@@ -1,0 +1,15 @@
+universe = vanilla
+requirements = (HAS_MATLAB =?= TRUE) && (MATLAB_VERSION == "'R2008A'" || MATLAB_VERSION == "'R2008B'" || MATLAB_VERSION == "'R2009A'" || MATLAB_VERSION == "'R2009B'" || MATLAB_VERSION == "'R2009b'") && (OpSys == "LINUX" || OpSys == "OSX") && (Disk > 1500000)
+
+environment = "MATLAB=$$(MATLAB_PATH) CPUUID=$(Cluster)$(Process)"
+getenv = true 
+executable = matlab.sh
+transfer_input_files = CelegansAnalysis.tar,TmpData/tmpmat17.tmp,OK-GZ920_MERGE_RECOS-.mat
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT_OR_EVICT
+
+output = matlab.$(Cluster).$(Process).out
+log = matlab.$(Cluster).$(Process).log
+error = matlab.$(Cluster).$(Process).err
+notification = always
+queue 10
