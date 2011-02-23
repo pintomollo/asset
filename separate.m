@@ -1,16 +1,10 @@
 function img = separate(img)
-  %figure;imshow(img);
-  global USE_MM;
 
   if (~any(any(img)))
     return;
   end
 
-  if (USE_MM)
-    dist = double(mmdist(img));
-  else
-    dist = bwdist(~img);
-  end
+  dist = bwdist(~img);
 
   dist = -dist;
   dist(~img) = -Inf;
@@ -21,13 +15,7 @@ function img = separate(img)
 
   %figure;imshow(dist,[],'InitialMagnification','fit');
 
-  if (USE_MM)
-    dist = dist - thresh + 1;
-    dist(isinf(dist)) = 0;
-    labels = mmwatershed(uint16(dist), mmsebox, 'REGIONS') - 1;
-  else
-    labels = watershed(dist) - 1;
-  end 
+  labels = watershed(dist) - 1;
 
   %figure;imshow(labels,[],'InitialMagnification','fit');
   prohib = unique(labels(~img));

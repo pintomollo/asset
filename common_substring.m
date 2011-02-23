@@ -5,10 +5,6 @@ function new_str = common_substring(str1, str2, replacement_str)
     return;
   end
 
-  if (nargin < 3)
-    replacement_str = 'MERGE';
-  end
-
   nstr = min(length(str1), length(str2));
 
   sindx = NaN;
@@ -38,7 +34,11 @@ function new_str = common_substring(str1, str2, replacement_str)
       sep2 = '_';
   end
       
-  new_str = [str1(1:sindx) sep1 replacement_str sep2 str1(end-eindx:end)];
+  if (nargin < 3)
+    new_str = str1(1:sindx);
+  else
+    new_str = [str1(1:sindx) sep1 replacement_str sep2 str1(end-eindx:end)];
+  end
 
   return;
 end

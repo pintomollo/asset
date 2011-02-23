@@ -17,20 +17,6 @@ function [carth_pts, carth_y] = elliptic2carth(ptso, ptsr, center, axes_length, 
       [center, axes_length, orient] = deal(ptsr, center, axes_length);
     end
 
-    if (isstruct(ptso))
-      theta = ptso.breaks((ptso.breaks >= 0) & (ptso.breaks <= 2*pi));
-      pts = fnval(ptso, theta);
-      pts = [theta; pts];
-      if (nargout == 2)
-        [carth_pts, carth_y] = elliptic2carth(pts, center, axes_length, orient);
-      else
-        carth_pts = elliptic2carth(pts, center, axes_length, orient);
-        carth_pts = create_spline(carth_pts);
-      end
-      
-      return;
-    end
-
     if (size(ptso,2) > 4)
       ptso = ptso.';
     end

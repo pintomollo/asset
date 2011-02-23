@@ -2,20 +2,34 @@ function mymovie = track_centrosomes(mymovie, opts)
 
   %hwait = waitbar(0,'Tracking centrosomes','Name','RECOS');
 
-  if (opts.recompute | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
-    
-    mymovie = correct_dic_shift(mymovie, 'data', opts.segmentation_parameters.correction, opts);
+%  if (opts.recompute | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
+%    
+%    mymovie = correct_dic_shift(mymovie, 'data', opts.segmentation_parameters.correction, opts);
+%  end
+
+  [nframes, imgsize ] = size_data(mymovie.data);
+
+  spots = detect_spots(mymovie.data, opts);
+
+  for i=1:nframes
+    if (size(spots{i}, 1) > 2)
+      spots{i} = spots{i}(1:2, :);
+    end
   end
 
-  [imgsize, nframes] = size_data(mymovie.data);
+  mymovie = spots;
+
+  return;
 
   sep_thresh = 5;
   weight = 0.45;
-  
+
   centr1 = NaN(nframes, 2);
   centr2 = NaN(nframes, 2);
 
   tmp_pts = zeros(0, 3);
+
+  %keyboard
 
   for i=1:nframes
 
@@ -24,7 +38,7 @@ function mymovie = track_centrosomes(mymovie, opts)
     img = load_data(mymovie.data, nimg);
 
     if (opts.verbosity == 3)
-      imshow(img);
+      imagesc(img);
       drawnow
     end
 

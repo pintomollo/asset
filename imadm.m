@@ -29,8 +29,11 @@ function [edge, direct] = imadm(img, thresh, single)
   end
 
   % Circular Gaussian filtre as defined in [2]
-  avgfilt = fspecial('gaussian',[7 7],1.5).*double(struct(strel('disk',4)).nhood);
-  avgfilt = avgfilt / sum(sum(avgfilt));
+  avgfilt = [0.25 0.5  0.5 0.5  0.25; ...
+             0.5  0.75 1   0.75 0.5; ...
+             0.5  1    2   1    0.5; ...
+             0.5  0.75 1   0.75 0.5; ...
+             0.25 0.5  0.5 0.5  0.25] / 16;
 
   img = imfilter(img, avgfilt, 'symmetric');
 
@@ -47,14 +50,14 @@ function [edge, direct] = imadm(img, thresh, single)
   ndimg = imfilter(img, ndfilt, 'symmetric');
 
   % Create a structure to find easily the maxima and minima of every pixel
-  img = abs(cat(3,ndimg,vimg,pdimg,himg));
+  img = abs(cat(3, ndimg, vimg, pdimg, himg));
 
-  edge = max(img,[],3)/2;
-  [tmp, direct] = min(img,[],3);
+  edge = max(img, [], 3) / 2;
+  [tmp, direct] = min(img, [], 3);
 
   % Create a framework necessary to compare each cell to its 8 neighbors
-  frame = ones(size(edge)+2);
-  frame(2:end-1,2:end-1) = edge;
+  frame = ones(size(edge) + 2);
+  frame(2:end-1, 2:end-1) = edge;
 
   % Reduce each edge to a single pixel-wide edge
   singleedge = zeros(size(edge));
@@ -64,13 +67,13 @@ function [edge, direct] = imadm(img, thresh, single)
     % The flowchart as defined in [1], keeps only the local maximas
     switch i
       case 1,
-        compar = (edge>=frame(1:end-2,1:end-2) & edge>frame(3:end,3:end));
+        compar = (edge >= frame(1:end-2, 1:end-2) & edge > frame(3:end, 3:end));
       case 2,
-        compar = (edge>=frame(2:end-1,1:end-2) & edge>frame(2:end-1,3:end));
+        compar = (edge >= frame(2:end-1, 1:end-2) & edge > frame(2:end-1, 3:end));
       case 3,
-        compar = (edge>=frame(1:end-2,3:end) & edge>frame(3:end,1:end-2));
+        compar = (edge >= frame(1:end-2, 3:end) & edge > frame(3:end, 1:end-2));
       case 4,
-        compar = (edge>=frame(1:end-2,2:end-1) & edge>frame(3:end,2:end-1));
+        compar = (edge >= frame(1:end-2, 2:end-1) & edge > frame(3:end, 2:end-1));
     end 
 
     indx = (indx & compar);
@@ -87,18 +90,21 @@ function [edge, direct] = imadm(img, thresh, single)
   edge = (edge - minimg) / (maximg - minimg);
 
   % Apply the threshold
-  edge(edge<thresh) = 0;
+  edge(edge < thresh) = 0;
 
-  % Compute the edge angle based on the intensities
-  direct = atan2(himg,vimg);
-  tmpdirect = atan2(ndimg,pdimg) - pi/4;
-  probs = (direct>pi/2 & tmpdirect<-pi/2);
-  tmpdirect(probs) = tmpdirect(probs) + 2*pi;
-  direct = (direct + tmpdirect) ./ 2;
+  if (nargout == 2)
+    % Compute the edge angle based on the intensities
+    direct = -atan2(himg, vimg);
+    tmpdirect = -(atan2(ndimg, pdimg) - pi/4);
+    probs = (direct > pi/2 & tmpdirect < -pi/2);
+    tmpdirect(probs) = tmpdirect(probs) + 2*pi;
+    probs = (tmpdirect > pi/2 & direct < -pi/2);
+    direct(probs) = direct(probs) + 2*pi;
+    direct = (direct + tmpdirect) ./ 2;
+    direct(direct < 0) = direct(direct < 0) + 2*pi;
 
-  direct(edge==0) = 0;
-  direct(direct<-pi) = direct(direct<-pi) + 2*pi; 
-  direct(direct>pi) = direct(direct>pi) - 2*pi; 
+    direct(edge == 0) = 0;
+  end
 
   return;
 end

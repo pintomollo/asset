@@ -1,96 +1,58 @@
-function [fname] = store_data(fname, data)
+function [fid] = store_data(fid, images, indexes)
 
-  if (isstruct(fname) & isfield(fname, 'fname'))
-    h = fname.fname;
-  else
-    h = fname;
-  end
+  if (~isjava(fid))
 
-  if (prod(size(data))==0)
-    return
-  end
+    compress = 'LZW';
+    if (isstruct(fid) & isfield(fid, 'fname'))
 
-  if(~isinteger(h))
-    if(isempty(h))
-      
-      cd_dir = cd;
-      if (exist('TmpData', 'dir'))
-        tmp_dir = [cd_dir '/TmpData/'];
-      elseif (exist('../TmpData','dir'))
-        cd('../TmpData/');
-        tmp_dir = cd;
-        cd(cd_dir);
-      else 
-        tmp_dir = cd_dir;
+      if (isfield(fid, 'compression'))
+        compress = fid.compression;
       end
 
-      new_tokens = [];
-
-      ls_dir = dir(tmp_dir);
-      for d = 1:length(ls_dir)
-        [tmp tokens] = regexp(ls_dir(d).name,'tmpmat(\d+)\.tmp','match','tokens');
-        if(length(tokens)~=0)
-          tmp_tokens = [];
-          for i=1:length(tokens)
-            tmp_tokens(i) = str2num(char(tokens{i}));
-          end
-          new_tokens = [new_tokens sort(tmp_tokens)];
-        end
-      end
-
-      if (length(new_tokens) > 0)
-        tokens = sort(new_tokens);
-        indxs = [1:tokens(end)+1];
-        indxs = setxor(tokens, indxs);
-
-        indx = indxs(1);
-      else
-        indx = 1;
-      end
-
-      new_name = fullfile(tmp_dir, ['tmpmat' num2str(indx) '.tmp']);
-      new_name = relativepath(new_name);
-
-      h = fopen(new_name,'a');
-
-      if(isfield(data,'cdata'))
-        ssize = size(data(1).cdata);
-      elseif(isfield(data,'data'))
-        ssize = size(data(1).data);
-      else
-        ssize = size(data);
-      end
-      if(length(ssize)<3)
-        ssize = [ssize ones(1,3-length(ssize))];
-      end
-      count = fwrite(h,ssize(1:3),'double');
-
-    elseif(ischar(h))
-      new_name = h;
-      h = fopen(new_name,'a');
+      fid = fid.fname;
     end
+    omexmlMeta = loci.formats.MetadataTools.createOMEXMLMetadata();
+
+    fid = full
+
+    r = loci.formats.ImageReader();
+    r = loci.formats.ChannelMerger(r);
+    r.setMetadataStore(omexmlMeta);
+    r.setId(fid);
+
+    if (nargin < 3)
+      nframes = r.getImageCount();
+      indexes = nframes + 1;
+
+      % Update xml ? 
+      omexmlMeta.setPixelsSizeT(ome.xml.model.primitives.PositiveInteger(java.lang.Integer(indexes)), 0);
+    end
+
+    r.close();
+
+    writer = loci.formats.ImageWriter();
+    writer.setMetadataRetrieve(omexmlMeta);
+    writer.setId(fid);
+
+    writer.setCompression(java.lang.String(compress));
   else
-    new_name = h;
-    frewind(h);
+    writer = fid;
   end
 
-  if(isfield(data,'cdata'))
-    for i=1:length(data)
-      count = fwrite(h,data(i).cdata,'double');
-    end
-  elseif(isfield(data,'data'))
-    for i=1:length(data)
-      count = fwrite(h,data(i).data,'double');
-    end
-  else
-    count = fwrite(h,data,'double');
+  %keyboard
+
+  for i=1:length(indexes)
+
+    img = images(:,:,i);
+    img = img.';
+    img = typecast(img(:), 'uint8');
+
+    writer.saveBytes(indexes(i) - 1, img);
   end
 
-  if (isstruct(fname) & isfield(fname, 'fname'))
-    fname.fname = new_name;
-  else
-    fname = new_name;
+  if (~isjava(fid))
+    writer.close();
   end
-  
-  fclose(h);
+
+  return;
 end

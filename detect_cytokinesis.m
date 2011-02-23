@@ -8,10 +8,10 @@ function mymovie = detect_cytokinesis(mymovie, opts)
 
   if (strncmp(opts.segmentation_type, 'markers', 7) & isfield(mymovie, 'markers') & ~isempty(mymovie.markers))
     type = 'markers';
-    [imgsize nframes] = size_data(mymovie.cortex);
+    [nframes, imgsize] = size_data(mymovie.cortex);
   else
     type = 'dic';
-    [imgsize nframes] = size_data(mymovie.dic);
+    [nframes, imgsize] = size_data(mymovie.dic);
   end
 
   if (~isfield(mymovie.(type), 'ruffles'))

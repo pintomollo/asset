@@ -5,9 +5,7 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
 %     http://mathworld.wolfram.com/Ellipse.html
 %
 
-  spline = X;
-
-  if (isempty(spline) || (isstruct(spline) && isempty(spline.breaks)))
+  if (isempty(X))
     center = zeros(1,2);
     axes_length = center;
     orientation = 0;
@@ -15,19 +13,7 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
     return;
   end
 
-  if (isstruct(spline))
-    pos = [spline.breaks(1):(spline.breaks(end)-spline.breaks(1))/(length(spline.breaks)-1):spline.breaks(end)];
-    spline = fnval(spline,pos).';
-
-    spline = spline(:,1:2);
-
-    if (all(spline(1,:)==spline(end,:)))
-      spline = spline(1:end-1,:);
-    end
-
-    X = spline(:,1);
-    Y = spline(:,2);
-  elseif (nargin == 1)
+  if (nargin == 1)
     if (size(X, 1)==2 & size(X, 2)>2)
       X = X.';
     end

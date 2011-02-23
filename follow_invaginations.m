@@ -3,12 +3,12 @@ function mymovie = follow_invaginations(mymovie, parameters, opts)
   if (strncmp(opts.segmentation_type, 'markers', 7) & isfield(mymovie, 'markers') & ~isempty(mymovie.markers))
     type = 'markers';
     channel = 'cortex';
-    [imgsize nframes] = size_data(mymovie.cortex);
+    [nframes, imgsize] = size_data(mymovie.cortex);
     segment_func = @intens;
   else
     type = 'dic';
     channel = 'dic';
-    [imgsize nframes] = size_data(mymovie.dic);
+    [nframes, imgsize] = size_data(mymovie.dic);
     segment_func = @edges_intens;
   end
 

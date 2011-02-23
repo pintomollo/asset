@@ -1,12 +1,14 @@
 function mymovie = tracing_error(trackings, mymovie, field, opts)
 
-  mymovie.(field).splines = movie2spline(mymovie, field, opts);
+  % Do we need to store this ?
+  segments = extract_segmentations(mymovie, field, opts);
+  update = mymovie.(field).update;
 
   if (opts.follow_periphery)
-    mymovie.(field).splines = spline_periphery(mymovie.(field), opts);
+    segments = path_periphery(segments, update, opts);
   end
 
-  mymovie.(field).errors = spline_error(trackings.(field), mymovie.(field), opts.nbins, opts);
+  mymovie.(field).errors = path_error(trackings.(field).average, segments, mymovie.(field).update, trackings.(field).reference, opts);
   mymovie.(field).update = false(size(mymovie.(field).update));
 
   return;

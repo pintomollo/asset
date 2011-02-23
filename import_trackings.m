@@ -1,163 +1,269 @@
-function [trackings, expr_name, updated] = import_trackings(trackings, opts)
+function [trackings, opts, experiment, updated] = import_trackings(trackings, opts)
+% IMPORT_TRACKING loads the content of manual tracking files (.shapes) into the
+%   corresponding data structure (get_struct('trackings')). It also accepts MAT-files
+%   in which 'trackings' structures have been stored.
+%
+%   [TRACKINGS, OPTS] = IMPORT_TRACKINGS(TRACKINGS, OPTS) imports the files listed in
+%   OPTS.TRACKINGS into TRACKINGS. If no file is specified, it prompts the user for it.
+%
+%   [...] = IMPORT_TRACKINGS() uses the default values for both OPTS and TRACKINGS.
+%   If only one is provided, the default value will be used for the missing argument.
+%
+%   [TRACKINGS, OPTS, EXPERIMENT, UPDATED] = IMPORT_TRACKINGS(...) returns the experiment
+%   name EXPERIMENT extracted from the file names, as well as the UPDATED flag which is true
+%   when TRACKINGS was modified.
+%
+% Gonczy & Naef labs, EPFL
+% Simon Blanchoud
+% 15.12.2010
 
+  % Some basic input checking to handle missing arguments
+  if (nargin == 1)
+    % We identify trackings through this field
+    if (isfield(trackings, 'experiment'))
+      opts = get_struct('ASSET');
+    elseif (isstruct(trackings))
+      opts = trackings;
+      trackings = [];
+    else
+      trackings = [];
+      opts = get_struct('ASSET');
+    end
+  elseif (nargin == 0)
+    trackings = [];
+    opts = get_struct('ASSET');
+  end
+
+  % Default value for the return values
   updated = false;
-  files = opts.trackings;
-  expr_name = '';
+  experiment = '';
 
-  %track = struct('mean',[],'name','','errors',[],'expr','','child',[],'files',repmat(struct('fname','','splines',[],'shapes',[],'groups',{}),0,1));
+  % We extract the file names
+  files = opts.trackings;
+  if (~iscell(files))
+    files = {files};
+  end
+
+  % 'all' is a keyword which means both DIC and Markers
   if (strncmp(opts.segmentation_type, 'all', 3))
     types = {'dic', 'markers'};
   else
     types = {opts.segmentation_type};
   end
 
+  % Get the required number of segmentation types
+  ntypes = length(types);
+
+  % Get the basic structure for every type
+  new_trackings = get_struct('trackings');
+  tracking = get_struct('tracking');
+
+  % We check whether trackings is already up-to-date.
+  % Obviously if it's empty we have some work to do.
   if (isempty(trackings))
-    trackings = get_struct('trackings', 1);
+    trackings = new_trackings;
+
+  % Otherwise, we simply verify whether its fields corresponding to the 
+  % segmentation types were assigned previously.
   elseif (isstruct(trackings))
     
-    done = true;
-    for t=1:length(types)
-      if (~isfield(trackings, types{t}) & ~isempty(trackings.(types{t})))
-        done = false;
+    for t = ntypes
+      % If the field do not exist or was not assigned, we have some work to do !
+      if (~isfield(trackings, types{t}))
+        trackings.(types{t}) = tracking;
       end
-    end
-
-    if (done & ~opts.recompute)
-      return;
     end
   end
 
+  % Required for finding missing frames of manual tracking
   max_frames = 0;
 
-  for t=1:length(types)
-    if (~isempty(files))
-      if (ischar(files))
-        files = {{files}};
-      end
+  % We check the dimensionality of the provided files
+  [file_types, file_groups, file_ids] = size(files);
+  if (file_types > ntypes)
+    warning('More tracking files than segmentation types were provided. Additional files will be ignored');
+  end
 
-      if (iscell(files))
-        for i=1:length(files)
-          for j=1:length(files(i))
-            if (j==1)
-              [tokens,junk]=regexp(files{i}{j},'(.+[-_])?([^-_\.]+)(\..+)','tokens');
-              name = tokens{1}{1};
-              suffix = tokens{1}{2};
-              ext = tokens{1}{3};
+  check_fields = {};
 
-              if (strncmp(ext, '.mat', 4))
-                tmp = load(fname{f});
-                tmp_trackings = tmp.trackings;
-                tmp_trackings = tmp_trackings.(types{t});
+  % We loop over the files to retrieve the data
+  for t = 1:file_types
+    tmp_type = types{t};
 
-                for i=1:length(tmp_trackings.child)
-                  found = false;
-                  for j=1:length(trackings.(types{t}).child)
-                    if (strcmp(trackings.(types{t}).child(j).expr, tmp_trackings.child(i).expr))
-                      found = true;
-                      break;
-                    end
-                  end
+    % We create a new regular expression representing each group of files and prepare 
+    %the tracking structure
+    if (~isfield(new_trackings, tmp_type))
+      new_trackings.(types{t}) = tracking;
+    end
+    new_trackings.(tmp_type).expr = '';
+    new_trackings.(tmp_type).child = get_struct('tracking', [1 file_groups]);
 
-                  if (~found)
-                    if (length(trackings.(types{t}).child) == 0)
-                      trackings.(types{t}).child = get_struct('tracking');
-                    end
+    for g = 1:file_groups
 
-                    trackings.(types{t}).child(end+1) = tmp_trackings.child(i);
-                  end
-                end
-              else
-                if (isempty(name))
-                  expr = [suffix ext];
-                  name = suffix;
-                else
-                  expr = [name '*' ext];
-                end
+      new_trackings.(tmp_type).child(g).child = get_struct('file', [1 file_ids]);
 
-                trackings.(types{t}).child(end+1).name = name;
-                trackings.(types{t}).child(end).expr = expr;
-                trackings.(types{t}).child(end).files(1).fname = files{i}{j};
-              end
+      for i = 1:file_ids
+
+        % If a MAT-file is specify, we try to extract the corresponding files from the tracking structure
+        if (strncmp(ext, '.mat', 4))
+          tmp_trackings = load(files{t}{g}{i});
+
+          % We merge both structure to avoid loosing any information
+          new_trackings = merge_structures(new_trackings, tmp_trackings.trackings);
+
+        % Otherwise it's a plain file
+        else
+
+          % Here we try to identify the regular expression
+          if (isempty(new_trackings.(tmp_type).child(g).expr))
+            
+            % Extract the "name", "suffix" and extension of the filename
+            [tokens, junk] = regexp(files{t}{g}{i}, '(.+[-_])?([^-_\.]+)(\..+)', 'tokens');
+            name = tokens{1}{1};
+            suffix = tokens{1}{2};
+            ext = tokens{1}{3};
+
+            % The file might have no suffix
+            if (isempty(name))
+              expr = [suffix ext];
+              name = suffix;
             else
-              trackings.(types{t}).child(end).files(end+1).fname = files{i}{j};
+              expr = [name '*' ext];
             end
+
+            % We copy the useful information
+            new_trackings.(types{t}).child(g).name = name;
+            new_trackings.(types{t}).child(g).expr = expr;
           end
+
+          % And we copy the filename
+          new_trackings.(types{t}).child(g).child(i).fname = files{t}{g}{i};
         end
-      elseif (isstruct(files))
-        tracking.(types{t}).child = [trackings.(types{t}).child files.(types{t})];
       end
     end
+  end
 
+  % Now we merge the new with the old trackings
+  [trackings, is_same] = merge_structures(trackings, new_trackings);
+  if (is_same & ~opts.recompute)
+    return;
+  end
+
+  % Now we prompt and sort the resulting structure
+  for t = 1:length(types)
+    % First get the name of the experiment based on the filenames
+    experiment = get_name(trackings.(types{t}), experiment);
+
+    % Then we sort the different groups by name
     child_names = {};
     for i=1:length(trackings.(types{t}).child)
       child_names = [child_names trackings.(types{t}).child(i).name];
     end
+
+    % We we have all the names, we can just reorder them by permutation
     [junk, indxs] = sort(child_names);
     trackings.(types{t}).child = trackings.(types{t}).child(indxs);
 
-    if (opts.verbosity > 0)
-      expr_name = get_name(trackings.(types{t}), expr_name);
+    % If verbosity is 'big' enough, we can prompt
+    if (opts.verbosity > 1)
 
-      disp(['[Select your ' expr_name ' ' types{t} ' tracking files]'])
+      disp(['[Select your ' experiment ' ' types{t} ' tracking files]'])
 
-      trackings.(types{t}) = input_trackings(trackings.(types{t}), [types{t} ' (' expr_name ')']);
-      expr_name = get_name(trackings.(types{t}), expr_name);
+      % Display the input dialog
+      trackings.(types{t}) = input_trackings(trackings.(types{t}), [types{t} ' (' experiment ')']);
+
+      % Update the experiment name if needed
+      experiment = get_name(trackings.(types{t}), experiment);
     end
+
+    % Now we finally load the trackings
     [trackings.(types{t}), nframes] = load_trackings(trackings.(types{t}), opts);
+
+    % We keep track of the total number of frames to check later if some are missing
     if (nframes > max_frames)
       max_frames = nframes;
     end
   end
 
-  for t=1:length(types)
-    trackings.(types{t}) = check_trackings(trackings.(types{t}), max_frames);
-  end
+  % We check whether some tracking files are missing in some groups and we
+  % buffer them accordingly so that every group has the same number of frames
+  trackings = check_trackings(trackings, max_frames, opts.verbosity);
 
   updated = true;
 
   return;
 end
 
-function trackings = check_trackings(trackings, max_frames)
+function name = get_name(mystruct, name)
+% This function extracts the common substring from various names in order
+% to deduce the 'experiment' name
+  
+  % We loop over all the childrens to browse their names
+  for i = 1:length(mystruct.child)
 
-  for i=1:length(trackings.files)
-    [ngroups,nframes] = size(trackings.files(i).shapes);
-    if (nframes < max_frames)
-      trackings.files(i).shapes = [trackings.files(i).shapes repmat(struct('path',[]), ngroups, max_frames - nframes)];
-      nframes = max_frames;
-    end
-
-    for j=1:ngroups
-      for k=1:nframes
-        if (isempty(trackings.files(i).shapes(j,k).path))
-          disp(['File ' trackings.files(i).fname ', tracking of ' trackings.files(i).groups{j} ' in frame ' num2str(k) ' is missing']);
-        end
+    % If they have a 'name' field, we try to find the common part with the 
+    % provided name string
+    if (isfield(mystruct.child(i), 'name') & ~isempty(mystruct.child(i).name))
+      if (isempty(name))
+        name = mystruct.child(i).name;
+      else
+        name = common_substring(name, mystruct.child(i).name);
       end
     end
   end
 
-  for i=1:length(trackings.child)
-    trackings.child(i) = check_trackings(trackings.child(i), max_frames);
+  return;
+end
+
+function trackings = check_trackings(trackings, max_frames, verbosity)
+% This function parses a tracking structure to make sure that no frame is missing.
+% Moreover it will add empty 'frames' where they are missing to avoid indexing problems.
+
+  % We need to check at which level of the structure we are
+  if (isfield(trackings, 'child'))
+
+    % Here we found some children structures so we recursively parse them as they
+    % should contain the filenames at some level
+    nchild = length(trackings.child);
+    for i=1:nchild
+      trackings.child(i) = check_trackings(trackings.child(i), max_frames, verbosity);
+    end
+
+  % Here we have reached a file structure and thus can check for the missing frames
+  elseif (isfield(trackings, 'shapes'))
+
+    [ngroups, nframes] = size(trackings.shapes);
+
+    % In case of missing frames at the end of the tracking, we would miss them and could have
+    % indexing problems so we substitute them with empty cells
+    if (nframes < max_frames)
+      trackings.shapes = [tmp_child(i).shapes cell([ngroups, max_frames - nframes])];
+      nframes = max_frames;
+    end
+    
+    % We loop over every frame and announce the missing ones
+    for g = 1:ngroups
+      for i = 1:nframes
+        if (isempty(trackings.shapes{g, i}) & verbosity > 0)
+          warning(['File ' trackings.fname ', tracking of ' trackings.groups{g} ' in frame ' num2str(i) ' is missing']);
+        end
+      end
+    end
+
+  % Otherwise, we try to look recursively in every structure field
+  else
+
+    % Get the existing fields
+    fields = fieldnames(trackings);
+
+    % And loop over the structure ones
+    for f = 1:length(fields)
+      if (isstruct(trackings.(fields{f})))
+        trackings.(fields{f}) = check_trackings(trackings.(fields{f}), max_frames, verbosity);
+      end
+    end
   end
 
   return;
 end
 
-function name = get_name(mystruct, name)
-
-  for i = 1:length(mystruct.child)
-    name = get_name(mystruct.child(i), name);
-    if (~isempty(name))
-      return;
-    end
-  end
-
-  if (isfield(mystruct, 'name') & ~isempty(mystruct.name))
-    indxs = findstr(mystruct.name, '-');
-    if (length(indxs) > 1)
-      name = mystruct.name(indxs(1)+1:indxs(2)-1);
-    end
-  end
-
-  return;
-end

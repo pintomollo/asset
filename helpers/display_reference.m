@@ -32,7 +32,7 @@ function h = display_reference(varargin)
         if (handles.index ~= indx)
           handles.index = indx;
 
-          if (length(indexes) == 1 | strncmp(args, 'animate', 7))
+          if (length(indexes) == 1 | any(ismember(args, 'animate')))
             handles.movie_index = 1;
           end
         end
@@ -46,19 +46,31 @@ function h = display_reference(varargin)
         end
 
         for i=1:size(fields,1)
+
+          if (isfield(mymovie(m).(fields{i,1}).(fields{i,2})(indx), 'all'))
+            pts = mymovie(m).(fields{i,1}).(fields{i,2})(indx).all;
+
+            if (length(indexes) == 1 | any(ismember(args, 'animate')))
+              handles = draw_element(handles, pts, [fields{i,2} '_all'], 0.5, args);
+            else
+              handles = draw_element(handles, pts, [fields{i,2} '_all'], 0.5 * indx / indexes(end), args);
+            end
+          end
+
           pts = mymovie(m).(fields{i,1}).(fields{i,2})(indx).warped;
 
-          if (length(indexes) == 1 | strncmp(args, 'animate', 7))
-            handles = draw_element(handles, pts, fields{i,2});
+          if (length(indexes) == 1 | any(ismember(args, 'animate')))
+            handles = draw_element(handles, pts, fields{i,2}, 1, args);
           else
-            handles = draw_element(handles, pts, fields{i,2}, indx / indexes(end));
+            handles = draw_element(handles, pts, fields{i,2}, indx / indexes(end), args);
           end
+
         end
 
         handles.movie_index = handles.movie_index + 1;
       end
 
-      if (strncmp(args, 'animate', 7))
+      if (any(ismember(args, 'animate')))
         refresh(h);
         drawnow;
         if (~isempty(fname))
@@ -72,7 +84,7 @@ function h = display_reference(varargin)
   refresh(h);
 
   if (~isempty(fname))
-    movie2avi(movie,fname,'FPS',6);
+    movie2avi(movie,fname,'FPS',12);
   end
 
   return;
@@ -132,9 +144,10 @@ function handles = draw_background(hfig, handles, warper)
   return;
 end
 
-function handles = draw_element(handles, pts, name, scaling)
+function handles = draw_element(handles, pts, name, scaling, args)
 
-  if (nargin == 3)
+  if (nargin == 4)
+    args = scaling;
     scaling = 1;
   end
 
@@ -142,17 +155,37 @@ function handles = draw_element(handles, pts, name, scaling)
     pts = NaN(2);
   else
     %pts = pts(:,1:2);
-    pts(:,2:2:end) = -pts(:,2:2:end);
+    pts(:,2:2:end, :) = -pts(:,2:2:end, :);
   end
 
-  if (handles.movie_index <= size(handles.(name), 2))
+  if (isfield(handles, name) & handles.movie_index <= size(handles.(name), 2))
     nelems = size(handles.(name), 1);
+          if (any(ismember(args, 'traces')))
+            nelems = nelems / 2;
+          end
     %if (nelems == 1)
       %set(handles.(name)(handles.movie_index),'XData', pts(:,1), 'YData', -pts(:,2));
     %else
+      if (name(end-2:end) == 'all')
+        for j=1:size(pts, 3)
+          for i=1:nelems
+          if (any(ismember(args, 'traces')))
+              set(handles.(name)(i+nelems,j,:), 'XData', [get(handles.(name)(i+nelems,j,:), 'XData') pts(i,1,j)]); 
+              set(handles.(name)(i+nelems,j,:), 'YData', [get(handles.(name)(i+nelems,j,:), 'YData') pts(i,2,j)]); 
+            end
+            myplot(pts(i, 1:2, j), handles.(name)(i, j, :));
+          end
+        end
+      else
       for i=1:nelems
-        %set(handles.(name)(i,handles.movie_index),'XData', pts(i,1), 'YData', -pts(i,2));
-        myplot(handles.(name)(i, handles.movie_index, :), pts);
+        %seet(handles.(name)(i,handles.movie_index),'XData', pts(i,1), 'YData', -pts(i,2));
+            if (any(ismember(args, 'traces')))
+              set(handles.(name)(i+nelems,handles.movie_index,:), 'XData', [get(handles.(name)(i+nelems,handles.movie_index,:), 'XData') pts(i,1)]); 
+              set(handles.(name)(i+nelems,handles.movie_index,:), 'YData', [get(handles.(name)(i+nelems,handles.movie_index,:), 'YData') pts(i,2)]); 
+            end
+
+        myplot(pts(i, 1:2), handles.(name)(i, handles.movie_index, :));
+      end
       end
     %end
   else
@@ -183,8 +216,30 @@ function handles = draw_element(handles, pts, name, scaling)
                 'SelectionHighlight','off', ...
                 'Tag','Ruffles');
       case 'centrosomes'
+        if (any(ismember(args, 'traces')))
+        htmp(1,1,:) = myplot(pts(1,1:2), ...
+                'Color', [0 0 1] * scaling, ...
+                'HandleVisibility', 'callback', ...
+                'EraseMode', 'none', ...
+                'HitTest','off', ...
+                'LineStyle','-', 'Marker','none', ...
+                'LineWidth', 2, ...
+                'Parent',handles.axes, ...
+                'SelectionHighlight','off', ...
+                'Tag','Centrosomes-Trace');
+        htmp(2,1,:) = myplot(pts(2,1:2), ...
+                'Color', [1 0 0] * scaling, ...
+                'HandleVisibility', 'callback', ...
+                'EraseMode', 'none', ...
+                'HitTest','off', ...
+                'LineStyle','-', 'Marker','none', ...
+                'LineWidth', 2, ...
+                'Parent',handles.axes, ...
+                'SelectionHighlight','off', ...
+                'Tag','Centrosomes-Trace');
+        end
         %h = line(pts(1,1),-pts(1,2), ...
-        h(1,1,:) = myplot(pts(1,:), ...
+        h(1,1,:) = myplot(pts(1,1:2), ...
                 'Color', [0 0 1] * scaling, ...
                 'HandleVisibility', 'callback', ...
                 'EraseMode', 'none', ...
@@ -196,7 +251,7 @@ function handles = draw_element(handles, pts, name, scaling)
                 'Tag','Centrosomes');
 
         %h(2,1) = line(pts(2,1),-pts(2,2), ...
-        h(2,1,:) = myplot(pts(2,:), ...
+        h(2,1,:) = myplot(pts(2,1:2), ...
                 'Color', [1 0 0] * scaling, ...
                 'HandleVisibility', 'callback', ...
                 'EraseMode', 'none', ...
@@ -206,9 +261,70 @@ function handles = draw_element(handles, pts, name, scaling)
                 'Parent',handles.axes, ...
                 'SelectionHighlight','off', ...
                 'Tag','Centrosomes');
+
+      case 'centrosomes_all'
+        %h = line(pts(1,1),-pts(1,2), ...
+        if (any(ismember(args, 'traces')))
+        for i=1:size(pts, 3)
+        htmp(1,i,:) = myplot(pts(1,1:2,i), ...
+                'Color', [0 0 1] * scaling, ...
+                'HandleVisibility', 'callback', ...
+                'EraseMode', 'none', ...
+                'HitTest','off', ...
+                'LineStyle','-', 'Marker','none', ...
+                'LineWidth', 1, ...
+                'Parent',handles.axes, ...
+                'SelectionHighlight','off', ...
+                'Tag','Centrosomes-Trace');
+        htmp(2,i,:) = myplot(pts(2,1:2,i), ...
+                'Color', [1 0 0] * scaling, ...
+                'HandleVisibility', 'callback', ...
+                'EraseMode', 'none', ...
+                'HitTest','off', ...
+                'LineStyle','-', 'Marker','none', ...
+                'LineWidth', 1, ...
+                'Parent',handles.axes, ...
+                'SelectionHighlight','off', ...
+                'Tag','Centrosomes-Trace');
+        end
+        end
+
+        for i=1:size(pts, 3)
+
+          h(1,i,:) = myplot(pts(1,1:2, i), ...
+                  'Color', [0 0 1] * scaling, ...
+                  'HandleVisibility', 'callback', ...
+                  'EraseMode', 'none', ...
+                  'HitTest','off', ...
+                  'LineStyle','none', 'Marker','o', ...
+                  'LineWidth', 1, ...
+                  'Parent',handles.axes, ...
+                  'SelectionHighlight','off', ...
+                  'Tag','Centrosomes');
+
+          %h(2,1) = line(pts(2,1),-pts(2,2), ...
+          h(2,i,:) = myplot(pts(2,1:2, i), ...
+                  'Color', [1 0 0] * scaling, ...
+                  'HandleVisibility', 'callback', ...
+                  'EraseMode', 'none', ...
+                  'HitTest','off', ...
+                  'LineStyle','none', 'Marker','^', ...
+                  'LineWidth', 1, ...
+                  'Parent',handles.axes, ...
+                  'SelectionHighlight','off', ...
+                  'Tag','Centrosomes');
+        end
+    end
+    
+    if (any(ismember(args, 'traces')))
+      h = [h; htmp];
     end
 
-    handles.(name) = [handles.(name) h];
+    if (isfield(handles, name))
+      handles.(name) = [handles.(name) h];
+    else
+      handles.(name) = h;
+    end
   end
 
   return;
@@ -219,9 +335,9 @@ function [h, mymovie, fields, indx, opts, fname, args, dv_inversion] = parse_inp
   h = [];
   mymovie = [];
   indx = [];
-  opts = get_struct('RECOS',1);
+  opts = get_struct('ASSET',1);
   fname = '';
-  args = 'none';
+  args = {};
   dv_inversion = false;
   fields = {(opts.segmentation_type), 'cortex'; (opts.segmentation_type), 'ruffles'; 'data', 'centrosomes'};
 
@@ -233,7 +349,7 @@ function [h, mymovie, fields, indx, opts, fname, args, dv_inversion] = parse_inp
           if (findstr(varargin{i}, '.'))
             fname = varargin{i};
           else
-            args = varargin{i};
+            args{end+1} = varargin{i};
           end
         case 'cell'
           fields = varargin{i};
@@ -265,8 +381,8 @@ function [h, mymovie, fields, indx, opts, fname, args, dv_inversion] = parse_inp
     end
   end
 
-  if (~isempty(fname))
-    args = 'animate';
+  if (~isempty(fname) & ~any(ismember(args, 'animate')))
+    args{end+1} = 'animate';
   end
 
   if (isfield(mymovie, 'data') & isfield(mymovie.data, 'inverted') & mymovie.data.inverted)

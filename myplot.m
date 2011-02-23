@@ -2,16 +2,8 @@ function handles = myplot(pts, varargin)
 
   [h, polar, args] = parse_inputs(varargin{:});
 
-  if (isstruct(pts))
-    pos = [pts.breaks(1):(pts.breaks(end)-pts.breaks(1))/(length(pts.breaks)-1):pts.breaks(end)];
-    new_pts = fnval(pts,pos);
-
-    if (mod(pts.dim,2)==1)
-      polar = true;
-      pts = [pos; new_pts];
-    else
-      pts = new_pts;
-    end
+  if (iscell(pts))
+    pts = pts{1};
   end
 
   [m, n] = size(pts);

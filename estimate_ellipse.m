@@ -1,6 +1,6 @@
 function [center, axes_length, orientation, mask, estimation] = estimate_ellipse(img)
 
-  global USE_MM;
+  'Use the paramters from opts instead'
 
   img = double(img);
 
@@ -27,21 +27,12 @@ function [center, axes_length, orientation, mask, estimation] = estimate_ellipse
   img=(img>thresh);
   %figure;imshow(img)
 
-  if (USE_MM)
-
-    img = mmareaopen(img, size200, mmsebox);
-    img = imclose(img, strel('disk', size250));
-    %img = mmclose(img, mmsedisk(size250));
-    img = mmareaopen(img, size200, mmsebox);
-  else
-    img = bwareaopen(img,size200);
-    img = imclose(img, strel('disk', size250));
-    %img = imdilate(img, ser5);
-    %img = imfill(img,'holes');
-    %img = imerode(img, ser5);
-    img = bwareaopen(img,size200);
-    %figure;imshow(img)
-  end
+  img = bwareaopen(img,size200);
+  img = imclose(img, strel('disk', size250));
+  %img = imdilate(img, ser5);
+  %img = imfill(img,'holes');
+  %img = imerode(img, ser5);
+  img = bwareaopen(img,size200);
 
   img = separate(img);
   %figure;imshow(img)

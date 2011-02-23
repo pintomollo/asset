@@ -24,51 +24,6 @@ function [ellpts, radius] = carth2elliptic(ptsx, ptsy, center, axes_length, orie
       [center, axes_length, orient] = deal(ptsy, center, axes_length);
     end
 
-    if (isstruct(ptsx))
-      if (isempty(ptsx.breaks))
-        ellpts = ptsx;
-
-        return;
-      end
-      pts = fnval(ptsx, ptsx.breaks);
-
-      if (nargout == 2)
-        [ellpts, radius] = carth2elliptic(pts, center, axes_length, orient)
-      else
-        if (~ispolycw(pts(1,:), pts(2,:)))
-          pts = pts(:,[end:-1:1]);
-        end
-
-        ellpts = carth2elliptic(pts, center, axes_length, orient);
-        if (isempty(ellpts))
-          if (nargout == 2)
-            radius = [];
-          end
-
-          return;
-        end
-
-        min_indx = find(ellpts(:,1) == min(ellpts(:,1)),1);
-
-        if (~isempty(min_indx) && min_indx ~= 1)
-          ellpts = ellpts([min_indx:end 1:min_indx-1],:);
-        end
-        % Add pts on both sides to ensure circularity
-        nadd = 10;
-        npts = size(ellpts, 1);
-        if (nadd > npts)
-          nadd = npts;
-        end
-
-        ellpts = ellpts([end-nadd+1:end 1:end 1:nadd],:);
-        ellpts(1:nadd,1) = ellpts(1:nadd,1) - 2*pi;
-        ellpts(end-nadd+1:end,1) = ellpts(end-nadd+1:end,1) + 2*pi;
-        ellpts = create_spline(ellpts(:,2:end), ellpts(:,1));
-      end
-
-      return;
-    end
-
     if (size(ptsx,2) > 4)
       ptsx = ptsx.';
     end

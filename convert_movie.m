@@ -9,8 +9,6 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
   import loci.formats.gui.LegacyQTTools;
   import loci.formats.MetadataTools;
   import loci.formats.ChannelMerger;
-  import loci.formats.gui.BufferedImageReader;
-  import loci.formats.gui.BufferedImageWriter;
 
   if (nargin < 2)
     compression = '';
@@ -39,7 +37,6 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
   % Create the File reader pointing to our file
   r = ImageReader();
   r = ChannelMerger(r);
-  r = BufferedImageReader(r);
   r.setMetadataStore(omexmlMeta);
 
   [tokens,junk]=regexp(fname,'(.+[-_])?([^-_\.]+)(\.[\w\.]+)?','tokens');
@@ -58,47 +55,44 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
   printname = strrep(name(slash:end),'_','\_');
 
   r.setId(fname);
+  format = char(r.getReader().getFormat());
 
   % In case it's a QT movie, use the legacy if possible
   qt = LegacyQTTools;
   qtjava = qt.canDoQT();
 
-  if (strncmp(char(r.getFormat()),'QuickTime',9))
+  if (strncmp(format,'QuickTime',9))
       if (qtjava)
         r.getReader().setLegacy(true);
       else
         qt.checkQTLibrary();
       end
-  elseif (strncmp(char(r.getFormat()),'OME-TIFF',8))
+  elseif (strncmp(format,'OME-TIFF',8))
 
     newfile = fname;
-
-    try 
-      r.close();
-    catch ME
-      disp(ME.message);
-      disp('Ignoring closing Error, Continuing');
-    end
+    r.close();
 
     newfile = relativepath(newfile);
 
     return;
   end
-  %r.setId(fname);
 
   % Create the File writer
   w = OMETiffWriter();
-  w = BufferedImageWriter(w);
   w.setMetadataRetrieve(omexmlMeta);
+  w.setWriteSequentially(true);
 
   % Check whether the conversion is feasible
   if(~w.isSupportedType(r.getPixelType()))
+
+    r.close();
+    error(['Conversion from ' format ' to OME-TIFF is not feasible !']);
 
     return
   end
 
   % We create a OMETiff file
-  newname = [name '.ome.tif'];
+  newname = [name '.ome.tiff'];
 
   if(exist(newname,'file'))
     answer = 0;
@@ -120,13 +114,7 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
         delete(newname);
       case 3
         newfile = newname;
-
-        try 
-          r.close();
-        catch ME
-          disp(ME.message);
-          disp('Ignoring closing Error, Continuing');
-        end
+        r.close();
 
         newfile = relativepath(newfile);
 
@@ -151,7 +139,6 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
   w.setCompression(java.lang.String(compression));
 
   % A nice status bar
-  format = char(r.getReader().getFormat());
   str = [' Converting ' printname ' from [' format '] to [' char(compression) ' OME-TIFF]'];
   hwait = waitbar(0, str,'Name','Bio-Formats Library');
   % Simply copy everything
@@ -161,22 +148,18 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
     
     numImages = r.getImageCount();
 
-    for i=0:(numImages-1)
-      img = r.openImage(i);
+    for i=0:numImages-1
 
-      w.saveImage(img, s, (i==(numImages-1)), (i==(numImages-1)) && (s==(numSeries-1)));
+      img = r.openBytes(i);
+      w.saveBytes(i, img);
       
       % Show our progress
       waitbar(double(s*numSeries + (i+1))/(numSeries*numImages),hwait);
     end
   end
 
-  try 
-    r.close();
-  catch ME
-    disp(ME.message);
-    disp('Ignoring Error, Continuing');
-  end
+  r.close();
+  w.close();
 
   close(hwait);
   

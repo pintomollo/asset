@@ -1,16 +1,24 @@
 function times = frame_timing(mymovie, replace_timing)
 
   if (nargin == 1)
+    times = 1:size_data(mymovie.dic);
+  else
+    times = mymovie;
+  end
+  
+  return;
 
-    if (isfield(mymovie, 'dic') & isfield(mymovie.dic, 'metadata'))
+  if (nargin == 1)
+
+    if (isfield(mymovie, 'dic') & isfield(mymovie.dic, 'fname') & ~isempty(mymovie.dic.fname))
       field = 'dic';
-    elseif (isfield(mymovie, 'eggshell') & isfield(mymovie.eggshell, 'metadata'))
+    elseif (isfield(mymovie, 'eggshell') & isfield(mymovie.eggshell, 'fname') & ~isempty(mymovie.eggshell.fname))
       field = 'eggshell';
-    elseif (isfield(mymovie, 'cortex') & isfield(mymovie.cortex, 'metadata'))
+    elseif (isfield(mymovie, 'cortex') & isfield(mymovie.cortex, 'fname') & ~isempty(mymovie.cortex.fname))
       field = 'cortex';
-    elseif (isfield(mymovie, 'data') & isfield(mymovie.data, 'metadata'))
+    elseif (isfield(mymovie, 'data') & isfield(mymovie.data, 'fname') & ~isempty(mymovie.data.fname))
       field = 'data';
-    elseif (isfield(mymovie, 'metadata'))
+    elseif (isfield(mymovie, 'fname') & ~isempty(mymovie.fname))
       field = 'tmp';
       mymovie = struct('tmp', mymovie);
     else

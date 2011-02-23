@@ -57,15 +57,15 @@ function [mymovie, mymovies] = combine_movies(mymovie, method)
 
     nframes = 0;
     if (fields(i,1) & isfield(mymovies(i).dic, 'fname'))
-      [junk, nframes] = size_data(mymovies(i).dic);
+      [nframes] = size_data(mymovies(i).dic);
       zero = mymovies(i).dic.cytokinesis;
     elseif (fields(i,2))
       if (isfield(mymovies(i), 'eggshell') & isfield(mymovies(i).eggshell, 'fname'))
-        [junk, nframes] = size_data(mymovies(i).eggshell);
+        [nframes] = size_data(mymovies(i).eggshell);
       elseif (isfield(mymovies(i), 'cortex') & isfield(mymovies(i).cortex, 'fname'))
-        [junk, nframes] = size_data(mymovies(i).cortex);
+        [nframes] = size_data(mymovies(i).cortex);
       elseif (isfield(mymovies(i), 'markers') & isfield(mymovies(i).markers, 'fname'))
-        [junk, nframes] = size_data(mymovies(i).markers);
+        [nframes] = size_data(mymovies(i).markers);
       end
       zero = mymovies(i).markers.cytokinesis;
     end
@@ -77,7 +77,7 @@ function [mymovie, mymovies] = combine_movies(mymovie, method)
       timings(i,1:3) = [zero 1-zero nframes-zero];
     end
 
-    mymovies(i) = carth2RECOS(mymovies(i));
+    mymovies(i) = carth2normalized(mymovies(i));
   end
   range = [min(timings(:,2)):max(timings(:,3))];
   timings(:,4) = timings(:,1) - find(range == 0);
@@ -115,17 +115,17 @@ function [mymovie, mymovies] = combine_movies(mymovie, method)
   end
 
   for indx = 1:length(range)
-    splines = get_struct('spline', [nmovies 2]);
+    paths = cell([nmovies 2]);
     centers = NaN(2,2,nmovies);
 
     for i = 1:nmovies
       tmp_indx = indx + timings(i,4);
 
       if (fields(i,1) & range(indx) >= timings(i,2) & range(indx) <= timings(i,3))
-        splines(i,1) = create_spline(mymovies(i).dic.cortex(tmp_indx).warped);
+        paths(i,1) = {mymovies(i).dic.cortex(tmp_indx).warped};
       end
       if (fields(i,2) & range(indx) >= timings(i,2) & range(indx) <= timings(i,3))
-        splines(i,2) = create_spline(mymovies(i).markers.cortex(tmp_indx).warped);
+        paths(i,2) = {mymovies(i).markers.cortex(tmp_indx).warped};
       end
       if (fields(i,3) & range(indx) >= timings(i,2) & range(indx) <= timings(i,3))
         centers(:,:,i) = mymovies(i).data.centrosomes(tmp_indx).warped;
@@ -133,18 +133,18 @@ function [mymovie, mymovies] = combine_movies(mymovie, method)
     end
 
     if (myfields(1))
-      tmp_spline = mean_spline(splines(:,1));
+      tmp_path = mean_paths(paths(:,1));
       
-      if (~isempty(tmp_spline.breaks))
-        mymovie.dic.cortex(indx).warped = fnval(tmp_spline, tmp_spline.breaks).';
-        mymovie.dic.cortex(indx).all = splines(:,1);
+      if (~isempty(tmp_path{1}))
+        mymovie.dic.cortex(indx).warped = tmp_path{1};
+        mymovie.dic.cortex(indx).all = paths(:,1);
       end
     end
     if (myfields(2))
-      tmp_spline = mean_spline(splines(:,2));
-      if (~isempty(tmp_spline.breaks))
-        mymovie.markers.cortex(indx).warped = fnval(tmp_spline, tmp_spline.breaks).';
-        mymovie.markers.cortex(indx).all = splines(:,1);
+      tmp_path = mean_paths(paths(:,2));
+      if (~isempty(tmp_path{1}))
+        mymovie.markers.cortex(indx).warped = tmp_path{1};
+        mymovie.markers.cortex(indx).all = paths(:,2);
       end
     end
     if (myfields(3))

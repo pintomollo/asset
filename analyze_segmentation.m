@@ -1,4 +1,4 @@
-function [mymovie, trackings] = analyse_segmentation(mymovie, trackings, opts)
+function [mymovie, trackings] = analyze_segmentation(mymovie, trackings, opts)
 
   if (strncmp(opts.segmentation_type, 'all', 3))
     types = {'dic', 'markers'};
@@ -8,7 +8,7 @@ function [mymovie, trackings] = analyse_segmentation(mymovie, trackings, opts)
 
   for t=1:length(types)
  
-    if (isempty(trackings.(types{t}).mean) || opts.recompute)
+    if (isempty(trackings.(types{t}).average) || opts.recompute)
       trackings.(types{t}) = mean_trackings(trackings.(types{t}), opts);
     end
 

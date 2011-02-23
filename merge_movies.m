@@ -110,7 +110,7 @@ function [fname, new_size] = append_file(new_file, old_file, frame_shift)
     case '.tmp'
       if (frame_shift == 0)
         fname = '';
-        [imgsize nframes] = size_data(new_file);
+        [nframes, imgsize] = size_data(new_file);
         for i=1:nframes
           fname = store_data(fname, load_data(new_file, i));
         end
@@ -118,9 +118,9 @@ function [fname, new_size] = append_file(new_file, old_file, frame_shift)
         fname = new_file;
       end
 
-      [imgsize, new_size] = size_data(fname);
+      [new_size, imgsize] = size_data(fname);
 
-      [imgsize nframes] = size_data(old_file);
+      [nframes, imgsize] = size_data(old_file);
       for i=1:nframes
         fname = store_data(fname, load_data(old_file, i));
       end
@@ -191,8 +191,8 @@ function old_struct = duplicate(old_struct, frame_shift)
       switch (get_type(old_struct.(field)))
         case 'struct'
           switch field
-            case {'mean', 'splines'}
-              buffer = get_struct('spline', [m frame_shift o p]);
+            case {'mean', 'paths'}
+              buffer = cell([m frame_shift o p]);
               old_struct.(field) = mycat(buffer, old_struct.(field));
             case 'shapes'
               buffer = repmat(struct('path',[]), [m frame_shift o p]);
@@ -241,11 +241,9 @@ function merge = mycat(array1, array2)
       case 'num'
         buffer = NaN;
       case 'struct'
-        if (isfield(array1(1,1,1), 'breaks'))
-          buffer = get_struct('spline', 1);
-        else
-          buffer = array1(1,1,1);
-        end
+        buffer = array1(1,1,1);
+      case 'cell'
+        buffer = cell(1);
     end
 
     if (nbuff > 0)

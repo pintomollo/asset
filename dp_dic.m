@@ -14,7 +14,7 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
         update = mymovie.dic.update;
       end
     else
-      [imgsize nframes] = size_data(mymovie.dic);
+      [nframes, imgsize] = size_data(mymovie.dic);
 
       centers = zeros(2,nframes);
       axes_length = zeros(2,nframes);
@@ -30,7 +30,6 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
 
     return;
   end
-
 
   img = [];
   global rescale_size;
@@ -66,7 +65,7 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
       eggshell(nimg).probabilities = sparse(probs);
 
       if (opts.verbosity == 3)
-        figure;implot(realign(probs,rescale_size,centers(:,nimg),orientations(1,nimg)));
+        figure;imagesc(realign(probs,rescale_size,centers(:,nimg),orientations(1,nimg)));
       end
     else
       outer_egg = dynamic_programming(polar_img, parameters.eggshell_params, parameters.scoring_func{1}, parameters.eggshell_weights, opts);
@@ -217,7 +216,6 @@ end
 
 function [center, axes_length, orientation, estim] = detect_ellipse(img, verbosity, estim_only)
 
-  global USE_MM;
   global rescale_size;
 
   if (nargin == 1)
@@ -242,25 +240,12 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, verbosi
 
   edg1 = increase_canevas(edg1, size10);
 
-  if (USE_MM)
-
-    %edg1 = mmdil(edg1, mmsedisk(size150));
-    edg1 = imdilate(edg1, strel('disk', size150));
-    edg1 = mmclohole(edg1, mmsebox);
-    edg1 = mmareaopen(edg1, size100, mmsebox);
-    %edg1 = mmdil(edg1, mmsedisk(size75));
-    edg1 = imdilate(edg1, strel('disk', size75));
-    edg1 = mmclohole(edg1, mmsebox);
-    %edg1 = mmero(edg1, mmsedisk(size75 + size150));
-    edg1 = imerode(edg1, strel('disk', size75 + size150));
-  else
-    edg1 = imdilate(edg1, strel('disk', size150));
-    edg1 = imfill(edg1, 'holes');
-    edg1 = bwareaopen(edg1, size100);
-    edg1 = imdilate(edg1, strel('disk', size75));
-    edg1 = imfill(edg1, 'holes');
-    edg1 = imerode(edg1, strel('disk', size75 + size150));
-  end
+  edg1 = imdilate(edg1, strel('disk', size150));
+  edg1 = imfill(edg1, 'holes');
+  edg1 = bwareaopen(edg1, size100);
+  edg1 = imdilate(edg1, strel('disk', size75));
+  edg1 = imfill(edg1, 'holes');
+  edg1 = imerode(edg1, strel('disk', size75 + size150));
 
   edg1 = reduce_canevas(edg1, size10);
 

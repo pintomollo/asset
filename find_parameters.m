@@ -4,7 +4,6 @@ function opts = find_parameters(mymovie, trackings, opts)
 
   p0 = gather_parameters(params, opts);
   nparams = length(p0);
-  opts.segmentation_nparams = nparams;
   log_name = ['ML-' num2str(opts.uuid) '-' mymovie.experiment];
 
   dp = 1e-25;
@@ -61,12 +60,12 @@ function opts = find_parameters(mymovie, trackings, opts)
   %% forth through the ML algorithms
   function err_all = error_function(p_all)
 
-    [nparams, nevals] = size(p_all);
+    [curr_nparams, nevals] = size(p_all);
     flip = false;
-    if (nevals == opts.segmentation_nparams)
+    if (nevals == nparams)
       flip = true;
       p_all = p_all.';
-      nevals = nparams; 
+      nevals = curr_nparams; 
     end
     err_all = NaN(1, nevals);
 
@@ -92,7 +91,7 @@ function opts = find_parameters(mymovie, trackings, opts)
       opts.segmentation_parameters = params;
       mymovie = segment_movie(mymovie, opts);
 
-      [mymovie, trackings] = analyse_segmentation(mymovie, trackings, opts);
+      [mymovie, trackings] = analyze_segmentation(mymovie, trackings, opts);
 
       switch opts.segmentation_type
         case 'dic'

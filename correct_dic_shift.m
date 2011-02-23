@@ -1,12 +1,20 @@
-function mymovie = correct_dic_shift(mymovie, type, params, opts)
+function mymovie = correct_dic_shift(mymovie, type, params, opts, nframe)
 
-  [imgsize, nframes] = size_data(mymovie.dic);
+  [nframes, imgsize] = size_data(mymovie.dic);
 
-  centers = zeros(2,nframes);
-  axes_length = zeros(2,nframes);
-  orientations = zeros(1,nframes);
-  eggshell = get_struct('eggshell',[1,nframes]);
-  cortex = get_struct('cortex',[1,nframes]);
+  if (isfield(mymovie, type) && isfield(mymovie.(type), 'centers'))
+    centers = mymovie.(type).centers;
+    axes_lengths = mymovie.(type).axes_length;
+    orientations = mymovie.(type).orientations;
+    eggshell = mymovie.(type).eggshell;
+    cortex = mymovie.(type).cortex;
+  else
+    centers = zeros(2,nframes);
+    axes_lengths = zeros(2,nframes);
+    orientations = zeros(1,nframes);
+    eggshell = get_struct('eggshell',[1,nframes]);
+    cortex = get_struct('cortex',[1,nframes]);
+  end
 
   %mymovie.(type) = mymovie.dic;
   if (isfield(mymovie.dic, 'inverted') & ~isempty(mymovie.dic.inverted))
@@ -15,9 +23,20 @@ function mymovie = correct_dic_shift(mymovie, type, params, opts)
     mymovie.dic.inverted = false;
     mymovie.(type).inverted = false;
   end
-  mymovie.(type).cytokinesis = mymovie.dic.cytokinesis;
 
-  for nimg=1:nframes
+  if (isfield(mymovie.dic, 'cytokinesis'))
+    mymovie.(type).cytokinesis = mymovie.dic.cytokinesis;
+  end
+
+  if (nargin == 5)
+    frames = nframe;
+  else
+    frames = 1:nframes;
+  end
+
+  for i=1:length(frames)
+    nimg = frames(i);
+
     img = load_data(mymovie.dic,nimg);
 
     egg = mymovie.dic.eggshell(nimg).carth;

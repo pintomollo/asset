@@ -11,6 +11,8 @@ function mymovie = perform_application(mymovie, opts)
           mymovie = track_ruffles(mymovie, opts);
         case 'centrosomes'
           mymovie = track_centrosomes(mymovie, opts);
+        case 'quantification'
+          mymovie = quantify_signal(mymovie, opts);
         otherwise
           warning(['Application ' opts.application{i} ' not implemented.']);
       end

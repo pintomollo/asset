@@ -1,9 +1,5 @@
 function vals = bilinear(img, x, y, circular)
 
-  if (exist('bilinear_mex') == 3)
-    vals = bilinear_mex(img, x, y, circular);
-  end
-
   if (nargin < 3)
     y = x(2,:);
     x = x(1,:);
@@ -22,6 +18,12 @@ function vals = bilinear(img, x, y, circular)
 
   if (length(circular) == 1)
     circular = [circular circular];
+  end
+
+  if (exist('bilinear_mex') == 3)
+    vals = bilinear_mex(img, x, y, circular);
+
+    return;
   end
 
   vals = NaN(size(x));

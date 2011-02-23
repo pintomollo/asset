@@ -1,7 +1,7 @@
 function animate_movie(mymovie, trackings, fname, opts, displ_type)
 
   if (nargin < 4)
-    opts = get_struct('RECOS',1);
+    opts = get_struct('ASSET',1);
   end
   
   type = opts.segmentation_type;
@@ -10,13 +10,13 @@ function animate_movie(mymovie, trackings, fname, opts, displ_type)
     displ_type = type;
   end
 
-  [imgsize, nframes] = size_data(mymovie.(displ_type));
+  [nframes,imgsize] = size_data(mymovie.(displ_type));
   hline = [];
   hpts = [];
   hcentr = [];
 
   for i=1:nframes
-    img = load_data(mymovie.(displ_type), i);
+    img = imnorm(load_data(mymovie.(displ_type), i));
     egg = mymovie.(type).eggshell(i).carth;
     cortex = mymovie.(type).cortex(i).carth;
     if (~isempty(trackings))
@@ -37,6 +37,8 @@ function animate_movie(mymovie, trackings, fname, opts, displ_type)
 
     if (opts.crop_export)
       [s,c,o] = deal([388 591], mymovie.(type).centers(:,i), mymovie.(type).orientations(1,i));
+
+      o = o;
       img = realign(img, s, c, o);
       egg = realign(egg, s, c, o);
       cortex = realign(cortex, s, c, o);
@@ -64,9 +66,9 @@ function animate_movie(mymovie, trackings, fname, opts, displ_type)
         hline = [hline h];
       end
 
-      h = myplot(egg, 'Color', [0 1 0], 'LineWidth', 2);
+      h = myplot(egg, 'Color', [0 1 0], 'LineWidth', 1);
       hline = [hline h];
-      h = myplot(cortex, 'Color', [1 0.5 0], 'LineWidth', 2);
+      h = myplot(cortex, 'Color', [1 0.5 0], 'LineWidth', 1);
       hline = [hline h];
 
       if (~isempty(pts))

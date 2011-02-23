@@ -14,7 +14,7 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
     end
 
   elseif (isfield(mymovie, 'cortex') && isfield(mymovie, 'eggshell'))
-    [imgsize nframes] = size_data(mymovie.eggshell);
+    [nframes, imgsize] = size_data(mymovie.eggshell);
 
     centers = zeros(2,nframes);
     axes_length = zeros(2,nframes);
@@ -31,7 +31,7 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
   end
 
   img = [];
-  if (length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'eggshell', 8)))
+  if (~isempty(mymovie.eggshell) & ( length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'eggshell', 8))))
 
     update(1, nimg) = true;
 
@@ -113,7 +113,7 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
   end
 
   
-  if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'cortex', 6)))
+  if (~isempty(mymovie.cortex) & (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'cortex', 6))))
 
     update(2, nimg) = true;
     img = load_data(mymovie.cortex,nimg);

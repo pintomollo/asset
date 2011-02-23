@@ -1,212 +1,322 @@
 function mystruct = get_struct(type, nstruct)
+% GET_STRUCT retrieve custom data structures.
+%   This function is designed as a centralization for the different 
+%   complex structures used throughout the program so that they can
+%   be edited consistently.
+%
+%   MYSTRUCT = GET_STRUCT(TYPE, SIZE) returns a matrix of size SIZE 
+%   of the custom data structure of type TYPE. SIZE can be multi-
+%   dimensional.
+%
+%   MYSTRUCT = GET_STRUCT(TYPE) returns one structure (SIZE = 1).
+%
+% Gonczy & Naef labs, EPFL
+% Simon Blanchoud
+% 09.12.2010
 
+  % Set the default size
   if (nargin == 1)
-    nstruct = 0;
+    nstruct = 1;
   end
 
+  % Switch between all the different types
   switch type
-    case 'smoothness_parameters'
-      mystruct = struct('nhood', 0, ...
-                        'init', [], ...
-                        'final', [], ...
-                        'alpha', 0, ...
-                        'beta', 0, ...
-                        'gamma', 0);
 
-    case 'scoring_parameters'
-      mystruct = struct('filt', [], ...
-                        'path', [], ...
-                        'alpha', 0, ...
-                        'beta', 0, ...
-                        'gamma', 0, ...
-                        'delta', 0, ...
-                        'epsilon', 0, ...
-                        'zeta', 0, ...
-                        'eta', 0);
+    % The general structure that contains all the information required for
+    % ASSET to analyze the data. Usually this structure is called 'opts' throughout the code.
+    case 'ASSET'
+      mystruct = struct('analyzed_fields', {{'carth'}}, ... % Fields in mymovie used for the analyis
+                        'application', {{''}}, ...          % List of the applications (other than segmentation) that will be performed
+                        'auto_save', true, ...              % Automatically save the intermediate results
+                        'ccd_pixel_size', 6.45, ...         % X-Y size of the pixels in µm (of the CCD camera, without magnification)
+                        'compression', 'LZW', ...           % Compression used for the data files (prompted is empty)
+                        'compute_probabilities', false, ... % Compute the posterior probability
+                        'config_file', '', ...              % Name of the configuration file that will be loaded 
+                        'crop_export', false, ...           % Crop the images when exporting the results
+                        'crop_size', 2.2, ...               % Crop size is the axes_length*crop_size
+                        'debug', false, ...                 % Debug mode ON
+                        'do_ml', 'none', ...                % Machine learning (ML) is performed
+                        'dp_method', 'double', ...          % Dynamic programming method used (see dynamic_programming.m)
+                        'export_movie', false, ...          % Export the results of the analysis
+                        'follow_periphery', true, ...       % Follow only the periphery of the trackings (no invaginations)
+                        'force_circularity', true, ...      % Enforces that the last row of the DP conincides with the first one
+                        'magnification', 63, ...            % Magnification of the objective of the microscope
+                        'max_export', 1, ...                % Number of exported frames (>1 is the absolute number of frames, <=1 is the fraction)
+                        'max_frames', 1, ...                % Number of analyzed frames (value as for max_export)
+                        'measure_performances', false, ...  % Measures the error of the segmentation with respect to the manual trackings
+                        'ml_type', 'cortex', ...            % Field on which ML is performed (use cell array for more than one)
+                        'nbins', 36, ...                    % Number of bins used to measure the performance
+                        'normalize', true, ...              % Normalize the results of the analysis onto the reference embryo
+                        'overwrite', true, ...              % Overwrite the previous data by saving in the same MAT-file
+                        'parse_export', 'normal', ...       % How export is performed (normal or random)
+                        'parse_frames', 'normal', ...       % Order of the frames for the segmentation (normal or random)
+                        'pixel_size', 0, ...                % X-Y size of the pixels in µm (computed as ccd_pixel_size / magnification)
+                        'quantification', get_struct('quantification'), ... % Parameters of the quantification
+                        'recompute', false, ...             % Recompute previously computed features (mainly segmentaiton and trackings)
+                        'segment', true, ...                % Perform the segmentation (useful when combine with recompute)
+                        'segmentation_parameters', get_struct('segmentations'), ... % Parameters of the segmentation
+                        'segmentation_type', 'dic', ...     % Type of segmentation (dic, markers, all)
+                        'spot_tracking', get_struct('spot_tracking'), ... % Parameters of the spot tracking algorithm
+                        'temperatures', get_struct('temperatures'), ... % Parameters of the posterior decoding
+                        'trackings', '', ...                % List of tracking files
+                        'uuid', 0 , ...                     % Universal Unique IDentifier (used in ML to identify processes) 
+                        'verbosity', 2, ...                 % Verbosity level (0 null, 1 text only, 2 gui, 3 full with plots)
+                        'warp_type', 'radial');             % Warp type used to normalize the embryo (see carth2normalized.m)
 
+      % Compute the pixel size based on the default values. This needs to be re-done
+      % in case one value is changed.
+      mystruct = set_pixel_size(mystruct);
+
+    % Structure used to parse the original files (reused to create the fields of mymovie)
+    case 'channel'
+      mystruct = struct('color', ones(1,3), ...             % Color of the channel (RGB)
+                        'compression', 'LZW', ...           % Compression used for the temporary file
+                        'detrend', false, ...               % Detrend the image (see imdetrend.m)
+                        'file', '', ...                     % Path to the original file
+                        'fname', '', ...                    % Name of the corresponding temporary file
+                        'hot_pixels', true, ...             % Remove the hot pixels in the image (see imhotpixels.m)
+                        'max', -Inf, ...                    % Original maximum value used for rescaling
+                        'min', Inf, ...                     % Original minimum value used for rescaling
+                        'type', 'dic');                     % Type of channel (dic, eggshell, cortex, data)
+
+    % Structure used to store the parameters of the correction function (see correct_dic_shift.m)
+    % The correction function is : F(i) = a + b*I(i+s) + c*R(I)
     case 'conversion'
-      mystruct = struct('bkg', 0.0424, ...
-                        'factor', -0.0440, ...
-                        'range', -0.0176, ...
-                        'shift', 5.1836);
+      mystruct = struct('bkg', 0.0424, ...                  % Value of the background shift ('a')
+                        'factor', -0.0440, ...              % Value of the intensity factor ('b')
+                        'range', -0.0176, ...               % Value of the range factor ('c')
+                        'shift', 5.1836);                   % Value of the shift between the intensity and the correction ('s')
 
+    % Parameters used to compute the data part of the DP scoring function (see dynamic_programming.m)
+    case 'data_parameters'
+      mystruct = struct('filt', [], ...                     % Filter applied to the image
+                        'path', [], ...                     % Path of interest (usually the eggshell)
+                        'alpha', 0, ...                     % Parameters that can be used in the scoring function (7 provided)
+                        'beta', 0, ...                      %  |
+                        'gamma', 0, ...                     %  |
+                        'delta', 0, ...                     %  |
+                        'epsilon', 0, ...                   %  |
+                        'zeta', 0, ...                      %  |
+                        'eta', 0);                          %  |
+
+    % Structure used to store the results of the segmentations (both eggshell and cortex) (see segment_movie.m)
+    case {'eggshell', 'cortex'}
+      mystruct = struct('carth', [], ...                    % Nx2 matrix of points representing the contour in Cartesian coordinates
+                        'estim', [], ...                    % Initial segmentation (without DP, as used in the paper)
+                        'temperatures', [], ...             % Temperatures found to compute the posterior probability
+                        'thickness', 0);                    % Thickness of the eggshell in ER
+    
+    % Structure used to handle tracking files (see import_trackings.m)
+    case 'file'
+      mystruct = struct('fname','', ...                     % Path of the original .shapes file (see load_shapes.m)
+                        'groups',{{}}, ...                  % Name of the shape groups found in the file (see load_shapes.m)
+                        'shapes',[]);                       % Shapes extracted from the file
+
+    % Parameters used to perform machine learning (see find_parameters.m)
+    case 'ml_params'                              
+      mystruct = struct('ml_type', '', ...                  % Type of segmentation which is optimized (eggshell, cortex)
+                        'params', [], ...                   % Current value of the optimized parameters
+                        'score', Inf);                      % Score of the current iteration
+
+    % Global structure of a recording/analysis (see ASSET.m)
+    case 'mymovie'
+      mystruct = struct('correction', [], ...               % Correction between different channels
+                        'cortex', [], ...                   % Cortex channel (fluorescence)
+                        'data', [], ...                     % Data channel (generic container)
+                        'dic', [], ...                      % DIC channel of the experiment & results of the segmentation
+                        'eggshell', [], ...                 % Eggshell channel (fluorescence)
+                        'experiment', '', ...               % Name of the experiment
+                        'markers', []);                     % Result of the fluorescent segmentation
+
+    % Parameters used for the quantification of the signal
+    case 'quantification'
+      mystruct = struct('channel', 'data', ...              % Quantified channel
+                        'field', 'cortex', ...              % Quantified field in the previously defined channel
+                        'window_shape', 'gaussian', ...     % Shape of the quantification window, can either be a filter or a 'fspecial' type
+                        'window_params', 1, ...             % Parameters required to compute the filter
+                        'window_size', 4);                  % Size of (square) the window
+
+    % Parameters of the reference embryo (see carth2normalized.m)
+    case 'reference'
+      mystruct = struct('axes_length', [25; 15], ...        % Major and minor radii of the ellipse
+                        'centers', [0; 0], ...              % Position of the ellipse
+                        'orientations', 0);                 % Tilt (in radians) of the ellipse
+
+    % Structure used to store the detected ruffles (see track_ruffles.m)
+    case 'ruffles'
+      mystruct = struct('bounds', [], ...                   % Bounds of the aperture of the invagination
+                        'carth', [], ...                    % Cartesian position of the invaginations (Nx2)
+                        'cluster', [], ...                  % Time cluster containing the invaginations
+                        'properties', []);                  % Various properties computed on each invagination
+
+    % Parameters used for a segmentation (eggshell and cortex) (see 'segmentations')
     case 'segmentation' 
+      % Retrieve the previously defined structures for the smoothness and data terms
+      params = get_struct('smoothness_parameters');
+      weights = get_struct('data_parameters');
 
-      params = get_struct('smoothness_parameters', 1);
-      weights = get_struct('scoring_parameters', 1);
+      mystruct = struct('cortex_params', params, ...        % Smoothness for the cortex
+                        'cortex_weights', weights, ...      % Data for the cortex
+                        'eggshell_params', params, ...      % Smoothness for the eggshell
+                        'eggshell_weights', weights, ...    % Data for the eggshell
+                        'estimate', [], ...                 % Field to store parameters for the initial elliptical projection
+                        'noise', [], ...                    % Field to store parameters to handle noise (filters usually)
+                        'safety', 1.2, ...                  % Additional portion projected for safety (see carthesian_coordinate.m)
+                        'scoring_func', {{}});              % Function handle for the scoring functions (first:eggshell, second:cortex)
 
-      mystruct = struct('safety', 1.2, ...
-                        'eggshell_params', params, ...
-                        'eggshell_weights', weights, ...
-                        'cortex_params', params, ...
-                        'cortex_weights', weights, ...
-                        'noise', [], ...
-                        'drift', [], ...
-                        'scoring_func', {{@weight_egg; @weight_cortex}});
+    % Structure containing all the information for all the segmentations (including parameter values)
+    % Start by looking into segment_movie.m and dynamic_programming.m
+    case 'segmentations'
+      % Get the basic structure
+      segment = get_struct('segmentation');
 
-      mystruct = struct('dic', mystruct, ...
-                        'markers', mystruct, ...
-                        'correction', get_struct('conversion', 1));
+      % Construct the global structure to store all the different segmentations
+      mystruct = get_struct('mymovie');
+
+      % Set the segmentation to the used channels
+      mystruct.dic = segment;                               % Parameters to segment DIC images
+      mystruct.markers = segment;                           % Parameters to segment fluorescent images
+      mystruct.correction = get_struct('conversion');       % Parameters to convert from DIC to fluorescence
 
       %%### DIC PARAMETERS ###%%
       
-      % Good values for the eggshell
-      mystruct.dic.eggshell_params.nhood   = 5;
-      mystruct.dic.eggshell_params.alpha   = 0.65; % Prop. of smoothness VS data
-      mystruct.dic.eggshell_params.beta    = 0.55; % Prop. of path VS intensity
-      mystruct.dic.eggshell_params.gamma   = 0.5;  % Prop. of dx VS d2x
+      % Best values for the eggshell
+      % This first section of parameters is common for all the functions
+      mystruct.dic.eggshell_params.nhood   = 5;      % Neighborhood size
+      mystruct.dic.eggshell_params.alpha   = 0.8873; % Prop. of smoothness VS data
+      mystruct.dic.eggshell_params.beta    = 0.1813; % Prop. of path VS intensity
+      mystruct.dic.eggshell_params.gamma   = 0.9975; % Prop. of dx VS d2x
 
-      mystruct.dic.eggshell_weights.alpha  = 0.25;
-      mystruct.dic.eggshell_weights.beta   = 0.02;
+      % This part is function-specific
+      mystruct.dic.eggshell_weights.alpha  = 0.2490; % Prop. of edges VS outside
+      mystruct.dic.eggshell_weights.beta   = 0.0240; % Rescaling factor for the edges
+      mystruct.dic.eggshell_weights.eta    = 0.4953; % Position of the eggshell between outside & inside
 
-      mystruct.dic.eggshell_weights.eta    = 0.5; % Position of the eggshell between outside & inside
-
-      % Good values for the cortex
+      % Best values for the cortex
+      % Same as for the DIC eggshell
       mystruct.dic.cortex_params.nhood    = 5;
-      mystruct.dic.cortex_params.alpha    = 0.15;
-      mystruct.dic.cortex_params.beta     = 0.55;
-      mystruct.dic.cortex_params.gamma    = 0.25;
+      mystruct.dic.cortex_params.alpha    = 0.7773;
+      mystruct.dic.cortex_params.beta     = 0.0769;
+      mystruct.dic.cortex_params.gamma    = 0.3467;
 
-      mystruct.dic.cortex_weights.alpha   = 0.15;
-      mystruct.dic.cortex_weights.beta    = 0.65;
-      mystruct.dic.cortex_weights.gamma   = 0.5;
-      mystruct.dic.cortex_weights.delta   = 0.45;
-      mystruct.dic.cortex_weights.epsilon = 0.75;
+      mystruct.dic.cortex_weights.alpha   = 0.2090; % Prop. of edges VS rest
+      mystruct.dic.cortex_weights.beta    = 0.5326; % Prop. of outside VS intensity
+      mystruct.dic.cortex_weights.gamma   = 0.6979; % Rescaling factor for the edges
+      mystruct.dic.cortex_weights.delta   = 0.9854; % Prop. of edges VS gap penalty
+      mystruct.dic.cortex_weights.epsilon = 0.8751; % Prop. of cortex VS egg intensity
+
+      mystruct.dic.scoring_func = {@weight_egg, ... % Scoring functions used to
+                                   @weight_cortex}; % segment DIC images
 
       %%### MARKERS PARAMETERS ###%%
 
+      % Best values for the eggshell
+      % Same as for the DIC eggshell
       mystruct.markers.eggshell_params.nhood   = 5;
-      mystruct.markers.eggshell_params.alpha   = 0.35;
-      mystruct.markers.eggshell_params.beta    = 0.35;
-      mystruct.markers.eggshell_params.gamma   = 0.75;
+      mystruct.markers.eggshell_params.alpha   = 0.9243;
+      mystruct.markers.eggshell_params.beta    = 0.1458;
+      mystruct.markers.eggshell_params.gamma   = 0.8584;
 
-      mystruct.markers.eggshell_weights.filt   = ...
-          ['filt = ones(1,2*round(max(imgsize) / 100) + 1);' ...
+      % The actual value of this parameter depends on the pixel size which is not 
+      % yet known, consequently it will be computed by "set_pixel_size". 
+      % For more information on defining parameters proportional
+      % to the size of the pixels: help set_pixel_size.
+      mystruct.markers.eggshell_weights.filt   = ...    % local "Edge-detection" filter
+          ['filt = ones(1,2*ceil(1.5 / pixel_size) + 1);' ...
           'filt(1,1:floor(length(filt) / 2)) = -0.5;' ...
           'filt / sum(abs(filt));'];
-      mystruct.markers.eggshell_weights.alpha  = 0.25;
+      mystruct.markers.eggshell_weights.alpha  = 0.0018;% Prop. of intensity VS filter
 
+      % Best values for the cortex
+      % Same as for the DIC eggshell
       mystruct.markers.cortex_params.nhood  = 9;
-      mystruct.markers.cortex_params.alpha  = 0.225;
-      mystruct.markers.cortex_params.beta   = 0.35;
-      mystruct.markers.cortex_params.gamma  = 0.95;
+      mystruct.markers.cortex_params.alpha  = 0.3336;
+      mystruct.markers.cortex_params.beta   = 0.2941;
+      mystruct.markers.cortex_params.gamma  = 0.6278;
 
-      mystruct.markers.cortex_weights.alpha = 0.475;
-      mystruct.markers.cortex_weights.beta  = 0.045;
+      mystruct.markers.cortex_weights.alpha = 0.5228;   % Prop. of intensity VS outside
+      mystruct.markers.cortex_weights.beta  = 1e-8;     % Threshold for outside
 
-      mystruct.markers.scoring_func = {@intens_filt;...
+      mystruct.markers.scoring_func = {@intens_filt,... % Segmentation functions
                                        @intens_sum};
 
-      mystruct.markers.shrink = 'strel(''disk'', round(max(imgsize) / 75), 0);';
-      mystruct.markers.noise  = struct('gaussian', 'max(imgsize) / 1000;', ...
-                                         'median', [5 5]);
+      % General filters used in the segmentation which should be proportional to the 
+      % size of the images. For more information on defining parameters proportional
+      % to the size of the pixels: help set_pixel_size.
+      mystruct.markers.shrink = 'strel(''disk'', ceil(2 / pixel_size), 0);';
+      mystruct.markers.noise  = struct('gaussian', '0.15 / pixel_size;', ...
+                                         'median', 'ceil(0.5 / pixel_size) * ones(1,2);');
 
-    case 'mymovie'
-      mystruct = struct('experiment', '', ...
-                        'dic', [], ...
-                        'cortex', [], ...
-                        'eggshell', [], ...
-                        'data', [], ...
-                        'markers', []);
-    case {'eggshell', 'cortex'}
-      mystruct = struct('thickness', 0, ...
-                        'carth', [], ...
-                        'temperatures', [], ...
-                        'estim', []);
-    case 'temperatures'
-      mystruct = struct('aim_transitions', 1/6, ...
-                        'aim_emissions', 1/50, ...
-                        'thresh', 1e-3, ...
-                        'step_thresh', 1e-5);
-    case 'trackings'
-      mystruct = struct('dic', get_struct('tracking', 1), ...
-                        'markers', get_struct('tracking', 1));
-    case 'tracking'
-      mystruct = struct('mean',[], ...
-                        'reference', get_struct('reference'), ...
-                        'elliptic', [], ...
-                        'name','', ...
-                        'errors',[], ...
-                        'expr','', ...
-                        'child',[], ...
-                        'files',[]);
-    case 'file'
-      mystruct = struct('fname','', ...
-                        'splines',[], ...
-                        'shapes',[], ...
-                        'groups',{{}});
-    case 'channel'
-      mystruct = struct('file','', ...
-                        'color',zeros(1,3), ...
-                        'type','data', ...
-                        'detrend',false, ...
-                        'hot_pixels',false, ...
-                        'fname','', ...
-                        'min', Inf, ...
-                        'max', -Inf, ...
-                        'metadata', '');
-    case 'warper'
-      mystruct = struct('original',get_struct('reference',1),...
-                        'reference', get_struct('reference',1), ...
-                        'warp', []);
+    % Structure used to store the smoothness parameters (see 'segmentations')
+    case 'smoothness_parameters'
+      mystruct = struct('final', [], ...                % Final position used for backtracking DP
+                        'init', [], ...                 % Initial position for DP (see dynamic_programming.m)
+                        'nhood', 0, ...                 % Neighborhood explored during dynamic programming (nhood/2 pixels on each side)
+                        'alpha', 0, ...                 % Weights of the different smoothness terms
+                        'beta', 0, ...                  %  |
+                        'gamma', 0);                    %  |
+
+    % Structure of MATLAB's splines, useful to represent empty splines (help spline)
     case 'spline'
-      mystruct = struct('form', '', ...
-                        'breaks', [], ...
+      mystruct = struct('breaks', [], ...
                         'coefs', [], ...
-                        'pieces', 0, ...
+                        'dim', 0, ...
+                        'form', '', ...
                         'order', 0, ...
-                        'dim', 0);
-    case 'RECOS'
-      mystruct = struct('auto_save', true, ...
-                        'export_movie', false, ...
-                        'crop_export', false, ...
-                        'crop_size', 2.2, ...
-                        'debug', false, ...
-                        'compression', 'LZW', ...
-                        'max_export', 1, ...
-                        'parse_export', 'normal', ...
-                        'segmentation_parameters', get_struct('segmentation', 1), ...
-                        'segmentation_type', 'dic', ...
-                        'segmentation_nparams', 0, ...
-                        'compute_probabilities', false, ...
-                        'parse_frames', 'normal', ...
-                        'recompute', false, ...
-                        'max_frames', 1, ...
-                        'normalize', true, ...
-                        'measure_performances', false, ...
-                        'force_circularity', true, ...
-                        'dp_method', 'double', ...
-                        'trackings', '', ...
-                        'nbins', 36, ...
-                        'uuid', 0 , ...
-                        'temperatures', get_struct('temperatures',1), ...
-                        'follow_periphery', true, ...
-                        'analysed_fields', {{'carth'}}, ...
-                        'application', {{''}}, ...
-                        'warp_type', 'radial', ...
-                        'verbosity', 1, ...
-                        'segment', true, ...
-                        'config_file', '', ...
-                        'ml_type', 'cortex', ...
-                        'do_ml', 'none');
-    case 'reference'
-      mystruct = struct('center', [0;0], ...
-                        'axes_length', [25;15], ...
-                        'orientation', 0);
-    case 'ml_params'
-      mystruct = struct('score', Inf, ...
-                        'ml_type', '', ...
-                        'params', []);
-    case 'ruffles'
-      mystruct = struct('carth', [], ...
-                        'cluster', [], ...
-                        'bounds', [], ...
-                        'properties', []);
+                        'pieces', 0);
 
+    % Structure containing the different parameters required for tracking spots
+    case 'spot_tracking'
+      mystruct = struct('fusion_thresh', 1, ...         % Minimal distance in um to another spot (estimation) before fusion
+                        'frame_displacement', 2, ...    % Maximal displacement of a spot (in um) between two frames 
+                        'frame_window', 3, ...          % Considered number of frames for the gap closing algorithm (see track_spots.m)
+                        'gap_function', @relative_distance, ... % Function used to measure the gap-closing weight
+                        'joining_function', @merging_distance, ... % Same but for the joinging weight
+                        'splitting_function', @merging_distance, ... % For the splitting weight
+                        'linking_function', @mutual_distance, ... % And for the frame-to-frame linking 
+                        'max_size', 3, ...              % Maximal size (in um) of the spots
+                        'noise_thresh', 3);             % Threshold used to remove the nosie (see imatrou.m)
+
+    % Structure used to store the parameters required to compute the temperature of the posterior decoding (see find_temperature.m)
+    case 'temperatures'
+      mystruct = struct('aim_transitions', 1/6, ...     % The temperature of the transitions is based on the mean translation 
+                        'aim_emissions', 1/50, ...      % The one for the emission is based on the average width of the posterior path
+                        'step_thresh', 1e-5, ...        % Stop criterion in case two consecutive dichotomies have the same value (stalled)
+                        'thresh', 1e-3);                % Stop criterion for the dichotomy (diff. to the aims)
+
+    % Structure containing the data from the manual trackings (see import_trackings.m)
+    case 'tracking'
+      mystruct = struct('average',[], ...               % Average trackings based on the different children
+                        'child',[], ...                 % Children structures containing either groups of tracking or tracking files
+                        'errors',[], ...                % Compute error to the average tracking
+                        'expr','', ...                  % Regular expression used to find the children files for import
+                        'name','', ...                  % Name of the manual trackings extracted from the filenames
+                        'reference', get_struct('reference'));  % Reference embryo used to project the different trackings
+
+    % General structure to store all the manual trackings
+    case 'trackings'
+      % Get the substructure to store manual trackings
+      tracking = get_struct('tracking');
+      
+      % Get the structure to store the various channels of a movie
+      mystruct = get_struct('mymovie');
+
+      % Set the trackings to the used channels
+      mystruct.dic = tracking;
+      mystruct.markers = tracking;
+                        
+    % The structure containing the information to convert into the absolute coordinate system
+    case 'warper'
+      mystruct = struct('original',get_struct('reference'),...
+                        'reference', get_struct('reference'), ...
+                        'warp', []);
+
+    % If the required type of structure has not been implemented, return an empty one
     otherwise
       mystruct = struct();
   end
 
+  % Repeat the structure to fit the size (nstruct can be multi-dimensional)
   mystruct = repmat(mystruct,nstruct);
 
   return;

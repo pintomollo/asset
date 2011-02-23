@@ -15,7 +15,7 @@ function [shapes, groups] = load_shapes(fname)
     fname = [pwd fname];
     fid = fopen(fname,'rt');
     if (fid<0)
-      shapes = [];
+      shapes = {};
 
       return;
     end
@@ -80,7 +80,7 @@ function [shapes, groups] = load_shapes(fname)
           y = y(good_indx);
           [x, y] = poly2cw(x, y);
 
-          shapes(group_indx,slice_indx + frame_shift).path = [x y];
+          shapes{group_indx,slice_indx + frame_shift} = [x y];
         else
           if (strncmp(line,'x=',2))
             x = [x; str2num(line(3:end))];
@@ -100,7 +100,7 @@ function [shapes, groups] = load_shapes(fname)
     y = y(good_indx);
     [x, y] = poly2cw(x, y);
 
-    shapes(group_indx,slice_indx + frame_shift).path = [x y];
+    shapes{group_indx,slice_indx + frame_shift} = [x y];
   end
 
   return;

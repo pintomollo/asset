@@ -24,7 +24,7 @@ function [img, p] = imdetrend(orig_img, npts)
   bkg = p(1) * X.^2 + p(2) * Y.*X + Y.^2 * p(3) + X * p(4) + Y * p(5) + p(6);
 
   img = imsubtract(orig_img, bkg);
-  img = imnorm(img);
+  %img = imnorm(img);
 
   return;
 end

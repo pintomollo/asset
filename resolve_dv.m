@@ -7,7 +7,7 @@ function mymovie = resolve_dv(mymovie)
 
   %mymovie.data.dv_inverted = false;
   if (~isfield(mymovie.data.centrosomes, 'warped'))
-    mymovie = carth2RECOS(mymovie);
+    mymovie = carth2normalized(mymovie);
   end
 
   for i=1:nframes
@@ -36,7 +36,7 @@ function mymovie = resolve_dv(mymovie)
   if (above < 0.5)
     disp('D-V were inverted !');
     mymovie.data.dv_inverted = ~mymovie.data.dv_inverted;
-    mymovie = carth2RECOS(mymovie);
+    mymovie = carth2normalized(mymovie);
   %else
   %  mymovie.data.dv_inverted = false;
   end

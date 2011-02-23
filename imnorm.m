@@ -16,7 +16,7 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode)
     elseif (~isempty(mode) & mode(1) == 'c')
       minval = repmat(min(img,[],1), h, 1);
     else
-      minval = min(min(img));
+      minval = min(img(:));
     end
   end
   if (isempty(maxval))
@@ -25,7 +25,7 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode)
     elseif (~isempty(mode) & mode(1) == 'c')
       maxval = repmat(max(img,[],1), h, 1);
     else
-      maxval = max(max(img));
+      maxval = max(img(:));
     end
   end
   

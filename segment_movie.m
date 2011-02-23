@@ -3,18 +3,18 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   updated = false;
 
   if (nargin < 2)
-    opts = get_struct('RECOS', 1);
+    opts = get_struct('ASSET', 1);
   end
       
   switch (opts.segmentation_type)
     case {'dic', 'all'}
-      [imgsize nframes] = size_data(mymovie.dic);
+      [nframes imgsize ] = size_data(mymovie.dic);
     case 'markers'
       switch (opts.ml_type)
         case {'eggshell', 'all'}
-          [imgsize nframes] = size_data(mymovie.eggshell);
+          [nframes imgsize ] = size_data(mymovie.eggshell);
         case 'cortex'
-          [imgsize nframes] = size_data(mymovie.cortex);
+          [nframes imgsize ] = size_data(mymovie.cortex);
       end
     otherwise
       error 'None of the expected field are present in ''mymovie''';
@@ -37,7 +37,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   end
 
   if (opts.verbosity > 0)
-    hwait = waitbar(0,'Segmenting Frames','Name','RECOS');
+    hwait = waitbar(0,'Segmenting Frames','Name','ASSET');
   end
 
   switch (opts.parse_frames)
@@ -71,6 +71,10 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     end
 
     if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
+      if (~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
+        mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts, nframe);
+      end
+
       mymovie = dp_markers(mymovie, opts.segmentation_parameters.markers, nframe, opts);
       updated = updated || any(mymovie.markers.update(:));
     end

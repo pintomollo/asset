@@ -171,10 +171,10 @@ function update_display(hfig, indx)
   if (ngroups > 0)
     set(handles.uiexpr, 'String', trackings.child(indx).expr);
 
-    nfiles = length(trackings.child(indx).files);
+    nfiles = length(trackings.child(indx).child);
     files = '';
     for i=1:nfiles
-      files = [files trackings.child(indx).files(i).fname];
+      files = [files trackings.child(indx).child(i).fname];
 
       if (i<nfiles)
         files = [files '|'];
@@ -272,7 +272,7 @@ function add_group(hObject, eventdata, handles)
 
       if (~found)
         if (length(trackings.child) == 0)
-          trackings.child = get_struct('tracking');
+          trackings.child = get_struct('tracking', 0);
         end
         trackings.child(end+1).name = name;
         trackings.child(end).expr = [dirpath expr];
@@ -345,17 +345,17 @@ function add_file(hObject, eventdata, handles)
 
   for f=1:length(fname)
     found = false;
-    for k=1:length(trackings.child(indx).files)
-      if (strcmp([dirpath fname{f}], trackings.child(indx).files(k).fname))
+    for k=1:length(trackings.child(indx).child)
+      if (strcmp([dirpath fname{f}], trackings.child(indx).child(k).fname))
         found = true;
         break;
       end
     end
     if (~found)
-      if (length(trackings.child(indx).files) == 0)
-        trackings.child(indx).files = get_struct('file');
+      if (length(trackings.child(indx).child) == 0)
+        trackings.child(indx).child = get_struct('file', 0);
       end
-      trackings.child(indx).files(end+1).fname = [dirpath fname{f}];
+      trackings.child(indx).child(end+1).fname = [dirpath fname{f}];
     end
   end
 
@@ -375,8 +375,8 @@ function delete_file(hObject, eventdata, handles)
   gindx = get(handles.uigroups,'Value');
   findx = get(handles.uifiles,'Value');
 
-  if (gindx > 0 && findx > 0 && findx <= length(trackings.child(gindx).files))
-    trackings.child(gindx).files(findx) = [];
+  if (gindx > 0 && findx > 0 && findx <= length(trackings.child(gindx).child))
+    trackings.child(gindx).child(findx) = [];
     handles.trackings = trackings;
     set(hfig, 'UserData', handles);
   end
@@ -427,17 +427,17 @@ function trackings = load_group(trackings)
     for f = 1:length(files)
       name = [dirpath files(f).name];
       found = false;
-      for k=1:length(trackings.files)
-        if (strcmp(name, trackings.files(k).fname))
+      for k=1:length(trackings.child)
+        if (strcmp(name, trackings.child(k).fname))
           found = true;
           break;
         end
       end
       if (~found)
-        if (length(trackings.files) == 0)
-          trackings.files = get_struct('file');
+        if (length(trackings.child) == 0)
+          trackings.child = get_struct('file', 0);
         end
-        trackings.files(end+1).fname = name;
+        trackings.child(end+1).fname = name;
       end
     end
   end

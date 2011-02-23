@@ -15,8 +15,8 @@ function analyse_ruffles(groups)
   for i=1:length(groups)
     ls_dir = dir(groups{i});
 
-    res(i) = struct('pos',[],'mov',[],'depth',[],'time',[],'num',[],'area',[], 'duration', [], 'names', {{}});
-    dic(i) = struct('pos',[],'mov',[],'depth',[],'time',[],'num',[],'area',[], 'duration', [], 'names', {{}});
+    res(i) = struct('pos',[],'mov',[],'depth',[],'time',[],'num',[],'area',[], 'duration', [], 'names', {{}}, 'axes', [], 'cortex', []);
+    dic(i) = struct('pos',[],'mov',[],'depth',[],'time',[],'num',[],'area',[], 'duration', [], 'names', {{}}, 'axes', [], 'cortex', []);
     for j=1:length(ls_dir)
       %ls_dir(j).name;
       load(ls_dir(j).name);
@@ -34,7 +34,6 @@ function analyse_ruffles(groups)
     dic(i).pos = dic(i).pos - 2*pi*(dic(i).pos > 2*pi);
   end
 
-  max_depth = 150;
   %max_area = max(max(res(1).area),max(res(2).area));
 
   oks1=(res(1).depth>0);
@@ -42,6 +41,15 @@ function analyse_ruffles(groups)
   oks3=(dic(1).depth>0);
 
   nbins = 40;
+  pix2um = 6.45 / 63;
+
+  max_depth = 150 * pix2um;
+
+  figure;boxplot(res(1).axes(:,1) * pix2um);
+  figure;boxplot(res(1).axes(:,2) * pix2um);
+  figure;boxplot(res(1).axes(:,1)./res(1).axes(:,2));
+  figure;boxplot(res(1).cortex(:,1) * pix2um^2);
+  figure;boxplot(res(1).cortex(:,2) * pix2um);
   %[bin1, bin_pos] = hist(res(1).time);
   %[bin2] = histc(res(2).time, bin_pos);
   %figure;bar(bin_pos, [bin1.' bin2]);
@@ -143,15 +151,15 @@ function analyse_ruffles(groups)
   %keyboard
   
 
-  figure;scatter(res(1).pos(range1), res(1).depth(range1), 'MarkerEdgeColor', [0.5 0.5 1]);
-  hold on;scatter(res(2).pos(range2), res(2).depth(range2), 'MarkerEdgeColor', [1 0.5 0.5]);
+  figure;scatter(res(1).pos(range1), res(1).depth(range1)*pix2um, 'MarkerEdgeColor', [0.5 0.5 1]);
+  hold on;scatter(res(2).pos(range2), res(2).depth(range2)*pix2um, 'MarkerEdgeColor', [1 0.5 0.5]);
 
-  pts1 = res(1).depth(range1);
+  pts1 = res(1).depth(range1)*pix2um;
   [junk, assign] = histc(res(1).pos(range1), bounds);
   mean1 = zeros(nbins,1);
   m = mymean(pts1, [], assign);
   mean1(junk(1:end-1)~=0) = m;
-  pts2 = res(2).depth(range2);
+  pts2 = res(2).depth(range2)*pix2um;
   [junk, assign] = histc(res(2).pos(range2), bounds);
   mean2 = zeros(nbins,1);
   m = mymean(pts2, [], assign);
@@ -163,6 +171,8 @@ function analyse_ruffles(groups)
   xlim([0 2*pi])
   set(gca, 'XTick', [0:pi/2:2*pi]);
   set(gca, 'Box', 'on')
+
+  keyboard
 
   range = event_time(2:3);
   range1 = oks1 & res(1).time >= range(1) & res(1).time < range(2);
@@ -383,6 +393,9 @@ function res = extract_results(mystruct, res, indx)
     %res.depth = [res.depth; ruffles(k).properties(:,2)];
     res.time = [res.time; ones(size(pos))*cytokinesis(k)];
     res.num = [res.num; length(pos) cytokinesis(k)];
+
+    res.axes = [res.axes; mystruct.axes_length(:,k)'];
+    res.cortex = [res.cortex; [polyarea(mystruct.cortex(k).carth(:,1), mystruct.cortex(k).carth(:,2)), sum(sqrt(sum(diff(mystruct.cortex(k).carth).^2,2))) + sum(ruffles(k).properties(:,3))]];
 
     new_links = ruffles(end-k+1).cluster(:,1);
     tmp = ones(size(new_links));

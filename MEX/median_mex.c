@@ -7,7 +7,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   int h, w, nelem, i, niter = 1, radius = 1; 
   unsigned char *tmp_img, *median_img, *tmp_ptr;
-  double *img, value;
+  double *img, value, mymin, mymax, scaling_factor;
 
   if (nrhs < 1) {
     mexErrMsgTxt("Not enough input arguments (1 is the minimum, 3 is the maximum) !");
@@ -39,13 +39,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexErrMsgTxt("Memory allocation failed !");
   }
 
+  mymax = mymin = img[0];
+  for (i = 1; i < nelem; i++) {
+    if (img[i] < mymin) {
+      mymin = img[i];
+    } else if (img[i] > mymax) {
+      mymax = img[i];
+    }
+  }
+  scaling_factor = 255 / (mymax - mymin);
+
   for (i = 0; i < nelem; i++){
     if (mxIsNaN(img[i])) {
       median_img[i] = 0;
     } else {
-      value = ceil(255*img[i]);
-      value > 255 ? 255 : value;
-      value < 0 ? 0 : value;
+      value = ceil(scaling_factor*(img[i] - mymin));
 
       median_img[i] = (unsigned char) value;
     }
@@ -65,7 +73,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   img = mxGetPr(plhs[0]);
 
   for (i=0;i < nelem; i++) {
-    img[i] = (double) ((double) median_img[i]) / 255.0;
+    img[i] = ((double) ((double) median_img[i]) / scaling_factor) + mymin;
   }
 
   mxFree(median_img);

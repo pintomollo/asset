@@ -73,11 +73,15 @@ function [mymovie] = open_movie(mymovie, expr_name)
     for i=1:nchannels
       channels(i).file = [dirpath files(i).name];
       channels(i).file = relativepath(channels(i).file);
-      [channels(i).fname, policy] = convert_movie(channels(i).file, 'Uncompressed', policy);
-      channels(i) = bfopen(channels(i));
+      %[channels(i).fname, policy] = convert_movie(channels(i).file, 'Uncompressed', policy);
+      [channels(i).fname, policy] = convert_movie(channels(i).file, 'LZW', policy);
+      %channels(i) = bfopen(channels(i));
     end
 
+    %keyboard
+
     mymovie = identify_channels(channels);
+
     mymovie = rescale_movie(mymovie, true);
     mymovie.experiment = name;
   end

@@ -7,10 +7,10 @@ function mymovie = track_ruffles(mymovie, opts)
   %  type = 'markers';
   type = opts.segmentation_type;
   if (strncmp(type, 'markers', 7))
-    [imgsize nframes] = size_data(mymovie.cortex);
+    [nframes imgsize ] = size_data(mymovie.cortex);
   else
   %  type = 'dic';
-    [imgsize nframes] = size_data(mymovie.(type));
+    [nframes imgsize ] = size_data(mymovie.(type));
   end
 
   max_thresh = 35;
@@ -146,7 +146,11 @@ function mymovie = track_ruffles(mymovie, opts)
   alt_dist = eye(max(nends, nstarts))*alt_cost;
   alt_dist(alt_dist==0) = Inf;
 
-  trans_dist = (mutual_dist.' < Inf) * min(mutual_dist(:));
+  if (isempty(mutual_dist))
+    trans_dist = (mutual_dist.' < Inf);
+  else
+    trans_dist = (mutual_dist.' < Inf) * min(mutual_dist(:));
+  end
   trans_dist(trans_dist == 0) = Inf;
 
   merge_dist = sqrt(bsxfun(@minus,ends(:,1),interm(:,1).').^2 + bsxfun(@minus,ends(:,2),interm(:,2).').^2);
