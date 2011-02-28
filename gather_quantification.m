@@ -1,9 +1,9 @@
-function [datas, cyto] = gather_quantification(mymovie, opts)
+function [datas, theta, cyto] = gather_quantification(mymovie, opts)
 
   npts = 200;
 
   nframes = size_data(mymovie.data);  
-  theta = [0:2*pi/npts:2*pi].';
+  theta = [-pi:2*pi/npts:pi].';
   theta = theta(1:end-1);
 
   datas = NaN(nframes, npts);

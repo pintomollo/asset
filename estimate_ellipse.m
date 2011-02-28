@@ -1,6 +1,6 @@
 function [center, axes_length, orientation, mask, estimation] = estimate_ellipse(img)
 
-  'Use the paramters from opts instead'
+  'estimate_ellipse.m:Use the paramters from opts instead'
 
   img = double(img);
 
@@ -24,7 +24,7 @@ function [center, axes_length, orientation, mask, estimation] = estimate_ellipse
 
   %thresh = mean(mean(img));
   thresh = graythresh(img);
-  img=(img>thresh);
+  img= (img > thresh*max(img(:)));
   %figure;imshow(img)
 
   img = bwareaopen(img,size200);

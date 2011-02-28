@@ -49,8 +49,6 @@ function new_name = get_new_name(pattern, folder)
   new_name = regexprep(pattern, '\(.+\)', indx);
   new_name = regexprep(new_name, '[\\\?]', '');
   new_name = fullfile(folder_dir, new_name);
-
-  'need to adapt for relative paths'
   new_name = relativepath(new_name);
 
   return;

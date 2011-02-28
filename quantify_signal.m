@@ -21,7 +21,7 @@ function signal = quantify_signal(imgs, positions, opts)
 
     if (opts.recompute | ~isfield(mymovie.(channel_name), 'eggshell') | isempty(mymovie.(channel_name).eggshell))
     
-      mymovie = correct_dic_shift(mymovie, channel_name, opts.segmentation_parameters.correction, opts);
+      mymovie = duplicate_segmentation(mymovie, channel_name, opts);
     end
     
     nframes = size_data(mymovie.(channel_name));
@@ -51,7 +51,7 @@ function signal = quantify_signal(imgs, positions, opts)
       img = imgs(:,:,i);
       pos = positions{i};
     else
-      img = load_data(mymovie.(channel_name), i);
+      img = double(load_data(mymovie.(channel_name), i));
       pos = mymovie.(channel_name).(field_name)(i).carth;
     end
 

@@ -60,7 +60,7 @@ function [field_values] = extract_fields(mystruct, nframe, type, fields, crop)
     try
       switch fields{2,i}
         case 'img'
-          tmp_value = load_data(mystruct.(fields{1,i}), nframe);
+          tmp_value = double(load_data(mystruct.(fields{1,i}), nframe));
           tmp_value = imnorm(imhotpixels(tmp_value));
         case 'axes'
           tmp_value = bsxfun(@plus, [zeros(1,2); [cos(orient) -sin(orient)] * axes_length(1,1); [-sin(orient) -cos(orient)] * axes_length(2,1)], center');

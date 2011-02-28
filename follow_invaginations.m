@@ -37,7 +37,7 @@ function mymovie = follow_invaginations(mymovie, parameters, opts)
       mins = bounds(:,1:2);
       maxs = bounds(:,3:4);
 
-      img = load_data(mymovie.(channel), nimg);
+      img = double(load_data(mymovie.(channel), nimg));
       if (strncmp(type, 'markers',7))
         img = gaussian_mex(img, parameters.noise.gaussian);
         img = median_mex(img, parameters.noise.median);

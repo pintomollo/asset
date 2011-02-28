@@ -12,7 +12,7 @@ function img = imhotpixels(orig_img, thresh, method)
     end
   end
 
-  pixels = orig_img(:);
+  pixels = double(orig_img(:));
   mean_value = mean(pixels);
   stddev = std(pixels);
 
@@ -27,9 +27,9 @@ function img = imhotpixels(orig_img, thresh, method)
     switch (method)
       case 'median'
         %filt_img = medfilt2(orig_img);
-        filt_img = median_mex(orig_img);
+        filt_img = median_mex(double(orig_img));
       otherwise
-        filt_img = imfilter(orig_img, fspecial(method), 'symmetric');
+        filt_img = imfilter(double(orig_img), fspecial(method), 'symmetric');
     end
 
     img(bad_pixels) = filt_img(bad_pixels);

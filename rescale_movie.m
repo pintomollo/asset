@@ -4,6 +4,8 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
   [junk, junk, realEndian] = computer;
   bigEndian = ~strncmp(realEndian, 'L', 1);
 
+  maxuint = intmax('uint16');
+
   hwait = waitbar(0,'','Name','CellCoord Info');
   for f = 1:length(fields)
     field = fields{f};
@@ -28,10 +30,10 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
       reader = loci.formats.ImageReader();
       reader = loci.formats.ChannelMerger(reader);
       reader.setMetadataStore(omexmlMeta);
-      reader.setId(mymovie.(field)(k).file);
+      reader.setId(fullfile(pwd, mymovie.(field)(k).file));
       %reader.setSeries(0);
       
-      omexmlMeta.setPixelsType(ome.xml.model.enums.PixelType.DOUBLE, 0);
+      omexmlMeta.setPixelsType(ome.xml.model.enums.PixelType.UINT16, 0);
       omexmlMeta.setPixelsBinDataBigEndian(java.lang.Boolean(bigEndian), 0, 0);
 
       writer = loci.formats.out.OMETiffWriter();
@@ -44,13 +46,14 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
       %new_field = mymovie.(field)(k);
       %new_field.fname = '';
 
+      img_params = [];
       for i=1:nframes
-        img = double(load_data(reader, i));
+        [img, img_params] = all2uint16(load_data(reader, i), img_params);
 
 
-        if (i==1)
-          orig = img;
-        end
+        %if (i==1)
+        %  orig = img;
+        %end
 
         if (mymovie.(field)(k).hot_pixels)
           img = imhotpixels(img);
@@ -77,9 +80,9 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
         
         writer = store_data(writer, img, i);
 
-        if (i==1)
-          worked = img;
-        end
+        %if (i==1)
+        %  worked = img;
+        %end
 
         waitbar(i/(2*nframes),hwait);
       end
@@ -123,7 +126,7 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
         img = load_data(reader, i);
         %reader.close();
 
-        img = imnorm(img, mymovie.(field)(k).min, mymovie.(field)(k).max);
+        img = imnorm(img, mymovie.(field)(k).min, mymovie.(field)(k).max, '', 0, maxuint);
 
         %writer.setId(mymovie.(field)(k).fname);
         %writer.setCompression(java.lang.String(mymovie.(field)(k).compression));

@@ -10,11 +10,10 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     case {'dic', 'all'}
       [nframes imgsize ] = size_data(mymovie.dic);
     case 'markers'
-      switch (opts.ml_type)
-        case {'eggshell', 'all'}
-          [nframes imgsize ] = size_data(mymovie.eggshell);
-        case 'cortex'
-          [nframes imgsize ] = size_data(mymovie.cortex);
+      if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
+        [nframes imgsize ] = size_data(mymovie.eggshell);
+      else
+        [nframes imgsize ] = size_data(mymovie.cortex);
       end
     otherwise
       error 'None of the expected field are present in ''mymovie''';
@@ -60,6 +59,9 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   end
 
   frames = frames(1:max_frames);
+  dic_opts = opts;
+  dic_opts.segmentation_type = 'dic';
+  %keyboard
 
   for i = 1:max_frames
     nframe = frames(i);
@@ -67,16 +69,26 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     if (strncmp(opts.segmentation_type, 'dic', 3) | strncmp(opts.segmentation_type, 'all', 3))
       mymovie = dp_dic(mymovie, opts.segmentation_parameters.dic, nframe, opts);
 
-      updated = updated || any(mymovie.dic.update(:));
+      updated = updated || any(mymovie.dic.update(:, nframe));
     end
 
     if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
       if (~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
-        mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts, nframe);
+        mymovie = dp_dic(mymovie, dic_opts.segmentation_parameters.dic, nframe, opts);
+
+        if (any(mymovie.dic.update(:, nframe)))
+          tmp_opts = dic_opts;
+          tmp_opts.recompute = true;
+          mymovie = duplicate_segmentation(mymovie, 'markers', tmp_opts, nframe);
+          tmp_opts = opts;
+          tmp_opts.recompute = true;
+          mymovie = dp_markers(mymovie, tmp_opts.segmentation_parameters.markers, nframe, tmp_opts);
+        end
+      else
+        mymovie = dp_markers(mymovie, opts.segmentation_parameters.markers, nframe, opts);
       end
 
-      mymovie = dp_markers(mymovie, opts.segmentation_parameters.markers, nframe, opts);
-      updated = updated || any(mymovie.markers.update(:));
+      updated = updated || any(mymovie.markers.update(:, nframe));
     end
   
     if (opts.verbosity > 0)

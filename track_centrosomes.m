@@ -7,6 +7,10 @@ function mymovie = track_centrosomes(mymovie, opts)
 %    mymovie = correct_dic_shift(mymovie, 'data', opts.segmentation_parameters.correction, opts);
 %  end
 
+  if (isfield(mymovie.data, 'centrosomes') & ~isempty(mymovie.data.centrosomes) & ~opts.recompute)
+    return;
+  end
+
   [nframes, imgsize ] = size_data(mymovie.data);
 
   spots = detect_spots(mymovie.data, opts);
@@ -74,12 +78,7 @@ function mymovie = track_centrosomes(mymovie, opts)
   pts = [centr1(:,[2 1]) centr2(:, [2 1])];
   indx = find(~any(isnan(pts), 2), 1, 'last');
 
-  try
   ell_pos = carth2elliptic(pts(indx,:), mymovie.data.centers(:,indx),mymovie.data.axes_length(:,indx),mymovie.data.orientations(1,indx));
-  catch
-    beep;beep;
-    keyboard
-  end
   if (abs(ell_pos(1)-pi) < abs(ell_pos(3)-pi))
     pts = pts(:,[3 4 1 2]);
   end

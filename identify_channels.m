@@ -4,6 +4,16 @@ function mymovie = identify_channels(channels)
   nchannels = length(channels);
   detrend = zeros(nchannels,1);
 
+  for i=1:nchannels
+    if (strfind(channels(i).file, 'mCherry'))
+      channels(i).color = [1 0 0];
+      channels(i).type = 'cortex';
+    elseif (strfind(channels(i).file, 'FITC'))
+      channels(i).color = [0 1 0];
+      channels(i).type = 'data';
+    end
+  end
+
   mymovie = get_struct('mymovie', 1);
   channels = input_channels(channels);
 

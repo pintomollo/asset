@@ -1,6 +1,6 @@
 function mymovie = track_ruffles(mymovie, opts)
 
-  mymovie = segment_ruffle(mymovie, opts);
+  %mymovie = segment_ruffle(mymovie, opts);
   %keyboard
 
   %if (isfield(mymovie, 'markers') & ~isempty(mymovie.markers))
@@ -362,34 +362,34 @@ function d = point2line(pt, lines, mode)
   return;
 end
 
-function mymovie = segment_ruffle(mymovie, opts)
-
-  if (strncmp(opts.segmentation_type, 'markers', 7) && isfield(mymovie, 'cortex') && ~isempty(mymovie.cortex))
-    if ((~isfield(mymovie, 'eggshell') || isempty(mymovie.eggshell)) && (~isfield(mymovie.markers, 'eggshell') || isempty(mymovie.markers.eggshell)))
-      opts.segmentation_type = 'dic';
-      mymovie = segment_movie(mymovie, opts);
-
-      opts.segmentation_type = 'markers';
-      mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts);
-      %mymovie.markers = mymovie.dic;
-      mymovie.markers.cortex = [];
-      opts.recompute = false;
-    %elseif (opts.recompute)
-    else
-      %mymovie.markers = mymovie.dic;
-      mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts);
-      %mymovie.markers = mymovie.dic;
-      mymovie.markers.cortex = [];
-      
-      opts.segmentation_type = 'markers';
-      opts.recompute = false;
-    end
-  end
-
-  mymovie = segment_movie(mymovie, opts);
-  %if (any(mymovie.(opts.segmentation_type).update(:)) & opts.auto_save)
-  %  save(mymovie.experiment, 'mymovie', '-append');
-  %end
-
-  return;
-end
+%function mymovie = segment_ruffle(mymovie, opts)
+%
+%  if (strncmp(opts.segmentation_type, 'markers', 7) && isfield(mymovie, 'cortex') && ~isempty(mymovie.cortex))
+%    if ((~isfield(mymovie, 'eggshell') || isempty(mymovie.eggshell)) && (~isfield(mymovie.markers, 'eggshell') || isempty(mymovie.markers.eggshell)))
+%      opts.segmentation_type = 'dic';
+%      mymovie = segment_movie(mymovie, opts);
+%
+%      opts.segmentation_type = 'markers';
+%      mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts);
+%      %mymovie.markers = mymovie.dic;
+%      mymovie.markers.cortex = [];
+%      opts.recompute = false;
+%    %elseif (opts.recompute)
+%    else
+%      %mymovie.markers = mymovie.dic;
+%      mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts);
+%      %mymovie.markers = mymovie.dic;
+%      mymovie.markers.cortex = [];
+%      
+%      opts.segmentation_type = 'markers';
+%      opts.recompute = false;
+%    end
+%  end
+%
+%  mymovie = segment_movie(mymovie, opts);
+%  %if (any(mymovie.(opts.segmentation_type).update(:)) & opts.auto_save)
+%  %  save(mymovie.experiment, 'mymovie', '-append');
+%  %end
+%
+%  return;
+%end

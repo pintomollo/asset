@@ -79,7 +79,7 @@ function mystruct = get_struct(type, nstruct)
                         'min', Inf, ...                     % Original minimum value used for rescaling
                         'type', 'dic');                     % Type of channel (dic, eggshell, cortex, data)
 
-    % Structure used to store the parameters of the correction function (see correct_dic_shift.m)
+    % Structure used to store the parameters of the correction function (see duplicate_segmentation.m)
     % The correction function is : F(i) = a + b*I(i+s) + c*R(I)
     case 'conversion'
       mystruct = struct('bkg', 0.0424, ...                  % Value of the background shift ('a')

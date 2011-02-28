@@ -35,7 +35,7 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
 
     update(1, nimg) = true;
 
-    img = load_data(mymovie.eggshell,nimg);
+    img = imnorm(double(load_data(mymovie.eggshell,nimg)));
 
     if (opts.verbosity == 3)
       figure;
@@ -116,7 +116,7 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
   if (~isempty(mymovie.cortex) & (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'cortex', 6))))
 
     update(2, nimg) = true;
-    img = load_data(mymovie.cortex,nimg);
+    img = imnorm(double(load_data(mymovie.cortex,nimg)));
 
     if (opts.verbosity == 3)
       figure;imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));

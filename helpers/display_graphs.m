@@ -53,7 +53,9 @@ function display_graphs(fname, field)
         mymovie.markers = mymovie.dic;
         mymovie2 = tracing_error(trackings, mymovie, field, opts);
 
-        mymovie = correct_dic_shift(mymovie, opts.segmentation_parameters.correction, opts);
+        opts.segmentation_type = 'markers';
+        mymovie = segment_movie(mymovie, opts);
+        %mymovie = correct_dic_shift(mymovie, opts.segmentation_parameters.correction, opts);
         mymovie3 = tracing_error(trackings, mymovie, field, opts);
 
         mymovie.markers.cortex = [];

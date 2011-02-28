@@ -38,11 +38,12 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
   if (length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & strncmp(opts.ml_type, 'eggshell', 8)))
     update(1,nimg) = true;
 
-    img=load_data(mymovie.dic,nimg);
+    img = imnorm(double(load_data(mymovie.dic,nimg)));
 
     if (opts.measure_performances)
       [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), estimation] = detect_ellipse(img, opts.verbosity, false);
     else
+    %beep;keyboard
       [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = detect_ellipse(img, opts.verbosity, false);
     end
 
@@ -124,7 +125,7 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
     update(2,nimg) = true;
 
     if (isempty(img))
-      img = load_data(mymovie.dic, nimg);
+      img = imnorm(double(load_data(mymovie.dic, nimg)));
     end
 
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
@@ -232,7 +233,7 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, verbosi
   img = imadm_mex(img);
 
   thresh = graythresh(img);
-  edg1 = (img>thresh*0.5);
+  edg1 = (img > thresh*0.5*(max(img(:))) );
 
   if (verbosity == 3)
     old_edg1 = edg1;
@@ -250,6 +251,7 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, verbosi
   edg1 = reduce_canevas(edg1, size10);
 
   if(~any(any(edg1)))
+    %beep;keyboard
     display('Error : No embryo detected !!');
   end
 

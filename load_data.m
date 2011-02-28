@@ -158,9 +158,11 @@ function [result, r] = load_data(fid, indexes)
     bpp = loci.formats.FormatTools.getBytesPerPixel(pixelType);
     fp = loci.formats.FormatTools.isFloatingPoint(pixelType);
     sgn = loci.formats.FormatTools.isSigned(pixelType);
+    type = char(loci.formats.FormatTools.getPixelTypeString(pixelType));
+
     bppMax = power(2, bpp * 8);
     little = r.isLittleEndian();
-    result = zeros([ssize length(indexes)]);
+    result = zeros([ssize length(indexes)], type);
 
     [junk, junk, realEndian] = computer;
     realEndian = strncmp(realEndian, 'L', 1);
@@ -223,8 +225,10 @@ function [result, r] = load_data(fid, indexes)
                         arr = typecast(arr, 'uint32');
                     case 'int64'
                         arr = typecast(arr, 'uint64');
-                    case {'double','float'}
-                      arr = typecast(arr, 'double');
+                    case 'double'
+                        arr = typecast(arr, 'double');
+                    case {'single', 'float'}
+                        arr = typecast(arr, 'single');
                 end
         %    else
         %        % adjust apparent negative values to actual positive ones

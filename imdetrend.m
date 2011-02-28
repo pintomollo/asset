@@ -8,7 +8,7 @@ function [img, p] = imdetrend(orig_img, npts)
   x = floor(npts/2):floor(w/npts):w;
   y = floor(npts/2):floor(h/npts):h;
 
-  img = imopen(orig_img, strel('disk',10));
+  img = imopen(double(orig_img), strel('disk',10));
   img = gaussian_mex(img, 10);
   %img = imfilter(img, fspecial('gaussian', 20, 10), 'symmetric');
 
