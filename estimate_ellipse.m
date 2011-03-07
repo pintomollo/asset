@@ -1,6 +1,6 @@
 function [center, axes_length, orientation, mask, estimation] = estimate_ellipse(img)
 
-  'estimate_ellipse.m:Use the paramters from opts instead'
+  disp('estimate_ellipse.m:Use the paramters from opts instead');
 
   img = double(img);
 

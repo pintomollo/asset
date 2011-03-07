@@ -1,6 +1,6 @@
 function [datas, theta, cyto] = gather_quantification(mymovie, opts)
 
-  npts = 200;
+  npts = 500;
 
   nframes = size_data(mymovie.data);  
   theta = [-pi:2*pi/npts:pi].';

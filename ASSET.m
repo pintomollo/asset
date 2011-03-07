@@ -390,7 +390,30 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
     % Otherwise we notify its inexistence
     else
-      warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
+      tokens = regexp(varargin{2*i - 1}, '\.', 'split');
+      tmp_struct = opts;
+      is_valid = true;
+
+      for c = 1:length(tokens)
+        if (~isfield(tmp_struct, tokens{c}))
+          is_valid = false;
+          break;
+        else
+          tmp_struct = tmp_struct.(tokens{c});
+        end
+      end
+
+      if (is_valid)
+        try
+          eval(['opts.' varargin{2*i - 1} ' = varargin{2*i};']);
+        catch ME
+          is_valid = false;
+        end
+      end
+
+      if (~is_valid)
+        warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
+      end
     end
   end
 

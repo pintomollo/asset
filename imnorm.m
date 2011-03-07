@@ -4,13 +4,11 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode, minrange, max
     minval = [];
     maxval = [];
     mode = '';
-    minrange = 0;
-    maxrange = 1;
   elseif (nargin < 4)
     mode = '';
-    minrange = 0;
-    maxrange = 1;
   end
+  minrange = 0;
+  maxrange = 1;
 
   [h w] = size(img);
 
@@ -33,7 +31,7 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode, minrange, max
     end
   end
   
-  img = (img - (minval - minrange)) .* ((maxrange - minrange) / (maxval - minval));
+  img = (img - (minval - minrange)) .* ((maxrange - minrange) ./ (maxval - minval));
   img(img < minrange) = minrange;
   img(img > maxrange) = maxrange;
 

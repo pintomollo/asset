@@ -1,11 +1,15 @@
-function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, shortcut)
+function [ellipse, num_votes] = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, shortcut)
+
+  disp('connot detect "thin" ellipses')
 
   size_img = size(img);
 
   if (nargin == 1)
-    thresh = 0;
-    wsize = 2;
-    angle_thresh = pi/8;
+    wsize = 7;
+    thresh = 0.05;
+    angle_thresh = pi/20;
+    radius_thresh = [200 750];
+    shortcut = true;
   elseif (nargin == 2)
     thresh = 0;
   end
@@ -13,8 +17,10 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
   %keyboard
 
   alpha = pi/4;
-  precision_thresh = 1e-2;
-  voting_thresh = 50;
+  precision_thresh = 0.1;
+  % Now using absolute numbers
+  %voting_thresh = 10;
+  voting_thresh = 0.1;
 
   [edges, direct] = imadm(img, thresh, true);
 
@@ -96,16 +102,21 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
           %  keyboard;
           %end
 
-          linear_scan(i, j, -alpha);
-          linear_scan(i, j, alpha);
+          linear_scan(i, j, -alpha, true);
+          linear_scan(i, j, alpha, true);
       end
     end
   end
 
   %keyboard
 
-  window = nulls;
-  window(:, wsize+1:end) = 1;
+  %window = nulls;
+  %window(:, wsize+1:end) = 1;
+
+  window = zeros(2*filter_size + 1);
+  window(:, filter_size+1:end) = 1;
+  window(wsize+1:end-wsize, filter_size+1:end-wsize) = 0;
+
   [tmp_x, tmp_y] = find(window);
   window = (tmp_x - (wsize + 1)) + (tmp_y - (wsize + 1))*img_size(1);
   %window = find(window) - (wsize^2 + (wsize+1)^2);
@@ -168,9 +179,11 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
   end
 
   npairs = size(pairs, 1);
-  votes = NaN(npairs, 5);
+  %votes = NaN(npairs, 5);
+  votes =[];
 
   accum = zeros(img_size);
+  %figure;imagesc(convex_angle);hold on;
 
   for i = 1:npairs
     %indx1 = pairs(i, 1);
@@ -193,7 +206,8 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
 
     [tmp_votes] = compute_estimation(pt1, cands1, pt2, cands2);
     if (~isempty(tmp_votes))
-      votes(i, :) = tmp_votes;
+%%      votes(i, :) = tmp_votes;
+      votes = [votes; tmp_votes];
       %'Need to move out the Gaussian, the paste it at the correct position'
       %for j = 1:size(tmp_votes, 1)
       %  accum = accum + GaussMask2D(sigma_adapted, img_size, tmp_votes(j, [2 1]), 2, 1);
@@ -201,8 +215,44 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
     end
   end
 
+  if (isempty(votes))
+    figure;imagesc(convex_angle)
+    return;
+  end
+
   %votes(:, end) = align_orientations(votes(:, end));
   %figure;imagesc(accum)
+
+  %keyboard
+
+  binning = [5, 5, 5, 5, pi/30];
+  results = 1;
+  ellipse = zeros(0, 5);
+  num_votes = [];
+  votes = votes(~any(isnan(votes),2), :);
+  %figure;imshow(imnorm(img));
+  %hold on;
+  total_votes = size(votes, 1);
+
+  while (~isempty(results))
+    [results, nvotes] = vote_1d(votes, binning);
+
+    if (~isempty(results))
+      [~, ells] = carth2elliptic(votes(:,1:2), results(1:2), results(3:4), results(5));
+      done = (ells <= 1);
+      votes = votes(~done, :);
+      nvotes = sum(done);
+
+      if (nvotes/total_votes > voting_thresh) 
+        ellipse(end+1, :) = results;
+        num_votes(end+1) = nvotes;
+      end
+      
+      %if ((nvotes / total_votes) > voting_thresh)
+      %  draw_ellipse(results(1:2),results(3:4),results(5))
+      %end
+    end
+  end
 
   %keyboard
 
@@ -217,7 +267,11 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
     return;
   end
 
-  function linear_scan(line_x, line_y, line_angle)
+  %%
+  %%
+  %% Instead of "first", use a "while" instead
+  %%
+  function linear_scan(line_x, line_y, line_angle, first)
     pt_angle = convex_angle(line_x, line_y);
 
     % Need to invert the y-axis for the basic geometry to work in the usual coordinate system
@@ -234,7 +288,7 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
       drawnow;
     end
 
-    if (any(diag_good))
+    if (any(diag_good) & first)
       done(line_x, line_y) = true;
 
       %diag_angles = diag_angles(diag_good);
@@ -263,7 +317,7 @@ function ellipse = imellipse(img, wsize, thresh, angle_thresh, radius_thresh, sh
         
         if (~already_done(tmp_i))
           [pts_x, pts_y] = ind2sub(img_size, line_diag(tmp_i));
-          linear_scan(pts_x, pts_y, line_angle);
+          linear_scan(pts_x, pts_y, line_angle, false);
         end
       end
     end
@@ -289,7 +343,14 @@ function [votes] = compute_estimation(pt1, cands1, pt2, cands2)
   pt1 = [pt1(2) pt1(1) (pi/2 - pt1(3))];
   pt2 = [pt2(2) pt2(1) (pi/2 - pt2(3))];
 
-  if (true)
+  %scatter([pt1(1) pt2(1)], [pt1(2) pt2(2)], 'm');
+  %scatter([cands1(:,1); cands2(:,1)], [cands1(:,2); cands2(:,2)], 'c');
+
+  %%
+  %% Use all the votes
+  %%
+
+  if (false)
 
   i = randi(ncands1);
   j = randi(ncands2);
@@ -314,7 +375,10 @@ function [votes] = compute_estimation(pt1, cands1, pt2, cands2)
 
   for i = 1:ncands1
     for j = 1:ncands2
-      votes((i-1)*ncands2 + j, :) = infer_params(params1(i, :), params2(j, :), [pt1(1:2); pt2(1:2); cands1(i, 1:2); cands2(j, 1:2)]);
+      tmp_vote = infer_params(params1(i, :), params2(j, :), [pt1(1:2); pt2(1:2); cands1(i, 1:2); cands2(j, 1:2)]);
+      if (~isempty(tmp_vote))
+        votes((i-1)*ncands2 + j, :) = tmp_vote;
+      end
     end
   end
 
@@ -324,6 +388,8 @@ function [votes] = compute_estimation(pt1, cands1, pt2, cands2)
 end
 
 function params = infer_params(triangle1, triangle2, pts)
+
+  params = [];
 
   x1 = triangle1(1);
   y1 = triangle1(2);
@@ -337,19 +403,88 @@ function params = infer_params(triangle1, triangle2, pts)
 
   a0 = (y2 - q4*x2 - y1 + q2*x1) / (q2 - q4);
   b0 = q2 * (a0 - x1) + y1;
+
+  if (false)
+  orig_pts = pts;
+
+  pts = bsxfun(@minus, pts, [a0 b0]);
+  mat = [pts(:,1).^2 2*prod(pts, 2) pts(:,2).^2];
+
+  quadr = mat \ ones(size(pts, 1), 1);
+  quadr = [quadr(1) quadr(2); quadr(2) quadr(3)];
+
+  [vectors, eigens] = eig(quadr);
+  eigens = diag(eigens);
+
+  if (any(eigens < 1e-9)) 
+    return;
+  end
+
+  a = sqrt(1/eigens(1));
+  b = sqrt(1/eigens(2));
+
+  if (a < b)
+    [a,b] = deal(b,a);
+    rho = atan2(-vectors(2,2), vectors(1,2));
+  else
+    rho = atan2(-vectors(2,1), vectors(1,1));
+  end
+
+  else
+
+  %figure;scatter(pts(:,1), pts(:,2));hold on;
+  %draw_ellipse([0,0],[a, b], rho);
+  %keyboard
+
   K = abs(sqrt(1 + ((q1*q2 + 1)*(q3 + q4) - (q3*q4 + 1)*(q1 + q2)) / (q1*q2 - q3*q4)));
   N = abs(sqrt(-((q1 - K)*(q2 - K))/((1 + q1*K)*(1 + q2*K))));
+
+  %if (N > 1)
+  %  N = 1/N;
+  %  K = tan(atan(K) + pi/2);
+  %end
 
   x0 = ((pts(:,1) - a0) / sqrt(K^2 + 1)) + ((pts(:,2) - b0)*K / sqrt(K^2 + 1));
   y0 = ((pts(:,1) - a0)*K / sqrt(K^2 + 1)) + ((pts(:,2) - b0) / sqrt(K^2 + 1));
   ax = sqrt(((x0.^2)*(N^2) + y0.^2) / (N^2*(1+K^2)));
-  ax = mean(abs(ax(:)));
-
-  rho = atan(K);
+  ax = ax(~imag(ax));
+  ax = mean(ax(:));
+  
+  ay = K * ax; 
+  rho = atan2(ay, ax);
   a = ax / cos(rho);
   b = N * a;
 
-  params = [a0 b0 a b rho];
+  rho = atan2(-ay, ax);
+
+  if (b > a)
+    tmp = a;
+    b = a;
+    a = tmp;
+    rho = rho + pi/2;
+  end
+
+
+
+  end
+  %rho = atan(K);
+  %a = ax / cos(rho);
+  %b = N * a;
+
+  %if (b > a)
+  %  params = [a0 b0 b a rho];
+  %else
+    params = [a0 b0 a b rho];
+  %end
+
+  %scatter(orig_pts(:,1),orig_pts(:,2), 'm');
+  %scatter([x1 x2], [y1 y2], 'b');
+  %scatter(a0, b0, 'y');
+  %draw_ellipse([a0, b0],[a, b], rho, 'r');
+  %scatter(a0 + [cos(-rho)*a cos(-rho+pi/2)*b], b0 + [sin(-rho)*a sin(-rho+pi/2)*b], 'r');
+  %scatter(x0, y0, 'g');
+  %drawnow
+  %pause
 
   return;
 end
@@ -439,6 +574,28 @@ function [diag] = get_indexes(x, y, angle, maxs, thresh)
 
   diag = ptsy + (ptsx-1)*maxs(1);
   %diag = sub2ind(maxs, ptsy, ptsx);
+
+  return;
+end
+
+function [results, nvotes] = vote_1d(votes, binning)
+
+  epsilon = 1e-5;
+  accepted = true(size(votes, 1), 1);
+
+  for i=1:size(votes, 2)
+    data = votes(:,i);
+    data(~accepted) = NaN;
+    edges = [min(data)-epsilon:binning(i):max(data) max(data)+epsilon];
+    counts = histc(data, edges);
+
+    [~, best] = max(counts);
+    indx = (data >= edges(best) & data <= edges(best+1));
+    accepted = accepted & indx;
+  end
+  nvotes = sum(accepted);
+
+  results = mymean(votes(accepted, :));
 
   return;
 end
