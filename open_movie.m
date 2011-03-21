@@ -1,4 +1,4 @@
-function [mymovie] = open_movie(mymovie, expr_name)
+function [mymovie] = open_movie(mymovie, expr_name, opts)
 
   if (nargin < 1)
     mymovie = get_struct('mymovie',1);
@@ -37,7 +37,7 @@ function [mymovie] = open_movie(mymovie, expr_name)
       end  
     end
 
-    [tokens,junk]=regexp(fname,'(.+[-_])?([^-_\.]+)(\.[\w\.]+)?','tokens');
+    [tokens,junk]=regexp(fname, opts.file_regexpr,'tokens');
     name = tokens{1}{1};
     suffix = tokens{1}{2};
     ext = tokens{1}{3};
@@ -52,7 +52,7 @@ function [mymovie] = open_movie(mymovie, expr_name)
       files = dir([dirpath name '*' ext]);
 
       for i = length(files):-1:1
-        [tokens,junk]=regexp(files(i).name,'(.+[-_])?([^-_\.]+)(\.[\w\.]+)?','tokens');
+        [tokens,junk]=regexp(files(i).name,opts.file_regexpr,'tokens');
 
         if (~strcmp(name, tokens{1}{1}))
           files(i) = [];

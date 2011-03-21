@@ -39,7 +39,7 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
   r = ChannelMerger(r);
   r.setMetadataStore(omexmlMeta);
 
-  [tokens,junk]=regexp(fname,'(.+[-_])?([^-_\.]+)(\.[\w\.]+)?','tokens');
+  [tokens,junk]=regexp(fname,opts.file_regexpr,'tokens');
   name = tokens{1}{1};
   suffix = tokens{1}{2};
   ext = tokens{1}{3};

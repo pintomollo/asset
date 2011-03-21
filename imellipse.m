@@ -458,9 +458,7 @@ function params = infer_params(triangle1, triangle2, pts)
   rho = atan2(-ay, ax);
 
   if (b > a)
-    tmp = a;
-    b = a;
-    a = tmp;
+    [a,b] = deal(b,a);
     rho = rho + pi/2;
   end
 

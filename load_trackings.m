@@ -1,5 +1,8 @@
 function [trackings, max_frames] = load_trackings(trackings, opts)
 
+
+%%%%%%%%%%%%%% DO NOT USE THE MEAN FIELD, USE THE eggshell AND cortex RATHER
+
   max_frames = 0;
   if (~isfield(trackings, 'child'))
     fields = fieldnames(trackings);

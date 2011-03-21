@@ -64,22 +64,34 @@ function [mymovie,trackings] = ASSET(varargin)
   if (opts.measure_performances || ~strncmp(opts.do_ml, 'none', 4))
     
     % Import the trackings from the .shapes files
-    [trackings, opts, expr_name, updated] = import_trackings(trackings, opts);
+    [trackings, opts, updated] = import_trackings(trackings, opts);
 
     % Auto-save
-    if (updated && opts.auto_save && ~isempty(mymovie.experiment))
+    if (updated && opts.auto_save)
+
+      % Use whichever name is available
+      tmp_name = '';
+      if (~isempty(mymovie.experiment))
+        tmp_name = mymovie.experiment;
+      elseif (~isempty(trackings.experiment))
+        tmp_name = trackings.experiment;
+      end
+
       % Update the experiment name if we cannot overwrite
       if (~opts.overwrite)
-        mymovie.experiment = get_next_name([mymovie.experiment '(\d+)\.mat']);
+        tmp_name = get_new_name([tmp_name '(\d+)\.mat']);
 
         % We do not keep the extension
-        mymovie.experiment = mymovie.experiment(1:end-4);
+        tmp_name = tmp_name(1:end-4);
         
         % Remember we already created a new file
         is_original_file = false;
       end
 
-      save(mymovie.experiment, 'mymovie', 'trackings','opts');
+      % Save if we know where to
+      if (~isempty(tmp_name))
+        save(tmp_name, 'mymovie', 'trackings','opts');
+      end
     end
 
     % Debug mode breakpoints
@@ -94,7 +106,7 @@ function [mymovie,trackings] = ASSET(varargin)
   end
 
   % Import the recordings
-  mymovie = open_movie(mymovie, expr_name);
+  mymovie = open_movie(mymovie, expr_name, opts);
 
   % Debug mode breakpoints
   if (opts.debug)
@@ -115,7 +127,7 @@ function [mymovie,trackings] = ASSET(varargin)
 
   % Update the experiment name if we cannot overwrite (and if not done before)
   if (~opts.overwrite & is_original_file)
-    mymovie.experiment = get_next_name([mymovie.experiment '(\d+)\.mat']);
+    mymovie.experiment = get_new_name([mymovie.experiment '(\d+)\.mat']);
 
     % We do not keep the extension
     mymovie.experiment = mymovie.experiment(1:end-4);
@@ -364,14 +376,20 @@ function [mymovie, trackings, opts] = parse_input(varargin)
     trackings = get_struct('tracking', 0);
   end
 
+  % Retrieve the latest version of OPTS
+  new_opts = get_struct('ASSET');
+
   % Next possible structure has to be opts
   if (~isempty(varargin) && isstruct(varargin{1}))
     opts = varargin{1};
     varargin(1) = [];
 
+    % Correct the structure of opts if need be
+    opts = merge_structures(opts, new_opts);
+
   % Otherwise, we use the standard one
   elseif (isempty(opts))
-    opts = get_struct('ASSET');
+    opts = new_opts;
   end
 
   % Now we check that the parameters were provided in pairs

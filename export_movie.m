@@ -42,7 +42,7 @@ function export_movie(mymovie, opts)
         end
 
 
-        [tokens,junk]=regexp(mymovie.(field)(k).file,'(.+[-_])?([^-_\.]+)(\.[\w\.]+)?','tokens');
+        [tokens,junk]=regexp(mymovie.(field)(k).file,opts.file_regexpr,'tokens');
         name = tokens{1}{1};
         suffix = tokens{1}{2};
         ext = tokens{1}{3};

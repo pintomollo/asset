@@ -1,4 +1,4 @@
-function new_str = common_substring(str1, str2, replacement_str)
+function [new_str, end_str] = common_substring(str1, str2, replacement_str)
 
   new_str = '';
   if (isempty(str1) | isempty(str2))
@@ -19,25 +19,32 @@ function new_str = common_substring(str1, str2, replacement_str)
   end
 
   if (isnan(sindx))
-    sindx = 1;
+    sindx = nstr;
   end
   if (isnan(eindx))
+    eindx = nstr-1;
+  end
+  if (eindx < 0)
     eindx = 0;
   end
     
   sep1 = '';
   sep2 = '';
-  if (str1(sindx) ~= '_')
-      sep1 = '_';
+  if (sindx > 0 & str1(sindx) ~= '_')
+    sep1 = '_';
   end
-  if (str1(end-eindx) ~= '_')
-      sep2 = '_';
+  if (eindx < nstr & str1(end-eindx) ~= '_')
+    sep2 = '_';
   end
       
   if (nargin < 3)
     new_str = str1(1:sindx);
   else
     new_str = [str1(1:sindx) sep1 replacement_str sep2 str1(end-eindx:end)];
+  end
+
+  if (nargout > 1)
+    end_str = str1(end-eindx:end);
   end
 
   return;

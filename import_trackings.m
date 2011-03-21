@@ -1,4 +1,4 @@
-function [trackings, opts, experiment, updated] = import_trackings(trackings, opts)
+function [trackings, opts, updated] = import_trackings(trackings, opts)
 % IMPORT_TRACKING loads the content of manual tracking files (.shapes) into the
 %   corresponding data structure (get_struct('trackings')). It also accepts MAT-files
 %   in which 'trackings' structures have been stored.
@@ -33,6 +33,7 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
     trackings = [];
     opts = get_struct('ASSET');
   end
+  was_empty = false;
 
   % Default value for the return values
   updated = false;
@@ -62,6 +63,7 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
   % Obviously if it's empty we have some work to do.
   if (isempty(trackings))
     trackings = new_trackings;
+    was_empty = true;
 
   % Otherwise, we simply verify whether its fields corresponding to the 
   % segmentation types were assigned previously.
@@ -84,14 +86,12 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
     warning('More tracking files than segmentation types were provided. Additional files will be ignored');
   end
 
-  check_fields = {};
-
   % We loop over the files to retrieve the data
   for t = 1:file_types
     tmp_type = types{t};
 
     % We create a new regular expression representing each group of files and prepare 
-    %the tracking structure
+    % the tracking structure
     if (~isfield(new_trackings, tmp_type))
       new_trackings.(types{t}) = tracking;
     end
@@ -104,12 +104,24 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
 
       for i = 1:file_ids
 
+        % If the name is empty, we cannot do anything
+        if (isempty(files{t, g, i}))
+          break;
+        end
+
+        % Extract the "name", "suffix" and extension of the filename
+        [tokens, junk] = regexp(files{t, g, i}, opts.file_regexpr, 'tokens');
+
+        name = tokens{1}{1};
+        suffix = tokens{1}{2};
+        ext = tokens{1}{3};
+
         % If a MAT-file is specify, we try to extract the corresponding files from the tracking structure
-        if (strncmp(ext, '.mat', 4))
-          tmp_trackings = load(files{t}{g}{i});
+        if (~isempty(ext) & strncmp(ext, '.mat', 4))
+          tmp_trackings = load(files{t, g, i});
 
           % We merge both structure to avoid loosing any information
-          new_trackings = merge_structures(new_trackings, tmp_trackings.trackings);
+          new_trackings = merge_structures(new_trackings, tmp_trackings.trackings, {'expr', 'fname'});
 
         % Otherwise it's a plain file
         else
@@ -117,16 +129,10 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
           % Here we try to identify the regular expression
           if (isempty(new_trackings.(tmp_type).child(g).expr))
             
-            % Extract the "name", "suffix" and extension of the filename
-            [tokens, junk] = regexp(files{t}{g}{i}, '(.+[-_])?([^-_\.]+)(\..+)', 'tokens');
-            name = tokens{1}{1};
-            suffix = tokens{1}{2};
-            ext = tokens{1}{3};
-
             % The file might have no suffix
             if (isempty(name))
               expr = [suffix ext];
-              name = suffix;
+              name = expr;
             else
               expr = [name '*' ext];
             end
@@ -144,15 +150,17 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
   end
 
   % Now we merge the new with the old trackings
-  [trackings, is_same] = merge_structures(trackings, new_trackings);
-  if (is_same & ~opts.recompute)
+  [trackings, is_same] = merge_structures(trackings, new_trackings, {'expr', 'fname'});
+
+  % If nothing changed and we do not need to recompute everything, exit
+  if (~was_empty & is_same & ~opts.recompute)
     return;
   end
 
   % Now we prompt and sort the resulting structure
   for t = 1:length(types)
     % First get the name of the experiment based on the filenames
-    experiment = get_name(trackings.(types{t}), experiment);
+    experiment = get_name(trackings.(types{t}), '');
 
     % Then we sort the different groups by name
     child_names = {};
@@ -170,7 +178,7 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
       disp(['[Select your ' experiment ' ' types{t} ' tracking files]'])
 
       % Display the input dialog
-      trackings.(types{t}) = input_trackings(trackings.(types{t}), [types{t} ' (' experiment ')']);
+      trackings.(types{t}) = input_trackings(trackings.(types{t}), [types{t} ' (' experiment ')'], opts);
 
       % Update the experiment name if needed
       experiment = get_name(trackings.(types{t}), experiment);
@@ -189,6 +197,8 @@ function [trackings, opts, experiment, updated] = import_trackings(trackings, op
   % buffer them accordingly so that every group has the same number of frames
   trackings = check_trackings(trackings, max_frames, opts.verbosity);
 
+  % Save the name and exit
+  trackings.experiment = experiment;
   updated = true;
 
   return;
@@ -197,7 +207,7 @@ end
 function name = get_name(mystruct, name)
 % This function extracts the common substring from various names in order
 % to deduce the 'experiment' name
-  
+
   % We loop over all the childrens to browse their names
   for i = 1:length(mystruct.child)
 
@@ -207,10 +217,19 @@ function name = get_name(mystruct, name)
       if (isempty(name))
         name = mystruct.child(i).name;
       else
-        name = common_substring(name, mystruct.child(i).name);
+        [name, end_name] = common_substring(name, mystruct.child(i).name);
+
+        % Use the end of the name instead
+        if (isempty(name))
+          name = end_name;
+        end
       end
     end
   end
+
+  % Remove heading and trailing non-alphanumeric symbols which might cause
+  % problems when saving the .mat file
+  name = regexprep(name, '^\W+|\W+$', '');
 
   return;
 end

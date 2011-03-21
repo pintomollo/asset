@@ -38,6 +38,7 @@ function mystruct = get_struct(type, nstruct)
                         'do_ml', 'none', ...                % Machine learning (ML) is performed
                         'dp_method', 'double', ...          % Dynamic programming method used (see dynamic_programming.m)
                         'export_movie', false, ...          % Export the results of the analysis
+                        'file_regexpr', '(.+[-_])?(.*?[-_]?)(\.[\w\.]+)', ... % The regular expression representing the files
                         'follow_periphery', true, ...       % Follow only the periphery of the trackings (no invaginations)
                         'force_circularity', true, ...      % Enforces that the last row of the DP conincides with the first one
                         'magnification', 63, ...            % Magnification of the objective of the microscope
@@ -286,8 +287,7 @@ function mystruct = get_struct(type, nstruct)
 
     % Structure containing the data from the manual trackings (see import_trackings.m)
     case 'tracking'
-      mystruct = struct('average',[], ...               % Average trackings based on the different children
-                        'child',[], ...                 % Children structures containing either groups of tracking or tracking files
+      mystruct = struct('child',[], ...                 % Children structures containing either groups of tracking or tracking files
                         'errors',[], ...                % Compute error to the average tracking
                         'expr','', ...                  % Regular expression used to find the children files for import
                         'name','', ...                  % Name of the manual trackings extracted from the filenames
