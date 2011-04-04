@@ -47,8 +47,6 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
     frames = 1:nframes;
   end
 
-  disp('duplicate_segmentation:correct the egg shift');
-
   if (strncmp(orig_type, 'dic', 3))
     params = opts.segmentation_parameters.correction;
     maxval = double(intmax('uint16'));
@@ -69,7 +67,7 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
       axes_length = mymovie.dic.axes_length(:,nimg);
       orientation = mymovie.dic.orientations(:,nimg);
 
-      egg = carth2elliptic(egg, center, axes_length, orientation) + 0.1;
+      egg = carth2elliptic(egg, center, axes_length, orientation) + params.safety;
       cor = carth2elliptic(cor, center, axes_length, orientation);
 
       [egg, indx] = align(egg);

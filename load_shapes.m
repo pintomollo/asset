@@ -1,4 +1,22 @@
 function [shapes, groups] = load_shapes(fname)
+% LOAD_SHAPES loads .shapes files and outputs the coordinates of the tracking in cells.
+%
+%   SHAPES = LOAD_SHAPES(FNAME) loads the content of the .shapes FNAME file into the GxN
+%   cell SHAPES. G being the number of "groups" (i.e. the different types of trackigns),
+%   while N is the number of frames.
+%
+%   [SHAPES, GROUPS] = LOAD_SHAPES(...) also returns the strings identifying the GROUPS.
+%
+%   [...] = LOAD_SHAPES(MYSTRUCT) loads the content of the .shapes file specified in
+%   the "fname" field.
+%
+% SHAPES FILES
+%
+%   
+%
+% Gonczy & Naef labs, EPFL
+% Simon Blanchoud
+% 23.03.2011
 
   if (isempty(fname))
     [fname,dirpath] = uigetfile('*.shapes', 'Load a .SHAPES file');

@@ -36,6 +36,9 @@ function [mymovie,trackings] = ASSET(varargin)
 % Simon Blanchoud
 % 10.12.2010
 
+  % Check whether ASSET needs to be installed
+  install_ASSET
+
   % Parsing the variable inputs
   [mymovie, trackings, opts] = parse_input(varargin{:});
 

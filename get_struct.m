@@ -86,6 +86,7 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('bkg', 0.0424, ...                  % Value of the background shift ('a')
                         'factor', -0.0440, ...              % Value of the intensity factor ('b')
                         'range', -0.0176, ...               % Value of the range factor ('c')
+                        'safety', 0, ...                    % Value used to expand the eggshell to avoid excluding part of the membrane signal
                         'shift', 5.1836);                   % Value of the shift between the intensity and the correction ('s')
 
     % Parameters used to compute the data part of the DP scoring function (see dynamic_programming.m)
