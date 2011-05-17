@@ -8,6 +8,10 @@
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #endif
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #ifndef EDGE_DIR
 #define EDGE_DIR(a,b,c,d) \
     ((a) < (b) ? ((a) < (c) ? ((a) < (d) ? 1 : 4) : ((c) < (d) ? 3 : 4)) : \

@@ -285,4 +285,3 @@ function trackings = check_trackings(trackings, max_frames, verbosity)
 
   return;
 end
-

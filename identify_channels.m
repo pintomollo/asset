@@ -1,4 +1,4 @@
-function mymovie = identify_channels(channels)
+function mymovie = identify_channels(channels, opts)
 
   ncolors=3;
   nchannels = length(channels);
@@ -15,7 +15,9 @@ function mymovie = identify_channels(channels)
   end
 
   mymovie = get_struct('mymovie', 1);
-  channels = input_channels(channels);
+  if (opts.verbosity > 1)
+    channels = input_channels(channels);
+  end
 
   for i=1:nchannels
     channel_name = channels(i).type;

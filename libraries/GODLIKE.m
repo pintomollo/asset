@@ -1016,7 +1016,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     fprintf(1, '· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·\n')
 
                     if (~isempty(options.LogFile))
-                      [fid, err] = fopen(['./' options.LogFile '.dat'], 'a');
+                      [fid, err] = fopen(['.' filesep options.LogFile '.dat'], 'a');
                       fprintf(fid, [uuid '%% columns="iteration, evalutation | lastbest" (' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')\n']);
                     end
                 end % if
@@ -1036,7 +1036,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
          
                 if (~isempty(options.LogFile))
                   if (algorithm_index ~= 1) % display new header
-                    [fid, err] = fopen(['./' options.LogFile '.dat'], 'a');
+                    [fid, err] = fopen(['.' filesep options.LogFile '.dat'], 'a');
                   end
                   fprintf(fid, [uuid '%ld : %ld |'], pop{loop_index}.funevals, output.best_funcvalues(loop_index));
                   fprintf(fid, ' %f',output.global_best_individual);

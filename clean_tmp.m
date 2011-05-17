@@ -26,9 +26,9 @@ function clean_tmp
   end
   used_tmp = unique(used_tmp);
 
-  cd_dir = [cd '/'];
+  cd_dir = [pwd filesep];
   if (exist('TmpData', 'dir'))
-    tmp_dir = [cd_dir 'TmpData/'];
+    tmp_dir = [cd_dir 'TmpData' filesep];
   else 
     tmp_dir = cd_dir;
   end

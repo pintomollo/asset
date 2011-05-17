@@ -5,6 +5,8 @@ function display_domain(mymovie, opts, removed)
       tmp = dir(mymovie); 
       mymovies = cell(1, length(tmp));
 
+      close all;
+
       for i=1:length(tmp)
         load(tmp(i).name);
         display_domain(mymovie, opts);
@@ -22,17 +24,28 @@ function display_domain(mymovie, opts, removed)
     data(removed, :) = NaN;
   end
 
-  ticks = [1:50:length(theta) length(theta)];
+  ticks = [1:100:length(theta) length(theta)];
 
-  figure;imagesc(imnorm(data, [], [], 'r'));
-  colormap(hot);
+  %imagesc(imnorm(data, [], [], 'r'));
+  %colormap(jet);
+  %hold on;
+  %plot([1 length(theta)], cyto+[0 0],'b', 'LineWidth', 2)
+  %set(gca, 'XTick', ticks, 'XTickLabel', theta(ticks));
+
+  %title(mymovie.experiment);
+
+  %saveas(gca, [mymovie.experiment '-norm.png']);
+
+  imagesc(imnorm(data));
+  colormap(jet);
   hold on;
-  plot([1 length(theta)], cyto+[0 0],'b', 'LineWidth', 2)
+  plot([1 length(theta)], cyto+[0 0],'k', 'LineWidth', 2)
   set(gca, 'XTick', ticks, 'XTickLabel', theta(ticks));
 
   title(mymovie.experiment);
 
-  saveas(gca, [mymovie.experiment 'domain.png']);
+  saveas(gca, [mymovie.experiment '.png']);
+  hold off;
 
   return;
 end

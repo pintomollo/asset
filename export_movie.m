@@ -63,7 +63,7 @@ function export_movie(mymovie, opts)
           new_file = [suffix '-' diff_name ext];
         end
 
-        [slash] = findstr(new_file,'/');
+        [slash] = findstr(new_file,filesep);
         if(length(slash)>0)
           slash = slash(end) + 1;
         else
@@ -175,7 +175,7 @@ function export_movie(mymovie, opts)
     omexmlMeta = loci.formats.MetadataTools.createOMEXMLMetadata();
     r = loci.formats.ImageReader();
     r.setMetadataStore(omexmlMeta);
-    r.setId(mymovie.(field)(k).file);
+    r.setId(absolutepath(mymovie.(field)(k).file));
 
       if (crop_export)
         omexmlMeta.setPixelsSizeX(ome.xml.model.primitives.PositiveInteger(java.lang.Integer(crop_size(2))), 0);
@@ -196,9 +196,10 @@ function export_movie(mymovie, opts)
 %        end
 %      end
 
-      if (isequal(new_file(1),'.'))
-        new_file = fullfile(pwd, new_file(2:end));
-      end
+      %if (isequal(new_file(1),'.'))
+      %  new_file = fullfile(pwd, new_file(2:end));
+      %end
+      new_file = absolutepath(new_file);
 
       pType = char(omexmlMeta.getPixelsType(0).getValue());
 

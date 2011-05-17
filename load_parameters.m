@@ -43,12 +43,12 @@ function opts = load_parameters(opts, fname)
       fname = [fname '.txt'];
 
     % Maybe it's located in the configuration folder
-    elseif (exist(['Config/' fname], 'file'))
-      fname = ['Config/' fname];
+    elseif (exist(['Config' filesep fname], 'file'))
+      fname = ['Config' filesep fname];
 
     % Or maybe even both previous cases
-    elseif (exist(['Config/' fname '.txt'], 'file'))
-      fname = ['Config/' fname '.txt'];
+    elseif (exist(['Config' filesep fname '.txt'], 'file'))
+      fname = ['Config' filesep fname '.txt'];
 
     % Otherwise we ran out of options
     else

@@ -1,4 +1,4 @@
-function [newfile, policy] = convert_movie(fname, compression, policy)
+function [newfile, policy] = convert_movie(fname, compression, policy, opts)
   %
   % This function convert a movie into a OMETiff movie using the BIO-Formats
   %
@@ -13,6 +13,7 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
   if (nargin < 2)
     compression = '';
     policy = 0;
+    opts = get_struct('ASSET');
   elseif (nargin < 3)
     if (ischar(compression))
       policy = 0;
@@ -20,6 +21,7 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
       policy = compression;
       compression = '';
     end
+    opts = get_struct('ASSET');
   end
 
   newfile = '';
@@ -28,9 +30,7 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
     return;
   end
 
-  if (isequal(fname(1),'.'))
-    fname = fullfile(pwd, fname(2:end));
-  end
+  fname = absolutepath(fname);
 
   omexmlMeta = MetadataTools.createOMEXMLMetadata();
 
@@ -46,7 +46,7 @@ function [newfile, policy] = convert_movie(fname, compression, policy)
 
   name = [name suffix];
 
-  [slash] = findstr(name,'/');
+  [slash] = findstr(name, filesep);
   if(length(slash)>0)
     slash = slash(end) + 1;
   else

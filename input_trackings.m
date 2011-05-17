@@ -294,9 +294,9 @@ function trackings = input_trackings(trackings, name, opts)
       cd('Shapes');
 
     % Otherwise, check in the parent directory
-    elseif(exist('../Shapes', 'dir'))
+    elseif(exist(['..' filesep 'Shapes'], 'dir'))
       curdir = cd;
-      cd('../Shapes');
+      cd(['..' filesep 'Shapes']);
     end
 
     % Open a pop-up to select .shapes file(s)
@@ -448,9 +448,9 @@ function trackings = input_trackings(trackings, name, opts)
     if(exist('Shapes', 'dir'))
       curdir = cd;
       cd('Shapes');
-    elseif(exist('../Shapes', 'dir'))
+    elseif(exist(['..' filesep 'Shapes'], 'dir'))
       curdir = cd;
-      cd('../Shapes');
+      cd(['..' filesep 'Shapes']);
     end
 
     % Open a pop-up to get the files
@@ -583,12 +583,12 @@ function trackings = input_trackings(trackings, name, opts)
     end
 
     % Create an absolute path to the file
-    if (expr(1) ~= '/')
+    if (expr(1) ~= filesep)
       expr = fullfile(pwd, expr);
     end
     
     % Extract only the name of the file
-    slash = findstr(expr, '/');
+    slash = findstr(expr, filesep);
     dirpath  = '';
     if (length(slash)>0)
       dirpath = expr(1:slash(end));

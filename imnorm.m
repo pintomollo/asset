@@ -7,8 +7,11 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode, minrange, max
   elseif (nargin < 4)
     mode = '';
   end
-  minrange = 0;
-  maxrange = 1;
+
+  if (nargin < 6)
+    minrange = 0;
+    maxrange = 1;
+  end
 
   [h w] = size(img);
 

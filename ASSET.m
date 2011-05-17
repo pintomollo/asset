@@ -258,7 +258,10 @@ function [mymovie,trackings] = ASSET(varargin)
 
   % It's over, let's notify it !
   if (opts.verbosity > 1)
-    mariosong;
+    try
+      mariosong;
+    catch ME
+    end
   end
 
   return;
@@ -292,9 +295,16 @@ function [mymovie, trackings, opts] = parse_input(varargin)
         % List all the MAT-files corresponding to the pattern
         datas = dir(varargin{1});
 
+        % Chech whether the file is in a subdirectory
+        indx = strfind(varargin{1}, filesep);
+        dirpath = '';
+        if (~isempty(indx))
+          dirpath = varargin{1}(1:indx(end));
+        end
+
         % Run them one after the other one
         for i=1:length(datas)
-          ASSET(datas(i).name, varargin{2:end});
+          ASSET([dirpath datas(i).name], varargin{2:end});
         end
 
         % Do not forget to stop here !
@@ -364,7 +374,12 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
   % If mymovie was not provided, we use the standard structure
   if (isempty(mymovie))
-    mymovie = get_struct('mymovie');
+    if (~real_mat & mod(length(varargin), 2) == 1 & ischar(varargin{1}))
+      mymovie = varargin{1};
+      varargin(1) = [];
+    else
+      mymovie = get_struct('mymovie');
+    end
   end
 
   % The second possible argument is trackings, it needs to be a
@@ -372,7 +387,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
   if (~isempty(varargin) && isfield(varargin{1}, 'experiment'))
     % Assign & remove
     trackings = varargin{1};
-    varargin{1} = [];
+    varargin(1) = [];
   else
 
     % Otherwise we assign an empty structure (as it might never be used)
@@ -381,19 +396,16 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
   % Retrieve the latest version of OPTS
   new_opts = get_struct('ASSET');
+  new_opts = load_parameters('default_params.txt');
 
   % Next possible structure has to be opts
   if (~isempty(varargin) && isstruct(varargin{1}))
     opts = varargin{1};
     varargin(1) = [];
-
-    % Correct the structure of opts if need be
-    opts = merge_structures(opts, new_opts);
-
-  % Otherwise, we use the standard one
-  elseif (isempty(opts))
-    opts = new_opts;
   end
+
+  % Correct the structure of opts if need be
+  opts = merge_structures(opts, new_opts);
 
   % Now we check that the parameters were provided in pairs
   npairs = length(varargin) / 2;

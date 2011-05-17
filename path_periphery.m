@@ -1,4 +1,11 @@
 function outside_paths = path_periphery(paths, varargin)
+% PATH_PERIPHERY computes the periphery of a closed 2D path, thus removing invaginations.
+%
+% 
+%
+% Gonczy & Naef labs, EPFL
+% Simon Blanchoud
+% 14.04.2011
 
   [update, center, axes_length, orientation, opts] = parse_inputs(varargin{:});
   was_cell = true;

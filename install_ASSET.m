@@ -13,9 +13,10 @@ function install_ASSET
       cd(current_dir);
     end
 
-    addpath('.');
-    addpath('libraries');
-    addpath('helpers');
+    here = pwd;
+    addpath(here);
+    addpath(fullfile(here, 'libraries'));
+    addpath(fullfile(here, 'helpers'));
 
     cd ..;
   end
@@ -45,6 +46,13 @@ function install_ASSET
     end
 
     cd ..;
+  end
+
+  try
+    loci.formats.ImageReader();
+    loci.formats.MetadataTools.createOMEXMLMetadata();
+  catch ME
+    warning('LOCI Bio-formats library does not seem to be installed, this will impair correct conversion of the images.\nVisit http://www.loci.wisc.edu/software/bio-formats and install the JAR libraries.')
   end
 
   if (~exist('TmpData', 'dir'))

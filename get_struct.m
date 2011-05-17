@@ -134,8 +134,10 @@ function mystruct = get_struct(type, nstruct)
     case 'quantification'
       mystruct = struct('channel', 'data', ...              % Quantified channel
                         'field', 'cortex', ...              % Quantified field in the previously defined channel
+                        'normalize', 'cytoplasm', ...       % Type of signal normalization
+                        'norm_shift', 2, ...                % Distance to quantify the normalization value
                         'window_shape', 'gaussian', ...     % Shape of the quantification window, can either be a filter or a 'fspecial' type
-                        'window_params', 1, ...             % Parameters required to compute the filter
+                        'window_params', 0.5, ...           % Parameters required to compute the filter
                         'window_size', 2);                  % Size of (square) the window
 
     % Parameters of the reference embryo (see carth2normalized.m)

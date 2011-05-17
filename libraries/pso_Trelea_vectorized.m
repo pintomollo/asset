@@ -378,7 +378,7 @@ for i=1:me  % start epoch loop (iterations)
 
          cnt = cnt+1; % count how many times we display (useful for movies)
 	
-         [fid, err] = fopen(['./' fname '.dat'], 'a');
+         [fid, err] = fopen(['.' filesep fname '.dat'], 'a');
          if (i==1)
            fprintf(fid, [uuid '%% columns="iteration, evalutation | lastbest" (' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')\n']);
          end

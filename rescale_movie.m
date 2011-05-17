@@ -12,15 +12,15 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
 
     for k=1:length(mymovie.(field))
       mymovie.(field)(k).file = mymovie.(field)(k).fname;
-      indx = findstr(mymovie.(field)(k).file, '/');
+      indx = findstr(mymovie.(field)(k).file, filesep);
       if (isempty(indx))
-        indx = 0;
+        indx = 1;
       else
         indx = indx(end) + 1;
       end
       waitbar(0, hwait, ['Preprocessing Movie ' strrep(mymovie.(field)(k).file(indx:end),'_','\_')]);
 
-      tmp_fname = get_new_name('tmpmat(\d+)\.ome\.tiff?', 'TmpData');
+      tmp_fname = absolutepath(get_new_name('tmpmat(\d+)\.ome\.tiff?', 'TmpData'));
       %tmp_fname = get_temp_name();
       %mymovie.(field)(k).fname
 
@@ -30,7 +30,7 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
       reader = loci.formats.ImageReader();
       reader = loci.formats.ChannelMerger(reader);
       reader.setMetadataStore(omexmlMeta);
-      reader.setId(fullfile(pwd, mymovie.(field)(k).file));
+      reader.setId(absolutepath(mymovie.(field)(k).file));
       %reader.setSeries(0);
       
       omexmlMeta.setPixelsType(ome.xml.model.enums.PixelType.UINT16, 0);
@@ -105,7 +105,7 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
 
       %writer = loci.formats.out.OMETiffWriter();
       %writer.setMetadataRetrieve(omexmlMeta);
-      writer.setId(mymovie.(field)(k).fname);
+      writer.setId(absolutepath(mymovie.(field)(k).fname));
       writer.setCompression(java.lang.String(mymovie.(field)(k).compression));
       writer.setWriteSequentially(true);
 

@@ -251,8 +251,8 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, verbosi
   edg1 = reduce_canevas(edg1, size10);
 
   if(~any(any(edg1)))
-    %beep;keyboard
-    display('Error : No embryo detected !!');
+    beep;keyboard
+    error('No embryo detected !!');
   end
 
   estim = bwboundaries(edg1, 8, 'noholes');

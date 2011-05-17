@@ -623,7 +623,7 @@ else % flgresume
       for namecell = filenames(:)'
         name = namecell{:};
 
-	[fid, err] = fopen(['./' filenameprefix name '.dat'], 'a');
+	[fid, err] = fopen(['.' filesep filenameprefix name '.dat'], 'a');
 	if fid < 1 % err ~= 0 
 	  warning(['could not open ' filenameprefix name '.dat']);
 	  filesnames(find(strcmp(filenames,name))) = [];

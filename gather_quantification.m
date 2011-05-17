@@ -22,7 +22,11 @@ function [datas, theta, cyto] = gather_quantification(mymovie, opts)
     datas(i, :) = new_intens(:, 2);
   end
 
-  cyto = mymovie.data.cytokinesis;
+  if (isfield(mymovie.data, 'cytokinesis'))
+    cyto = mymovie.data.cytokinesis;
+  else
+    cyto = 0;
+  end
 
   return;
 end

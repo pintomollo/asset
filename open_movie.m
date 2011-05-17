@@ -9,8 +9,18 @@ function [mymovie] = open_movie(mymovie, expr_name, opts)
 
   if(~isstruct(mymovie) | length(mymovie) == 0 | (isempty(mymovie.dic) & isempty(mymovie.eggshell & isempty(mymovie.cortex))))
     if(ischar(mymovie))
-      fname=mymovie;
-      dirpath='';
+      indx = strfind(mymovie, filesep);
+
+      if (~isempty(indx))
+        curdir = cd;
+        cd(mymovie(1:indx(end)-1));
+        dirpath = [pwd filesep];
+        cd(curdir);
+        fname = mymovie(indx(end)+1:end);
+      else
+        fname = mymovie;
+        dirpath = pwd;
+      end
     else
 
       % In case a subfolder name Movies exists, move into it
@@ -18,9 +28,9 @@ function [mymovie] = open_movie(mymovie, expr_name, opts)
       if(exist('Movies', 'dir'))
         curdir = cd;
         cd('Movies');
-      elseif(exist('../Movies', 'dir'))
+      elseif(exist(['..' filesep 'Movies'], 'dir'))
         curdir = cd;
-        cd('../Movies');
+        cd(['..' filesep 'Movies']);
       end
 
       disp('[Select a movie file]');
@@ -74,13 +84,13 @@ function [mymovie] = open_movie(mymovie, expr_name, opts)
       channels(i).file = [dirpath files(i).name];
       channels(i).file = relativepath(channels(i).file);
       %[channels(i).fname, policy] = convert_movie(channels(i).file, 'Uncompressed', policy);
-      [channels(i).fname, policy] = convert_movie(channels(i).file, 'LZW', policy);
+      [channels(i).fname, policy] = convert_movie(channels(i).file, 'LZW', policy, opts);
       %channels(i) = bfopen(channels(i));
     end
 
     %keyboard
 
-    mymovie = identify_channels(channels);
+    mymovie = identify_channels(channels, opts);
 
     mymovie = rescale_movie(mymovie, true);
     mymovie.experiment = name;

@@ -13,7 +13,7 @@ function [fid] = store_data(fid, images, indexes)
     end
     omexmlMeta = loci.formats.MetadataTools.createOMEXMLMetadata();
 
-    fid = full
+    fid = absolutepath(fid);
 
     r = loci.formats.ImageReader();
     r = loci.formats.ChannelMerger(r);

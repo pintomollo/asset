@@ -41,8 +41,16 @@ function [best_coefs, shift] = calibrate_dic_correction(mymovie, trackings, opts
 
   intensity = [intensity(:) ranges(:)];
 
-  disp('can do better than this !')
   [shift] = fminbnd(@regress_dic, 0 , 2*pi);
+  next_min = shift + pi;
+  if (next_min > 2*pi)
+    next_min = next_min - 2*pi;
+  end
+
+  new_val = regress_dic(next_min);
+  if (new_val == best_val)
+    shift = next_min;
+  end
 
   return;
 

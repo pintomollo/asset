@@ -6,9 +6,10 @@ function [nframes, ssize, pixelType, r] = size_data(fname)
     end
 
     %omexmlMeta = loci.formats.MetadataTools.createOMEXMLMetadata();
-    if (fname(1) == '.')
-      fname = fullfile(pwd, fname);
-    end
+    %if (fname(1) == '.')
+    %  fname = fullfile(pwd, fname);
+    %end
+    fname = absolutepath(fname);
 
     r = loci.formats.ImageReader();
     %r = loci.formats.ChannelMerger(r);
