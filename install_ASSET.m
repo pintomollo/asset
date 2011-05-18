@@ -34,12 +34,14 @@ function install_ASSET
         mex MEX\gaussian_mex.c MEX\gaussian_smooth.c;
         mex MEX\median_mex.c MEX\ctmf.c;
         mex MEX\imadm_mex.c MEX\gaussian_smooth.c;
+        mex MEX\emdc.c;
       else
         mex MEX/bilinear_mex.c;
         mex MEX/dp_score_mex.c;
         mex MEX/gaussian_mex.c MEX/gaussian_smooth.c;
         mex MEX/median_mex.c MEX/ctmf.c;
         mex MEX/imadm_mex.c MEX/gaussian_smooth.c;
+        mex MEX/emdc.c;
       end
     catch ME
       warning('Could not compile the MEX funtions, ASSET can still run without them but more slowly. Consider fixing this problem for more efficiency.');

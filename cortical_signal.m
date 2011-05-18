@@ -62,11 +62,6 @@ function mymovie = cortical_signal(mymovie, opts)
 
       projection = mean(values, 1);
       imf = emdc([], projection);
-      if (any(isnan(imf(:))))
-      %  imf = emd([], projection);
-        'NaN proj !'
-        keyboard
-      end
       projection = imf(end, :);
 
       params1 = estimate_sigmoid(dpos, projection);
@@ -98,6 +93,7 @@ function mymovie = cortical_signal(mymovie, opts)
       signal = NaN(npts, 4); 
       dpos_range = dpos(peak_range);
       estim_range = estim5(peak_range);
+      smoothed = NaN(size(values));
       %signal2 = NaN(npts, 4); 
       %signal3 = NaN(npts, 4); 
       %signal4 = NaN(npts, 4); 
@@ -105,21 +101,25 @@ function mymovie = cortical_signal(mymovie, opts)
         %signal(j, :) = nlinfit(dpos, values(j, :) - estim3, @gaussian, params4);
         %signal2(j, :) = estimate_gaussian(dpos(peak_range), values(j, peak_range)-estim3(peak_range));
         line = values(j,:);
-        if (any(isnan(line)))
-          disp('?!?!?');
-        end
         tmp_val = emdc([],line);
         %while (any(isnan(tmp_val(:))))
         %  tmp_val = emdc([], line);
         %end
+        smoothed(j, :) = tmp_val(end, :);
         signal(j, :) = estimate_gaussian(dpos_range, tmp_val(end, peak_range)-estim_range);
         %signal4(j, :) = nlinfit(dpos, values(j, :) - estim3, @gaussian, signal2(j,:));
       end
       mymovie.data.quantification(nimg).front = signal;
       mymovie.data.quantification(nimg).bkg = [params5 params4(1:3)];
 
-      %figure;imagesc(gaussian(signal, dpos));
-      %keyboard
+      clim = [min(values(:)) max(values(:))];
+
+      figure;imagesc(gaussian(signal, dpos), clim);
+      figure;imagesc(values, clim);
+      figure;imagesc(smoothed, clim);
+      keyboard
+
+      %close all
     else
 
       tmp_cortex = [cortex(end,:); cortex; cortex(1,:)];

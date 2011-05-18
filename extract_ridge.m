@@ -17,6 +17,9 @@ function values = extract_ridge(params, pos, dperp, opts)
     window = centers(indexes+i, :);
     window_params = params(indexes+i, :);
     dist = sqrt(sum(bsxfun(@minus, window, pos(i,:)).^2, 2));
+
+
+    'Wrong, favors the furhter away!'
     values(i) = sum(window_params(:, 3) .* (dist / sum(dist)));
     
     %values(i) = sum(exp((-dist) ./ (2*window_params(:,2))) .* window_params(:, 3));
