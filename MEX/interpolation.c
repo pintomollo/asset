@@ -36,34 +36,29 @@ void interpolation(double y[],double xs[],double ys[],int n,double x[], int nx,d
   j=0;
   jfin=n-1;
   while (xs[j+2]<x[0]) j++;
-  while (xs[jfin]>x[nx-1]) jfin--;
+  while (xs[jfin]>=x[nx-1]) jfin--;
   for (;j<=jfin;j++) {
     /* Compute the coefficients of the polynomial between two knots */
     a=xs[j];
     b=xs[j+1];
     c=b-a;
+    d=ys[j];
+    e=ys[j+1];
+    f=ys2[j];
+    g=ys2[j+1];
+    a0=(b*d-a*e+CUBE(b)*f/6-CUBE(a)*g/6)/c+c*(a*g-b*f)/6;
+    a1=(e-d-SQUARE(b)*f/2+SQUARE(a)*g/2)/c+c*(f-g)/6;
+    a2=(b*f-a*g)/(2*c);
+    a3=(g-f)/(6*c);
 
-    //
-    // My own correction
-    //
-    if (c != 0) {
-      d=ys[j];
-      e=ys[j+1];
-      f=ys2[j];
-      g=ys2[j+1];
-      a0=(b*d-a*e+CUBE(b)*f/6-CUBE(a)*g/6)/c+c*(a*g-b*f)/6;
-      a1=(e-d-SQUARE(b)*f/2+SQUARE(a)*g/2)/c+c*(f-g)/6;
-      a2=(b*f-a*g)/(2*c);
-      a3=(g-f)/(6*c);
 
-      prev=cur;
-      while ((cur<nx) && ((j==jfin) || (x[cur]<xs[j+1]))) cur++;
+    prev=cur;
+    while ((cur<nx) && ((j==jfin) || (x[cur]<xs[j+1]))) cur++;
 
-      /* Compute the value of the spline at the sampling times x[i] */
-      for (i=prev;i<cur;i++) {
-        xc=x[i];
-        y[i]=a0+a1*xc+a2*SQUARE(xc)+a3*CUBE(xc);
-      }
+    /* Compute the value of the spline at the sampling times x[i] */
+    for (i=prev;i<cur;i++) {
+      xc=x[i];
+      y[i]=a0+a1*xc+a2*SQUARE(xc)+a3*CUBE(xc);
     }
   }
 }

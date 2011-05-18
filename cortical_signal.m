@@ -112,12 +112,12 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).front = signal;
       mymovie.data.quantification(nimg).bkg = [params5 params4(1:3)];
 
-      clim = [min(values(:)) max(values(:))];
+      %clim = [min(values(:)) max(values(:))];
 
-      figure;imagesc(gaussian(signal, dpos), clim);
-      figure;imagesc(values, clim);
-      figure;imagesc(smoothed, clim);
-      keyboard
+      %figure;imagesc(gaussian(signal, dpos), clim);
+      %figure;imagesc(values, clim);
+      %figure;imagesc(smoothed, clim);
+      %keyboard
 
       %close all
     else

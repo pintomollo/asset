@@ -9,8 +9,6 @@ function [datas, theta, cyto] = gather_quantification(mymovie, opts)
   datas = NaN(nframes, npts);
 
   for i=1:nframes
-    keyboard
-
     warper = mymovie.data.warpers(i);
 
     cortex = mymovie.data.cortex(i).carth;
