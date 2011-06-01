@@ -25,11 +25,12 @@ function mymovie = cortical_signal(mymovie, opts)
   for i=1:nframes
     %nimg = randi(nframes)
     nimg = i;
-    %nimg = 38;
+    %nimg = i + 109;
+    %nimg = 27
 
     cortex = mymovie.data.cortex(nimg).carth;
 
-    if (opts.recompute|(length(mymovie.data.quantification) < nimg)|~isfield(mymovie.data.quantification(nimg), 'front')|isempty(mymovie.data.quantification(nimg).front))
+    if (opts.recompute|(~isfield(mymovie.data, 'quantification'))|(length(mymovie.data.quantification) < nimg)|~isfield(mymovie.data.quantification(nimg), 'front')|isempty(mymovie.data.quantification(nimg).front))
       img = double(load_data(mymovie.data, nimg));
 
       ell_cortex = abs(carth2elliptic(cortex, mymovie.data.centers(:, nimg), mymovie.data.axes_length(:, nimg), mymovie.data.orientations(1, nimg)));
@@ -40,16 +41,26 @@ function mymovie = cortical_signal(mymovie, opts)
         mymovie.data.cortex(nimg).carth = cortex;
       end
 
+      %keyboard
+
+      [cortex, rescale] = insert_ruffles(cortex, mymovie.markers.ruffles(nimg).carth, mymovie.markers.ruffles(nimg).paths);
+
       tmp_cortex = [cortex(end,:); cortex; cortex(1,:)];
       dpos = (tmp_cortex(3:end, :) - tmp_cortex(1:end-2, :)) / 2;
+      dpts = diff(cortex(1:end-1, :));
 
       dperp = [-dpos(:,2) dpos(:,1)];
+      nulls = all(dperp == 0, 2);
+      dperp(nulls, :) = dpts(nulls, :);
+
       dperp = bsxfun(@rdivide, dperp, hypot(dperp(:,1), dperp(:,2))); 
+
 
       nbins = 64;
 
       dpos = [-nbins:0.5:nbins];
       nbins = length(dpos);
+      sampling_index = [1:nbins];
 
       all_pos_x = bsxfun(@plus, dperp(:,1) * dpos, cortex(:,1));
       all_pos_y = bsxfun(@plus, dperp(:,2) * dpos, cortex(:,2));
@@ -60,16 +71,21 @@ function mymovie = cortical_signal(mymovie, opts)
       values = bilinear(img, all_pos_x, all_pos_y);
       values = reshape(values, [size(cortex,1) nbins]);
 
-      projection = mean(values, 1);
-      imf = emdc([], projection);
+      projection = mymean(values, 1);
+      valids = ~isnan(projection);
+
+      valid_projection = projection(valids);
+      valid_dpos = dpos(valids);
+
+      imf = emdc(sampling_index(valids), valid_projection);
       projection = imf(end, :);
 
-      params1 = estimate_sigmoid(dpos, projection);
-      estim1 = sigmoid(params1, dpos);
+      params1 = estimate_sigmoid(valid_dpos, valid_projection);
+      estim1 = sigmoid(params1, valid_dpos);
 
-      peak_range = get_peak(dpos, projection-estim1);
-      params2 = estimate_gaussian(dpos(peak_range), projection(peak_range)-estim1(peak_range));
-      estim2 = gaussian([params2(1:3) 0], dpos);
+      peak_range = get_peak(valid_dpos, valid_projection-estim1);
+      params2 = estimate_gaussian(valid_dpos(peak_range), valid_projection(peak_range)-estim1(peak_range));
+      estim2 = gaussian([params2(1:3) 0], valid_dpos);
 
       %params3 = nlinfit(dpos, projection - estim2, @sigmoid, params1);
       %estim3 = sigmoid(params3, dpos);
@@ -77,22 +93,24 @@ function mymovie = cortical_signal(mymovie, opts)
       %params4 = nlinfit(dpos, projection - estim3, @gaussian, params2);
       %estim4 = gaussian(params4, dpos);
 
-      params3 = estimate_sigmoid(dpos, projection - estim2);
-      estim3 = sigmoid(params3, dpos);
+      params3 = estimate_sigmoid(valid_dpos, valid_projection - estim2);
+      estim3 = sigmoid(params3, valid_dpos);
 
-      peak_range = get_peak(dpos, projection - estim3);
-      params4 = estimate_gaussian(dpos(peak_range), projection(peak_range)-estim3(peak_range));
-      estim4 = gaussian([params4(1:3) 0], dpos);
+      peak_range = get_peak(valid_dpos, valid_projection - estim3);
+      params4 = estimate_gaussian(valid_dpos(peak_range), valid_projection(peak_range)-estim3(peak_range));
+      %estim4 = gaussian([params4(1:3) 0], dpos);
 
       params5 = params3;
       params5(4) = params5(4) + params4(4);
       estim5 = sigmoid(params5, dpos);
 
+      peak_range = correct_peak(peak_range, valids);
+
       npts = size(values, 1);
 
       signal = NaN(npts, 4); 
-      dpos_range = dpos(peak_range);
-      estim_range = estim5(peak_range);
+      %dpos_range = dpos(peak_range);
+      %estim_range = estim5(peak_range);
       smoothed = NaN(size(values));
       %signal2 = NaN(npts, 4); 
       %signal3 = NaN(npts, 4); 
@@ -101,24 +119,46 @@ function mymovie = cortical_signal(mymovie, opts)
         %signal(j, :) = nlinfit(dpos, values(j, :) - estim3, @gaussian, params4);
         %signal2(j, :) = estimate_gaussian(dpos(peak_range), values(j, peak_range)-estim3(peak_range));
         line = values(j,:);
-        tmp_val = emdc([],line);
+        valids = ~isnan(line);
+
+        if (~any(valids))
+          all_pos_x = reshape(all_pos_x, [size(cortex,1) nbins]);
+          all_pos_y = reshape(all_pos_y, [size(cortex,1) nbins]);
+
+          [all_pos_x(j, :); all_pos_y(j, :)]
+
+          j
+
+          continue;
+        end
+
+        valid_line = line(valids);
+        valid_dpos = dpos(valids);
+
+        valid_range = valids & peak_range;
+
+        tmp_val = emdc(sampling_index(valids), valid_line);
         %while (any(isnan(tmp_val(:))))
         %  tmp_val = emdc([], line);
         %end
-        smoothed(j, :) = tmp_val(end, :);
-        signal(j, :) = estimate_gaussian(dpos_range, tmp_val(end, peak_range)-estim_range);
+        smoothed(j, valids) = tmp_val(end, :);
+        signal(j, :) = estimate_gaussian(dpos(valid_range), tmp_val(end, valid_range)-estim5(valid_range));
         %signal4(j, :) = nlinfit(dpos, values(j, :) - estim3, @gaussian, signal2(j,:));
+        if (rescale(j))
+          signal(j, 3) = signal(j, 3) / 2;
+        end
       end
+
       mymovie.data.quantification(nimg).front = signal;
       mymovie.data.quantification(nimg).bkg = [params5 params4(1:3)];
+      mymovie.data.quantification(nimg).carth = cortex(:, :);
 
       %clim = [min(values(:)) max(values(:))];
-
       %figure;imagesc(gaussian(signal, dpos), clim);
       %figure;imagesc(values, clim);
       %figure;imagesc(smoothed, clim);
+      %figure;plot(dpos, projection);hold on;plot(dpos(peak_range), projection(peak_range), 'r');
       %keyboard
-
       %close all
     else
 
@@ -156,6 +196,19 @@ function mymovie = cortical_signal(mymovie, opts)
 
     %keyboard
   end
+
+  return;
+end
+
+function new_peak = correct_peak(peak, valids)
+
+  new_peak = false(size(valids));
+  new_peak(valids) = peak;
+
+  start_indx = find(new_peak, 1, 'first');
+  end_indx = find(new_peak, 1, 'last');
+
+  new_peak(start_indx:end_indx) = true;
 
   return;
 end
@@ -204,28 +257,31 @@ function range = get_peak(x, y)
 
   x = x - center;
 
-  lmin = find(x(2:end-1) < 0 & dy(1:end-1) < 0 & dy(2:end) >= 0, 1, 'last')+1;
+  lmin = find(x(2:end-1) < 0 & dy(1:end-1) < 0 & dy(2:end) >= 0)+1;
   if (isempty(lmin))
     lmin = 1;
   end
-  rmin = find(x(2:end-1) > 0 & dy(1:end-1) <= 0 & dy(2:end) > 0, 1, 'first')+1;
+  rmin = find(x(2:end-1) > 0 & dy(1:end-1) <= 0 & dy(2:end) > 0)+1;
   if (isempty(rmin))
     rmin = length(x);
   end
 
-  range = min(-x(lmin), x(rmin));
+  width = abs(bsxfun(@minus, x(rmin), x(lmin).'));
+  dist = abs(bsxfun(@plus, x(rmin), x(lmin).'));
+  dist(width < 30) = Inf;
+  [dist, indexes] = min(dist, [], 2);
+  best_min = find(dist(2:end) <= dist(1:end-1), 1, 'last') + 1;
+  if (isempty(best_min))
+    best_min = length(dist);
+  end
+
+  range = min(-x(lmin(best_min)), x(rmin(indexes(best_min))));
   range = (x >= -range & x <= range);
 
   return;
 end
 
 function params = estimate_gaussian(x,y)
-
-  if (any(isnan(y)))
-    'NaNssss'
-    beep;beep;
-    keyboard
-  end
 
   orig_y = y;
   y = y - min(y);
@@ -238,7 +294,7 @@ function params = estimate_gaussian(x,y)
 
   % Try to catch the possible warning (lastwarn)
   % and adapt to it, either reduce #params or try pinv
-  % check 14-110311_2!!! 24-170211_1 !! 24-090311_4
+  % check 14-110311_2!!! 24-170211_1 !! 24-090311_4 !! 160211_0
 
 
   %ampl = mean(orig_y(range) ./ exp(-x / (2*sigma)));

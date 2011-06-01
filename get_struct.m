@@ -45,6 +45,7 @@ function mystruct = get_struct(type, nstruct)
                         'max_export', 1, ...                % Number of exported frames (>1 is the absolute number of frames, <=1 is the fraction)
                         'max_frames', 1, ...                % Number of analyzed frames (value as for max_export)
                         'measure_performances', false, ...  % Measures the error of the segmentation with respect to the manual trackings
+                        'merge_input_files', true, ...      % Uses the Bio-formats file merge when importing movie files
                         'ml_type', 'cortex', ...            % Field on which ML is performed (use cell array for more than one)
                         'nbins', 36, ...                    % Number of bins used to measure the performance
                         'normalize', true, ...              % Normalize the results of the analysis onto the reference embryo

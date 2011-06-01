@@ -18,6 +18,7 @@
                  ((b) < (c) ? ((b) < (d) ? 2 : 4) : ((c) < (d) ? 3 : 4)));
 #endif
 
+#include "gaussian_smooth.c"
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 

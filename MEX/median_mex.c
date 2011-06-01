@@ -3,6 +3,8 @@
 #include "ctmf.h"
 #include "mex.h"
 
+#include "ctmf.c"
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   int h, w, nelem, i, niter = 1, radius = 1; 

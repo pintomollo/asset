@@ -1,6 +1,6 @@
 function values = extract_ridge(params, pos, dperp, opts)
 
-  window_size = 7;
+  window_size = 15;
 
   npts = size(params, 1);
   values = NaN(npts,1);
@@ -9,18 +9,22 @@ function values = extract_ridge(params, pos, dperp, opts)
 
   centers = [centers(end-window_size+1:end, :); centers; centers(1:window_size,:)];
   params = [params(end-window_size+1:end, :); params; params(1:window_size,:)];
-  params(:,2) = params(:,2).^2;
 
   indexes = [0:2*window_size];
+  gaussian_var = opts.quantification.window_params / opts.pixel_size;
+  gaussian_var = 2*(gaussian_var^2);
+
+  factor = sqrt(2*pi);
 
   for i=1:npts
     window = centers(indexes+i, :);
     window_params = params(indexes+i, :);
-    dist = 1 ./ sqrt(sum(bsxfun(@minus, window, pos(i,:)).^2, 2));
+    dist = exp(-sqrt(sum(bsxfun(@minus, window, pos(i,:)).^2, 2)) ./ gaussian_var);
 
+    % Integral
+    %values(i) = sum((window_params(:, 3) .* window_params(:,2) .* factor) .* (dist / sum(dist)));
+    % Amplitude
     values(i) = sum(window_params(:, 3) .* (dist / sum(dist)));
-    
-    %values(i) = sum(exp((-dist) ./ (2*window_params(:,2))) .* window_params(:, 3));
   end
   %subplot(221)
   %scatter(centers(:,1), centers(:,2), 'b');

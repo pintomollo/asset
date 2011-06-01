@@ -49,7 +49,6 @@ function [mymovie,trackings] = ASSET(varargin)
   end
 
   % Temporary variables
-  expr_name = '';
   is_original_file = true;
 
   % Debug mode breakpoints
@@ -109,7 +108,7 @@ function [mymovie,trackings] = ASSET(varargin)
   end
 
   % Import the recordings
-  mymovie = open_movie(mymovie, expr_name, opts);
+  mymovie = open_movie(mymovie, opts);
 
   % Debug mode breakpoints
   if (opts.debug)
@@ -117,7 +116,7 @@ function [mymovie,trackings] = ASSET(varargin)
     keyboard;
 
   % If there is no experiment, something is really wrong, give up
-  elseif (isempty(mymovie.experiment))
+  elseif (~isstruct(mymovie) || ~isfield(mymovie, 'experiment') || isempty(mymovie.experiment))
     error('No recording was properly loaded thus ASSET cannot run');
 
   % Progress display

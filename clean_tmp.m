@@ -16,7 +16,7 @@ function clean_tmp
         for k=1:length(mymovie.(fields{j}))
           [tmp tokens] = regexp(mymovie.(fields{j})(k).fname,'tmpmat(\d+)\.*','match','tokens');
           if (length(tokens)~=0)
-            used_tmp = [used_tmp; str2num(char(tokens{1}))];
+            used_tmp = [used_tmp; str2double(char(tokens{1}))];
           end
         end
       end
@@ -37,7 +37,7 @@ function clean_tmp
   for d = 1:length(ls_dir)
     [tmp tokens] = regexp(ls_dir(d).name,'tmpmat(\d+)\.*','match','tokens');
     if(length(tokens)~=0)
-      tmp_token = str2num(char(tokens{1}));
+      tmp_token = str2double(char(tokens{1}));
       if (~any(used_tmp == tmp_token))
         disp(['Deleting ' ls_dir(d).name]);
         delete([tmp_dir ls_dir(d).name]);

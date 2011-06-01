@@ -4,6 +4,8 @@
 #include "gaussian_smooth.h"
 #include "mex.h"
 
+#include "gaussian_smooth.c"
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   int h, w; 

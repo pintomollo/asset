@@ -80,7 +80,7 @@ function outside_paths = path_periphery(paths, varargin)
         % Project the path and over-sample it so that the "bins" contain more than
         % one data point
         polar = carth2elliptic(tmp_path,center,axes_length,orientation); 
-        polar = interp_elliptic(polar, 2);
+        polar = interp_elliptic(polar, 2, true);
 
         % No detectable invagination, then continue
         if (all(diff(polar(:,1))>=0))

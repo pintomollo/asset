@@ -91,6 +91,8 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
       writer.close();
 
       mymovie.(field)(k).fname = get_new_name('tmpmat(\d+)\.ome\.tiff?', 'TmpData');
+
+      %keyboard
       %mymovie.(field)(k).fname = get_temp_name();
 
       %clear reader writer;
@@ -103,8 +105,8 @@ function [mymovie] = rescale_movie(mymovie, overwrite)
       
       %omexmlMeta.setPixelsType(ome.xml.model.enums.PixelType.DOUBLE, 0);
 
-      %writer = loci.formats.out.OMETiffWriter();
-      %writer.setMetadataRetrieve(omexmlMeta);
+      writer = loci.formats.out.OMETiffWriter();
+      writer.setMetadataRetrieve(omexmlMeta);
       writer.setId(absolutepath(mymovie.(field)(k).fname));
       writer.setCompression(java.lang.String(mymovie.(field)(k).compression));
       writer.setWriteSequentially(true);

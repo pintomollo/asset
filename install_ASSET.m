@@ -1,5 +1,12 @@
 function install_ASSET
+% INSTALL_ASSET adds the required directories to the matlabpath, compiles the MEX
+% functions and checks for the existence of the required java libraries.
+%
+% Gonczy & Naef labs, EPFL
+% Simon Blanchoud
+% 19.05.2011
 
+  % Start by checking where we are, we need to be inside the celegans-analysis folder
   current_dir = '';
   if (numel(dir('get_struct.m')) == 1)
     current_dir = pwd;
@@ -8,6 +15,7 @@ function install_ASSET
     current_dir = 'celegans-analysis';
   end
 
+  % If we can see this function, ASSET is already in the matlabpath
   if (exist('get_struct') ~= 2)
     if (~isempty(current_dir))
       cd(current_dir);
@@ -17,32 +25,26 @@ function install_ASSET
     addpath(here);
     addpath(fullfile(here, 'libraries'));
     addpath(fullfile(here, 'helpers'));
+    savepath
 
     cd ..;
   end
 
+  % If this function exists, the MEX files were properly compiled already
   if (exist('bilinear_mex') ~= 3)
     if (~isempty(current_dir))
       cd(current_dir);
     end
     
+    % Try to compile all the MEX functions
     try
       mex -setup;
-      if (ispc)
-        mex MEX\bilinear_mex.c;
-        mex MEX\dp_score_mex.c;
-        mex MEX\gaussian_mex.c MEX\gaussian_smooth.c;
-        mex MEX\median_mex.c MEX\ctmf.c;
-        mex MEX\imadm_mex.c MEX\gaussian_smooth.c;
-        mex MEX\emdc.c;
-      else
-        mex MEX/bilinear_mex.c;
-        mex MEX/dp_score_mex.c;
-        mex MEX/gaussian_mex.c MEX/gaussian_smooth.c;
-        mex MEX/median_mex.c MEX/ctmf.c;
-        mex MEX/imadm_mex.c MEX/gaussian_smooth.c;
-        mex MEX/emdc.c;
-      end
+      eval(['mex MEX' filesep 'bilinear_mex.c']);
+      eval(['mex MEX' filesep 'dp_score_mex.c']);
+      eval(['mex MEX' filesep 'gaussian_mex.c']);
+      eval(['mex MEX' filesep 'median_mex.c']);
+      eval(['mex MEX' filesep 'imadm_mex.c']);
+      eval(['mex MEX' filesep 'emdc.c']);
     catch ME
       warning('Could not compile the MEX funtions, ASSET can still run without them but more slowly. Consider fixing this problem for more efficiency.');
     end
@@ -50,6 +52,7 @@ function install_ASSET
     cd ..;
   end
 
+  % Try to use the java libraries to see if they are properly installed
   try
     loci.formats.ImageReader();
     loci.formats.MetadataTools.createOMEXMLMetadata();
@@ -57,6 +60,7 @@ function install_ASSET
     warning('LOCI Bio-formats library does not seem to be installed, this will impair correct conversion of the images.\nVisit http://www.loci.wisc.edu/software/bio-formats and install the JAR libraries.')
   end
 
+  % This folder is required as well
   if (~exist('TmpData', 'dir'))
     mkdir('TmpData');
   end

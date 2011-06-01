@@ -156,11 +156,11 @@ function mystruct = match_struct(mystruct, twin_struct, nframes)
 
     else
       indx = regexp(twin_struct(i).fname, '.*?-(\d+)\.shapes', 'tokens');
-      indx  = str2num(indx{1}{1});
+      indx  = str2double(indx{1}{1});
 
       for j=1:length(mystruct)
         new_indx = regexp(mystruct(j).fname, '.*?-(\d+)\.shapes', 'tokens');
-        new_indx  = str2num(new_indx{1}{1});
+        new_indx  = str2double(new_indx{1}{1});
 
         if (new_indx == indx)
           [mystruct(j), new_size] = merge_recursive(mystruct(j), twin_struct(i), nframes);

@@ -96,7 +96,7 @@ function [shapes, groups] = load_shapes(fname)
         % If there is a shift, we store it
         shift = regexp(line,'FrameShift=(\d+)','tokens');
         if (~isempty(shift))
-          frame_shift = str2num(shift{1}{1});
+          frame_shift = str2double(shift{1}{1});
         end
 
         % Look for the definition of the groups
@@ -125,7 +125,7 @@ function [shapes, groups] = load_shapes(fname)
         % Maybe there is another shift
         shift = regexp(line,'FrameShift=(\d+)','tokens');
         if (~isempty(shift))
-          frame_shift = str2num(shift{1}{1});
+          frame_shift = str2double(shift{1}{1});
         end
 
         % We look for the definition of the segmentation type
@@ -148,7 +148,7 @@ function [shapes, groups] = load_shapes(fname)
           % And in which slice they are
           slice = regexp(line,'^in slice=(\d+)','tokens');
           if(~isempty(slice))
-            slice_indx = str2num(char(slice{1})) + 1;
+            slice_indx = str2double(char(slice{1})) + 1;
           end
         end
         
@@ -179,9 +179,9 @@ function [shapes, groups] = load_shapes(fname)
 
           % We look for x and y points
           if (strncmp(line,'x=',2))
-            x = [x; str2num(line(3:end))];
+            x = [x; str2double(line(3:end))];
           elseif (strncmp(line,'y=',2))
-            y = [y; str2num(line(3:end))];
+            y = [y; str2double(line(3:end))];
           end
         end
     end

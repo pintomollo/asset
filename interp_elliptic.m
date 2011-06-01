@@ -1,48 +1,37 @@
-function [new_angles, path] = interp_elliptic(orig_angles, orig_values, new_angles)
+function [new_angles, path] = interp_elliptic(varargin)
 % INTERP_ELLIPTIC linear interpolation of the values in elliptical coordinate system,
-% taking into account the fact that the angular new_anglesitions are periodic.
+% taking into account the fact that the angular positions are periodic.
 %
 %   [VALUES] = INTERP_ELLIPTIC(ORIGINAL, NEW_POSITION) interpolates ORIGINAL at
 %   NEW_POSITION and returns the result in VALUES. Both VALUES and ORIGINAL are NxM
-%   matrices in which the first column is the angular new_anglesition.
+%   matrices in which the first column is the angular position.
 %
-%   [...] = INTERP_ELLIPTIC(ORIGINAL, NRESAMPLE) resamples the original values with
-%   a seemingly 2^NRESAMPLE higher resolution.
+%   [...] = INTERP_ELLIPTIC(ORIGINAL, NRESAMPLE, IS_RESAMPLING) resamples the original
+%   values with a seemingly 2^NRESAMPLE higher resolution when IS_RESAMPLING is true.
 %
-%   [ANGULAR_POSITION, VALUES] = INTERP_ELLIPTIC(...) returns the angular new_anglesition
+%   [ANGULAR_POSITION, VALUES] = INTERP_ELLIPTIC(...) returns the angular position
 %   and the interpolated values separatly.
 %
-%   [...] = INTERP_ELLIPTIC(ORIG_POSITION, ORIG_VALUES, NEW_POSITION) provides the
-%   original angular new_anglesitions and values separatly.
+%   [...] = INTERP_ELLIPTIC(ORIG_POSITION, ORIG_VALUES, ...) provides the original 
+%   angular positions and values separatly.
+%
+%   [...] = INTERP_ELLIPTIC(..., ANGLE_RANGE) interpolates in between ANGLE_RANGE
+%   instead of the default [0 2*pi] range.
 %
 % Gonczy & Naef labs, EPFL
 % Simon Blanchoud
 % 18.05.2011
 
-  % Handle the different types of new_anglessible inputs
-  % For 2, we have both the new_anglesition and the values together
-  if (nargin == 2)
-    new_angles = orig_values;
+  [orig_angles, orig_values, new_angles, angle_range, is_resampling] = parse_input(varargin{:});
 
-    orig_values = orig_angles(:, 2:end);
-    orig_angles = orig_angles(:, 1);
-
-  % One argument is not valid, so return directly
-  elseif (nargin == 1)
-    new_angles = orig_angles;
-
-    return;
-  end
+  % Measure the "size" of the range
+  drange = diff(angle_range);
 
   % Vectorize the input angles
   new_angles = new_angles(:);
 
-  % Initialization
-  is_resampling = false;
-
   % If we have only one value for the angles, this is a resampling problem
-  if (numel(new_angles) == 1 & mod(new_angles, 1) == 0)
-    is_resampling = true;
+  if (is_resampling)
 
     % Re-aling the positions as the interpolation works only with monotonically
     % increasing positions
@@ -64,7 +53,7 @@ function [new_angles, path] = interp_elliptic(orig_angles, orig_values, new_angl
 
       % Compute the very last element, to get periodicity
       first = new_angles(1);
-      first = first + 2*pi;
+      first = first + drange;
 
       % Simply average the following positions to get the newer intermediater one
       mean_new_angles = mean([new_angles,[new_angles(2:end,:); first]], 2);
@@ -87,12 +76,12 @@ function [new_angles, path] = interp_elliptic(orig_angles, orig_values, new_angl
   end
 
   % Deduce the minimal and maximal positions we can interpolate
-  min_angle = min(new_angles(:,1)) - dangle;
-  max_angle = max(new_angles(:,1)) + dangle;
+  min_angle = angle_range(1) - dangle;
+  max_angle = angle_range(2) + dangle;
 
   % Reset the angular values such that they are in the interpolated range
-  orig_angles(orig_angles < min_angle) = orig_angles(orig_angles < min_angle) + 2*pi;
-  orig_angles(orig_angles > max_angle) = orig_angles(orig_angles > max_angle) - 2*pi;
+  orig_angles(orig_angles < min_angle) = orig_angles(orig_angles < min_angle) + drange;
+  orig_angles(orig_angles > max_angle) = orig_angles(orig_angles > max_angle) - drange;
 
   % Re-align the data such that they ahave increasing angular values
   indx = find(orig_angles(1:end-1) > orig_angles(2:end), 1);
@@ -105,14 +94,14 @@ function [new_angles, path] = interp_elliptic(orig_angles, orig_values, new_angl
   npts = length(orig_angles);
 
   % Get the number of points we need to repeat on both sides to avoid border effects
-  start = find(orig_angles - 2*pi < new_angles(1,1), 1, 'last');
-  ends = find(orig_angles + 2*pi > new_angles(end,1), 1, 'first');
+  start = find(orig_angles - drange < new_angles(1,1), 1, 'last');
+  ends = find(orig_angles + drange > new_angles(end,1), 1, 'first');
 
   % Repeat the data on both sides to avoid border effects when interpolating
   orig_angles = orig_angles([start:end 1:end 1:ends]);
   orig_values = orig_values([start:end 1:end 1:ends], :);
-  orig_angles(1:npts-start+1) = orig_angles(1:npts-start+1) - 2*pi;
-  orig_angles(end-ends+1:end) = orig_angles(end-ends+1:end) + 2*pi;
+  orig_angles(1:npts-start+1) = orig_angles(1:npts-start+1) - drange;
+  orig_angles(end-ends+1:end) = orig_angles(end-ends+1:end) + drange;
 
   % Perform the actual linear interpolation
   path = interp1q(orig_angles, orig_values, new_angles);
@@ -130,6 +119,48 @@ function [new_angles, path] = interp_elliptic(orig_angles, orig_values, new_angl
   if (nargout == 1)
     new_angles = [new_angles path];
     path = [];
+  end
+
+  return;
+end
+
+function [orig_angles, orig_values, new_angles, angle_range, is_resampling] = parse_input(varargin)
+
+  orig_angles = NaN;
+  orig_values = NaN;
+  new_angles = NaN;
+  angle_range = NaN;
+  is_resampling = NaN;
+
+  for i=1:length(varargin)
+    if (isnan(orig_values))
+      orig_values = varargin{i};
+    elseif (isnan(new_angles))
+      new_angles = varargin{i};
+    else
+      if (islogical(varargin{i}))
+        is_resampling = varargin{i};
+      elseif (numel(varargin{i}) == 2 & size(orig_values, 1) ~= size(new_angles, 1))
+        angle_range = varargin{i};
+      else
+        orig_angles = orig_values;
+        orig_values = new_angles;
+        new_angles = varargin{i};
+      end
+    end
+  end
+
+  if (isnan(orig_angles))
+    orig_angles = orig_values(:, 1);
+    orig_values = orig_values(:, 2:end);
+  end
+
+  if (isnan(is_resampling))
+    is_resampling = false;
+  end
+
+  if (isnan(angle_range))
+    angle_range = [0 2*pi];
   end
 
   return;

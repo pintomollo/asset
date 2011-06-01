@@ -4,12 +4,11 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
 % the standard formulas, e.g., (19) - (24) in Wolfram Mathworld:
 %     http://mathworld.wolfram.com/Ellipse.html
 %
+  center = zeros(2,1);
+  axes_length = center;
+  orientation = 0;
 
   if (isempty(X))
-    center = zeros(1,2);
-    axes_length = center;
-    orientation = 0;
-
     return;
   end
 
@@ -29,9 +28,6 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
 
   if (any(indx))
     if (all(indx))
-      center = zeros(1,2);
-      axes_length = center;
-      orientation = 0;
 
       return;
     end
@@ -42,14 +38,15 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
 
   XY = unique([X Y], 'rows');
   if (numel(XY) == 2)
-    center = zeros(1,2);
-    axes_length = center;
-    orientation = 0;
 
     return;
   end
 
-  A = EllipseDirectFit(XY);
+  try
+    A = EllipseDirectFit(XY);
+  catch ME
+    return;
+  end
 
   % Correct the scaling factor of 2 present in Wolfram
   a = A(1); b = A(2) / 2; c = A(3); d = A(4) / 2; f = A(5) / 2; g = A(6);
@@ -57,7 +54,7 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
   delta = b^2 - a*c;
   x0 = (c*d - b*f) / delta;
   y0 = (a*f - b*d) / delta;
-  center = [x0; y0];
+  center = real([x0; y0]);
 
   numer = 2*(a*f^2 + c*d^2 + g*b^2 - 2*b*d*f - a*c*g);
   denom = sqrt((a-c)^2 + 4*b^2);
@@ -89,7 +86,7 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
     orientation = orientation + pi/2;
   end
 
-  axes_length = [a0; b0];
+  axes_length = real([a0; b0]);
   orientation = orientation + 2*pi * (orientation < 0) - 2*pi * (orientation > 2*pi);
 
   return;

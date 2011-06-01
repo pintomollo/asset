@@ -31,7 +31,7 @@ function times = frame_timing(mymovie, replace_timing)
     [tokens] = regexp(meta,'<PlaneTiming DeltaT="(.+?)"', 'tokens');
     times = zeros(1, length(tokens));
     for i=1:length(tokens)
-      times(1,i) = str2num(tokens{i}{1});
+      times(1,i) = str2double(tokens{i}{1});
     end
   else
     ntimings = length(replace_timing);
@@ -47,7 +47,7 @@ function times = frame_timing(mymovie, replace_timing)
           [starts, ends] = regexp(meta,'<PlaneTiming DeltaT="(.+?)"');
           for i = length(starts):-1:1
             if (ntimings == 1)
-              meta = [meta(1:starts(i)-1) '<PlaneTiming DeltaT="' num2str(str2num(tokens{i}{1}) + replace_timing) '"' meta(ends(i)+1:end)];
+              meta = [meta(1:starts(i)-1) '<PlaneTiming DeltaT="' num2str(str2double(tokens{i}{1}) + replace_timing) '"' meta(ends(i)+1:end)];
             elseif (i <= ntimings)
               meta = [meta(1:starts(i)-1) '<PlaneTiming DeltaT="' num2str(replace_timing(i)) '"' meta(ends(i)+1:end)];
             end

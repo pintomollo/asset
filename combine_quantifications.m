@@ -2,12 +2,16 @@ function [res] = combine_quantifications(mymovies)
   close all;
   fname = regexprep(mymovies, '\*', '');
 
-  if (ischar(mymovies) & ~isempty(findstr(mymovies, '*')))
-    tmp = dir(mymovies); 
-    mymovies = cell(1, length(tmp));
+  if (ischar(mymovies))
+    if (~isempty(findstr(mymovies, '*')))
+      tmp = dir(mymovies); 
+      mymovies = cell(1, length(tmp));
 
-    for i=1:length(tmp)
-      mymovies{i} = tmp(i).name;
+      for i=1:length(tmp)
+        mymovies{i} = tmp(i).name;
+      end
+    else
+      mymovies = {mymovies}; 
     end
   end
 
@@ -23,6 +27,7 @@ function [res] = combine_quantifications(mymovies)
   for i=1:nmovies
     load(mymovies{i});
     [tmp_quant{i}, ~, cytos(i)] = gather_quantification(mymovie, opts);
+
     if (1-cytos(i) < first)
       first = 1-cytos(i);
     end
@@ -34,28 +39,40 @@ function [res] = combine_quantifications(mymovies)
 
   nframes = last - first + 1;
   cyto = 1-first;
-  %res = NaN(nframes, size(tmp_quant{i}, 2), nmovies);
+  res = NaN(nframes, size(tmp_quant{i}, 2), nmovies);
   orig_res = res;
   maxint = double(intmax('uint16'));
+
+  y_label = [1:nframes]-cyto;
 
   for i=1:nmovies
     tmp_frame = size(tmp_quant{i}, 1);
     orig_res((cyto-cytos(i))+[1:tmp_frame],:,i) = tmp_quant{i}*(minmax(i,2) - minmax(i,1))/maxint + minmax(i,1);;
-    res(:,:,i) = imnorm(orig_res(:,:,i));
+    %res(:,:,i) = imnorm(orig_res(:,:,i));
 
     imagesc(orig_res(:,:,i));
+    hold on
+    set(gca,'YTickLabel',y_label)
+    saveas(gca, [mymovies{i}(1:end-5) '.png']);
+    hold off
+    imagesc(imnorm(orig_res(:,:,i), [], [], 'row'));
+    hold on
+    set(gca,'YTickLabel',y_label)
     saveas(gca, [mymovies{i}(1:end-5) '-scaled.png']);
-    imagesc(res(:,:,i));
-    saveas(gca, [mymovies{i}(1:end-5) '-norm.png']);
+    hold off
+    %imagesc(res(:,:,i));
+    %saveas(gca, [mymovies{i}(1:end-5) '-norm.png']);
+    %imagesc(res(:,:,i));
+    %saveas(gca, [mymovies{i}(1:end-5) '-norm.png']);
   end
 
-  [val1, errs] = mymean(res, 3);
-  imagesc(val1);
-  saveas(gca, [fname '-norm.png']);
+  %[val1, errs] = mymean(res, 3);
+  %imagesc(val1);
+  %saveas(gca, [fname '-norm.png']);
 
-  [val1, errs] = mymean(orig_res, 3);
-  imagesc(val1);
-  saveas(gca, [fname '-scaled.png']);
+  %[val1, errs] = mymean(orig_res, 3);
+  %imagesc(val1);
+  %saveas(gca, [fname '-scaled.png']);
 
   return;
 

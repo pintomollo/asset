@@ -8,7 +8,7 @@ function [finalname] = rename_data(fname,newname)
     if(length(tokens)~=0)
       tmp_tokens = [];
       for i=1:length(tokens)
-        tmp_tokens(i) = str2num(char(tokens{i}));
+        tmp_tokens(i) = str2double(char(tokens{i}));
       end
       new_tokens = [new_tokens sort(tmp_tokens)];
     end
