@@ -41,10 +41,10 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
     img = imnorm(double(load_data(mymovie.dic,nimg)));
 
     if (opts.measure_performances)
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), estimation] = detect_ellipse(img, opts.verbosity, false);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), estimation] = detect_ellipse(img, false, opts);
     else
     %beep;keyboard
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = detect_ellipse(img, opts.verbosity, false);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = detect_ellipse(img, false, opts);
     end
 
     %orientations(1,nimg) = orientations(1,nimg) + pi;
@@ -149,7 +149,7 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
 
     if (opts.measure_performances)
       eggless = carthesian_coordinate(polar_cortex,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg),parameters.safety,size(img),[false true]);
-      estimation = detect_ellipse(eggless, opts.verbosity, true);
+      estimation = detect_ellipse(eggless, true, opts);
 
       if (opts.verbosity == 3)
         figure;imshow(realign(eggless,rescale_size,centers(:,nimg),orientations(1,nimg)));
@@ -215,49 +215,13 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
   return;
 end
 
-function [center, axes_length, orientation, estim] = detect_ellipse(img, verbosity, estim_only)
-
-  global rescale_size;
-
-  if (nargin == 1)
-    estim_only = false;
-    verbosity = 0;
-  end
-
-  npixels = max(size(img));
-  size10 = round(npixels/10);
-  size75 = round(npixels/75);
-  size150 = round(npixels/150);
-  size100 = round(prod(size(img)) / 100);
+function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_only, opts)
 
   img = imadm_mex(img);
-
   thresh = graythresh(img);
-  edg1 = (img > thresh*0.5*(max(img(:))) );
+  img = (img > thresh*0.5*(max(img(:))) );
 
-  if (verbosity == 3)
-    old_edg1 = edg1;
-  end
-
-  edg1 = increase_canevas(edg1, size10);
-
-  edg1 = imdilate(edg1, strel('disk', size150));
-  edg1 = imfill(edg1, 'holes');
-  edg1 = bwareaopen(edg1, size100);
-  edg1 = imdilate(edg1, strel('disk', size75));
-  edg1 = imfill(edg1, 'holes');
-  edg1 = imerode(edg1, strel('disk', size75 + size150));
-
-  edg1 = reduce_canevas(edg1, size10);
-
-  if(~any(any(edg1)))
-    beep;keyboard
-    error('No embryo detected !!');
-  end
-
-  estim = bwboundaries(edg1, 8, 'noholes');
-  estim = estim{1};
-  estim = estim(:,[2 1]);
+  [ellipse, estim] =  split_cells(img, estim_only, opts);
 
   if (estim_only)
     center = estim;
@@ -265,51 +229,17 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, verbosi
     orientation = [];
     estim = [];
 
-    return
+    return;
   end
 
-  [center, axes_length, orientation] = estimate_ellipse(edg1);
-  if (verbosity == 3)
-    figure; imshow(realign(img,rescale_size,center,orientation));
-    figure; imshow(realign(old_edg1,rescale_size,center,orientation));
-    figure; imshow(realign(edg1,rescale_size,center,orientation));
-    hold on; myplot(realign(draw_ellipse(center, axes_length, orientation),rescale_size,center, orientation),'m');
+  if (size(ellipse, 1) > 1)
+    imgsize = size(img);
+    dist = sum(bsxfun(@minus, ellipse([1 2], :), imgsize([2 1])/2).^2, 2);
+    [~, indx] = min(dist);
+    ellipse = ellipse(indx(1),:)
   end
 
-  return
-end
-
-%***********************************************************
-function ellsize = elliptic_size(mymovie,safety)
-
-  axes_length = ceil(mymovie.axes_length * safety);
-  perifs = ceil(ellipse_circum(axes_length))-1;
-  ellsize = [max(perifs) max(axes_length(1,:))];
-  
-end
-
-%***********************************************************
-function resized = increase_canevas(img, new_size)
-
-  [h,w] = size(img);
-  
-  resized =  zeros(h+(2*new_size), w+(2*new_size));
-
-  if (islogical(img))
-    resized = logical(resized);
-  end
-
-  resized((new_size+1):(new_size+h),(new_size+1):(new_size+w)) = img;
-  
-  return;
-end
-
-%***********************************************************
-function resized = reduce_canevas(img, new_size)
-
-  [h,w] = size(img);
-  
-  resized =  img((new_size+1):(h-new_size), (new_size+1):(w-new_size));
+  [center, axes_length, orientation, estim] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
 
   return;
 end

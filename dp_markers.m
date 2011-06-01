@@ -50,9 +50,9 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
     img = 1-img;
 
     if (opts.measure_performances)
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), mask, estimation] = estimate_ellipse(img);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), estimation] = detect_ellipse(img, false, opts);
     else
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), mask] = estimate_ellipse(img);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = detect_ellipse(img, false, opts);
     end
 
     if (opts.verbosity == 3)
@@ -164,7 +164,7 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
     carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
 
     if (opts.measure_performances)
-      [junk, junk, junk, junk, estimation] = estimate_ellipse(img);
+      [estimation] = detect_ellipse(img, true, opts);
     end
 
     if (opts.verbosity == 3)
@@ -198,3 +198,39 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
   return;
 end
 
+function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_only, opts)
+
+  imgsize = size(img);
+  npixels = max(imgsize);
+
+  size250 = round(npixels/250);
+  size200 = round(npixels/200);
+
+  img = gaussian_mex(img, size250);
+  img = median_mex(img, size200, 3);
+  img = imnorm(img);
+
+  thresh = graythresh(img);
+  img = (img > thresh*(max(img(:))) );
+
+  [ellipse, estim] =  split_cells(img, estim_only, opts);
+
+  if (estim_only)
+    center = estim;
+    axes_length = [];
+    orientation = [];
+    estim = [];
+
+    return;
+  end
+
+  if (size(ellipse, 1) > 1)
+    dist = sum(bsxfun(@minus, ellipse([1 2], :), imgsize([2 1])/2).^2, 2);
+    [~, indx] = min(dist);
+    ellipse = ellipse(indx(1),:)
+  end
+
+  [center, axes_length, orientation, estim] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
+
+  return;
+end

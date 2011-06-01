@@ -1,53 +1,62 @@
-function all_pts = split_cells(mymovie, opts)
+function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
 
-  [nframes, imgsize] = size_data(mymovie.dic);
-  all_pts = cell(nframes, 4);
+  if (nargin == 2)
+    opts = estim_only;
+    estim_only = false;
+  end
+
+  [h,w,nframes] = size(imgs);
+  imgsize = [h,w];
+
+  max_ratio = 2;
+  angle_thresh = pi/20;
+
+  npixels = max(imgsize);
+  size10 = round(npixels/10);
+  size75 = round(npixels/75);
+  size100 = round(h*w / 100);
+  size150 = round(npixels/150);
+
+  all_ellipses = cell(nframes, 1);
+  all_estims = cell(nframes, 1);
 
   %c = [3 6 7 8 19 26 31 35 45 60 63 67 69 70 75 78 81];
   %nframes = length(c);
 
-  for n=1:nframes
+  for n = 1:nframes
     %nimg = randi(nframes, 1);
     nimg = n;
     %nimg = 23
     %nimg = c(n);
 
-    angle_thresh = pi/20;
+    img = imgs(:, :, nimg);
+ 
+    resized = false(h+(2*size10), w+(2*size10));
+    resized((size10+1):(size10+h),(size10+1):(size10+w)) = img;
+    img = resized;
 
-    img = imnorm(double(load_data(mymovie.dic,nimg)));
+    img = imdilate(img, strel('disk', size150));
+    img = imfill(img, 'holes');
+    img = bwareaopen(img, size100);
+    img = imdilate(img, strel('disk', size75));
+    img = imfill(img, 'holes');
+    img = imerode(img, strel('disk', size75 + size150));
 
-    max_ratio = 2;
+    img =  img((size10+1):(h-size10), (size10+1):(w-size10));
 
-    npixels = max(size(img));
-    size10 = round(npixels/10);
-    size75 = round(npixels/75);
-    size150 = round(npixels/150);
-    size100 = round(prod(size(img)) / 100);
-
-    img = imadm_mex(img);
-
-    thresh = graythresh(img);
-    edg1 = (img > thresh*0.5*(max(img(:))) );
-
-    edg1 = increase_canevas(edg1, size10);
-
-    edg1 = imdilate(edg1, strel('disk', size150));
-    edg1 = imfill(edg1, 'holes');
-    edg1 = bwareaopen(edg1, size100);
-    edg1 = imdilate(edg1, strel('disk', size75));
-    edg1 = imfill(edg1, 'holes');
-    edg1 = imerode(edg1, strel('disk', size75 + size150));
-
-    edg1 = reduce_canevas(edg1, size10);
-
-    if(~any(any(edg1)))
-      beep;keyboard
-      error('No embryo detected !!');
+    if(~any(any(img)))
+      %beep;keyboard
+      continue;
     end
 
-    estim = bwboundaries(edg1, 8, 'noholes');
+    estim = bwboundaries(img, 8, 'noholes');
     %figure;imshow(img);
     %hold on;
+
+    if (estim_only)
+      all_estim{n} = estim{1};
+      continue;
+    end
 
     for i=1:length(estim)
       tmp_estim = estim{i};
@@ -55,8 +64,6 @@ function all_pts = split_cells(mymovie, opts)
 
       [pac, indxs] = impac(tmp_estim);
 
-      imgsize = size(img);
-      imgsize = imgsize([2 1]);
       borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize-1), 2));
       border_indx = find(xor(borders, borders([2:end 1])));
 
@@ -85,20 +92,33 @@ function all_pts = split_cells(mymovie, opts)
       %hold off
 
       if (i == 1)
-        all_pts{n, 1} = ellipses;
-        all_pts{n, 2} = tmp_estim;
-        all_pts{n, 3} = indxs;
-        all_pts{n, 4} = concaves;
+        all_ellipses{n} = ellipses;
+        all_estim{n} = tmp_estim;
+      %  all_pts{n, 2} = tmp_estim;
+      %  all_pts{n, 3} = indxs;
+      %  all_pts{n, 4} = concaves;
       else
-        all_pts{n, 1} = [all_pts{n, 1}; ellipses];
-        all_pts{n, 2} = [all_pts{n, 2}; tmp_estim];
-        all_pts{n, 3} = [all_pts{n, 3}; indxs];
-        all_pts{n, 4} = [all_pts{n, 4}; concaves];
+        all_ellipses{n} = [all_ellipses{n}; ellipses];
+        all_estim{n} = [all_estim{n}; [NaN, NaN]; tmp_estim];
+      %  all_pts{n, 3} = [all_pts{n, 3}; indxs];
+      %  all_pts{n, 4} = [all_pts{n, 4}; concaves];
       end
+    end
+    if (i > 1)
+      all_estim{n} = [all_estim{n}; [NaN, NaN]];
     end
 
     %pause
     %keyboard
+  end
+
+  if (length(indexes) == 1)
+    all_ellipses = all_ellipses{1};
+    all_estim = all_estim{1};
+  end
+
+  if (nargout == 1)
+    all_estim = [];
   end
 
   return;
@@ -273,33 +293,9 @@ function conc = compute_concavity(pts, thresh)
     else
       conc(indx + half) = true;
     end
+  elseif (sum(conc) == 0)
+    conc([1 end]) = true;
   end
-
-  return;
-end
-
-%***********************************************************
-function resized = increase_canevas(img, new_size)
-
-  [h,w] = size(img);
-  
-  resized =  zeros(h+(2*new_size), w+(2*new_size));
-
-  if (islogical(img))
-    resized = logical(resized);
-  end
-
-  resized((new_size+1):(new_size+h),(new_size+1):(new_size+w)) = img;
-  
-  return;
-end
-
-%***********************************************************
-function resized = reduce_canevas(img, new_size)
-
-  [h,w] = size(img);
-  
-  resized =  img((new_size+1):(h-new_size), (new_size+1):(w-new_size));
 
   return;
 end
