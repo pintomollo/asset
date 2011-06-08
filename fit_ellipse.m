@@ -86,8 +86,9 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
     orientation = orientation + pi/2;
   end
 
+  % Keep only the real part of the parameters, in case something went wrong
   axes_length = real([a0; b0]);
-  orientation = orientation + 2*pi * (orientation < 0) - 2*pi * (orientation > 2*pi);
+  orientation = real(orientation + 2*pi * (orientation < 0) - 2*pi * (orientation > 2*pi));
 
   return;
 end

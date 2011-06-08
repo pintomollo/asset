@@ -7,6 +7,13 @@ function values = extract_ridge(params, pos, dperp, opts)
 
   centers = bsxfun(@times, params(:,1), dperp) + pos;
 
+  if (size(centers, 1) < window_size)
+    '????'
+    keyboard
+
+    return;
+  end
+
   centers = [centers(end-window_size+1:end, :); centers; centers(1:window_size,:)];
   params = [params(end-window_size+1:end, :); params; params(1:window_size,:)];
 

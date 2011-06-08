@@ -42,7 +42,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
     img = imfill(img, 'holes');
     img = imerode(img, strel('disk', size75 + size150));
 
-    img =  img((size10+1):(h-size10), (size10+1):(w-size10));
+    img =  img((size10+1):(size10+h),(size10+1):(size10+w));
 
     if(~any(any(img)))
       %beep;keyboard
@@ -52,6 +52,8 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
     estim = bwboundaries(img, 8, 'noholes');
     %figure;imshow(img);
     %hold on;
+    %keyboard
+
 
     if (estim_only)
       all_estim{n} = estim{1};
@@ -62,6 +64,21 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
       tmp_estim = estim{i};
       tmp_estim = tmp_estim(:,[2 1]);
 
+      ptsx = emdc([], tmp_estim(:, 1));
+      ptsy = emdc([], tmp_estim(:, 2));
+
+      if (size(ptsx, 1) > 2)
+        ptsx = sum(ptsx(end-1:end, :));
+      else
+        ptsx = ptsx(end, :);
+      end
+      if (size(ptsy, 1) > 2)
+        ptsy = sum(ptsy(end-1:end, :));
+      else
+        ptsy = ptsy(end, :);
+      end
+
+      tmp_estim = [ptsx.' ptsy.'];
       [pac, indxs] = impac(tmp_estim);
 
       borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize-1), 2));
@@ -112,7 +129,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
     %keyboard
   end
 
-  if (length(indexes) == 1)
+  if (nframes == 1)
     all_ellipses = all_ellipses{1};
     all_estim = all_estim{1};
   end
@@ -132,6 +149,8 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio)
   segments = cell(nsegments, 1);
   scores = Inf(nsegments, 1);
 
+  %keyboard
+
   for i=1:nsegments
 
     if (i == nsegments)
@@ -143,9 +162,7 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio)
     tmp_border = is_border(index);
     tmp = tmp(~tmp_border, :);
 
-    segments{i} = tmp;
-
-    if (isempty(tmp))
+    if (size(tmp, 1) < 2 | (any(all(bsxfun(@eq, tmp(2:end, :), tmp(1,:)), 1), 2)) | all(diff(abs(diff(tmp)), [], 2) == 0))
       continue;
     end
 
@@ -153,12 +170,9 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio)
     if ((ellipse(3) / ellipse(4)) < 3*max_ratio)
       ellipses(i,:) = ellipse;
       scores(i) = avg;
-    else
-      segments{i} = [];
+      segments{i} = tmp;
     end
   end
-
-  %keyboard
 
   ellipses = combine_ellipses(segments, ellipses, scores, max_ratio);
   ellipses = ellipses(~any(isnan(ellipses), 2), :);

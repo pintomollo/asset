@@ -26,7 +26,7 @@ function mymovie = cortical_signal(mymovie, opts)
     %nimg = randi(nframes)
     nimg = i;
     %nimg = i + 109;
-    %nimg = 27
+    %nimg = 40
 
     cortex = mymovie.data.cortex(nimg).carth;
 
@@ -78,7 +78,7 @@ function mymovie = cortical_signal(mymovie, opts)
       valid_dpos = dpos(valids);
 
       imf = emdc(sampling_index(valids), valid_projection);
-      projection = imf(end, :);
+      valid_projection = imf(end, :);
 
       params1 = estimate_sigmoid(valid_dpos, valid_projection);
       estim1 = sigmoid(params1, valid_dpos);
@@ -133,7 +133,6 @@ function mymovie = cortical_signal(mymovie, opts)
         end
 
         valid_line = line(valids);
-        valid_dpos = dpos(valids);
 
         valid_range = valids & peak_range;
 
@@ -142,7 +141,11 @@ function mymovie = cortical_signal(mymovie, opts)
         %  tmp_val = emdc([], line);
         %end
         smoothed(j, valids) = tmp_val(end, :);
-        signal(j, :) = estimate_gaussian(dpos(valid_range), tmp_val(end, valid_range)-estim5(valid_range));
+        %try
+        signal(j, :) = estimate_gaussian(dpos(valid_range), smoothed(j, valid_range)-estim5(valid_range));
+        %catch ME
+        %  keyboard
+        %end
         %signal4(j, :) = nlinfit(dpos, values(j, :) - estim3, @gaussian, signal2(j,:));
         if (rescale(j))
           signal(j, 3) = signal(j, 3) / 2;

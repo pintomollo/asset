@@ -31,6 +31,9 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
     return;
   end
 
+  %%keyboard
+  %nimg
+
   img = [];
   global rescale_size;
   rescale_size = [388 591]*1;
@@ -234,12 +237,12 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_o
 
   if (size(ellipse, 1) > 1)
     imgsize = size(img);
-    dist = sum(bsxfun(@minus, ellipse([1 2], :), imgsize([2 1])/2).^2, 2);
+    dist = sum(bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])/2).^2, 2);
     [~, indx] = min(dist);
-    ellipse = ellipse(indx(1),:)
+    ellipse = ellipse(indx(1),:);
   end
 
-  [center, axes_length, orientation, estim] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
+  [center, axes_length, orientation] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
 
   return;
 end

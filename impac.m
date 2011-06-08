@@ -1,4 +1,6 @@
 function [pac, hits] = impac(contour, nsteps, thresh, method)
+  
+  %keyboard
 
   switch nargin
     case 1
@@ -83,11 +85,11 @@ function pac = pac_recursive(contour, thresh)
     segment = contour(end_indx, :) - contour(1, :);
   end
 
-  if (end_indx == 1)
+  pac([1 end_indx], :) = contour([1 end_indx], :);
+
+  if (end_indx == 1 | size(contour, 1) < 3)
     return;
   end
-
-  pac([1 end_indx], :) = contour([1 end_indx], :);
 
   dist = abs(segment(1, 1)*(pac(1,2) - contour(2:end_indx-1, 2)) - (pac(1, 1) - contour(2:end_indx-1, 1))*segment(1,2)) ./ hypot(segment(1, 1), segment(1, 2));
   [~, indx] = max(dist);

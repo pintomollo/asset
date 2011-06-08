@@ -230,7 +230,7 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_o
     ellipse = ellipse(indx(1),:)
   end
 
-  [center, axes_length, orientation, estim] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
+  [center, axes_length, orientation] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
 
   return;
 end
