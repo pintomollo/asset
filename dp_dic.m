@@ -1,4 +1,4 @@
-function mymovie = dp_dic(mymovie, parameters, nimg, opts)
+function mymovie = dp_dic(mymovie, nimg, opts)
 
   if (isfield(mymovie, 'dic'))
     if (isfield(mymovie.dic, 'centers'))
@@ -32,7 +32,9 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
   end
 
   %%keyboard
-  %nimg
+ % nimg
+
+  parameters = opts.segmentation_parameters.dic;
 
   img = [];
   global rescale_size;
@@ -122,7 +124,6 @@ function mymovie = dp_dic(mymovie, parameters, nimg, opts)
     mymovie.dic.axes_length = axes_length;
     mymovie.dic.orientations = orientations;
   end
-
   
   if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & strncmp(opts.ml_type, 'cortex', 6)))
     update(2,nimg) = true;
@@ -242,7 +243,11 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_o
     ellipse = ellipse(indx(1),:);
   end
 
+  try
   [center, axes_length, orientation] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
+  catch
+    keyboard
+  end
 
   return;
 end

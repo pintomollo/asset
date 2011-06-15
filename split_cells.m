@@ -6,10 +6,14 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
   end
 
   [h,w,nframes] = size(imgs);
-  imgsize = [h,w];
+  imgsize = [w, h];
 
-  max_ratio = 2;
+  max_ratio = 1/3;
   angle_thresh = pi/20;
+  max_dist = 12;
+  max_score = 0.05;
+
+  max_dist = max_dist / opts.pixel_size;
 
   npixels = max(imgsize);
   size10 = round(npixels/10);
@@ -60,25 +64,27 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
       continue;
     end
 
+      %imshow(img);
+      %hold on
     for i=1:length(estim)
       tmp_estim = estim{i};
       tmp_estim = tmp_estim(:,[2 1]);
 
-      ptsx = emdc([], tmp_estim(:, 1));
-      ptsy = emdc([], tmp_estim(:, 2));
+      %ptsx = emdc([], tmp_estim(:, 1));
+      %ptsy = emdc([], tmp_estim(:, 2));
 
-      if (size(ptsx, 1) > 2)
-        ptsx = sum(ptsx(end-1:end, :));
-      else
-        ptsx = ptsx(end, :);
-      end
-      if (size(ptsy, 1) > 2)
-        ptsy = sum(ptsy(end-1:end, :));
-      else
-        ptsy = ptsy(end, :);
-      end
+      %if (size(ptsx, 1) > 2)
+      %  ptsx = sum(ptsx(end-1:end, :));
+      %else
+      %  ptsx = ptsx(end, :);
+      %end
+      %if (size(ptsy, 1) > 2)
+      %  ptsy = sum(ptsy(end-1:end, :));
+      %else
+      %  ptsy = ptsy(end, :);
+      %end
 
-      tmp_estim = [ptsx.' ptsy.'];
+      %tmp_estim = [ptsx.' ptsy.'];
       [pac, indxs] = impac(tmp_estim);
 
       borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize-1), 2));
@@ -90,14 +96,13 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
       concaves = [concaves; true(size(border_indx))];
       concaves = concaves(indx_indx);
 
-      ellipses = fit_segments(tmp_estim, indxs(concaves), borders, max_ratio);
-      ratio = ellipses(:, 3) ./ ellipses(:, 4);
-
-      ellipses = ellipses(ratio < max_ratio, :);
-
-      %imshow(img);
-      %hold on
       %myplot(tmp_estim);
+
+      ellipses = fit_segments(tmp_estim, indxs(concaves), borders, max_ratio, max_dist, max_score);
+      %ratio = ellipses(:, 3) ./ ellipses(:, 4);
+
+      %ellipses = ellipses(ratio < max_ratio, :);
+
       %scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
       %scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
       %scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
@@ -141,13 +146,14 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
   return;
 end
 
-function ellipses = fit_segments(pts, junctions, is_border, max_ratio)
+function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist, max_score)
 
   nsegments = length(junctions);
   ellipses = NaN(nsegments, 5);
   npts = size(pts, 1);
   segments = cell(nsegments, 1);
   scores = Inf(nsegments, 1);
+  slender_parts = false(nsegments, 1);
 
   %keyboard
 
@@ -166,37 +172,68 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio)
       continue;
     end
 
-    [ellipse, dist, avg, stds] = fit_distance(tmp);
-    if ((ellipse(3) / ellipse(4)) < 3*max_ratio)
-      ellipses(i,:) = ellipse;
-      scores(i) = avg;
-      segments{i} = tmp;
+    [ellipse, score] = fit_distance(tmp);
+    segments{i} = tmp;
+    ellipses(i,:) = ellipse;
+    scores(i) = score;
+    if ~(score < max_score & (ellipse(4) / ellipse(3)) > max_ratio)
+      slender_parts(i) = true;
     end
   end
 
-  ellipses = combine_ellipses(segments, ellipses, scores, max_ratio);
+  if (all(slender_parts))
+    [~, indx] = min(scores);
+    slender_parts(indx) = false;
+  end
+
+  ellipses(slender_parts, :) = NaN;
+  scores(slender_parts) = Inf;
+
+  %keyboard
+  [ellipses, segments] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
+
+  for i=1:nsegments
+    if (slender_parts(i))
+      new_scores = Inf(nsegments, 1);
+      new_ellipses = Inf(nsegments, 5);
+      %myplot(segments{i}, 'm');
+      for j=1:nsegments
+        if (~isnan(ellipses(j, 1)))
+          [new_ellipses(j,:), new_scores(j)] = fit_distance([segments{i}; segments{j}]);
+        end
+      end
+      [val, indx] = min(new_scores);
+      if (val < max_score & (new_ellipses(indx,4) / new_ellipses(indx, 3)) > max_ratio)
+        ellipses(indx, :) = new_ellipses(indx, :);
+        segments{indx} = [segments{indx}; segments{i}];
+        segments{i} = [];
+      end
+    end
+  end
+
   ellipses = ellipses(~any(isnan(ellipses), 2), :);
 
   return;
 end
 
-function ellipses = combine_ellipses(segments, ellipses, scores, max_ratio)
+function [ellipses, segments] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score)
   
   nsegments = length(segments);
   improved = false;
-  new_scores = scores;
-  new_ellipses = ellipses;
+  %new_scores = scores;
+  %new_ellipses = ellipses;
+  max_pow = max_dist^2;
 
   for i=1:nsegments
     if (isinf(scores(i)))
       continue
     end
-    new_scores(:) = Inf;
+    %new_scores(:) = Inf;
     for j=i+1:nsegments
       if (isinf(scores(j)))
         continue
       end
-      [ellipse, dist, avg, stds] = fit_distance([segments{i}; segments{j}]);
+      [ellipse, avg] = fit_distance([segments{i}; segments{j}]);
       %if (avg <= min(scores([i j])) + ((scores(i)+scores(j))/4))
       %  improved(i) = true;
       %  segments{i} = [segments{i}; segments{j}];
@@ -206,33 +243,55 @@ function ellipses = combine_ellipses(segments, ellipses, scores, max_ratio)
       %  ellipses(j, :) = NaN;
       %  ellipses(i, :) = ellipse;
       %end
-      new_scores(j) = avg;
-      new_ellipses(j,:) = ellipse;
+
+      % Ellipse selection
+      if (avg > max_score | (ellipse(4) / ellipse(3)) < max_ratio)
+        continue;
+
+      % Case 1
+      elseif (all(sum(bsxfun(@minus, ellipses([i j], 1:2), ellipse(1:2)).^2) > max_pow) | sum((ellipses(i, 1:2) - ellipses(j, 1:2)).^2) > 9*max_pow)
+        continue;
+
+      % Case 2
+      % Case 3
+      elseif ((all(ellipses([i j], 4) < max_dist) | all(abs(diff(ellipses([i j], 3:4))) < [1 0.5]*max_dist) | (abs(diff(ellipses([i j], 4)) < 0.05*max_dist))) | ...
+             (avg < mean(scores([i j])) + std(scores([i j]))))
+        segments{i} = [segments{i}; segments{j}];
+        segments{j} = [];
+        scores(i) = avg;
+        scores(j) = Inf;
+        ellipses(j, :) = NaN;
+        ellipses(i, :) = ellipse;
+        improved = true;
+      end
+
+      %new_scores(j) = avg;
+      %new_ellipses(j,:) = ellipse;
       %new_scores(j,i) = ellipse(3) / ellipse(4);
     end
 
-    new_scores(new_scores > min(scores(i), scores) + ((scores(i)+scores)/5)) = Inf;
-    new_scores(~((new_ellipses(:,3) ./ new_ellipses(:,4)) < max_ratio)) = Inf;
-    [a, indx] = min(new_scores);
-    if (~isinf(a))
-        segments{i} = [segments{i}; segments{indx}];
-        segments{indx} = [];
-        scores(i) = avg;
-        scores(indx) = Inf;
-        ellipses(indx, :) = NaN;
-        ellipses(i, :) = new_ellipses(indx,:);
-        improved = true;
-    end
+    %new_scores(new_scores > min(scores(i), scores) + ((scores(i)+scores)/5)) = Inf;
+    %new_scores(~((new_ellipses(:,3) ./ new_ellipses(:,4)) < max_ratio)) = Inf;
+    %[a, indx] = min(new_scores);
+    %if (~isinf(a))
+    %    segments{i} = [segments{i}; segments{indx}];
+    %    segments{indx} = [];
+    %    scores(i) = avg;
+    %    scores(indx) = Inf;
+    %    ellipses(indx, :) = NaN;
+    %    ellipses(i, :) = new_ellipses(indx,:);
+    %    improved = true;
+    %end
   end
 
   if (improved)
-    ellipses = combine_ellipses(segments, ellipses, scores, max_ratio);
+    [ellipses, segments] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
   end
 
   return;
 end
 
-function [ellipse, dist, avg, stds] = fit_distance(pts)
+function [ellipse, avg] = fit_distance(pts)
 
   ellipse = NaN(1, 5);
 
@@ -258,7 +317,7 @@ function [ellipse, dist, avg, stds] = fit_distance(pts)
 
   dist = abs(ell_pts(:,2) - 1);
   avg = mean(dist);
-  stds = std(dist);
+  %stds = std(dist);
 
   return;
 end

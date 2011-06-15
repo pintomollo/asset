@@ -67,14 +67,14 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     nframe = frames(i);
 
     if (strncmp(opts.segmentation_type, 'dic', 3) | strncmp(opts.segmentation_type, 'all', 3))
-      mymovie = dp_dic(mymovie, opts.segmentation_parameters.dic, nframe, opts);
+      mymovie = dp_dic(mymovie, nframe, opts);
 
       updated = updated || any(mymovie.dic.update(:, nframe));
     end
 
     if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
       if (~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
-        mymovie = dp_dic(mymovie, dic_opts.segmentation_parameters.dic, nframe, opts);
+        mymovie = dp_dic(mymovie, nframe, opts);
 
         if (any(mymovie.dic.update(:, nframe)))
           tmp_opts = dic_opts;

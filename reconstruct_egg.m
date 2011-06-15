@@ -14,11 +14,36 @@ function reconstruct_egg(mymovie, opts)
   new_axes(2, :) = sqrt(axes_length(1,:) .* axes_length(2,:) ./ target_ratio);
   new_axes(1, :) = new_axes(2, :) * target_ratio;
 
+  mymovie = parse_metadata(mymovie, opts);
+
   [~, indx] = max(new_axes(1, :));
   equat_axes = new_axes(:, indx);
 
   z_pos = sqrt(equat_axes(2).^2 - new_axes(2, :).^2);
 
+  figure;
+  hold on;
+  for i=1:nframes
+    %plot3(x,y,z_pos(i)*ones(size(x)));
+    %[x,y] = draw_ellipse(centers(:, i), axes_length(:, i), orientations(i));
+    %plot3(x*opts.pixel_size,y*opts.pixel_size,mymovie.metadata.z_pos(i)*ones(size(x)), 'r');
+    %[x,y] = draw_ellipse(centers(:, i), new_axes(:, i), orientations(i));
+    %plot3(x*opts.pixel_size,y*opts.pixel_size,mymovie.metadata.z_pos(i)*ones(size(x)), 'b');
+    plot3(mymovie.dic.eggshell(i).carth(:,1)*opts.pixel_size,mymovie.dic.eggshell(i).carth(:,2)*opts.pixel_size,mymovie.metadata.z_pos(i)*ones(size(mymovie.dic.eggshell(i).carth(:,1))), 'g');
+  end
+  axis('equal')
+
+  figure;
+  hold on;
+  for i=1:nframes
+    [x,y] = draw_ellipse([0;0], axes_length(:, i), 0);
+    plot3(x*opts.pixel_size,y*opts.pixel_size,mymovie.metadata.z_pos(i)*ones(size(x)), 'r');
+    [x,y] = draw_ellipse([0;0], new_axes(:, i), 0);
+    plot3(x*opts.pixel_size,y*opts.pixel_size,mymovie.metadata.z_pos(i)*ones(size(x)), 'b');
+  end
+  axis('equal')
+
+  return;
   %keyboard
   
   figure;
