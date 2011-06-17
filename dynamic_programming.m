@@ -18,13 +18,10 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   switch opts.dp_method
     case 'backward'
       indxs = [1:h h-1:-1:1];
-      prev_indx = 1;
     case 'double'
       indxs = [1:h 1:h];
-      prev_indx = 1;
     otherwise
       indxs = 1:h;
-      prev_indx = 1;
   end
   nsteps = length(indxs);
 
@@ -86,7 +83,6 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     end
 
     prev_line = line;
-    prev_indx = indx;
   end
 
   if (do_probs)

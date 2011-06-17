@@ -24,8 +24,8 @@ function mymovie = cortical_signal(mymovie, opts)
   
   for i=1:nframes
     %nimg = randi(nframes)
-    nimg = i;
-    %nimg = i + 109;
+    nimg = i
+    %nimg = i + 73
     %nimg = 40
 
     cortex = mymovie.data.cortex(nimg).carth;
@@ -78,9 +78,14 @@ function mymovie = cortical_signal(mymovie, opts)
       valid_dpos = dpos(valids);
 
       imf = emdc(sampling_index(valids), valid_projection);
-      valid_projection = imf(end, :);
+      valid_projection = sum(imf(2:end, :), 1);
 
+      %try
       params1 = estimate_sigmoid(valid_dpos, valid_projection);
+      %catch ME
+      %  beep;
+      %  keyboard
+      %end
       estim1 = sigmoid(params1, valid_dpos);
 
       peak_range = get_peak(valid_dpos, valid_projection-estim1);
@@ -98,7 +103,6 @@ function mymovie = cortical_signal(mymovie, opts)
 
       peak_range = get_peak(valid_dpos, valid_projection - estim3);
       params4 = estimate_gaussian(valid_dpos(peak_range), valid_projection(peak_range)-estim3(peak_range));
-      %estim4 = gaussian([params4(1:3) 0], dpos);
 
       params5 = params3;
       params5(4) = params5(4) + params4(4);
@@ -156,11 +160,15 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).bkg = [params5 params4(1:3)];
       mymovie.data.quantification(nimg).carth = cortex(:, :);
 
+      %estim4 = gaussian([params4(1:3) 0], dpos);
       %clim = [min(values(:)) max(values(:))];
-      %figure;imagesc(gaussian(signal, dpos), clim);
-      %figure;imagesc(values, clim);
-      %figure;imagesc(smoothed, clim);
+      %figure;imagesc(gaussian(signal, dpos));
+      %figure;imagesc(values);
+      %figure;imagesc(smoothed);
       %figure;plot(dpos, projection);hold on;plot(dpos(peak_range), projection(peak_range), 'r');
+      %plot(dpos, estim5, 'k');plot(dpos, estim4, 'g');
+      %plot(dpos, estim3, 'm');plot(dpos, estim2, 'y');
+      %plot(dpos, estim1, 'c');
       %keyboard
       %close all
     else
@@ -260,13 +268,28 @@ function range = get_peak(x, y)
 
   x = x - center;
 
-  lmin = find(x(2:end-1) < 0 & dy(1:end-1) < 0 & dy(2:end) >= 0)+1;
+  %lmin = find(x(2:end-1) < 0 & dy(1:end-1) < 0 & dy(2:end) >= 0)+1;
+  %rmin = find(x(2:end-1) > 0 & dy(1:end-1) <= 0 & dy(2:end) > 0)+1;
+
+  mins = find(dy(1:end-2) > dy(2:end-1) & dy(2:end-1) <= dy(3:end)) + 1;
+  maxs = [];
+  lmin = mins(x(mins) < 0);
   if (isempty(lmin))
-    lmin = 1;
+    maxs = find(dy(1:end-2) < dy(2:end-1) & dy(2:end-1) >= dy(3:end)) + 1;
+    lmin = maxs(x(maxs) < 0);
+    if (isempty(lmin))
+      lmin = 1;
+    end
   end
-  rmin = find(x(2:end-1) > 0 & dy(1:end-1) <= 0 & dy(2:end) > 0)+1;
+  rmin = mins(x(mins) > 0);
   if (isempty(rmin))
-    rmin = length(x);
+    if (isempty(maxs))
+      maxs = find(dy(1:end-2) < dy(2:end-1) & dy(2:end-1) >= dy(3:end)) + 1;
+    end
+    rmin = maxs(x(maxs) > 0);
+    if (isempty(rmin))
+      rmin = length(x);
+    end
   end
 
   width = abs(bsxfun(@minus, x(rmin), x(lmin).'));

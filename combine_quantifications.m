@@ -16,26 +16,43 @@ function [res] = combine_quantifications(mymovies)
   end
 
   nmovies = length(mymovies);
-  tmp_quant = cell(1, nmovies);
+  %tmp_quant = cell(1, nmovies);
   cytos = NaN(1, nmovies);
   opts = get_struct('ASSET');
 
+  res = [];
   first = 0;
   last = 0;
   minmax = NaN(nmovies, 2);
 
   for i=1:nmovies
     load(mymovies{i});
-    [tmp_quant{i}, ~, cytos(i)] = gather_quantification(mymovie, opts);
+    [tmp_quant, ~, cytos(i)] = gather_quantification(mymovie, opts);
 
     if (1-cytos(i) < first)
       first = 1-cytos(i);
     end
-    if (size(tmp_quant{i}, 1) - cytos(i) > last)
-      last = size(tmp_quant{i}, 1) - cytos(i);
-    end
+    %if (size(tmp_quant{i}, 1) - cytos(i) > last)
+    %  last = size(tmp_quant{i}, 1) - cytos(i);
+    %end
     minmax(i,:) = [mymovie.data.min mymovie.data.max]; 
+
+
+    y_label = [1:5:size(tmp_quant, 1)];
+
+    imagesc(tmp_quant);
+    hold on
+    set(gca, 'YTick', y_label,'YTickLabel',y_label - cytos(i))
+    saveas(gca, [mymovies{i}(1:end-5) '.png']);
+    hold off
+    imagesc(imnorm(tmp_quant, [], [], 'row'));
+    hold on
+    set(gca,'YTick',y_label,'YTickLabel',y_label - cytos(i))
+    saveas(gca, [mymovies{i}(1:end-5) '-scaled.png']);
+    hold off
   end
+
+  return;
 
   nframes = last - first + 1;
   cyto = 1-first;

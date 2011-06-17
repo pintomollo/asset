@@ -51,6 +51,10 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     %beep;keyboard
       [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = detect_ellipse(img, false, opts);
     end
+    if (isnan(orientations(1,nimg)))
+      warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
+      return;
+    end
 
     %orientations(1,nimg) = orientations(1,nimg) + pi;
 
@@ -221,6 +225,11 @@ end
 
 function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_only, opts)
 
+  center = NaN(2, 1);
+  axes_length = NaN(2, 1);
+  orientation = NaN;
+  estim = [];
+
   img = imadm_mex(img);
   thresh = graythresh(img);
   img = (img > thresh*0.5*(max(img(:))) );
@@ -236,18 +245,16 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_o
     return;
   end
 
-  if (size(ellipse, 1) > 1)
+  if (numel(ellipse) == 0)
+    return;
+  elseif (size(ellipse, 1) > 1)
     imgsize = size(img);
     dist = sum(bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])/2).^2, 2);
     [~, indx] = min(dist);
     ellipse = ellipse(indx(1),:);
   end
 
-  try
   [center, axes_length, orientation] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
-  catch
-    keyboard
-  end
 
   return;
 end

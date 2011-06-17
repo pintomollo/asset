@@ -10,7 +10,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
 
   max_ratio = 1/3;
   angle_thresh = pi/20;
-  max_dist = 12;
+  max_dist = 15;
   max_score = 0.05;
 
   max_dist = max_dist / opts.pixel_size;
