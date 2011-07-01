@@ -20,6 +20,30 @@ function reconstruct_egg(mymovie, opts)
   equat_axes = new_axes(:, indx);
 
   z_pos = sqrt(equat_axes(2).^2 - new_axes(2, :).^2);
+  real_z = mymovie.metadata.z_pos;
+  npts = length(real_z);
+
+  x_pos = [0:npts-1];
+  derivatives = (39*(real_z(:,5:end-2) - real_z(:,3:end-4)) + 12*(real_z(:,6:end-1) - real_z(:,2:end-5)) -5*(real_z(:, 7:end) - real_z(:, 1:end-6))) / 96;
+  y_deriv = log(derivatives);
+  x_valids = x_pos(4:end-3).';
+
+  expfunc = @(p,x)(p(1)*(1-exp(-p(2)*x)) + p(3));
+
+  params = [x_valids ones(size(x_valids))] \ y_deriv(:);
+  params(2) = -params(2);
+  params(1) = exp(params(1)) / params(2);
+  params(3) = real_z(1);
+
+  figure;plot(x_pos, real_z);
+  hold on;plot(x_pos, expfunc(params, x_pos), 'r');
+
+  keyboard
+
+  better_params = lsqcurvefit(expfunc,params,x_pos, real_z);
+
+
+  plot(x_pos, expfunc(better_params, x_pos), 'g');
 
   figure;
   hold on;

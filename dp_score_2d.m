@@ -1,4 +1,4 @@
-function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, prev_dir, params)
+function [bests, indxs] =  dp_score_2d(values, new_values, datas, prev_dist, prev_dir, initiation, params)
 
   %keyboard
 
@@ -6,6 +6,9 @@ function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, pre
   alpha = params.alpha;
   beta = params.beta;
   gamma = params.gamma;
+
+  prohibit = params.prohibit;
+  new_prctile = params.spawn_percentile;
 
   %half = floor(nhood/2);
   check = [-half:half];
@@ -25,6 +28,9 @@ function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, pre
   npts = numel(datas);
   curr_indx = reshape([1:npts], size_prob);
 
+  %[indxi, indxj] = ind2sub(size_prob,curr_indx);
+  %uppers = (indxi <= indxj);
+
   real_indx = curr_indx(1:window_size(1),1:window_size(1));
   real_indx = real_indx(:);
   back_indx = spalloc(npts, 1, nhood);
@@ -33,6 +39,8 @@ function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, pre
   %curr_dir = curr_indx - 
 
   res = zeros([nhood,size_prob]);
+  new_segments = (prev_dir == 0);
+  prev_dir(new_segments) = curr_indx(new_segments);
 
   if (~isempty(prev_dir))
     tmp = bsxfun(@minus, prev_dir(:) - curr_indx(:), [0 npts -npts]);
@@ -53,6 +61,7 @@ function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, pre
   end
 
   prev_dist = mirror_matrix(prev_dist, half);
+  %uppers = mirror_matrix(uppers, half);
   %prev_val = [Inf*ones(1,half) values Inf*ones(1,half)];
   %prev_dir = [Inf*ones(1,half) prev_dir Inf*ones(1,half)];
   if (~isempty(values))
@@ -69,30 +78,53 @@ function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, pre
 %    do_probs = false;
 %  end
   size_prob = size_prob(1);
+  tmp_inf = Inf(1, size_prob);
   max_dir = 2*max(dists);
   [tmp_i, tmp_j] = ind2sub(window_size, window_indx);
   curr_dir = [tmp_i tmp_j];
+  crossing = zeros(size_prob);
 
   for i=1:nhood
-    %disp([num2str(prev_val(i))  ' '  num2str(candidates(1))  ' '  num2str(datas(1))  ' '  num2str(prev_dist(i)) ' ' num2str(prev_dir(i))])
+    diag_indx = (tmp_j(i) - tmp_i(i));
+    diag_switch = sign(diag_indx);
+
+    if (diag_switch > 0)
+      diag_indx = [-diag_indx+1 : 0];
+    elseif (diag_switch < 0)
+      diag_indx = [0:-diag_indx-1];
+    else
+      diag_indx = [];
+    end
+
+    switch prohibit
+      case 'diag'
+        crossing = zeros(size_prob);
+        for j=diag_indx
+          crossing = crossing + diag(tmp_inf(1:end-abs(j)), j);
+        end
+    end
+    %disp([num2str(prev_val(i))  ' '  num2str(new_values(1))  ' '  num2str(datas(1))  ' '  num2str(prev_dist(i)) ' ' num2str(prev_dir(i))])
 
     if(isempty(values))
       smooth = 0;
     else
       smooth = (dists(i)*gamma + ...
         (dir_dist(curr_dir(i, :),prev_dir(tmp_i(i):tmp_i(i)+size_prob-1, tmp_j(i):tmp_j(i)+size_prob-1), window_size)/max_dir)*(1-gamma))*beta + ...
-        (bsxfun(@plus, abs(candidates - prev_val(tmp_i(i):tmp_i(i)+size_prob-1)).', ...
-        abs(candidates - prev_val(tmp_j(i):tmp_j(i)+size_prob-1))) / 2)*(1-beta);
+        (bsxfun(@plus, abs(new_values - prev_val(tmp_i(i):tmp_i(i)+size_prob-1)).', ...
+        abs(new_values - prev_val(tmp_j(i):tmp_j(i)+size_prob-1))) / 2)*(1-beta);
     end
 
-    res(i,:,:) = alpha*smooth + (1-alpha)*datas + prev_dist(tmp_i(i):tmp_i(i)+size_prob-1,tmp_j(i):tmp_j(i)+size_prob-1);
+    res(i,:,:) = alpha*smooth + (1-alpha)*datas + ...
+          prev_dist(tmp_i(i):tmp_i(i)+size_prob-1,tmp_j(i):tmp_j(i)+size_prob-1) + ...
+          crossing;
+    %      Inf*xor(uppers(half+1:half+size_prob, half+1:half+size_prob), uppers(tmp_i(i):tmp_i(i)+size_prob-1,tmp_j(i):tmp_j(i)+size_prob-1));
 
 
 %    if (do_probs)
 %      if(isempty(values))
 %        emission(i,:) = (1-alpha)*datas;
 %      else
-%        emission(i,:) = alpha * ((abs(check(i)-prev_dir(i:i+npts-1))/(2*half))*(1-gamma)*beta + abs(candidates-prev_val(i:i+npts-1))*(1-beta)) + (1-alpha)*datas;
+%        emission(i,:) = alpha * ((abs(check(i)-prev_dir(i:i+npts-1))/(2*half))*(1-gamma)*beta + abs(new_values-prev_val(i:i+npts-1))*(1-beta)) + (1-alpha)*datas;
 %      end
 %    end
   end
@@ -105,6 +137,11 @@ function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, pre
   %direction = indxs - ceil(nhood/2);
   indxs = curr_indx + direction;
 
+  if (new_prctile >= 0)
+    starts = alpha*initiation + (1-alpha)*datas + prctile(prev_dist(:), new_prctile);
+    [bests, tmp] = min(cat(3,starts,bests), [], 3);
+  end
+
   if (all(isinf(bests)))
     %disp('Warning : No transition is valid !!');
     indxs = curr_indx;
@@ -112,6 +149,9 @@ function [bests, indxs] =  dp_score_2d(values, candidates, datas, prev_dist, pre
 
   indxs(indxs < 1) = indxs(indxs < 1) + npts;
   indxs(indxs > npts) = indxs(indxs > npts) - npts;
+  if (new_prctile >= 0)
+    indxs(tmp == 1) = 0;
+  end
 
 %  if (do_probs)
 %

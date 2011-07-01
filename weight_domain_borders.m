@@ -2,17 +2,17 @@ function weight = weight_domain_borders(img, params)
 
   alpha = params.alpha;
   beta = params.beta;
-  gamma = params.gamma;
-  delta = 1/params.delta;
+  gamma = 1/params.gamma;
 
   [nrows,npts] = size(img);
   img = imnorm(img, [], [], 'row');
   img = gaussian_mex(img, 0.6);
 
-  derivatives = zeros(nrows, npts, npts);
+  all_derivatives = zeros(nrows, npts, npts);
   domain_size = zeros(nrows, npts, npts);
   domain_integral = zeros(nrows, npts, npts);
   weight = zeros(nrows, npts, npts);
+  domain = zeros(nrows, npts, npts);
 
   %line = img(40, :);
 
@@ -46,24 +46,31 @@ function weight = weight_domain_borders(img, params)
 
   %keyboard
 
+  mirror = img(:,[end-2:end 1:end 1:3]);
+  derivatives = (39*(mirror(:,5:end-2) - mirror(:,3:npts+2)) + 12*(mirror(:,6:end-1) - mirror(:,2:npts+1)) -5*(mirror(:, 7:end) - mirror(:, 1:npts))) / 96;
+  derivatives = 1 ./ (1 + exp(-gamma * derivatives));
+  left_deriv = 0.5 * (1-derivatives);
+  right_deriv = 0.5 * derivatives;
+  all_derivatives = bsxfun(@plus, left_deriv, reshape(right_deriv, [nrows, 1, npts]));
+
   valids = ~isnan(img);
   img(~valids) = 0;
   dist = cumsum(valids, 2);
   domain_size = bsxfun(@minus, reshape(dist, [nrows 1 npts]), dist) + 1;
+  is_inverted = (domain_size < 0);
+  domain_size(is_inverted) = domain_size(is_inverted) + npts;
+
+  %domain_size = abs(domain_size);
   vals = cumsum(img, 2);
   domain_integral = bsxfun(@minus, reshape(vals, [nrows, 1, npts]), [zeros(nrows, 1) vals(:, 1:end-1)]);
+  complement_integral = bsxfun(@plus, vals(:, end), domain_integral);
+  domain_integral(is_inverted) = complement_integral(is_inverted);
+  
   domain = domain_integral ./ domain_size;
   outside = bsxfun(@minus, vals(:, end), domain_integral) ./ (npts - domain_size);
   domain_value = beta .* (1-domain) + (1-beta).*outside;
-
-  valids_deriv = (valids & valids(:, [2:end 1]));
-  dist = cumsum(valids_deriv, 2);
-  derivatives = bsxfun(@rdivide, diff([img img(:, 1)], [], 2), diff([zeros(nrows, 1) dist], [], 2));
-  derivatives = 1 ./ (1 + exp(-delta * derivatives));
-
-  left_deriv = gamma * (1-derivatives);
-  right_deriv = (1-gamma) * derivatives;
-  all_derivatives = bsxfun(@plus, left_deriv, reshape(right_deriv, [nrows, 1, npts]));
+  
+  %domain_value(is_inverted) = domain_value(is_inverted) - outside(is_inverted) + domain(is_inverted);
 
   %keyboard
 

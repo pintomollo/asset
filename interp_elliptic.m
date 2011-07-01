@@ -124,24 +124,38 @@ function [new_angles, path] = interp_elliptic(varargin)
   return;
 end
 
+% Sort out the mess due to the variable number of inputs
 function [orig_angles, orig_values, new_angles, angle_range, is_resampling] = parse_input(varargin)
 
+  % Initialize the output variable
   orig_angles = NaN;
   orig_values = NaN;
   new_angles = NaN;
   angle_range = NaN;
-  is_resampling = NaN;
+  is_resampling = false;
 
+  % Loop over all the input parameters
   for i=1:length(varargin)
+
+    % We assign them in a specific order, checking whether they've been assigned,
+    % first the original values, then the new positions
     if (isnan(orig_values))
       orig_values = varargin{i};
     elseif (isnan(new_angles))
       new_angles = varargin{i};
+
+    % Here it becomes more complicated as this can mean several things !
     else
+      % A boolean has to be the resampling flag
       if (islogical(varargin{i}))
         is_resampling = varargin{i};
+
+      % A short vector is the angle range
       elseif (numel(varargin{i}) == 2 & size(orig_values, 1) ~= size(new_angles, 1))
         angle_range = varargin{i};
+
+      % Otherwise it has to be the new positions while the two previous vectors
+      % were the values and the angles separate
       else
         orig_angles = orig_values;
         orig_values = new_angles;
@@ -150,15 +164,13 @@ function [orig_angles, orig_values, new_angles, angle_range, is_resampling] = pa
     end
   end
 
+  % If we still do not have the angles, they are in the values
   if (isnan(orig_angles))
     orig_angles = orig_values(:, 1);
     orig_values = orig_values(:, 2:end);
   end
 
-  if (isnan(is_resampling))
-    is_resampling = false;
-  end
-
+  % The default range is the entire ellipse
   if (isnan(angle_range))
     angle_range = [0 2*pi];
   end

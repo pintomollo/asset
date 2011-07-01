@@ -133,10 +133,27 @@ function mystruct = get_struct(type, nstruct)
 
     % Parameters used for the quantification of the signal
     case 'quantification'
+      % Retrieve the previously defined structures for the smoothness and data terms
+      params = get_struct('smoothness_parameters');
+      weights = get_struct('data_parameters');
+
+      params.nhood = 5;
+      params.alpha = 0.1;
+      params.beta = 0.2;
+      params.gamma = 0.5;
+
+      weights.alpha = 0.475;
+      weights.beta = 0.5;
+      weights.gamma = 0.5;
+      weights.delta = 0.025;
+
       mystruct = struct('channel', 'data', ...              % Quantified channel
                         'field', 'cortex', ...              % Quantified field in the previously defined channel
                         'normalize', 'cytoplasm', ...       % Type of signal normalization
                         'norm_shift', 2, ...                % Distance to quantify the normalization value
+                        'params', params, ...
+                        'weights', weights, ...
+                        'use_ruffles', false, ...           % Quantify along the ruffles ?
                         'window_shape', 'gaussian', ...     % Shape of the quantification window, can either be a filter or a 'fspecial' type
                         'window_params', 0.5, ...           % Parameters required to compute the filter
                         'window_size', 2);                  % Size of (square) the window
@@ -257,6 +274,8 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('final', [], ...                % Final position used for backtracking DP
                         'init', [], ...                 % Initial position for DP (see dynamic_programming.m)
                         'nhood', 0, ...                 % Neighborhood explored during dynamic programming (nhood/2 pixels on each side)
+                        'prohibit', 'diag', ...         % Prohibiting particular moves
+                        'spawn_percentile', -1, ...     % Score used when spawning a new path (as percentile of the previous step)
                         'alpha', 0, ...                 % Weights of the different smoothness terms
                         'beta', 0, ...                  %  |
                         'gamma', 0);                    %  |

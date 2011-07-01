@@ -291,6 +291,11 @@ function [mymovie, trackings, opts] = parse_input(varargin)
       % the regular expression metacharacter '*'
       if (~isempty(findstr(varargin{1}, '*')))
 
+
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      % 2. Use simple dir & regexp to allow [1-3] or \b and stuff in name
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
         % List all the MAT-files corresponding to the pattern
         datas = dir(varargin{1});
 
@@ -303,7 +308,12 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
         % Run them one after the other one
         for i=1:length(datas)
-          ASSET([dirpath datas(i).name], varargin{2:end});
+          try
+            ASSET([dirpath datas(i).name], varargin{2:end});
+          catch ME
+            warning(['Error during the analysis of ' datas(i).name ':']);
+            disp(ME);
+          end
         end
 
         % Do not forget to stop here !

@@ -23,8 +23,9 @@ function mymovie = cortical_signal(mymovie, opts)
   end
   
   for i=1:nframes
+    %keyboard
     %nimg = randi(nframes)
-    nimg = i
+    nimg = i;
     %nimg = i + 73
     %nimg = 40
 
@@ -43,7 +44,11 @@ function mymovie = cortical_signal(mymovie, opts)
 
       %keyboard
 
-      [cortex, rescale] = insert_ruffles(cortex, mymovie.markers.ruffles(nimg).carth, mymovie.markers.ruffles(nimg).paths);
+      if (opts.quantification.use_ruffles)
+        [ cortex, rescale] = insert_ruffles(cortex, mymovie.markers.ruffles(nimg).carth, mymovie.markers.ruffles(nimg).paths);
+      else
+        rescale = false(size(cortex, 1), 1);
+      end
 
       tmp_cortex = [cortex(end,:); cortex; cortex(1,:)];
       dpos = (tmp_cortex(3:end, :) - tmp_cortex(1:end-2, :)) / 2;
@@ -144,7 +149,7 @@ function mymovie = cortical_signal(mymovie, opts)
         %while (any(isnan(tmp_val(:))))
         %  tmp_val = emdc([], line);
         %end
-        smoothed(j, valids) = tmp_val(end, :);
+        smoothed(j, valids) = sum(tmp_val(end-1:end, :), 1);
         %try
         signal(j, :) = estimate_gaussian(dpos(valid_range), smoothed(j, valid_range)-estim5(valid_range));
         %catch ME
@@ -207,6 +212,14 @@ function mymovie = cortical_signal(mymovie, opts)
 
     %keyboard
   end
+
+  %if (opts.recompute|~isfield(mymovie.data, 'domain')|isempty(mymovie.data.domain))
+    img = gather_quantification(mymovie, opts);
+    img = imnorm(img);
+    opts.quantification.params.init = sub2ind(size(img,2)*[1 1], [1:size(img,2)],[1:size(img,2)]);
+    path = dynamic_prog_2d(img, opts.quantification.params, @weight_domain_borders, opts.quantification.weights, opts);
+    mymovie.data.domain = path / size(img, 2);
+  %end
 
   return;
 end

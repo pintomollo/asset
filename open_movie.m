@@ -54,7 +54,7 @@ function [mymovie] = open_movie(mymovie, opts)
       disp('[Select a movie file]');
 
       % Prompting the user for the movie file
-      [fname,dirpath] = uigetfile({'*.*'}, ['Load a movie (' expr_name ')']);
+      [fname, dirpath] = uigetfile({'*.*'}, ['Load a movie']);
     end
 
     % Return back to our original folder
@@ -69,7 +69,7 @@ function [mymovie] = open_movie(mymovie, opts)
     end  
 
     % Parse the file name using the provided pattern to identify the other channels
-    [tokens,junk]=regexp(fname, opts.file_regexpr, 'tokens');
+    [tokens, junk] = regexp(fname, opts.file_regexpr, 'tokens');
 
     name = tokens{1}{1};
     suffix = tokens{1}{2};
@@ -123,7 +123,7 @@ function [mymovie] = open_movie(mymovie, opts)
     mymovie = identify_channels(channels, opts);
 
     % Rescale the channels (including some filtering)
-    mymovie = rescale_movie(mymovie, true);
+    mymovie = rescale_movie(mymovie, opts);
 
     % Use the movie name as the name for the entire experiment
     mymovie.experiment = name;

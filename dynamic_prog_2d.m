@@ -21,6 +21,15 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
   size_weight = size(wimg);
   size_problem = size_weight(2:end);
 
+  npts = size_problem(1);
+  %init_weight = bsxfun(@minus, [1:npts], [1:npts].');
+  %init_weight(init_weight ~= 0) = Inf;
+  init_weight = bsxfun(@minus, [1:npts], [1:npts].')+1;
+  is_inverted = (init_weight <= 0);
+  init_weight(is_inverted) = init_weight(is_inverted) + npts;
+  init_weight = init_weight / max(init_weight(:));
+  init_weight = init_weight.^0.2;
+
   dist = zeros([nsteps size_problem]);
   map = zeros([nsteps size_problem]);
   %if (do_probs)
@@ -41,11 +50,11 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
   %if (do_probs)
   %  [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params);
   %else
-    [dist(1,:,:), map(1,:,:)] = dp_score_2d([], prev_step, squeeze(wimg(1,:,:)), init, [], params);
+    [dist(1,:,:), map(1,:,:)] = dp_score_2d([], prev_step, squeeze(wimg(1,:,:)), init, [], init_weight, params);
   %end
 
   for j=2:nsteps
-    indx = indxs(j)
+    indx = indxs(j);
 
     step = img(indx, :);
 
@@ -56,7 +65,7 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
     %    [dist(j,:), map(j,:), emission(j,:,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params);
     %  end
     %else
-      [dist(j,:,:), map(j,:,:)] = dp_score_2d(prev_step, step, squeeze(wimg(indx,:,:)), squeeze(dist(j-1,:,:)), squeeze(map(j-1,:,:)), params);
+      [dist(j,:,:), map(j,:,:)] = dp_score_2d(prev_step, step, squeeze(wimg(indx,:,:)), squeeze(dist(j-1,:,:)), squeeze(map(j-1,:,:)), init_weight, params);
     %end
 
     if (all(all(isinf(dist(j,:,:)))))
@@ -73,7 +82,7 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
   %  [junk, junk, junk, transitions(1,end)] = dp_score_mex([], prev_line, wimg(indxs(end),:), init, [], params);
   %end
 
-  tmp = zeros(nsteps, 1);
+  tmp = NaN(nsteps, 1);
 
   %if (isfield(params, 'final') & ~isempty(params.final))
   %  subdist = dist(end, params.final);
@@ -83,9 +92,15 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
   %end
 
   for j=1:nsteps-1
+    if (tmp(end-j+1, 1) == 0)
+      break;
+    end
     [tmpi, tmpj] = ind2sub(size_problem,tmp(end-j+1,1));
     tmp(end-j,1) = map(end-j+1,tmpi, tmpj);
   end
+
+  %keyboard
+
 
 %  switch opts.dp_method
 %    case 'backward'
@@ -101,8 +116,11 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
 %        emission = emission([h+1:middle+h middle+1:h], :, :);
 %      end
 %    otherwise
+    empty = isnan(tmp)|(tmp==0);
+    tmp(empty) = 1;
     [tmpi, tmpj] = ind2sub(size_problem,tmp);
       path = [tmpi(:) tmpj(:)];
+      path(empty, :) = NaN;
 %  end
 
   %if (opts.force_circularity && abs(path(1,1)-path(end,1))>(nhood/2))
