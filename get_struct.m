@@ -153,7 +153,7 @@ function mystruct = get_struct(type, nstruct)
                         'norm_shift', 2, ...                % Distance to quantify the normalization value
                         'params', params, ...
                         'weights', weights, ...
-                        'use_ruffles', false, ...           % Quantify along the ruffles ?
+                        'use_ruffles', true, ...            % Quantify along the ruffles ?
                         'window_shape', 'gaussian', ...     % Shape of the quantification window, can either be a filter or a 'fspecial' type
                         'window_params', 0.5, ...           % Parameters required to compute the filter
                         'window_size', 2);                  % Size of (square) the window

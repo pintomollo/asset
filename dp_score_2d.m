@@ -24,6 +24,12 @@ function [bests, indxs] =  dp_score_2d(values, new_values, datas, prev_dist, pre
     dists = dists/max(dists);
   end
 
+  %%%% TO DO
+  % Identify the corner of useful data (find(~isinf(datas),1))
+  % Take out central part
+  % Run normally
+  % re-insert results
+
   size_prob = size(datas);
   npts = numel(datas);
   curr_indx = reshape([1:npts], size_prob);

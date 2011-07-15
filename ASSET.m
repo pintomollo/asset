@@ -312,7 +312,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
             ASSET([dirpath datas(i).name], varargin{2:end});
           catch ME
             warning(['Error during the analysis of ' datas(i).name ':']);
-            disp(ME);
+            print_all(ME);
           end
         end
 

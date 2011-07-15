@@ -1,4 +1,4 @@
-function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
+function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init_params, opts)
 
   [h,w] = size(img);
 
@@ -9,7 +9,7 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
 
   nsteps = length(indxs);
 
-  init = params.init; 
+  %init = params.init; 
   
   path = zeros(h,1);
   if (isempty(weight_params))
@@ -21,14 +21,16 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
   size_weight = size(wimg);
   size_problem = size_weight(2:end);
 
-  npts = size_problem(1);
+  %npts = size_problem(1);
   %init_weight = bsxfun(@minus, [1:npts], [1:npts].');
   %init_weight(init_weight ~= 0) = Inf;
-  init_weight = bsxfun(@minus, [1:npts], [1:npts].')+1;
-  is_inverted = (init_weight <= 0);
-  init_weight(is_inverted) = init_weight(is_inverted) + npts;
-  init_weight = init_weight / max(init_weight(:));
-  init_weight = init_weight.^0.2;
+  %init_weight = bsxfun(@minus, [1:npts], [1:npts].')+1;
+  %is_inverted = (init_weight <= 0);
+  %init_weight(is_inverted) = init_weight(is_inverted) + npts;
+  %init_weight = init_weight / max(init_weight(:));
+  %init_weight = init_weight.^0.2;
+
+  init_weight = init(img, init_params);
 
   dist = zeros([nsteps size_problem]);
   map = zeros([nsteps size_problem]);
@@ -37,20 +39,20 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, opts)
   %  transitions = zeros(1,nhood+2);
   %end
 
-  if (isempty(init))
-    init = squeeze(dist(1,:,:));
-  elseif (numel(init) < numel(dist(1,:,:)))
-    tmp = init;
-    init = Inf(size(squeeze(dist(1,:,:))));
-    init(tmp) = 0;
-  end
+  %if (isempty(init))
+  %  init = squeeze(dist(1,:,:));
+  %elseif (numel(init) < numel(dist(1,:,:)))
+  %  tmp = init;
+  %  init = Inf(size(squeeze(dist(1,:,:))));
+  %  init(tmp) = 0;
+  %end
   %nstart = sum(~isinf(init(:)));
 
   prev_step = img(1,:);
   %if (do_probs)
   %  [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params);
   %else
-    [dist(1,:,:), map(1,:,:)] = dp_score_2d([], prev_step, squeeze(wimg(1,:,:)), init, [], init_weight, params);
+    [dist(1,:,:), map(1,:,:)] = dp_score_2d([], prev_step, squeeze(wimg(1,:,:)), init_weight, [], init_weight, params);
   %end
 
   for j=2:nsteps

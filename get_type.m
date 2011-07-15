@@ -12,11 +12,19 @@ function type = get_type(var)
 %     'cell'    Cell input        help iscell
 %     'struct'  Structure input   help isstruct
 %     'java'    Java object       help isjava
+%     'errmsg'  Matlab error      help MException
 %     'unkown'  Unkown type, none of the above
 %
 % Gonczy & Naef labs, EPFL
 % Simon Blanchoud
 % 18.05.2011
+
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %%%% USE CLASS INSTEAD %%%%
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   % Simply check the different possible types, one-by-one, using the build-in
   % Matlab functions.
@@ -34,6 +42,8 @@ function type = get_type(var)
     type = 'struct';
   elseif (isjava(var))
     type = 'java';
+  elseif (strncmp(class(var), 'MException', 10))
+    type = 'errmsg';
   else
     type = 'unknown';
   end

@@ -8,12 +8,13 @@ function [H, pval] = myttest(values, indexes)
     return;
   end
 
-  H = zeros(length(groups));
+  ngroups = length(groups);
+  H = zeros(ngroups);
   pval = H;
 
-  for i = groups
-    for j = groups
-      [H(i,j), pval(i,j)] = ttest2(values(indexes==i), values(indexes==j), [], 'right');
+  for i = 1:ngroups
+    for j = 1:ngroups
+      [H(i,j), pval(i,j)] = ttest2(values(indexes==groups(i)), values(indexes==groups(j)));
     end
   end
 

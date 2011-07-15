@@ -28,25 +28,25 @@ function [res] = combine_domains(mymovies)
   for i=1:nmovies
     load(mymovies{i});
     [img,~,cytos(i)] = gather_quantification(mymovie, opts);
-    tmp_path = mymovie.data.domain;
+    %tmp_path = mymovie.data.domain;
 
     [h,w] = size(img);
 
     imagesc(imnorm(img));
     hold on
-    plot(tmp_path(:, 1)*w,[1:h], 'k');
-    plot(tmp_path(:, 2)*w,[1:h], 'k');
+    %plot(tmp_path(:, 1)*w,[1:h], 'k');
+    %plot(tmp_path(:, 2)*w,[1:h], 'k');
     plot([1 size(img,2)],[cytos(i) cytos(i)], 'k');
 
     saveas(gca, [mymovies{i}(1:end-5) '-DP.png']);
     hold off
 
-    paths{i} = tmp_path;
+    %paths{i} = tmp_path;
   end
 
-  res{1} = mymovies;
-  res{2} = paths;
-  res{3} = cytos;
+  %res{1} = mymovies;
+  %res{2} = paths;
+  %res{3} = cytos;
 
   return;
 

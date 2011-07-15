@@ -23,24 +23,33 @@ function mymovie = cortical_signal(mymovie, opts)
   end
   
   for i=1:nframes
-    %keyboard
     %nimg = randi(nframes)
-    nimg = i;
+    %nimg = i;
     %nimg = i + 73
-    %nimg = 40
+    nimg = 52
+    %keyboard
 
     cortex = mymovie.data.cortex(nimg).carth;
 
     if (opts.recompute|(~isfield(mymovie.data, 'quantification'))|(length(mymovie.data.quantification) < nimg)|~isfield(mymovie.data.quantification(nimg), 'front')|isempty(mymovie.data.quantification(nimg).front))
       img = double(load_data(mymovie.data, nimg));
 
-      ell_cortex = abs(carth2elliptic(cortex, mymovie.data.centers(:, nimg), mymovie.data.axes_length(:, nimg), mymovie.data.orientations(1, nimg)));
-      indx = find(ell_cortex(:,1)==min(ell_cortex(:,1)), 1);
+      ell_cortex = carth2elliptic(cortex, mymovie.data.centers(:, nimg), mymovie.data.axes_length(:, nimg), mymovie.data.orientations(1, nimg));
 
-      if (indx ~= 1)
-        cortex = cortex([indx:end 1:indx-1], :);
-        mymovie.data.cortex(nimg).carth = cortex;
-      end
+      ell_pos = ell_cortex(:,1);
+      ell_pos = unique([ell_pos; 0; pi]);
+      ell_pos = ell_pos([diff([ell_pos; ell_pos(1)+2*pi]) > 1e-10]);
+
+      ell_cortex = interp_elliptic(ell_cortex, ell_pos);
+
+      cortex = elliptic2carth(ell_cortex, mymovie.data.centers(:, nimg), mymovie.data.axes_length(:, nimg), mymovie.data.orientations(1, nimg));
+
+      %indx = find(abs(ell_cortex(:,1))==min(abs(ell_cortex(:,1))), 1);
+
+      %if (indx ~= 1)
+      %  cortex = cortex([indx:end 1:indx-1], :);
+      %  mymovie.data.cortex(nimg).carth = cortex;
+      %end
 
       %keyboard
 
@@ -165,16 +174,20 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).bkg = [params5 params4(1:3)];
       mymovie.data.quantification(nimg).carth = cortex(:, :);
 
-      %estim4 = gaussian([params4(1:3) 0], dpos);
-      %clim = [min(values(:)) max(values(:))];
-      %figure;imagesc(gaussian(signal, dpos));
-      %figure;imagesc(values);
-      %figure;imagesc(smoothed);
-      %figure;plot(dpos, projection);hold on;plot(dpos(peak_range), projection(peak_range), 'r');
-      %plot(dpos, estim5, 'k');plot(dpos, estim4, 'g');
+      if (false)
+      estim4 = gaussian([params4(1:3) 0], dpos);
+      clim = [min(values(:)) max(values(:))];
+      figure;imagesc(gaussian(signal, dpos));
+      figure;imagesc(bsxfun(@plus, gaussian(signal, dpos), estim5), clim);
+      figure;imagesc(values, clim);
+      figure;imagesc(smoothed);
+      figure;plot(dpos, projection);hold on;plot(dpos(peak_range), projection(peak_range), 'r');
+      plot(dpos, estim5, 'k');plot(dpos, estim4, 'g');
+      plot(dpos, estim5 + estim4, 'm')
       %plot(dpos, estim3, 'm');plot(dpos, estim2, 'y');
       %plot(dpos, estim1, 'c');
-      %keyboard
+      keyboard
+      end
       %close all
     else
 
@@ -213,13 +226,14 @@ function mymovie = cortical_signal(mymovie, opts)
     %keyboard
   end
 
+  if (false)
   %if (opts.recompute|~isfield(mymovie.data, 'domain')|isempty(mymovie.data.domain))
     img = gather_quantification(mymovie, opts);
     img = imnorm(img);
     opts.quantification.params.init = sub2ind(size(img,2)*[1 1], [1:size(img,2)],[1:size(img,2)]);
     path = dynamic_prog_2d(img, opts.quantification.params, @weight_domain_borders, opts.quantification.weights, opts);
     mymovie.data.domain = path / size(img, 2);
-  %end
+  end
 
   return;
 end
