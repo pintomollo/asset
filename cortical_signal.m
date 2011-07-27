@@ -24,9 +24,9 @@ function mymovie = cortical_signal(mymovie, opts)
   
   for i=1:nframes
     %nimg = randi(nframes)
-    %nimg = i;
+    nimg = i;
     %nimg = i + 73
-    nimg = 52
+    %nimg = 52
     %keyboard
 
     cortex = mymovie.data.cortex(nimg).carth;
@@ -54,6 +54,9 @@ function mymovie = cortical_signal(mymovie, opts)
       %keyboard
 
       if (opts.quantification.use_ruffles)
+        if (~isfield(mymovie.markers, 'ruffles') | isempty(mymovie.markers.ruffles))
+          mymovie = track_ruffles(mymovie, opts);
+        end
         [ cortex, rescale] = insert_ruffles(cortex, mymovie.markers.ruffles(nimg).carth, mymovie.markers.ruffles(nimg).paths);
       else
         rescale = false(size(cortex, 1), 1);

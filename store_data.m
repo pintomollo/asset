@@ -1,24 +1,26 @@
-function [fid] = store_data(fid, images, indexes)
+function [fname] = store_data(fname, images, indexes)
+% STORE_DATA saves into the specified file the provided matrix.
+%
+%   
 
-  if (~isjava(fid))
+  if (~isjava(fname))
 
-    compress = 'LZW';
-    if (isstruct(fid) & isfield(fid, 'fname'))
+    compress = '';
+    if (isstruct(fname) & isfield(fname, 'fname'))
 
-      if (isfield(fid, 'compression'))
-        compress = fid.compression;
+      if (isfield(fname, 'compression'))
+        compress = fname.compression;
       end
 
-      fid = fid.fname;
+      fname = fname.fname;
     end
     omexmlMeta = loci.formats.MetadataTools.createOMEXMLMetadata();
 
-    fid = absolutepath(fid);
+    fname = absolutepath(fname);
 
     r = loci.formats.ImageReader();
-    r = loci.formats.ChannelMerger(r);
     r.setMetadataStore(omexmlMeta);
-    r.setId(fid);
+    r.setId(fname);
 
     if (nargin < 3)
       nframes = r.getImageCount();
@@ -32,11 +34,13 @@ function [fid] = store_data(fid, images, indexes)
 
     writer = loci.formats.ImageWriter();
     writer.setMetadataRetrieve(omexmlMeta);
-    writer.setId(fid);
+    writer.setId(fname);
 
-    writer.setCompression(java.lang.String(compress));
+    if (~isempty(compress))
+      writer.setCompression(java.lang.String(compress));
+    end
   else
-    writer = fid;
+    writer = fname;
   end
 
   %keyboard
@@ -50,7 +54,7 @@ function [fid] = store_data(fid, images, indexes)
     writer.saveBytes(indexes(i) - 1, img);
   end
 
-  if (~isjava(fid))
+  if (~isjava(fname))
     writer.close();
   end
 
