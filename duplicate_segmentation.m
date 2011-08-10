@@ -47,6 +47,12 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
     frames = 1:nframes;
   end
 
+  if (isfield(mymovie.(orig_type), 'neighbors'))
+    neighbors = mymovie.(orig_type).neighbors;
+  else
+    neighbors = get_struct('reference', [1 nframes]);
+  end
+
   if (strncmp(orig_type, 'dic', 3))
     params = opts.segmentation_parameters.correction;
     maxval = double(intmax('uint16'));
@@ -92,6 +98,9 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
       eggshell(nimg).carth = new_egg;
       cortex(nimg).carth = new_cortex;
       [centers(:,nimg), axes_lengths(:,nimg), orientations(1,nimg)] = fit_ellipse(new_egg);
+
+      neighbors(nimg).centers = bsxfun(@plus, neighbors(nimg).centers, centers(:,nimg) - center);
+      neighbors(nimg).orientations = neighbors(nimg).orientations + (orientations(:,nimg) - orientation);
     end
     orientations = align_orientations(orientations, mean(mymovie.dic.orientations));
   else
@@ -110,6 +119,7 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
   mymovie.(type).centers = centers;
   mymovie.(type).axes_length = axes_lengths;
   mymovie.(type).orientations = orientations;
+  mymovie.(type).neighbors = neighbors;
 
   return;
 end

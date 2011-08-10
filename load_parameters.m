@@ -111,22 +111,8 @@ function opts = load_parameters(opts, fname)
         % If we found the two elements, we can assign the value to the field
         if (length(tokens{1}) == 2)
 
-          % We need to behave slightly differently depending on the type of field
-          % so we retrieve it directly from opts as we know the target field
-          eval(['field_type = get_type(opts.' prefix tokens{1}{1} ');']);
-
-          % We convert the value to its correct type before assigning it to its
-          % field (with the prefix)
-          switch field_type
-            case 'char'
-              eval(['opts.' prefix '(tokens{1}{1}) = tokens{1}{2};']);
-            case 'num'
-              eval(['opts.' prefix '(tokens{1}{1}) = str2double(tokens{1}{2});']);
-            case 'bool'
-              eval(['opts.' prefix '(tokens{1}{1}) = logical(' tokens{1}{2} ');']);
-            case 'cell'
-              eval(['opts.' prefix '(tokens{1}{1}) = regexp(tokens{1}{2}, ''\W'', ''split'');']);
-          end
+          % We use the eval function to interpret the values as in MATLAB 
+          eval(['opts.' prefix '(tokens{1}{1}) = ' tokens{1}{2} ';']);
         end
       end
     end

@@ -1,11 +1,16 @@
-function mymovie = dp_markers(mymovie, parameters, nimg, opts)
+function mymovie = dp_markers(mymovie, nimg, opts)
 
-  if (isfield(mymovie, 'markers') && isfield(mymovie.markers, 'centers'))
+  if (isfield(mymovie, 'markers') && isfield(mymovie.markers, 'centers') && ~isempty(mymovie.markers.centers))
     centers = mymovie.markers.centers;
     axes_length = mymovie.markers.axes_length;
     orientations = mymovie.markers.orientations;
     eggshell = mymovie.markers.eggshell;
     cortex = mymovie.markers.cortex;
+    if (~isfield(mymovie.dic, 'neighbors'))
+      neighbors = get_struct('reference', size(eggshell));
+    else
+      neighbors = mymovie.dic.neighbors;
+    end
 
     if (~isfield(mymovie.markers, 'update'))
       update = false(size(centers));
@@ -24,11 +29,14 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
 
     eggshell = get_struct('eggshell',[1,nframes]);
     cortex = get_struct('cortex',[1,nframes]);
+    neighbors = get_struct('reference',[1, nframes]);
   else
     error 'No suitable channels available for the markers segmentation'; 
 
     return;
   end
+
+  parameters = opts.segmentation_parameters.markers;
 
   img = [];
   if (~isempty(mymovie.eggshell) & ( length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'eggshell', 8))))
@@ -50,9 +58,9 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
     img = 1-img;
 
     if (opts.measure_performances)
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), estimation] = detect_ellipse(img, false, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(img, false, opts);
     else
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = detect_ellipse(img, false, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(img, false, opts);
     end
 
     if (opts.verbosity == 3)
@@ -110,6 +118,7 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
     mymovie.markers.axes_length = axes_length;
     mymovie.markers.orientations = orientations;
     mymovie.markers.eggshell = eggshell;
+    mymovie.markers.neighbors = neighbors;
   end
 
   
@@ -198,7 +207,17 @@ function mymovie = dp_markers(mymovie, parameters, nimg, opts)
   return;
 end
 
-function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_only, opts)
+function [center, axes_length, orientation, neighbors, estim] = detect_ellipse(img, estim_only, opts)
+
+  center = NaN(2, 1);
+  axes_length = NaN(2, 1);
+  orientation = NaN;
+  estim = [];
+  neighbors = get_struct('reference');
+
+  neighbors.centers = center;
+  neighbors.axes_length = axes_length;
+  neighbors.orientations = orientation;
 
   imgsize = size(img);
   npixels = max(imgsize);
@@ -224,10 +243,23 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_o
     return;
   end
 
-  if (size(ellipse, 1) > 1)
-    dist = sum(bsxfun(@minus, ellipse([1 2], :), imgsize([2 1])/2).^2, 2);
-    [~, indx] = min(dist);
-    ellipse = ellipse(indx(1),:)
+  if (numel(ellipse) == 0)
+    return;
+  elseif (size(ellipse, 1) > 1)
+    imgsize = size(img);
+
+    %dist = sum(bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])/2).^2, 2);
+
+    dist = [bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])).^2 ellipse(:, [1 2]).^2];
+    dist = min(dist, [], 2);
+
+    [~, indx] = max(dist);
+    indxs = false(size(dist));
+    indxs(indx(1)) = true;
+
+    [neighbors.centers, neighbors.axes_length, neighbors.orientations] = deal(ellipse(~indxs, 1:2).', ellipse(~indxs, 3:4).', ellipse(~indxs, 5));
+
+    ellipse = ellipse(indxs,:);
   end
 
   [center, axes_length, orientation] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));

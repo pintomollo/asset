@@ -31,12 +31,17 @@ function print_structure(struct, spacer)
   spacer_unit = '    ';
 
   fields = fieldnames(struct);
-  for i=1:length(fields)
-    name = fields{i};
-    values = struct.(name);
+  for i=1:numel(struct)
+    if (numel(struct) > 1)
+      fprintf([spacer '----%d----\n'], i);
+    end
+    for j=1:length(fields)
+      name = fields{j};
+      values = struct(i).(name);
 
-    fprintf([spacer '%s:\n'], name);
-    print_all(values, [spacer spacer_unit]);
+      fprintf([spacer '%s:\n'], name);
+      print_all(values, [spacer spacer_unit]);
+    end
   end
 
   return;

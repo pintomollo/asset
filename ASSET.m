@@ -404,7 +404,6 @@ function [mymovie, trackings, opts] = parse_input(varargin)
   end
 
   % Retrieve the latest version of OPTS
-  new_opts = get_struct('ASSET');
   new_opts = load_parameters('default_params.txt');
 
   % Next possible structure has to be opts
@@ -413,7 +412,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
     varargin(1) = [];
   end
 
-  % Correct the structure of opts if need be
+  % Correct the different structures of opts if need be
   opts = merge_structures(opts, new_opts);
 
   % Now we check that the parameters were provided in pairs

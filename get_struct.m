@@ -71,15 +71,22 @@ function mystruct = get_struct(type, nstruct)
 
     % Structure used to parse the original files (reused to create the fields of mymovie)
     case 'channel'
-      mystruct = struct('color', ones(1,3), ...             % Color of the channel (RGB)
+      mystruct = struct('axes_length', zeros(2, 0), ...
+                        'centers', zeros(2, 0), ...
+                        'color', ones(1,3), ...             % Color of the channel (RGB)
                         'compression', 'LZW', ...           % Compression used for the temporary file
+                        'cortex', [], ...
                         'detrend', false, ...               % Detrend the image (see imdetrend.m)
+                        'eggshell', [], ...
                         'file', '', ...                     % Path to the original file
                         'fname', '', ...                    % Name of the corresponding temporary file
                         'hot_pixels', true, ...             % Remove the hot pixels in the image (see imhotpixels.m)
                         'max', -Inf, ...                    % Original maximum value used for rescaling
                         'min', Inf, ...                     % Original minimum value used for rescaling
-                        'type', 'dic');                     % Type of channel (dic, eggshell, cortex, data)
+                        'neighbors', [], ...
+                        'orientations', zeros(1, 0), ...    
+                        'type', 'dic', ...                  % Type of channel (dic, eggshell, cortex, data)
+                        'update', zeros(2, 0));
 
     % Structure used to store the parameters of the correction function (see duplicate_segmentation.m)
     % The correction function is : F(i) = a + b*I(i+s) + c*R(I)
@@ -134,6 +141,7 @@ function mystruct = get_struct(type, nstruct)
     % Parameters used for the quantification of the signal
     case 'quantification'
       % Retrieve the previously defined structures for the smoothness and data terms
+      init = get_struct('data_parameters');
       params = get_struct('smoothness_parameters');
       weights = get_struct('data_parameters');
 
@@ -149,6 +157,7 @@ function mystruct = get_struct(type, nstruct)
 
       mystruct = struct('channel', 'data', ...              % Quantified channel
                         'field', 'cortex', ...              % Quantified field in the previously defined channel
+                        'init_params', init, ...           
                         'normalize', 'cytoplasm', ...       % Type of signal normalization
                         'norm_shift', 2, ...                % Distance to quantify the normalization value
                         'params', params, ...
@@ -169,7 +178,9 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('bounds', [], ...                   % Bounds of the aperture of the invagination
                         'carth', [], ...                    % Cartesian position of the invaginations (Nx2)
                         'cluster', [], ...                  % Time cluster containing the invaginations
-                        'properties', []);                  % Various properties computed on each invagination
+                        'paths', {{}}, ...                  % Segmentation of the inner part of the invagination
+                        'properties', [], ...               % Various properties computed on each invagination
+                        'warped', []);                      % Normalized position
 
     % Parameters used for a segmentation (eggshell and cortex) (see 'segmentations')
     case 'segmentation' 
@@ -273,12 +284,13 @@ function mystruct = get_struct(type, nstruct)
     case 'smoothness_parameters'
       mystruct = struct('final', [], ...                % Final position used for backtracking DP
                         'init', [], ...                 % Initial position for DP (see dynamic_programming.m)
-                        'nhood', 0, ...                 % Neighborhood explored during dynamic programming (nhood/2 pixels on each side)
+                        'nhood', 0, ...                 % Neighborhood explored during dynamic programming (nhood pixels on each side)
                         'prohibit', 'diag', ...         % Prohibiting particular moves
                         'spawn_percentile', -1, ...     % Score used when spawning a new path (as percentile of the previous step)
                         'alpha', 0, ...                 % Weights of the different smoothness terms
-                        'beta', 0, ...                  %  |
-                        'gamma', 0);                    %  |
+                        'beta', 0, ...                  %  "
+                        'gamma', 0, ...                 %  "
+                        'delta', 0);                    %  "
 
     % Structure of MATLAB's splines, useful to represent empty splines (help spline)
     case 'spline'

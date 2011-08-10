@@ -5,6 +5,9 @@ function mymovie = track_ruffles(mymovie, opts)
 
   %if (isfield(mymovie, 'markers') & ~isempty(mymovie.markers))
   %  type = 'markers';
+
+  mymovie = find_ruffles(mymovie, opts);
+
   type = opts.segmentation_type;
   if (strncmp(type, 'markers', 7))
     [nframes imgsize ] = size_data(mymovie.cortex);
@@ -34,6 +37,8 @@ function mymovie = track_ruffles(mymovie, opts)
   npts = 0;
   avg_mov = [0 0];
 
+  ruffles = mymovie.(type).ruffles;
+
   for i=1:nframes
     %if (i==76)
     %  keyboard
@@ -43,19 +48,21 @@ function mymovie = track_ruffles(mymovie, opts)
     prev_pts = pts;
     prev_npts = npts;
 
-    pts = mymovie.(type).cortex(i).carth;
-    invs = find_ruffles(pts, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
+    %pts = mymovie.(type).cortex(i).carth;
+    %invs = find_ruffles(pts, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
 
-    npts = size(invs, 1);
+    %npts = size(invs, 1);
 
-    if (opts.verbosity == 3)
-      ell_pos = carth2elliptic(pts, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
-      plot3(ell_pos(:,1),ell_pos(:,2),i*ones(size(ell_pos,1),1));
-      hold on;
-      scatter3(ell_pos(invs(:,2),1),ell_pos(invs(:,2),2),i*ones(size(invs,1),1),'r')
-    end
+    %if (opts.verbosity == 3)
+    %  ell_pos = carth2elliptic(mymovie.(type).cortex(i).carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
+    %  plot3(ell_pos(:,1),ell_pos(:,2),i*ones(size(ell_pos,1),1));
+    %  hold on;
+      %scatter3(ell_pos(invs(:,2),1),ell_pos(invs(:,2),2),i*ones(size(invs,1),1),'r')
+    %end
   
-    pts = [pts(invs(:,2),:) pts(invs(:,1),:) pts(invs(:,3),:)];
+    %pts = [pts(invs(:,2),:) pts(invs(:,1),:) pts(invs(:,3),:)];
+
+    pts = ruffles(i).carth;
     npts = size(pts,1);
     
     %if (opts.verbosity == 3)
@@ -104,7 +111,7 @@ function mymovie = track_ruffles(mymovie, opts)
       end
     end
 
-    ruffles(i) = store_detection(prev_npts, pts, assign);
+    ruffles(i) = store_detection(ruffles(i), prev_npts, pts, assign);
   end
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GAP CLOSING
@@ -173,7 +180,7 @@ function mymovie = track_ruffles(mymovie, opts)
   [assign, cost] = munkres(dist);
 
   for i=1:nends
-    if (assign(i) <= nstarts)
+    if (assign(i) <= nstarts && assign(i) > 0)
       ruffles = close_gap(ruffles, ends(i,:), starts(assign(i),:));
 
       if (opts.verbosity == 3)
@@ -183,7 +190,7 @@ function mymovie = track_ruffles(mymovie, opts)
         ell_start = carth2elliptic(starts(assign(i),1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
         plot3([ell_end(1) ell_start(1)], [ell_end(2) ell_start(2)], [ends(i,3) starts(assign(i),3)], 'k');
       end
-    elseif (assign(i) < nstarts + ninterm)
+    elseif (assign(i) < nstarts + ninterm && assign(i) > 0)
       ruffles = close_gap(ruffles, ends(i,:), interm(assign(i)-nstarts,:));
 
       if (opts.verbosity == 3)
@@ -265,13 +272,13 @@ function ruffles = close_gap(ruffles, first, last)
   return;
 end
 
-function ruffles = store_detection(nprev, pts, assign)
+function ruffles = store_detection(ruffles, nprev, pts, assign)
 
   npts = size(pts,1);
 
-  ruffles = get_struct('ruffles', 1); 
-  ruffles.carth = pts(:,1:2);
-  ruffles.bounds = pts(:,3:end);
+  %ruffles = get_struct('ruffles', 1); 
+  %ruffles.carth = pts(:,1:2);
+  %ruffles.bounds = pts(:,3:end);
 
   ruffles = ruffles_properties(ruffles);
 

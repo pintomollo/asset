@@ -77,15 +77,16 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
         mymovie = dp_dic(mymovie, nframe, opts);
 
         if (any(mymovie.dic.update(:, nframe)))
+
           tmp_opts = dic_opts;
           tmp_opts.recompute = true;
           mymovie = duplicate_segmentation(mymovie, 'markers', tmp_opts, nframe);
           tmp_opts = opts;
           tmp_opts.recompute = true;
-          mymovie = dp_markers(mymovie, tmp_opts.segmentation_parameters.markers, nframe, tmp_opts);
+          mymovie = dp_markers(mymovie, nframe, tmp_opts);
         end
       else
-        mymovie = dp_markers(mymovie, opts.segmentation_parameters.markers, nframe, opts);
+        mymovie = dp_markers(mymovie, nframe, opts);
       end
 
       updated = updated || any(mymovie.markers.update(:, nframe));
@@ -101,6 +102,8 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
     mymovie.markers = align_orientations(mymovie.markers);
   end
+
+  mymovie = align_embryo(mymovie, opts);
 
   if (opts.verbosity > 0)
     close(hwait);

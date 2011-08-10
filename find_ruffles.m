@@ -1,4 +1,35 @@
-function indxs = find_ruffles(pts, center, axes_length, orient, hard_thresh)
+function mymovie = find_ruffles(mymovie, opts)
+%pts, center, axes_length, orient, hard_thresh)
+
+  if (nargin < 2)
+    opts = get_struct('ASSET', 1);
+  end
+
+  type = opts.segmentation_type;
+  switch (type)
+    case {'dic', 'all'}
+      [nframes imgsize ] = size_data(mymovie.dic);
+    case 'markers'
+      if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
+        [nframes imgsize ] = size_data(mymovie.eggshell);
+      else
+        [nframes imgsize ] = size_data(mymovie.cortex);
+      end
+    otherwise
+      error 'None of the expected field are present in ''mymovie''';
+  end
+
+  if (nargin < 2)
+    opts.segmentation_parameters = set_image_size(opts.segmentation_parameters, imgsize);
+  end
+
+  if (~opts.recompute && isfield(mymovie.(type), 'ruffles') && ~isempty(mymovie.(type).ruffles))
+    return;
+  end
+
+  if (~isfield(mymovie.(type), 'cortex') || isempty(mymovie.(type).cortex))
+    mymovie = segment_movie(mymovie, opts);
+  end
 
   if (nargin < 5)
     hard_thresh = 2e-2;
@@ -6,103 +37,119 @@ function indxs = find_ruffles(pts, center, axes_length, orient, hard_thresh)
 
   thresh = 1e-5;
   sub_coef = 2;
+  ruffles = get_struct('ruffles', [1 nframes]); 
+
+  for i=1:nframes
+
+    pts = mymovie.(type).cortex(i).carth;
+    center = mymovie.(type).centers(:,i);
+    axes_length = mymovie.(type).axes_length(:,i);
+    orient = mymovie.(type).orientations(1,i);
   
-  conv = pts(convhull(pts(:,1),pts(:,2)),:);
-  if (~ispolycw(conv(:,1),conv(:,2)))
-    conv = conv([end:-1:1],:);
-  end
+    conv = pts(convhull(pts(:,1),pts(:,2)),:);
+    if (~ispolycw(conv(:,1),conv(:,2)))
+      conv = conv([end:-1:1],:);
+    end
 
-  %figure;myplot(pts);hold on;
-  %myplot(conv,'r');
+    %figure;myplot(pts);hold on;
+    %myplot(conv,'r');
 
-  ell_pts = carth2elliptic(pts, center, axes_length, orient);
-  ell_conv = carth2elliptic(conv, center, axes_length, orient);
-  indx = find(ell_conv(1:end-1,1) > ell_conv(2:end,1));
+    ell_pts = carth2elliptic(pts, center, axes_length, orient);
+    ell_conv = carth2elliptic(conv, center, axes_length, orient);
+    indx = find(ell_conv(1:end-1,1) > ell_conv(2:end,1));
 
-  if (~isempty(indx))
-    ell_conv = ell_conv([indx+1:end 1:indx],:);
-  end
+    if (~isempty(indx))
+      ell_conv = ell_conv([indx+1:end 1:indx],:);
+    end
 
-  tmp_conv = ell_conv([end 1:end 1],:);
-  tmp_conv(1,1) = tmp_conv(1,1) - 2*pi;
-  tmp_conv(end,1) = tmp_conv(end,1) + 2*pi;
-  tmp_conv = interp1q(tmp_conv(:,1), tmp_conv(:,2), ell_pts(:,1));
+    tmp_conv = ell_conv([end 1:end 1],:);
+    tmp_conv(1,1) = tmp_conv(1,1) - 2*pi;
+    tmp_conv(end,1) = tmp_conv(end,1) + 2*pi;
+    tmp_conv = interp1q(tmp_conv(:,1), tmp_conv(:,2), ell_pts(:,1));
 
-  ell_conv = [ell_pts(:,1) tmp_conv];
+    ell_conv = [ell_pts(:,1) tmp_conv];
 
-  %figure;myplot(ell_pts);hold on;
-  %myplot(ell_conv,'r');
+    %figure;myplot(ell_pts);hold on;
+    %myplot(ell_conv,'r');
+      
+    dist = ell_conv(:,2) - ell_pts(:,2);
+    npts = length(dist);
+    dist = [dist; dist(1:ceil(npts/2))];
+
+    indxs = zeros(1,3);
+    cands = zeros(1,2);
+    local_max = 0;
+    first = find(dist < thresh, 1);
+
+    for j=first:length(dist)
+      if (dist(j) < thresh & local_max > thresh)
+        local_max = 0;
+        indxs(end, 3) = j;
+
+        if (indxs(1,2) == indxs(end,2)-npts)
+          break;
+        end
+
+        indxs(end+1,:) = j;
+      elseif (dist(j) > local_max)
+        if (local_max < thresh)
+          indxs(end, 1) = j-1;
+        end
+
+        local_max = dist(j);
+        indxs(end, 2) = j;
+      end
+    end
+
+    %keyboard
     
-  dist = ell_conv(:,2) - ell_pts(:,2);
-  npts = length(dist);
-  dist = [dist; dist(1:ceil(npts/2))];
+    indxs = indxs(1:end-1,:);
 
-  indxs = zeros(1,3);
-  cands = zeros(1,2);
-  local_max = 0;
-  first = find(dist < thresh, 1);
+    max_dist = dist(indxs(:,2));
+    %indxs = indxs(max_dist > mean(max_dist) + coef*std(max_dist),:);
+    indxs = indxs(max_dist > hard_thresh,:);
+    %bad_indxs = setdiff(indxs, good_indxs, 'rows');
 
-  for i=first:length(dist)
-    if (dist(i) < thresh & local_max > thresh)
-      local_max = 0;
-      indxs(end, 3) = i;
+    %ttest2(dist(good_indxs(:,2)),dist(bad_indxs(:,2)))
 
-      if (indxs(1,2) == indxs(end,2)-npts)
-        break;
+    %indxs = good_indxs;
+
+
+    %%% SUBMAX
+
+    %keyboard
+    %figure;
+    %plot([1:length(dist)], dist); hold on;
+
+    new_indxs = zeros(0,3);
+
+    for j=1:size(indxs,1)
+      tmp = local_maxs(indxs(j,:), dist);
+      tmp = tmp(1:2, tmp(3,:) > hard_thresh / sub_coef);
+
+      nmaxs = size(tmp,2);
+      if (nmaxs > 1)
+        maxs = sort(tmp(1,:));
+        mins = sort([tmp(2,:) indxs(j,3)]);
+
+        for k=1:nmaxs
+          new_indxs(end+1,:) = [mins(k) maxs(k) mins(k+1)];
+        end
+      else
+        new_indxs(end+1,:) = indxs(j,:);
       end
-
-      indxs(end+1,:) = i;
-    elseif (dist(i) > local_max)
-      if (local_max < thresh)
-        indxs(end, 1) = i-1;
-      end
-
-      local_max = dist(i);
-      indxs(end, 2) = i;
+      %scatter(tmp(1,:), dist(tmp(1,:)), 'k')
     end
+
+    indxs = new_indxs - npts*(new_indxs > npts); 
+
+    pts = [pts(indxs(:,2),:) pts(indxs(:,1),:) pts(indxs(:,3),:)];
+
+    ruffles(i).carth = pts(:,1:2);
+    ruffles(i).bounds = pts(:,3:end);
   end
 
-  %keyboard
-  
-  indxs = indxs(1:end-1,:);
-
-  max_dist = dist(indxs(:,2));
-  %indxs = indxs(max_dist > mean(max_dist) + coef*std(max_dist),:);
-  indxs = indxs(max_dist > hard_thresh,:);
-  %bad_indxs = setdiff(indxs, good_indxs, 'rows');
-
-  %ttest2(dist(good_indxs(:,2)),dist(bad_indxs(:,2)))
-
-  %indxs = good_indxs;
-
-
-  %%% SUBMAX
-
-  %keyboard
-  %figure;
-  %plot([1:length(dist)], dist); hold on;
-
-  new_indxs = zeros(0,3);
-
-  for i=1:size(indxs,1)
-    tmp = local_maxs(indxs(i,:), dist);
-    tmp = tmp(1:2, tmp(3,:) > hard_thresh / sub_coef);
-
-    nmaxs = size(tmp,2);
-    if (nmaxs > 1)
-      maxs = sort(tmp(1,:));
-      mins = sort([tmp(2,:) indxs(i,3)]);
-
-      for i=1:nmaxs
-        new_indxs(end+1,:) = [mins(i) maxs(i) mins(i+1)];
-      end
-    else
-      new_indxs(end+1,:) = indxs(i,:);
-    end
-    %scatter(tmp(1,:), dist(tmp(1,:)), 'k')
-  end
-
-  indxs = new_indxs - npts*(new_indxs > npts); 
+  mymovie.(type).ruffles = ruffles;
 
   %scatter(indxs(:,1), dist(indxs(:,1)), 'b')
   %scatter(indxs(:,2), dist(indxs(:,2)), 'r')

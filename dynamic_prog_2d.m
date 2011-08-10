@@ -2,8 +2,8 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
 
   [h,w] = size(img);
 
-  nhood = params.nhood;
-  half = floor(nhood/2);
+  %nhood = params.nhood;
+  %half = floor(nhood/2);
 
   indxs = 1:h;
 
@@ -20,6 +20,7 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
 
   size_weight = size(wimg);
   size_problem = size_weight(2:end);
+  default_map = reshape([1:prod(size_problem)], size_problem);
 
   %npts = size_problem(1);
   %init_weight = bsxfun(@minus, [1:npts], [1:npts].');
@@ -48,17 +49,26 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
   %end
   %nstart = sum(~isinf(init(:)));
 
-  prev_step = img(1,:);
+  %keyboard
+
+  prev_wimg = squeeze(wimg(1,:,:));
   %if (do_probs)
   %  [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params);
   %else
-    [dist(1,:,:), map(1,:,:)] = dp_score_2d([], prev_step, squeeze(wimg(1,:,:)), init_weight, [], init_weight, params);
+    [tmp_dist, tmp_map] = dp_score_2d(prev_wimg, [], [], [], init_weight, params);
   %end
+    dist(1,:,:) = tmp_dist;
+    map(1,:,:) = tmp_map;
 
   for j=2:nsteps
+
+    %if (j == 8)
+    %  keyboard
+    %end
+
     indx = indxs(j);
 
-    step = img(indx, :);
+    curr_wimg = squeeze(wimg(indx, :, :));
 
     %if (do_probs)
     %  if (j==2)
@@ -67,15 +77,18 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
     %    [dist(j,:), map(j,:), emission(j,:,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params);
     %  end
     %else
-      [dist(j,:,:), map(j,:,:)] = dp_score_2d(prev_step, step, squeeze(wimg(indx,:,:)), squeeze(dist(j-1,:,:)), squeeze(map(j-1,:,:)), init_weight, params);
+      [tmp_dist, tmp_map] = dp_score_2d(curr_wimg, prev_wimg, tmp_dist, tmp_map, init_weight, params);
     %end
 
-    if (all(all(isinf(dist(j,:,:)))))
+    if (all(isinf(tmp_dist(:))))
       dist(j,:,:) = dist(j-1,:,:);
-      map(j,:,:) = reshape([1:numel(step)], size_problem);
+      map(j,:,:) = default_map;
+    else
+      dist(j,:,:) = tmp_dist;
+      map(j,:,:) = tmp_map;
     end
 
-    prev_step = step;
+    prev_wimg = curr_wimg;
   end
 
   %keyboard

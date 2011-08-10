@@ -1,12 +1,17 @@
 function mymovie = dp_dic(mymovie, nimg, opts)
 
   if (isfield(mymovie, 'dic'))
-    if (isfield(mymovie.dic, 'centers'))
+    if (isfield(mymovie.dic, 'centers') & ~isempty(mymovie.dic.centers))
       centers = mymovie.dic.centers;
       axes_length = mymovie.dic.axes_length;
       orientations = mymovie.dic.orientations;
       eggshell = mymovie.dic.eggshell;
       cortex = mymovie.dic.cortex;
+      if (~isfield(mymovie.dic, 'neighbors'))
+        neighbors = get_struct('reference', size(eggshell));
+      else
+        neighbors = mymovie.dic.neighbors;
+      end
       
       if (~isfield(mymovie.dic, 'update'))
         update = false(size(centers));
@@ -24,6 +29,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
       eggshell = get_struct('eggshell',[1,nframes]);
       cortex = get_struct('cortex',[1,nframes]);
+      neighbors = get_struct('reference',[1, nframes]);
     end
   else
     error 'No DIC available for the DIC segmentation'; 
@@ -46,10 +52,10 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     img = imnorm(double(load_data(mymovie.dic,nimg)));
 
     if (opts.measure_performances)
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), estimation] = detect_ellipse(img, false, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(img, false, opts);
     else
     %beep;keyboard
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = detect_ellipse(img, false, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(img, false, opts);
     end
     if (isnan(orientations(1,nimg)))
       warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
@@ -127,6 +133,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     mymovie.dic.centers = centers;
     mymovie.dic.axes_length = axes_length;
     mymovie.dic.orientations = orientations;
+    mymovie.dic.neighbors = neighbors;
   end
   
   if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & strncmp(opts.ml_type, 'cortex', 6)))
@@ -223,12 +230,17 @@ function mymovie = dp_dic(mymovie, nimg, opts)
   return;
 end
 
-function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_only, opts)
+function [center, axes_length, orientation, neighbors, estim] = detect_ellipse(img, estim_only, opts)
 
   center = NaN(2, 1);
   axes_length = NaN(2, 1);
   orientation = NaN;
   estim = [];
+  neighbors = get_struct('reference');
+
+  neighbors.centers = center;
+  neighbors.axes_length = axes_length;
+  neighbors.orientations = orientation;
 
   img = imadm_mex(img);
   thresh = graythresh(img);
@@ -249,9 +261,19 @@ function [center, axes_length, orientation, estim] = detect_ellipse(img, estim_o
     return;
   elseif (size(ellipse, 1) > 1)
     imgsize = size(img);
-    dist = sum(bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])/2).^2, 2);
-    [~, indx] = min(dist);
-    ellipse = ellipse(indx(1),:);
+
+    %dist = sum(bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])/2).^2, 2);
+
+    dist = [bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])).^2 ellipse(:, [1 2]).^2];
+    dist = min(dist, [], 2);
+
+    [~, indx] = max(dist);
+    indxs = false(size(dist));
+    indxs(indx(1)) = true;
+
+    [neighbors.centers, neighbors.axes_length, neighbors.orientations] = deal(ellipse(~indxs, 1:2).', ellipse(~indxs, 3:4).', ellipse(~indxs, 5));
+
+    ellipse = ellipse(indxs,:);
   end
 
   [center, axes_length, orientation] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
