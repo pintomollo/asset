@@ -206,7 +206,6 @@ function mymovie = track_ruffles(mymovie, opts)
   mymovie.(type).ruffles = ruffles;
   mymovie = follow_invaginations(mymovie, opts.segmentation_parameters, opts);
 
-  mymovie = detect_cytokinesis(mymovie, opts);
   if (opts.verbosity == 3)
     view(0,0);
   end

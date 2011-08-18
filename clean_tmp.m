@@ -10,13 +10,33 @@ function clean_tmp
       continue;
     end
 
+    is_empty = false;
+
     fields = fieldnames(mymovie);
     for j=1:length(fields)
-      if (~isempty(mymovie.(fields{j})) && isfield(mymovie.(fields{j}), 'fname'))
-        for k=1:length(mymovie.(fields{j}))
-          [tmp tokens] = regexp(mymovie.(fields{j})(k).fname,'tmpmat(\d+)\.*','match','tokens');
-          if (length(tokens)~=0)
-            used_tmp = [used_tmp; str2double(char(tokens{1}))];
+      if (~isempty(mymovie.(fields{j})))
+        if (isfield(mymovie.(fields{j}), 'file'))
+          for k=1:length(mymovie.(fields{j}))
+            if (exist(mymovie.(fields{j})(k).file) == 0)
+              is_empty = true;
+            end
+          end
+        end
+      end
+    end
+    if (is_empty)
+      disp(['Deleting ' ls_dir(i).name]);
+      delete(ls_dir(i).name);
+    else
+      for j=1:length(fields)
+        if (~isempty(mymovie.(fields{j})))
+          if (isfield(mymovie.(fields{j}), 'fname'))
+            for k=1:length(mymovie.(fields{j}))
+              [tmp tokens] = regexp(mymovie.(fields{j})(k).fname,'tmpmat(\d+)\.*','match','tokens');
+              if (length(tokens)~=0)
+                used_tmp = [used_tmp; str2double(char(tokens{1}))];
+              end
+            end
           end
         end
       end

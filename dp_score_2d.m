@@ -32,7 +32,7 @@ function [bests, indxs] =  dp_score_2d(datas, prev_datas, prev_dist, prev_dir, i
   %keyboard
 
   prohibit = params.prohibit;
-  new_prctile = params.spawn_percentile;
+  new_prctile = params.spawn_percentile * 100;
   max_nhood = max(half);
 
   %half = floor(nhood/2);

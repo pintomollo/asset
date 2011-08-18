@@ -4,16 +4,26 @@ function mymovie = perform_application(mymovie, opts)
     opts.application = {opts.application};
   end
 
+  done_ruffles = false;
+
   for i=1:length(opts.application)
     if (~isempty(opts.application{i}))
       switch opts.application{i}
         case {'ruffling', 'ruffles'}
-          mymovie = track_ruffles(mymovie, opts);
+          if (~done_timing)
+            mymovie = track_ruffles(mymovie, opts);
+          end
         case 'centrosomes'
           mymovie = track_centrosomes(mymovie, opts);
         case 'quantification'
-          %mymovie = quantify_signal(mymovie, opts);
           mymovie = cortical_signal(mymovie, opts);
+        case 'timing'
+          mymovie = time_cell_cycle(mymovie, opts);
+          done_timing = true;
+        case 'nuclei'
+          if (~done_timing)
+            mymovie = detect_dic_nuclei(mymovie, opts);
+          end
         otherwise
           warning(['Application ' opts.application{i} ' not implemented.']);
       end

@@ -1,8 +1,18 @@
 function detect_dic_nuclei(mymovie, opts)
 
-  nuclei_size = [1];
-  thresh = [0.65:0.01:0.75];
+  nuclei_size = 1;
+  thresh = 0.75;
+  area_thresh = 0.5;
+  %thresh = [0.65:0.01:0.75];
   %morph_size = [1];
+
+    filt_size = (nuclei_size / opts.pixel_size);
+    if (mod(filt_size, 2) < 1)
+      filt_size = ceil(filt_size);
+    else
+      filt_size = floor(filt_size);
+    end
+    filt = true(filt_size);
 
   [nframes, imgsize] = size_data(mymovie.dic);
   blank_img = false(imgsize);
@@ -20,16 +30,9 @@ function detect_dic_nuclei(mymovie, opts)
     saveas(gca, ['frame-' num2str(nimg) '-ref.png']);
     colormap('jet')
 
-    for n=nuclei_size
+    %for n=nuclei_size
     %    for m=morph_size
 
-    filt_size = (n / opts.pixel_size);
-    if (mod(filt_size, 2) < 1)
-      filt_size = ceil(filt_size);
-    else
-      filt_size = floor(filt_size);
-    end
-    filt = true(filt_size);
 
     entr = imnorm(entropyfilt(img, filt));
 
@@ -41,13 +44,21 @@ function detect_dic_nuclei(mymovie, opts)
     %thresh = graythresh(entr) * t;
     entr(~mask) = 1;
 
-      for t=thresh
-    bw = (entr < t);
+    %  for t=thresh
+    bw = (entr < thresh);
     %bw(~mask) = 0;
-    %bw = imfill(bw, 'holes');
-    %bw = imopen(bw, strel('disk', ceil(filt_size/m)));
     %bw = imclose(bw, strel('disk', ceil(filt_size/m)));
     %stats = regionprops(bw, img, 'Area', 'Eccentricity', 'MeanIntensity', 'MajorAxisLength');
+
+    orig_bw = bw;
+    
+    for a=area_thresh
+
+    areas = round(pi * (a / opts.pixel_size)^2);
+
+    bw = bwareaopen(orig_bw, areas);
+    bw = imopen(bw, strel('disk', ceil(filt_size)));
+    bw = imfill(bw, 'holes');
 
     l = bwlabel(bw, 8);
     l(l==0) = img(l==0);
@@ -56,11 +67,11 @@ function detect_dic_nuclei(mymovie, opts)
     %subplot(122);imagesc(bwlabel(bw, 8));
     title(num2str(nimg));
 
-    saveas(gca, ['frame-' num2str(nimg) '-' num2str(n) '-' num2str(t) '.png']);
+    saveas(gca, ['frame-' num2str(nimg) '-' num2str(a) '.png']);
 
-    %end
     end
-    end
+%    end
+%    end
 
     %keyboard
   end
