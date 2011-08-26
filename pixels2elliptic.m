@@ -1,23 +1,84 @@
-function [theta,rads] = pixels2elliptic(ptsi, ptsj, imgsize, safety)
+function [theta,rads] = pixels2elliptic(varargin)
 
-  if (nargin < 4)
-    [imgsize, safety] = deal(ptsj, imgsize);
+  [ptsi, ptsj, imgsize, axes_length, safety, type] = parse_inputs(varargin{:});
 
-    if(size(ptsi,2)==1)
-      ptsj = ptsi;
-      ptsi = [1:length(ptsi)].';
-    else
-      ptsj = ptsi(:,2);
-      ptsi = ptsi(:,1);
+  theta = zeros(length(ptsi),2);
+
+  theta(:,1) = 2 * pi * (ptsi - 1) / imgsize(1);
+  theta(:,2) = safety * (ptsj - 1) / (imgsize(2) - 1);
+
+  switch type 
+    case 'radial'
+    case 'hyperbolic'
+      focus = sqrt(-diff(axes_length.^2));
+
+      x = axes_length(1)*theta(:,2).*cos(theta(:,1));
+      y = axes_length(2)*theta(:,2).*sin(theta(:,1));
+
+      ga = sqrt((x+focus).^2 + y.^2);
+      gb = sqrt((x-focus).^2 + y.^2);
+
+      theta(:,2) = acosh((ga + gb)/(2*focus));
+    otherwise
+      warning(['Unkown projection type: "' type '", using "hyperbolic" instead.']);
+      theta = pixels2elliptic(ptsi, ptsj, imgsize, axes_length, safety, 'hyperbolic');
+  end
+
+  if (nargout == 2)
+    rads = theta(:,2);
+    theta = theta(:,1);
+  end
+
+  return;
+end
+
+function [ptsi, ptsj, imgsize, axes_length, safety, type] = parse_inputs(varargin)
+
+  ptsi = [];
+  ptsj = [];
+  imgsize = [];
+  axes_length = [];
+  safety = 1.2;
+  type = 'hyperbolic';
+
+  for i=1:length(varargin)
+    var_type = get_type(varargin{i});
+    switch var_type
+      case 'num'
+        if (isempty(ptsi))
+          ptsi = varargin{i};
+        elseif (numel(ptsi) == numel(varargin{i}))
+          ptsj = varargin{i};
+        elseif (isempty(imgsize))
+          imgsize = varargin{i};
+        elseif (numel(varargin{i}) == 1)
+          safety = varargin{i};
+        else
+          axes_length = varargin{i};
+        end
+      case 'char'
+        type = varargin{i};
     end
   end
 
-  theta = 2 * pi * (ptsi - 1) / imgsize(1);
-  rads = safety * (ptsj - 1) / (imgsize(2) - 1);
+  if (isempty(ptsi))
+    return;
+  elseif (size(ptsi,2) > 4)
+    ptsi = ptsi.';
+  end
 
-  if (nargout == 1)
-    theta = [theta, rads];
-    rads = [];
+  if (isempty(ptsj))
+    if (size(ptsi, 2) > 1)
+      ptsj = ptsi(:, 2:end);
+      ptsi = ptsi(:,1);
+    else  
+      ptsj = ptsi;
+      ptsi = [1:length(ptsi)].';
+    end
+  end
+
+  if (isempty(axes_length))
+    type = 'radial';
   end
 
   return;

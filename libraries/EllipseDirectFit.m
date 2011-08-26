@@ -34,7 +34,12 @@ M = S1 + S2*T;
 M = [M(3,:)./2; -M(2,:); M(1,:)./2];
 [evec,eval] = eig(M);
 cond = 4*evec(1,:).*evec(3,:)-evec(2,:).^2;
-A1 = evec(:,find(cond>0));
+valids = find(cond>0);
+if (~any(valids))
+  A = [];
+  return;
+end
+A1 = evec(:,valids);
 A = [A1; T*A1];
 A4 = A(4)-2*A(1)*centroid(1)-A(2)*centroid(2);
 A5 = A(5)-2*A(3)*centroid(2)-A(2)*centroid(1);

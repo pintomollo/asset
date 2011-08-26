@@ -10,9 +10,18 @@ function [bests, alpha] = estimate_gamma(x, y)
   orig_y = y;
   orig_x = x;
 
+  valids = (~isnan(x) & ~isnan(y));
+  x = x(valids);
+  y = y(valids);
+
   y = y - min(y);
   
   y = y / sum(y);
+
+  %orig_y = y;
+  %imfs = emdc([], y);
+  %y = sum(imfs(2:end,:), 1).';
+
   center = sum(x .* y);
 
   s = log(sum(x .* y)) - sum(log(x) .* y);
@@ -30,6 +39,12 @@ function [bests, alpha] = estimate_gamma(x, y)
 
   %gammas = (lambda^alpha / gamma(alpha)) * x .^ (alpha - 1) .* exp(-lambda * orig_x);
   bests = nlinfit(x, y, @gamma_function, [lambda alpha]);
+
+  %figure;
+  %plot(x, y);
+  %hold on;
+  %plot(x, gamma_function([lambda, alpha], x), 'r')
+  %plot(x, gamma_function(bests, x), 'k')
 
   if (nargout == 2)
     alpha = bests(2);

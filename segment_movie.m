@@ -73,7 +73,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     end
 
     if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
-      if (~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
+      if (opts.recompute |~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
         mymovie = dp_dic(mymovie, nframe, opts);
 
         if (any(mymovie.dic.update(:, nframe)))

@@ -27,7 +27,10 @@ function [res] = combine_domains(mymovies)
 
   for i=1:nmovies
     load(mymovies{i});
-    [img,~,cytos(i)] = gather_quantification(mymovie, opts);
+
+    img = gather_quantification(mymovie, opts);
+%%[img,~,cytos(i)] = gather_quantification(mymovie, opts);
+
     %tmp_path = mymovie.data.domain;
 
     [h,w] = size(img);
@@ -36,7 +39,8 @@ function [res] = combine_domains(mymovies)
     hold on
     %plot(tmp_path(:, 1)*w,[1:h], 'k');
     %plot(tmp_path(:, 2)*w,[1:h], 'k');
-    plot([1 size(img,2)],[cytos(i) cytos(i)], 'k');
+
+%%plot([1 size(img,2)],[cytos(i) cytos(i)], 'k');
 
     saveas(gca, [mymovies{i}(1:end-5) '-DP.png']);
     hold off

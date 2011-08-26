@@ -31,16 +31,28 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       cortex = get_struct('cortex',[1,nframes]);
       neighbors = get_struct('reference',[1, nframes]);
     end
+
+      mymovie.dic.eggshell = eggshell;
+      mymovie.dic.cortex = cortex;
+      mymovie.dic.centers = centers;
+      mymovie.dic.axes_length = axes_length;
+      mymovie.dic.orientations = orientations;
+      mymovie.dic.neighbors = neighbors;
+      mymovie.dic.update = update;
+
+
   else
     error 'No DIC available for the DIC segmentation'; 
 
     return;
   end
 
+
   %%keyboard
  % nimg
 
   parameters = opts.segmentation_parameters.dic;
+      mymovie.dic.parameters = parameters;
 
   img = [];
   global rescale_size;
@@ -64,7 +76,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
     %orientations(1,nimg) = orientations(1,nimg) + pi;
 
-    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate2(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
 
     if (opts.compute_probabilities)
       [outer_egg, emissions, transitions] = dynamic_programming(polar_img, parameters.eggshell_params, parameters.scoring_func{1}, parameters.eggshell_weights, opts);
@@ -103,8 +115,8 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       figure;imshow(imadm_mex(polar_img));
     end
 
-    ell_egg = pixels2elliptic(egg_path,size(polar_img),parameters.safety);
-    cart_egg = elliptic2carth(ell_egg,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+    ell_egg = pixels2elliptic2(egg_path,size(polar_img),axes_length(:,nimg),parameters.safety);
+    cart_egg = elliptic2carth2(ell_egg,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
   
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(cart_egg);
     %orientations(1,nimg) = orientations(1,nimg) + pi
@@ -134,6 +146,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     mymovie.dic.axes_length = axes_length;
     mymovie.dic.orientations = orientations;
     mymovie.dic.neighbors = neighbors;
+
   end
   
   if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & strncmp(opts.ml_type, 'cortex', 6)))
@@ -143,11 +156,11 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       img = imnorm(double(load_data(mymovie.dic, nimg)));
     end
 
-    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate2(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
     polar_size = size(polar_img);
 
-    egg_path = carth2elliptic(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-    egg_path = elliptic2pixels(egg_path, polar_size, parameters.safety);
+    egg_path = carth2elliptic2(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
+    egg_path = elliptic2pixels2(egg_path, polar_size, axes_length(:,nimg), parameters.safety);
     egg_path = adapt_path(polar_size, egg_path);
 
     [inner_egg, outer_egg] = detect_eggshell(polar_size, egg_path, axes_length(:,nimg), parameters.eggshell_weights.eta, eggshell(nimg).thickness);
@@ -188,8 +201,8 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       %cortex_path = remove_polar_body(polar_img, cortex_path, parameters.cortex_params, parameters.scoring_func{2}, parameters.cortex_weights, opts);
     end
 
-    ellpts = pixels2elliptic(cortex_path,size(polar_img),parameters.safety);
-    carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+    ellpts = pixels2elliptic2(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
+    carths = elliptic2carth2(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
 
     %cortex(nimg).raw = cortex_path;
     %cortex(nimg).elliptic = ellpts;
@@ -209,7 +222,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       figure;imshow(polar_cortex);
       hold on;plot(cortex_path,[1:length(cortex_path)],'Color',[1 0.5 0]);
       plot(egg_path,[1:length(cortex_path)],'g');
-      ell = elliptic2pixels([0 1; 2*pi 1], polar_size, parameters.safety);
+      ell = elliptic2pixels2([0 1; 2*pi 1], polar_size, axes_length(:,nimg), parameters.safety);
       plot(ell(:,2), [1 length(cortex_path)], 'm');
       %plot(carths(:,1),carths(:,2),'r');
 

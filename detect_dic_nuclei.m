@@ -1,4 +1,4 @@
-function detect_dic_nuclei(mymovie, opts)
+function mymovie =  detect_dic_nuclei(mymovie, opts)
 
   nuclei_size = 1;
   thresh = 0.75;
@@ -17,18 +17,27 @@ function detect_dic_nuclei(mymovie, opts)
   [nframes, imgsize] = size_data(mymovie.dic);
   blank_img = false(imgsize);
 
+  goods = zeros(0, 4);
+  worse = zeros(0, 4);
+
+  %rand_frames = randperm(nframes);
+  %classes = cell([10 1]);
+
+  nuclei = get_struct('ruffles', [nframes, 1]);
+
   for i=1:nframes
     nimg = i;
     %nimg = randi(nframes, 1);
     %nimg = 89;
+    %nimg = rand_frames(i);
 
     %keyboard
 
     img = imnorm(double(load_data(mymovie.dic, nimg)));
-    imshow(img);
-    colormap('gray')
-    saveas(gca, ['frame-' num2str(nimg) '-ref.png']);
-    colormap('jet')
+    %imshow(img);
+    %colormap('gray')
+    %saveas(gca, ['frame-' num2str(nimg) '-ref.png']);
+    %colormap('jet')
 
     %for n=nuclei_size
     %    for m=morph_size
@@ -52,29 +61,64 @@ function detect_dic_nuclei(mymovie, opts)
 
     orig_bw = bw;
     
-    for a=area_thresh
+    %for a=area_thresh
 
-    areas = round(pi * (a / opts.pixel_size)^2);
+    areas = round(pi * (area_thresh / opts.pixel_size)^2);
 
     bw = bwareaopen(orig_bw, areas);
     bw = imopen(bw, strel('disk', ceil(filt_size)));
     bw = imfill(bw, 'holes');
 
-    l = bwlabel(bw, 8);
-    l(l==0) = img(l==0);
-    imagesc(l);
+    stats = regionprops(bw, 'MajorAxisLength', 'Centroid', 'Area');
+
+      %imshow(img);
+      %hold on
+    nucleus = get_struct('ruffles');
+    for r=1:length(stats)
+      if (stats(r).MajorAxisLength >= 50)
+      %  continue;
+      %  worse = [worse; [stats(r).Centroid, stats(r).Area, nimg]];
+      %else
+      
+      nucleus.carth = [nucleus.carth; stats(r).Centroid];
+      nucleus.properties = [nucleus.properties; stats(r).Area];
+
+        %goods = [goods; [stats(r).Centroid, stats(r).Area, nimg]];
+      end
+
+      %box_pos = stats(r).BoundingBox(1, 1:2);
+      %box_width = stats(r).BoundingBox(1, 3:4);
+
+      %plot(box_pos(1)+[0 0; box_width([1 1]); 0 box_width(1); 0 box_width(1)], [0 box_width(2); 0 box_width(2); 0 0; box_width([2 2])]+box_pos(2), 'k')
+
+
+
+      %spot_type = input('') + 1;
+      %classes{spot_type} = [classes{spot_type}; [stats(r).Eccentricity, stats(r).MeanIntensity, stats(r).MajorAxisLength, stats(r).Solidity, stats(r).Area]];
+    end
+      %hold off;
+      %pause
+
+    %save('spots.mat', 'classes');
+
+    %l = bwlabel(bw, 8);
+    %l(l==0) = img(l==0);
+    %imagesc(l);
+    %drawnow
     %subplot(121);imshow(img);
     %subplot(122);imagesc(bwlabel(bw, 8));
-    title(num2str(nimg));
+    %title(num2str(nimg));
 
-    saveas(gca, ['frame-' num2str(nimg) '-' num2str(a) '.png']);
+    %saveas(gca, ['frame-' num2str(nimg) '-' num2str(a) '.png']);
 
-    end
+    %end
 %    end
 %    end
-
-    %keyboard
+    nuclei(nimg) = nucleus;
   end
+
+  %mymovie.dic.nuclei = nuclei;
+  mymovie.dic.nuclei = tracking(nuclei, opts);
 
   return;
 end

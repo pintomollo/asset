@@ -1,4 +1,6 @@
-function [carth_pts, carth_y] = elliptic2carth(ptso, ptsr, center, axes_length, orient)
+function [carth_pts, carth_y] = elliptic2carth(varargin)
+
+  [ptso, ptsr, center, axes_length, orient, type] = parse_inputs(varargin{:});
   
   if (numel(ptso)==0)
     carth_pts = ptso;
@@ -10,36 +12,22 @@ function [carth_pts, carth_y] = elliptic2carth(ptso, ptsr, center, axes_length, 
     return;
   end
 
-  if (nargin < 5)
-    if (nargin == 1)
-      [center, axes_length, orient] = fit_ellipse(ptso);
+  if (size(ptsr, 2) > 1)
+    results = NaN(size(ptsr));
+    [pts_x, results(:,1)] = elliptic2carth(ptso, ptsr(:,1), center, axes_length, orient, type);
+
+    for i=2:2:(size(ptsr, 2) - 1)
+      [results(:, i:i+1)] = elliptic2carth(ptsr(:,i:i+1), [0; 0], axes_length, orient, type);
+    end
+
+    if (nargout == 1)
+      carth_pts = [pts_x results];
     else
-      [center, axes_length, orient] = deal(ptsr, center, axes_length);
+      carth_pts = [pts_x results(:,[2:2:end])];
+      carth_y = results(:,[1:2:end]);
     end
 
-    if (size(ptso,2) > 4)
-      ptso = ptso.';
-    end
-
-    if (size(ptso, 2) == 4)
-      [pts_x, pts_y] = elliptic2carth(ptso(:,1), ptso(:,2), center, axes_length, orient);
-      [stds_x, stds_y] = elliptic2carth(ptso(:,3), ptso(:,4), [0; 0], axes_length, orient);
-
-      if (nargout == 2)
-        carth_pts = [pts_x stds_x];
-        carth_y = [pts_y stds_y];
-      else
-        carth_pts = [pts_x pts_y stds_x stds_y];
-      end
-
-      return;
-    end
-
-    ptsr = ptso(:,2);
-    ptso = ptso(:,1);
-  else
-    ptso = ptso(:);
-    ptsr = ptsr(:);
+    return;
   end
 
   orient = orient; 
@@ -50,12 +38,79 @@ function [carth_pts, carth_y] = elliptic2carth(ptso, ptsr, center, axes_length, 
   r = ptsr;
 
   carth_pts = zeros(length(ptso),2);
-  carth_pts(:,1) = axes_length(1)*r.*cos(O)*corient - axes_length(2)*r.*sin(O)*sorient + center(1);
-  carth_pts(:,2) = -(axes_length(1)*r.*cos(O)*sorient + axes_length(2)*r.*sin(O)*corient) + center(2);
+
+  switch type 
+    case 'hyperbolic'
+
+      focus = sqrt(-diff(axes_length.^2));
+      carth_pts = zeros(length(ptso),2);
+      carth_pts(:,1) = focus*cosh(r).*cos(O)*corient - ...
+                       focus*sinh(r).*sin(O)*sorient + center(1);
+      carth_pts(:,2) = -(focus*cosh(r).*cos(O)*sorient + ...
+                         focus*sinh(r).*sin(O)*corient) + center(2);
+    case 'radial'
+
+      carth_pts(:,1) = axes_length(1)*r.*cos(O)*corient - ...
+                       axes_length(2)*r.*sin(O)*sorient + center(1);
+      carth_pts(:,2) = -(axes_length(1)*r.*cos(O)*sorient + ...
+                         axes_length(2)*r.*sin(O)*corient) + center(2);
+
+    otherwise
+      warning(['Unkown projection type: "' type '", using "hyperbolic" instead.']);
+      [carth_pts] = elliptic2carth(O, r, center, axes_length, orient, 'hyperbolic');
+  end
 
   if(nargout==2)
     carth_y = carth_pts(:,2);
     carth_pts(:,2) = [];
+  end
+
+  return;
+end
+
+function [ptso, ptsr, center, axes_length, orient, type] = parse_inputs(varargin)
+
+  ptso = [];
+  ptsr = [];
+  center = [];
+  axes_length = [];
+  orient = [];
+  type = 'hyperbolic';
+
+  for i=1:length(varargin)
+    var_type = get_type(varargin{i});
+    switch var_type
+      case 'num'
+        if (isempty(ptso))
+          ptso = varargin{i};
+        elseif (numel(ptso) == numel(varargin{i}))
+          ptsr = varargin{i};
+        elseif (isempty(center))
+          center = varargin{i};
+        elseif (isempty(axes_length))
+          axes_length = varargin{i};
+        elseif (isempty(orient))
+          orient = varargin{i};
+        end
+      case 'char'
+        type = varargin{i};
+    end
+  end
+
+  if (isempty(ptso))
+    return;
+  elseif (size(ptso,2) > 4)
+    ptso = ptso.';
+  end
+
+  if (isempty(ptsr))
+    ptsr = ptso(:, 2:end);
+    ptso = ptso(:,1);
+  end
+
+  if (isempty(center))
+    ptsr = [];
+    ptso = [];
   end
 
   return;

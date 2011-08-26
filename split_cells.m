@@ -54,9 +54,14 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
     end
 
     estim = bwboundaries(img, 8, 'noholes');
+    
+
     %figure;imshow(img);
     %hold on;
     %keyboard
+    if (isempty(estim))
+      continue;
+    end
 
 
     if (estim_only)

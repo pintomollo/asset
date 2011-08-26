@@ -51,10 +51,8 @@ function mymovie = align_embryo(mymovie, opts)
         continue;
       end
 
-      %keyboard
-
       dists = abs(ell_pos(:,1) - pi/2 - pi*(ell_pos(:,1) > pi));
-      max_indx = find(dists == min(dists) & dists < angl_thresh);
+      max_indx = find(dists == min(dists) & dists < angl_thresh, 1);
       if (isempty(max_indx))
           continue;
       end

@@ -1,4 +1,4 @@
-function mymovie = follow_invaginations(mymovie, parameters, opts)
+function mymovie = follow_invaginations(mymovie, opts)
 
   if (strncmp(opts.segmentation_type, 'markers', 7) & isfield(mymovie, 'markers') & ~isempty(mymovie.markers))
     type = 'markers';
@@ -12,7 +12,7 @@ function mymovie = follow_invaginations(mymovie, parameters, opts)
     segment_func = @edges_intens;
   end
 
-  parameters = parameters.(type);
+  parameters = opts.segmentation_parameters.(type);
   centers = mymovie.(type).centers;
   axes_length = mymovie.(type).axes_length;
   orientations = mymovie.(type).orientations;

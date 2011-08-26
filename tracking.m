@@ -1,32 +1,13 @@
-function mymovie = track_ruffles(mymovie, opts)
+function ruffles = tracking(all_pts, opts)
 
-  type = opts.segmentation_type;
-  if (strncmp(type, 'markers', 7))
-    [nframes imgsize] = size_data(mymovie.cortex);
+  if (isstruct(all_pts))
+    ruffles = all_pts;
+    is_struct = true;
+    nframes = length(ruffles);
   else
-    [nframes imgsize] = size_data(mymovie.(type));
-  end
-
-  if (~opts.recompute && isfield(mymovie.(type), 'ruffles') && ...
-     ~isempty(mymovie.(type).ruffles) && length(mymovie.(type).ruffles) == nframes)
-
-    all_done = true;
-    for i=1:nframes
-      if (size(mymovie.(type).ruffles(i).carth, 1) ~= size(mymovie.(type).ruffles(i).cluster, 1))
-        all_done = false;
-
-        break;
-      end
-    end
-    
-    if (all_done)
-      return;
-    end
-  end
- 
-
-  if (opts.recompute|~isfield(mymovie.(type), 'ruffles')|isempty(mymovie.(type).ruffles)|length(mymovie.(type).ruffles) ~= nframes)
-    mymovie = find_ruffles(mymovie, opts);
+    nframes = max(all_pts(:,end));
+    ruffles = get_struct('ruffles', [nframes 1]);
+    is_struct = false;
   end
 
   max_thresh = 35;
@@ -35,11 +16,11 @@ function mymovie = track_ruffles(mymovie, opts)
   init_gap = 1.25;
   %gap_min = 100;
 
-  window_size = 2;
+  window_size = 4;
 
-  if (opts.verbosity == 3)
-    figure;hold on;
-  end
+  %if (opts.verbosity == 3)
+  %  figure;hold on;
+  %end
 
   prev_max = max_thresh;
   all_max = prev_max;
@@ -50,13 +31,11 @@ function mymovie = track_ruffles(mymovie, opts)
   npts = 0;
   avg_mov = [0 0];
 
-  ruffles = mymovie.(type).ruffles;
-
   for i=1:nframes
     %if (i==76)
     %  keyboard
     %end
-    max_thresh = (mymovie.(type).axes_length(1,i) / 6);
+    %max_thresh = (mymovie.(type).axes_length(1,i) / 6);
 
     prev_pts = pts;
     prev_npts = npts;
@@ -75,7 +54,11 @@ function mymovie = track_ruffles(mymovie, opts)
   
     %pts = [pts(invs(:,2),:) pts(invs(:,1),:) pts(invs(:,3),:)];
 
-    pts = ruffles(i).carth;
+    if (is_struct)
+      pts = ruffles(i).carth;
+    else
+      pts = all_pts(all_pts(:,end) == i, 1:end-1);
+    end
     npts = size(pts,1);
     
     %if (opts.verbosity == 3)
@@ -124,7 +107,11 @@ function mymovie = track_ruffles(mymovie, opts)
       end
     end
 
-    ruffles(i) = store_detection(ruffles(i), prev_npts, pts, assign);
+    if (is_struct)
+      ruffles(i) = store_detection(ruffles(i), prev_npts, assign);
+    else
+      ruffles(i) = store_detection(pts, prev_npts, assign);
+    end
   end
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GAP CLOSING
@@ -143,7 +130,7 @@ function mymovie = track_ruffles(mymovie, opts)
     nends = length(ruffles(i-1).cluster(:,1));
     indx_ends = setdiff([1:nends], indxs);
     nends = length(indx_ends);
-    ends(end+1:end+nends,:) = [ruffles(i-1).carth(indx_ends,:) ones(nends,1)*i-1 ruffles(i-1).properties(indx_ends,2)];
+    ends(end+1:end+nends,:) = [ruffles(i-1).carth(indx_ends,:) ones(nends,1)*i-1 ruffles(i-1).properties(indx_ends,:)];
 
     new_interm = find_intersect(ruffles, ends(end-nends+1:end,:), all_max, i);
     ninterm = size(new_interm, 1);
@@ -196,31 +183,31 @@ function mymovie = track_ruffles(mymovie, opts)
     if (assign(i) <= nstarts && assign(i) > 0)
       ruffles = close_gap(ruffles, ends(i,:), starts(assign(i),:));
 
-      if (opts.verbosity == 3)
-        indx = ends(i, 3);
-        ell_end = carth2elliptic(ends(i,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-        indx = starts(assign(i), 3);
-        ell_start = carth2elliptic(starts(assign(i),1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-        plot3([ell_end(1) ell_start(1)], [ell_end(2) ell_start(2)], [ends(i,3) starts(assign(i),3)], 'k');
-      end
+      %if (opts.verbosity == 3)
+      %  indx = ends(i, 3);
+      %  ell_end = carth2elliptic(ends(i,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
+      %  indx = starts(assign(i), 3);
+      %  ell_start = carth2elliptic(starts(assign(i),1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
+      %  plot3([ell_end(1) ell_start(1)], [ell_end(2) ell_start(2)], [ends(i,3) starts(assign(i),3)], 'k');
+      %end
     elseif (assign(i) < nstarts + ninterm && assign(i) > 0)
       ruffles = close_gap(ruffles, ends(i,:), interm(assign(i)-nstarts,:));
 
-      if (opts.verbosity == 3)
-        indx = ends(i, 3);
-        ell_end = carth2elliptic(ends(i,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-        indx = starts(assign(i), 3);
-        ell_interm = carth2elliptic(interm(assign(i)-nstarts,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-        plot3([ell_end(1) ell_interm(1)], [ell_end(2) ell_interm(2)], [ends(i,3) interm(assign(i)-nstarts,3)], 'g');
-      end
+      %if (opts.verbosity == 3)
+      %  indx = ends(i, 3);
+      %  ell_end = carth2elliptic(ends(i,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
+      %  indx = starts(assign(i), 3);
+      %  ell_interm = carth2elliptic(interm(assign(i)-nstarts,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
+      %  plot3([ell_end(1) ell_interm(1)], [ell_end(2) ell_interm(2)], [ends(i,3) interm(assign(i)-nstarts,3)], 'g');
+      %end
     end
   end
 
-  mymovie.(type).ruffles = ruffles;
+  %mymovie.(type).ruffles = ruffles;
 
-  if (opts.verbosity == 3)
-    view(0,0);
-  end
+  %if (opts.verbosity == 3)
+  %  view(0,0);
+  %end
 
   return
 end
@@ -233,13 +220,18 @@ function merges = find_intersect(ruffles, ends, thresh, frame)
   indxs = find(valids);
 
   interms = ruffles(frame).carth(valids,:);
+
+  if (isempty(interms))
+    return;
+  end
+
   mutual_dist = sqrt(bsxfun(@minus,ends(:,1),interms(:,1).').^2 + bsxfun(@minus,ends(:,2),interms(:,2).').^2);
 
   cands = indxs(any(mutual_dist < thresh,1));
   ncands = length(cands);
   prev_indx = ruffles(frame).cluster(cands,1);
 
-  merges = [ruffles(frame).carth(cands,:) ones(ncands,1)*frame ruffles(frame).properties(cands,2) ruffles(frame-1).properties(prev_indx,2)];
+  merges = [ruffles(frame).carth(cands,:) ones(ncands,1)*frame ruffles(frame).properties(cands,:) ruffles(frame-1).properties(prev_indx,:)];
 
   return;
 end
@@ -265,9 +257,8 @@ function ruffles = close_gap(ruffles, first, last)
       frame_indx = i+first_indx;
       ruffles(frame_indx).carth(end+1,:) = interm_pos(i,:);
       ruffles(frame_indx).cluster(end+1,1) = indx;
-      ruffles(frame_indx).bounds(end+1,:) = 0;
+      %ruffles(frame_indx).bounds(end+1,:) = 0;
       ruffles(frame_indx).properties(end+1,:) = 0;
-      ruffles(frame_indx).paths(end+1,:) = {[]};
 
       indx = length(ruffles(frame_indx).cluster(:,1));
     end
@@ -284,15 +275,23 @@ function ruffles = close_gap(ruffles, first, last)
   return;
 end
 
-function ruffles = store_detection(ruffles, nprev, pts, assign)
+function ruffles = store_detection(pts, nprev, assign)
 
-  npts = size(pts,1);
+  if (isstruct(pts))
+    ruffles = pts;
+    npts = size(ruffles.carth, 1);
+  else
 
-  %ruffles = get_struct('ruffles', 1); 
-  %ruffles.carth = pts(:,1:2);
-  %ruffles.bounds = pts(:,3:end);
+    npts = size(pts,1);
 
-  ruffles = ruffles_properties(ruffles);
+    %ruffles = get_struct('ruffles', 1); 
+    %ruffles.carth = pts(:,1:2);
+    %ruffles.bounds = pts(:,3:end);
+
+    ruffles = get_struct('ruffles');
+    ruffles.carth = pts(:,1:2);
+    ruffles.properties = pts(:,3:end);
+  end
 
   if (nprev > 0)
     [junk tmp] = sort(assign);
@@ -310,105 +309,3 @@ function ruffles = store_detection(ruffles, nprev, pts, assign)
 
   return
 end
-
-function ruffles = ruffles_properties(ruffles)
-
-  pts = ruffles.carth;
-  bounds = ruffles.bounds;
-  nruff = size(pts,1);
-  group = 0;
-
-  props = zeros(nruff, 2);
-  %figure;hold on
-
-  for i=1:nruff
-    if (i > group)
-      group = i;
-      for j=i:nruff-1
-        if (any(bounds(j+1, 1:2) ~= bounds(j, 3:4)))
-          group = j;
-          break;
-        end
-      end
-      if (group == i)
-        vertices = [pts(i,:) bounds(i,:)];
-        base = bounds(i,:);
-      else
-        base = [bounds(i,1:2) bounds(group,3:4)];
-        pt1 = point2line(bounds(i,1:2), base, 'projection');
-        pt2 = point2line(bounds(i,3:4), base, 'projection');
-        vertices = [pt1 bounds(i,1:2) pts(i,:) bounds(i,3:4) pt2];
-      end
-    else
-      pt1 = point2line(bounds(i,1:2), base, 'projection');
-      pt2 = point2line(bounds(i,3:4), base, 'projection');
-      vertices = [pt1 bounds(i,1:2) pts(i,:) bounds(i,3:4) pt2];
-    end
-
-    props(i,2) = polyarea(vertices(1:2:end),vertices(2:2:end));
-    props(i,1) = point2line(pts(i,:), base, 'distance');
-
-    %patch(vertices(1:2:end), vertices(2:2:end),'r');
-  end
-
-  %inv_area = polyarea([pts(:,1) bounds(:,[1 3])],[pts(:,2) bounds(:,[1 3])],2);
-  %base = hypot(bounds(:,1)-bounds(:,3), bounds(:,2)-bounds(:,4));
-  %height = 2*inv_area ./ base;
-  %props
-  ruffles.properties = props;
-
-  return;
-end
-
-function d = point2line(pt, lines, mode)
-
-  if (nargin == 2)
-    mode = 'distance';
-  end
-
-  line1 = lines(1:2);
-  line2 = lines(3:4);
-
-  switch mode
-    case 'distance'
-      d = abs(det([line2-line1;pt-line1]))/norm(line2-line1);
-    case 'projection'
-      pt = pt - line1;
-      line = line2 -line1;
-      d = line * dot(pt, line) / sum(line.^2) + line1;
-  end
-  
-  return;
-end
-
-%function mymovie = segment_ruffle(mymovie, opts)
-%
-%  if (strncmp(opts.segmentation_type, 'markers', 7) && isfield(mymovie, 'cortex') && ~isempty(mymovie.cortex))
-%    if ((~isfield(mymovie, 'eggshell') || isempty(mymovie.eggshell)) && (~isfield(mymovie.markers, 'eggshell') || isempty(mymovie.markers.eggshell)))
-%      opts.segmentation_type = 'dic';
-%      mymovie = segment_movie(mymovie, opts);
-%
-%      opts.segmentation_type = 'markers';
-%      mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts);
-%      %mymovie.markers = mymovie.dic;
-%      mymovie.markers.cortex = [];
-%      opts.recompute = false;
-%    %elseif (opts.recompute)
-%    else
-%      %mymovie.markers = mymovie.dic;
-%      mymovie = correct_dic_shift(mymovie, 'markers', opts.segmentation_parameters.correction, opts);
-%      %mymovie.markers = mymovie.dic;
-%      mymovie.markers.cortex = [];
-%      
-%      opts.segmentation_type = 'markers';
-%      opts.recompute = false;
-%    end
-%  end
-%
-%  mymovie = segment_movie(mymovie, opts);
-%  %if (any(mymovie.(opts.segmentation_type).update(:)) & opts.auto_save)
-%  %  save(mymovie.experiment, 'mymovie', '-append');
-%  %end
-%
-%  return;
-%end

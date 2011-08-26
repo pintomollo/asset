@@ -1,4 +1,7 @@
-function [ellpts, radius] = carth2elliptic(ptsx, ptsy, center, axes_length, orient, align)
+function [ellpts, radius] = carth2elliptic(varargin)
+
+  [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(varargin{:});
+%function [ellpts, radius] = carth2elliptic(ptsx, ptsy, center, axes_length, orient, align)
 
   if (isempty(ptsx))
     ellpts = [];
@@ -9,44 +12,22 @@ function [ellpts, radius] = carth2elliptic(ptsx, ptsy, center, axes_length, orie
     return;
   end
 
-  thresh = 5;
-  if (nargin==5 & islogical(orient))
-    align = orient;
-    thresh = thresh + 1;
-  elseif (nargin < 6)
-    align = false;
-  end
+  if (size(ptsy, 2) > 1)
+    results = NaN(size(ptsy));
+    [pts_o, results(:,1)] = carth2elliptic(ptsx, ptsy(:,1), center, axes_length, orient, align, type);
 
-  if (nargin<thresh)
-    if (nargin == 1)
-      [center, axes_length, orient] = fit_ellipse(ptsx);
+    for i=2:2:(size(ptsy, 2) - 1)
+      [results(:, i:i+1)] = carth2elliptic(ptsy(:,i:i+1), [0; 0], axes_length, orient, align, type);
+    end
+
+    if (nargout == 1)
+      ellpts = [pts_o results];
     else
-      [center, axes_length, orient] = deal(ptsy, center, axes_length);
+      ellpts = [pts_o results(:,[2:2:end])];
+      radius = results(:,[1:2:end]);
     end
 
-    if (size(ptsx,2) > 4)
-      ptsx = ptsx.';
-    end
-
-    if (size(ptsx, 2) == 4)
-      [pts_o, pts_r] = carth2elliptic(ptsx(:,1), ptsx(:,2), center, axes_length, orient);
-      [stds_o, stds_r] = carth2elliptic(ptsx(:,3), ptsx(:,4), [0; 0], axes_length, orient);
-
-      if (nargout == 2)
-        ellpts = [pts_o stds_o];
-        radius = [pts_r stds_r];
-      else
-        ellpts = [pts_o pts_r stds_o stds_r];
-      end
-
-      return;
-    end
-
-    ptsy = ptsx(:,2);
-    ptsx = ptsx(:,1);
-  else
-    ptsx = ptsx(:);
-    ptsy = ptsy(:);
+    return;
   end
 
   ellpts = zeros(length(ptsx),2);
@@ -54,24 +35,40 @@ function [ellpts, radius] = carth2elliptic(ptsx, ptsy, center, axes_length, orie
   x = ptsx - center(1);
   y = -(ptsy - center(2));
 
-  ratio = axes_length(1) / axes_length(2);
-
   corient = cos(orient); 
   sorient = sin(orient); 
 
-  long_axe = (x*corient + y*sorient)/axes_length(1);
-  short_axe = (y*corient - x*sorient)/axes_length(2);
-  
-  ellpts(:,1) = atan2(short_axe, long_axe);
-  r = hypot(long_axe, short_axe);
-  %r = sqrt((long_axe).^2 + (short_axe).^2);
+  x = (x*corient + y*sorient);
+  y = (y*corient - x*sorient);
+
+  switch type
+    case 'hyperbolic'
+      focus = sqrt(-diff(axes_length.^2));
+
+      ga = sqrt((x + focus).^2 + y.^2);
+      gb = sqrt((x - focus).^2 + y.^2);
+
+      ellpts(:,1) = sign(y) .* acos((ga - gb) / (2*focus));
+      ellpts(:,2) = acosh((ga + gb) / (2*focus));
+
+    case 'radial'
+      ratio = axes_length(1) / axes_length(2);
+
+      long_axe = x/axes_length(1);
+      short_axe = y/axes_length(2);
+      
+      ellpts(:,1) = atan2(short_axe, long_axe);
+      ellpts(:,2) = hypot(long_axe, short_axe);
+    otherwise
+      warning(['Unkown projection type: "' type '", using "hyperbolic" instead.']);
+      [ellpts] = carth2elliptic(ptsx, ptsy, center, axes_length, orient, align, 'hyperbolic');
+  end
 
   negs = ellpts(:,1)<0;
   ellpts(negs,1) = ellpts(negs,1) + 2*pi;
-  ellpts(:,2) = r;
 
   % Correct a rounding error
-  if (ellpts(1,1)==2*pi)
+  if (abs(ellpts(1,1) - 2*pi) < 1e-6)
     ellpts(1,1) = 0;
   end
 
@@ -88,6 +85,56 @@ function [ellpts, radius] = carth2elliptic(ptsx, ptsy, center, axes_length, orie
   if(nargout==2)
     radius = ellpts(:,2);
     ellpts(:,2) = [];
+  end
+
+  return;
+end
+
+function [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(varargin)
+
+  ptsx = [];
+  ptsy = [];
+  center = [];
+  axes_length = [];
+  orient = [];
+  align = false;
+  type = 'hyperbolic';
+
+  for i=1:length(varargin)
+    var_type = get_type(varargin{i});
+    switch var_type
+      case 'num'
+        if (isempty(ptsx))
+          ptsx = varargin{i};
+        elseif (numel(ptsx) == numel(varargin{i}))
+          ptsy = varargin{i};
+        elseif (isempty(center))
+          center = varargin{i};
+        elseif (isempty(axes_length))
+          axes_length = varargin{i};
+        elseif (isempty(orient))
+          orient = varargin{i};
+        end
+      case 'char'
+        type = varargin{i};
+      case 'bool'
+        align = varargin{i};
+    end
+  end
+
+  if (isempty(ptsx))
+    return;
+  elseif (size(ptsx,2) > 4)
+    ptsx = ptsx.';
+  end
+
+  if (isempty(ptsy))
+    ptsy = ptsx(:, 2:end);
+    ptsx = ptsx(:,1);
+  end
+
+  if (isempty(center))
+    [center, axes_length, orient] = fit_ellipse(ptsx, ptsy(:, 1));
   end
 
   return;

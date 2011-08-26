@@ -42,6 +42,11 @@ function mymovie = find_ruffles(mymovie, opts)
   for i=1:nframes
 
     pts = mymovie.(type).cortex(i).carth;
+
+    if (isempty(pts))
+      continue;
+    end
+
     center = mymovie.(type).centers(:,i);
     axes_length = mymovie.(type).axes_length(:,i);
     orient = mymovie.(type).orientations(1,i);

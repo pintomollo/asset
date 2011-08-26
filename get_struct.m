@@ -86,6 +86,7 @@ function mystruct = get_struct(type, nstruct)
                         'neighbors', [], ...
                         'orientations', zeros(1, 0), ...    
                         'type', 'dic', ...                  % Type of channel (dic, eggshell, cortex, data)
+                        'timing', get_struct('timing'), ... % Timing of the cell cycle
                         'update', zeros(2, 0));
 
     % Structure used to store the parameters of the correction function (see duplicate_segmentation.m)
@@ -319,6 +320,12 @@ function mystruct = get_struct(type, nstruct)
                         'aim_emissions', 1/50, ...      % The one for the emission is based on the average width of the posterior path
                         'step_thresh', 1e-5, ...        % Stop criterion in case two consecutive dichotomies have the same value (stalled)
                         'thresh', 1e-3);                % Stop criterion for the dichotomy (diff. to the aims)
+
+    % Structure used to store the timing of the cell cycle
+    case 'timing'
+      mystruct = struct('cytokinesis', NaN, ...        % Frame of cytokinesis onset
+                        'pronuclear_meeting', NaN, ... % Frame of pronuclear meeting
+                        'pseudocleavage', NaN);        % Frame of max pseudocleavage
 
     % Structure containing the data from the manual trackings (see import_trackings.m)
     case 'tracking'

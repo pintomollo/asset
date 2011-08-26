@@ -1,6 +1,17 @@
 function mymovie = cortical_signal(mymovie, opts)
 
-  nframes = size_data(mymovie.cortex);
+  type = opts.segmentation_type;
+  if (strncmp(type, 'markers', 7))
+    [nframes imgsize] = size_data(mymovie.cortex);
+  else
+    [nframes imgsize] = size_data(mymovie.(type));
+  end
+
+  if (~opts.recompute && isfield(mymovie.data, 'quantification') && ...
+     ~isemtpy(mymovie.data.quantification) && length(mymovie.data.quantification) == nframes)
+    
+    return;
+  end
 
   window_shape = opts.quantification.window_shape;
 
@@ -20,6 +31,23 @@ function mymovie = cortical_signal(mymovie, opts)
 
   if (opts.recompute | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
     mymovie = duplicate_segmentation(mymovie, 'data', opts);
+  end
+
+  if (opts.quantification.use_ruffles)
+    if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
+      mymovie = find_ruffles(mymovie, opts);
+      mymovie = follow_invaginations(mymovie, opts);
+    elseif (~isfield(mymovie.(type).ruffles, 'paths') | isempty(mymovie.(type).ruffles(1).paths))
+      do_it = true;
+      for j=1:nframes
+        if (~isempty(mymovie.(type).ruffles(j).paths))
+          do_it = false;
+        end
+      end
+      if (do_it)
+        mymovie = follow_invaginations(mymovie, opts);
+      end
+    end
   end
   
   for i=1:nframes
@@ -44,20 +72,8 @@ function mymovie = cortical_signal(mymovie, opts)
 
       cortex = elliptic2carth(ell_cortex, mymovie.data.centers(:, nimg), mymovie.data.axes_length(:, nimg), mymovie.data.orientations(1, nimg));
 
-      %indx = find(abs(ell_cortex(:,1))==min(abs(ell_cortex(:,1))), 1);
-
-      %if (indx ~= 1)
-      %  cortex = cortex([indx:end 1:indx-1], :);
-      %  mymovie.data.cortex(nimg).carth = cortex;
-      %end
-
-      %keyboard
-
       if (opts.quantification.use_ruffles)
-        if (~isfield(mymovie.markers, 'ruffles') | isempty(mymovie.markers.ruffles))
-          mymovie = track_ruffles(mymovie, opts);
-        end
-        [ cortex, rescale] = insert_ruffles(cortex, mymovie.markers.ruffles(nimg).carth, mymovie.markers.ruffles(nimg).paths);
+        [ cortex, rescale] = insert_ruffles(cortex, mymovie.(type).ruffles(nimg).carth, mymovie.(type).ruffles(nimg).paths);
       else
         rescale = false(size(cortex, 1), 1);
       end
@@ -97,23 +113,12 @@ function mymovie = cortical_signal(mymovie, opts)
       imf = emdc(sampling_index(valids), valid_projection);
       valid_projection = sum(imf(2:end, :), 1);
 
-      %try
       params1 = estimate_sigmoid(valid_dpos, valid_projection);
-      %catch ME
-      %  beep;
-      %  keyboard
-      %end
       estim1 = sigmoid(params1, valid_dpos);
 
       peak_range = get_peak(valid_dpos, valid_projection-estim1);
       params2 = estimate_gaussian(valid_dpos(peak_range), valid_projection(peak_range)-estim1(peak_range));
       estim2 = gaussian([params2(1:3) 0], valid_dpos);
-
-      %params3 = nlinfit(dpos, projection - estim2, @sigmoid, params1);
-      %estim3 = sigmoid(params3, dpos);
-
-      %params4 = nlinfit(dpos, projection - estim3, @gaussian, params2);
-      %estim4 = gaussian(params4, dpos);
 
       params3 = estimate_sigmoid(valid_dpos, valid_projection - estim2);
       estim3 = sigmoid(params3, valid_dpos);
@@ -130,15 +135,8 @@ function mymovie = cortical_signal(mymovie, opts)
       npts = size(values, 1);
 
       signal = NaN(npts, 4); 
-      %dpos_range = dpos(peak_range);
-      %estim_range = estim5(peak_range);
       smoothed = NaN(size(values));
-      %signal2 = NaN(npts, 4); 
-      %signal3 = NaN(npts, 4); 
-      %signal4 = NaN(npts, 4); 
       for j=1:npts
-        %signal(j, :) = nlinfit(dpos, values(j, :) - estim3, @gaussian, params4);
-        %signal2(j, :) = estimate_gaussian(dpos(peak_range), values(j, peak_range)-estim3(peak_range));
         line = values(j,:);
         valids = ~isnan(line);
 
@@ -158,16 +156,9 @@ function mymovie = cortical_signal(mymovie, opts)
         valid_range = valids & peak_range;
 
         tmp_val = emdc(sampling_index(valids), valid_line);
-        %while (any(isnan(tmp_val(:))))
-        %  tmp_val = emdc([], line);
-        %end
         smoothed(j, valids) = sum(tmp_val(end-1:end, :), 1);
-        %try
         signal(j, :) = estimate_gaussian(dpos(valid_range), smoothed(j, valid_range)-estim5(valid_range));
-        %catch ME
-        %  keyboard
-        %end
-        %signal4(j, :) = nlinfit(dpos, values(j, :) - estim3, @gaussian, signal2(j,:));
+
         if (rescale(j))
           signal(j, 3) = signal(j, 3) / 2;
         end
@@ -202,31 +193,11 @@ function mymovie = cortical_signal(mymovie, opts)
 
       signal = mymovie.data.quantification(nimg).front;
     end
-
-    %figure;plot(dpos,projection);
     
     if (opts.recompute|length(mymovie.data.quantification) < nimg|~isfield(mymovie.data.quantification(nimg), 'cortex')|isempty(mymovie.data.quantification(nimg).cortex))
       values = extract_ridge(signal, cortex, dperp, opts);
       mymovie.data.quantification(nimg).cortex = values;
     end
-
-    %hold on;plot(dpos,estim1,'r');
-    %plot(dpos, estim3, 'g')
-
-    %figure;plot(dpos,projection-estim1);
-    %hold on;plot(dpos,estim2,'r');
-    %plot(dpos, estim4, 'g')
-
-    %index = (dpos < -8 | dpos > 8);
-    %clean_proj = projection;
-    %gap_length = sum(~index);
-    %clean_proj(~index) =  ([1:gap_length] / (gap_length + 1));
-    %params2 = estimate_sigmoid(dpos(index), projection(index));
-
-    %figure;imagesc(values);
-    %figure;imagesc(gaussian(signal, dpos));
-
-    %keyboard
   end
 
   if (false)
@@ -265,20 +236,6 @@ function params = estimate_sigmoid(x, y)
 
   vals = [estim.' ones(size(x)).'] \ y.';
   params = [p(1:2) vals.'];
-
-  %bkg = min(y);
-  %ampl = max(y) - bkg;
-
-  %y = (y - bkg) / ampl;
-  %[~, center] = min(abs(y - 0.5));
-  %center = x(center);
-  %x = (x - center);
-
-  %index = (y ~= 0 & y ~= 1 & x~= 0);
-
-  %slope = mean(log((1 ./ y(index)) - 1) ./ x(index));
-
-  %params = [center, slope, ampl, bkg];
 
   return;
 end
@@ -348,12 +305,6 @@ function params = estimate_gaussian(x,y)
   x = (x - center).^2;
   sigma = sum(y .* x);
 
-  % Try to catch the possible warning (lastwarn)
-  % and adapt to it, either reduce #params or try pinv
-  % check 14-110311_2!!! 24-170211_1 !! 24-090311_4 !! 160211_0
-
-
-  %ampl = mean(orig_y(range) ./ exp(-x / (2*sigma)));
   vals = [exp(-x / (2*sigma)).' ones(size(x)).'] \ orig_y.';
   [ampl, bkg] = deal(vals(1), vals(2));
   if (ampl < 0)
@@ -368,7 +319,6 @@ end
 
 function y = sigmoid(p, x)
 
-  %y = bsxfun(@plus, bsxfun(@rdivide, p(:, 3), (1+exp(bsxfun(@times, p(:, 2), bsxfun(@minus, x, p(:, 1)))))), p(:, 4));
   y = bsxfun(@plus, bsxfun(@times, ((1 + erf(bsxfun(@rdivide, bsxfun(@plus, -x, p(:, 1)), p(:, 2)*sqrt(2)))) ./ 2), p(:, 3)), p(:, 4));
 
   return;

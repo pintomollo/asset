@@ -4,9 +4,9 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
 % the standard formulas, e.g., (19) - (24) in Wolfram Mathworld:
 %     http://mathworld.wolfram.com/Ellipse.html
 %
-  center = zeros(2,1);
+  center = NaN(2,1);
   axes_length = center;
-  orientation = 0;
+  orientation = NaN;
 
   if (isempty(X))
     return;
@@ -37,14 +37,13 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
   end
 
   XY = unique([X Y], 'rows');
-  if (numel(XY) == 2)
+  if (size(XY, 1) < 4)
 
     return;
   end
 
-  try
-    A = EllipseDirectFit(XY);
-  catch ME
+  A = EllipseDirectFit(XY);
+  if (isempty(A))
     return;
   end
 

@@ -1,13 +1,36 @@
-function [pc_frame, cytok_frame] = time_cell_cycle(mymovie, opts)
-  
-  [nframes] = size_data(mymovie.dic);
+function mymovie = time_cell_cycle(mymovie, opts)
+
+  type = opts.segmentation_type;
+  if (strncmp(type, 'markers', 7))
+    [nframes imgsize] = size_data(mymovie.cortex);
+  else
+    [nframes imgsize] = size_data(mymovie.(type));
+  end
+
+  if (~opts.recompute && isfield(mymovie.(type), 'timing') && ~isempty(mymovie.(type).timing) && ~isnan(mymovie.(type).timing.cytokinesis))
+    
+    return;
+  end
+
+  if (~isfield(mymovie.(type), 'timing'))
+    mymovie.(type).timing = get_struct('timing');
+  end
+
+  if (~isfield(mymovie.(type), 'ruffles')|isempty(mymovie.(type).ruffles)|~isfield(mymovie.(type).ruffles, 'paths')|isempty(mymovie.(type).ruffles(1).paths)|isempty(mymovie.(type).ruffles(1).cluster))
+    mymovie = track_ruffles(mymovie, opts);
+  end
+
+  if (~isfield(mymovie.dic, 'nuclei') | isempty(mymovie.dic.nuclei))
+    mymovie = detect_dic_nuclei(mymovie, opts);
+  end
+ 
   nbins = 16;
 
   pts = zeros(0, 3);
 
   for i=1:nframes
-    carth = mymovie.markers.ruffles(i).carth;
-    ell = carth2elliptic(carth, mymovie.markers.centers(:,i),mymovie.markers.axes_length(:,i),mymovie.markers.orientations(1,i));
+    carth = mymovie.(type).ruffles(i).carth;
+    ell = carth2elliptic(carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
     ell = [ell i*ones(size(ell, 1), 1)];
     pts = [pts; ell];
   end
@@ -22,7 +45,6 @@ function [pc_frame, cytok_frame] = time_cell_cycle(mymovie, opts)
   cytok_pos = cytok_pos + size_front;
   cytok_pos = [cytok_pos nbins - cytok_pos + 1];
 
-
   traces = {};
   prev_pts = [];
   groups = [];
@@ -36,8 +58,8 @@ function [pc_frame, cytok_frame] = time_cell_cycle(mymovie, opts)
     if (~isempty(groups))
       done_pts = groups(:,2);
       for j=1:size(groups, 1)
-        traces{groups(j, 1)} = [traces{groups(j, 1)}; ell_pos(groups(j, 2),:)];
-        groups(j, 2) = mymovie.markers.ruffles(i).cluster(groups(j,2), 1);
+        traces{groups(j, 1)} = [traces{groups(j, 1)}; [ell_pos(groups(j, 2),:) mymovie.(type).ruffles(i).properties(groups(j,2), :)]];
+        groups(j, 2) = mymovie.(type).ruffles(i).cluster(groups(j,2), 1);
       end
       groups = groups(groups(:,2) ~= 0, :);
 
@@ -45,14 +67,15 @@ function [pc_frame, cytok_frame] = time_cell_cycle(mymovie, opts)
     end
 
     ell_bin = indx(pts(:,3)==i);
-    valids = (ell_bin == cytok_pos(1)|ell_bin == cytok_pos(2));
+    valids = true(size(ell_pos(:,1)));
+    %valids = (ell_bin == cytok_pos(1)|ell_bin == cytok_pos(2));
     if (~isempty(done_pts))
       valids(done_pts) = false;
     end
 
-    new_indx = (valids & mymovie.markers.ruffles(i).cluster(:,1) ~= 0);
-    new_pts = ell_pos(new_indx, :);
-    new_cluster = mymovie.markers.ruffles(i).cluster(new_indx, 1);
+    new_indx = (valids & mymovie.(type).ruffles(i).cluster(:,1) ~= 0);
+    new_pts = [ell_pos(new_indx, :) mymovie.(type).ruffles(i).properties(new_indx, :)];
+    new_cluster = mymovie.(type).ruffles(i).cluster(new_indx, 1);
     for j=1:length(new_cluster)
       traces{end+1} = new_pts(j, :);
       groups = [groups; [length(traces) new_cluster(j)]];
@@ -63,7 +86,7 @@ function [pc_frame, cytok_frame] = time_cell_cycle(mymovie, opts)
     end
   end
 
-  traces{end+1} = zeros(0, 3);
+  traces{end+1} = zeros(0, 5);
 
   params = [0.7 0.2 0.8];
 
@@ -71,36 +94,109 @@ function [pc_frame, cytok_frame] = time_cell_cycle(mymovie, opts)
   cytok_frame = min([traces{left_cytok}(:, 3); traces{right_cytok}(:, 3)]);
   cytok_pos = median([traces{left_cytok}(:, 1); 2*pi - traces{right_cytok}(:, 1)]);
 
+  mymovie.(type).timing.cytokinesis = cytok_frame;
+
   params = [0.5 0.7 0.5];
   pc_frames = frames;
   pc_frames(find(pc_frames, 1, 'first'):find(pc_frames(1:cytok_frame-1), 1, 'last')) = true;
   [left_pc, right_pc] = find_pairs(pc_frames(1:cytok_frame-1), traces, params, cytok_pos);
 
+  max_frame = max(traces{left_pc}(:,3));
+  [lambda_left, alpha_left] = estimate_gamma(max_frame - traces{left_pc}(:,3) + 1, 1 - traces{left_pc}(:, 2));
+  [lambda_left, alpha_left] = estimate_gamma(max_frame - traces{left_pc}(:,3) + 1, traces{left_pc}(:, 5));
 
-  %pc_position(traces{left_pc}(:, [3 2]), traces{right_pc}(:, [3 2]));
+  pc_left = round(max_frame - ((alpha_left - 1) / lambda_left) + 1);
+  max_frame = max(traces{right_pc}(:,3));
+  [lambda_right, alpha_right] = estimate_gamma(max_frame - traces{right_pc}(:,3) + 1, 1 - traces{right_pc}(:, 2));
+  [lambda_right, alpha_right] = estimate_gamma(max_frame - traces{right_pc}(:,3) + 1, traces{right_pc}(:, 5));
+  pc_right = round(max_frame - ((alpha_right - 1) / lambda_right) + 1);
 
-   %[both_x, ~, groups] = unique([traces{left_pc}(:,3); traces{right_pc}(:,3)]);
-   % y = mymean([traces{left_pc}(:,2); traces{right_pc}(:,2)], [], groups);
+  %keyboard
 
-   % x = both_x;
-   % max_frame = max(x);
-   % x = max(x) - x + 1;
-   % y = 1 - y;
+  pc_frame = ceil(mymean([pc_left; pc_right]));
 
-   % [lambda, alpha] = estimate_gamma(x, y);
-   [lambda_left, alpha_left] = estimate_gamma(max(traces{left_pc}(:,3)) - traces{left_pc}(:,3) + 1, 1 - traces{left_pc}(:, 2));
-    pc_left = round(max_frame - ((alpha - 1) / lambda) + 1);
-   [lambda_right, alpha_right] = estimate_gamma(max(traces{right_pc}(:,3)) - traces{right_pc}(:,3) + 1, 1 - traces{right_pc}(:, 2));
-    pc_right = round(max_frame - ((alpha - 1) / lambda) + 1);
+  mymovie.(type).timing.pseudocleavage = pc_frame;
 
-    pc_frame = mymean([pc_left, pc_right]);
+  traces = {};
+  prev_pts = [];
+  groups = [];
 
+  for i=nframes:-1:1
+  
+    pts = [mymovie.dic.nuclei(i).carth mymovie.dic.nuclei(i).properties];
 
-  %figure;scatter3(pts(:,1), pts(:,2), pts(:,3)); hold on;
-  %plot3(traces{left_cytok}(:,1), traces{left_cytok}(:,2), traces{left_cytok}(:,3), 'r');
-  %plot3(traces{right_cytok}(:,1), traces{right_cytok}(:,2), traces{right_cytok}(:,3), 'r');
-  %plot3(traces{left_pc}(:,1), traces{left_pc}(:,2), traces{left_pc}(:,3), 'g');
-  %plot3(traces{right_pc}(:,1), traces{right_pc}(:,2), traces{right_pc}(:,3), 'g');
+    if (isempty(pts))
+      continue;
+    end
+
+    done_pts = [];
+    if (~isempty(groups))
+      done_pts = groups(:,2);
+      for j=1:size(groups, 1)
+        traces{groups(j, 1)} = [traces{groups(j, 1)}; [pts(groups(j, 2),:) i]];
+        groups(j, 2) = mymovie.dic.nuclei(i).cluster(groups(j,2), 1);
+      end
+      groups = groups(groups(:,2) ~= 0, :);
+    end
+
+    valids = true(size(pts(:,1)));
+    if (~isempty(done_pts))
+      valids(done_pts) = false;
+    end
+
+    new_indx = (valids & mymovie.dic.nuclei(i).cluster(:,1) ~= 0);
+    new_pts = pts(new_indx, :);
+    new_cluster = mymovie.dic.nuclei(i).cluster(new_indx, 1);
+    for j=1:length(new_cluster)
+      traces{end+1} = [new_pts(j, :) i];
+      groups = [groups; [length(traces) new_cluster(j)]];
+    end
+  end
+
+  lengths = zeros(length(traces), 1);
+  for i=1:length(traces)
+    max_frame = max(traces{i}(:,end));
+    min_frame = min(traces{i}(:,end));
+
+    if (max_frame >= pc_frame & min_frame <= cytok_frame)
+      lengths(i) = max_frame - min_frame + 1;
+    end
+  end
+
+  traces = traces(lengths > 0);
+  lengths = lengths(lengths > 0);
+
+  traces{end+1} = zeros(0, 4);
+  traces{end+1} = zeros(0, 4);
+  lengths(end+1) = 0;
+  lengths(end+1) = 0;
+
+  [~, indxs] = sort(lengths);
+  bests = indxs([end end-1]);
+  traces = traces(bests);
+  nucl1 = traces{1};
+  nucl2 = traces{2};
+  
+  thresh = 10;
+  pnm_frame = NaN;
+  for i=pc_frame:cytok_frame
+    pt1 = nucl1(nucl1(:,end) == i, :);
+    pt2 = nucl2(nucl2(:,end) == i, :);
+
+    if (isempty(pt1) | isempty(pt2))
+      continue;
+    end
+
+    dist = sqrt(sum((pt1(1:2) - pt2(1:2)).^2));
+    radii = sqrt(pt1(3)/pi) + sqrt(pt2(3)/pi);
+
+    if (dist < radii + thresh)
+      pnm_frame = i;
+      break;
+    end
+  end
+
+  mymovie.(type).timing.pronuclear_meeting = pnm_frame;
 
   return;
 end
@@ -129,6 +225,9 @@ function [left_indx, right_indx] = find_pairs(frames, traces, params, target)
     min_cytok = 1;
   end
 
+  %%figure;
+  %hold on;
+
   left = [];
   right = [];
   for i=1:length(traces)-1
@@ -142,6 +241,8 @@ function [left_indx, right_indx] = find_pairs(frames, traces, params, target)
     else
       right = [right; [tmp_pos, size(traces{i}, 1), i, max(traces{i}(:,3)), min(traces{i}(:, 3))]];
     end
+
+    %plot(traces{i}(:,3), traces{i}(:,1));
   end
 
   dist = [];
@@ -205,6 +306,8 @@ function [left_indx, right_indx] = find_pairs(frames, traces, params, target)
   else
     right_indx = length(traces);
   end
+
+  %keyboard
 
   return;
 end
