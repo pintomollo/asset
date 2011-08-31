@@ -12,13 +12,9 @@ function [theta,rads] = pixels2elliptic(varargin)
     case 'hyperbolic'
       focus = sqrt(-diff(axes_length.^2));
 
-      x = axes_length(1)*theta(:,2).*cos(theta(:,1));
-      y = axes_length(2)*theta(:,2).*sin(theta(:,1));
+      scaling = acosh(axes_length(1) * safety / focus);
+      theta(:,2) = theta(:, 2) * (scaling / safety);
 
-      ga = sqrt((x+focus).^2 + y.^2);
-      gb = sqrt((x-focus).^2 + y.^2);
-
-      theta(:,2) = acosh((ga + gb)/(2*focus));
     otherwise
       warning(['Unkown projection type: "' type '", using "hyperbolic" instead.']);
       theta = pixels2elliptic(ptsi, ptsj, imgsize, axes_length, safety, 'hyperbolic');
@@ -47,9 +43,9 @@ function [ptsi, ptsj, imgsize, axes_length, safety, type] = parse_inputs(varargi
       case 'num'
         if (isempty(ptsi))
           ptsi = varargin{i};
-        elseif (numel(ptsi) == numel(varargin{i}))
+        elseif (all(size(ptsi) == size(varargin{i})))
           ptsj = varargin{i};
-        elseif (isempty(imgsize))
+        elseif (isempty(imgsize) & numel(varargin{i})==2)
           imgsize = varargin{i};
         elseif (numel(varargin{i}) == 1)
           safety = varargin{i};
@@ -58,6 +54,10 @@ function [ptsi, ptsj, imgsize, axes_length, safety, type] = parse_inputs(varargi
         end
       case 'char'
         type = varargin{i};
+      case 'none'
+        if (isempty(ptsi))
+          ptsi = NaN(1,2);
+        end
     end
   end
 

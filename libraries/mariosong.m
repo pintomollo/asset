@@ -1,20 +1,38 @@
-function mariosong
+function mariosong(working)
 % mariosong.m  : mario brother's theme song..   
 % programming  : James Humes
 % transcription: Stewart Bozarth
 % http://www.mathworks.com/matlabcentral/fileexchange/8442
 
+  if (nargin == 0)
+    working = true;
+  end
+
   t = 0.17;
 
-  %Mario's intro
-  keyst = [ 56 56 0 56 0 52 56 0 59 0 0 47 0 0 ];
-  tdur = [t t t t t t t t t t 2*t t t 2*t ];
-  %bass
-  keysb = [ 30 30 0 30 0 30 30 0 47 0 0 35 0 0];
-  bdur = [ t t t t t t t t t t 2*t t t 2*t];
-  %alto
-  keysa= [ 46 46 0 46 0 46 46 0 51 0 0 47 0 0 ];
-  adur = [ t t t t t t t t t t 2*t t t 2*t];
+  if (working)
+    %Mario's intro
+    %treble
+    keyst = [ 56 56 0 56 0 52 56 0 59 0 0 47 0 0 ];
+    tdur = [t t t t t t t t t t 2*t t t 2*t ];
+    %bass
+    keysb = [ 30 30 0 30 0 30 30 0 47 0 0 35 0 0];
+    bdur = [ t t t t t t t t t t 2*t t t 2*t];
+    %alto
+    keysa= [ 46 46 0 46 0 46 46 0 51 0 0 47 0 0 ];
+    adur = [ t t t t t t t t t t 2*t t t 2*t];
+  else
+    %Mario's lose life
+    %treble
+    keyst = [52 53 54 0 51 57 0 57 57 56 54 52 0 35 0 28 0];
+    tdur = [(1/4)*t (1/4)*t (1/2)*t 3*t t t t t (2/3)*t (2/3)*t (2/3)*t t t t t t t 3*t];
+    %bass
+    keysb = [0 0 0 0 35 0 0 35 35 37 39 40 0 35 0 28 0];
+    bdur = [(1/4)*t (1/4)*t (1/2)*t 3*t t t t t (2/3)*t (2/3)*t (2/3)*t t t t t t t 3*t];
+    %alto
+    keysa = [0 0 0 0 47 54 0 54 52 51 47 44 0 44 40 0];
+    adur = [(1/4)*t (1/4)*t (1/2)*t 3*t t t t t (2/3)*t (2/3)*t (2/3)*t t t t t t t 3*t];
+  end
 
   fs = 11025;
   xt = zeros(1, ceil(sum(tdur)*fs)+1);

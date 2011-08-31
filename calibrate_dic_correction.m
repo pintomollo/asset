@@ -123,14 +123,14 @@ function [intensity, ranges, corrections] = gather_corrections(mymovie, tracking
 
     dic_egg = reference.eggshell(nimg).carth;
     tmp_intens = bilinear(img, dic_egg(:,1), dic_egg(:,2));
-    dic_egg = carth2elliptic(dic_egg, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg));
+    dic_egg = carth2elliptic(dic_egg, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg), 'radial');
     [~, intensity(:, nimg)] = interp_elliptic(dic_egg(:,1), tmp_intens, thetas);
 
     [~, dic_egg] = interp_elliptic(dic_egg, thetas);
 
     for f = 1:nfields
       tmp_path = target.(fields{f}).carth;
-      tmp_path = carth2elliptic(tmp_path, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg));
+      tmp_path = carth2elliptic(tmp_path, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg), 'radial');
       [~, tmp_path] = interp_elliptic(tmp_path, thetas);
 
       fluo_path(:, nimg, f) = tmp_path;
@@ -139,7 +139,7 @@ function [intensity, ranges, corrections] = gather_corrections(mymovie, tracking
         tmp_path = dic_egg;
       else
         tmp_path = reference.(fields{f}).carth;
-        tmp_path = carth2elliptic(tmp_path, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg));
+        tmp_path = carth2elliptic(tmp_path, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg), 'radial');
         [~, tmp_path] = interp_elliptic(tmp_path, thetas);
       end
 

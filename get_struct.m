@@ -349,8 +349,13 @@ function mystruct = get_struct(type, nstruct)
                         
     % The structure containing the information to convert into the absolute coordinate system
     case 'warper'
-      mystruct = struct('original',get_struct('reference'),...
-                        'reference', get_struct('reference'), ...
+      ref = get_struct('reference');
+      orig = ref;
+      orig.centers = NaN(2,1);
+      orig.axes_length = NaN(2,1);
+
+      mystruct = struct('original', orig,...
+                        'reference', ref, ...
                         'warp', []);
 
     % If the required type of structure has not been implemented, return an empty one

@@ -83,21 +83,26 @@ function [ptso, ptsr, center, axes_length, orient, type] = parse_inputs(varargin
       case 'num'
         if (isempty(ptso))
           ptso = varargin{i};
-        elseif (numel(ptso) == numel(varargin{i}))
+        elseif (all(size(ptso) == size(varargin{i})))
           ptsr = varargin{i};
-        elseif (isempty(center))
+        elseif (isempty(center) & numel(varargin{i})==2)
           center = varargin{i};
-        elseif (isempty(axes_length))
+        elseif (isempty(axes_length) & numel(varargin{i})==2)
           axes_length = varargin{i};
-        elseif (isempty(orient))
+        elseif (isempty(orient) & numel(varargin{i})==1)
           orient = varargin{i};
         end
       case 'char'
         type = varargin{i};
+      case 'none'
+        if (isempty(ptso))
+          ptso = NaN(1,2);
+        end
     end
   end
 
-  if (isempty(ptso))
+  if (isempty(ptso) | all(isnan(ptso)))
+    ptso = [];
     return;
   elseif (size(ptso,2) > 4)
     ptso = ptso.';

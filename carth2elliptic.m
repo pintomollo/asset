@@ -1,7 +1,6 @@
 function [ellpts, radius] = carth2elliptic(varargin)
 
   [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(varargin{:});
-%function [ellpts, radius] = carth2elliptic(ptsx, ptsy, center, axes_length, orient, align)
 
   if (isempty(ptsx))
     ellpts = [];
@@ -38,8 +37,9 @@ function [ellpts, radius] = carth2elliptic(varargin)
   corient = cos(orient); 
   sorient = sin(orient); 
 
-  x = (x*corient + y*sorient);
+  tmp = (x*corient + y*sorient);
   y = (y*corient - x*sorient);
+  x = tmp;
 
   switch type
     case 'hyperbolic'
@@ -64,6 +64,7 @@ function [ellpts, radius] = carth2elliptic(varargin)
       [ellpts] = carth2elliptic(ptsx, ptsy, center, axes_length, orient, align, 'hyperbolic');
   end
 
+  ellpts = real(ellpts);
   negs = ellpts(:,1)<0;
   ellpts(negs,1) = ellpts(negs,1) + 2*pi;
 
@@ -106,23 +107,28 @@ function [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(v
       case 'num'
         if (isempty(ptsx))
           ptsx = varargin{i};
-        elseif (numel(ptsx) == numel(varargin{i}))
+        elseif (all(size(ptsx) == size(varargin{i})))
           ptsy = varargin{i};
-        elseif (isempty(center))
+        elseif (isempty(center) & numel(varargin{i})==2)
           center = varargin{i};
-        elseif (isempty(axes_length))
+        elseif (isempty(axes_length) & numel(varargin{i})==2)
           axes_length = varargin{i};
-        elseif (isempty(orient))
+        elseif (isempty(orient) & numel(varargin{i})==1)
           orient = varargin{i};
         end
       case 'char'
         type = varargin{i};
       case 'bool'
         align = varargin{i};
+      case 'none'
+        if (isempty(ptsx))
+          ptsx = NaN(1,2);
+        end
     end
   end
 
-  if (isempty(ptsx))
+  if (isempty(ptsx) | all(isnan(ptsx)))
+    ptsx = [];
     return;
   elseif (size(ptsx,2) > 4)
     ptsx = ptsx.';

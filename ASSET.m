@@ -36,6 +36,10 @@ function [mymovie,trackings] = ASSET(varargin)
 % Simon Blanchoud
 % 10.12.2010
 
+  % General error handling
+  try
+  working = true;
+
   % Check whether ASSET needs to be installed
   install_ASSET
 
@@ -255,10 +259,21 @@ function [mymovie,trackings] = ASSET(varargin)
     save(mymovie.experiment, 'mymovie', 'trackings','opts');
   end
 
+  % Catch the error overall
+  catch ME
+    if (exist('mymovie', 'var') & isfield(mymovie.experiment) & ~isempty(mymovie.experiment))
+      warning(['Error during the analysis of ' mymovie.experiment ':']);
+    else
+      warning(['Error during the analysis:']);
+    end
+    print_all(ME);
+    working = false;
+  end
+
   % It's over, let's notify it !
-  if (opts.verbosity > 1)
+  if (~exist('opts', 'var') | opts.verbosity > 1)
     try
-      mariosong;
+      mariosong(working);
     catch ME
     end
   end
@@ -308,12 +323,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
         % Run them one after the other one
         for i=1:length(datas)
-          try
-            ASSET([dirpath datas(i).name], varargin{2:end});
-          catch ME
-            warning(['Error during the analysis of ' datas(i).name ':']);
-            print_all(ME);
-          end
+          ASSET([dirpath datas(i).name], varargin{2:end});
         end
 
         % Do not forget to stop here !
@@ -371,6 +381,8 @@ function [mymovie, trackings, opts] = parse_input(varargin)
             disp(['MAT file is currently used, trying again in ' str2double(nsecs) 's']);
             % Wait
             pause(nsecs);
+            % Try closing the possible hanging files
+            fclose('all');
           else
 
             % There is a different type of error

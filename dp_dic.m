@@ -63,6 +63,9 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
     img = imnorm(double(load_data(mymovie.dic,nimg)));
 
+    %figure;imshow(img);hold on;
+    %title(num2str(nimg));
+
     if (opts.measure_performances)
       [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(img, false, opts);
     else
@@ -76,7 +79,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
     %orientations(1,nimg) = orientations(1,nimg) + pi;
 
-    polar_img = elliptic_coordinate2(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
 
     if (opts.compute_probabilities)
       [outer_egg, emissions, transitions] = dynamic_programming(polar_img, parameters.eggshell_params, parameters.scoring_func{1}, parameters.eggshell_weights, opts);
@@ -99,7 +102,8 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       outer_egg = dynamic_programming(polar_img, parameters.eggshell_params, parameters.scoring_func{1}, parameters.eggshell_weights, opts);
     end
 
-    [egg_path, egg_shift] = detect_eggshell(polar_img, outer_egg, axes_length(:,nimg), parameters.eggshell_weights.eta);
+    [egg_path, egg_shift] = detect_eggshell(polar_img, outer_egg, axes_length(:,nimg), parameters.safety, parameters.eggshell_weights.eta);
+    %keyboard
 
     if (opts.verbosity == 3)
       figure; imshow(polar_img)
@@ -115,10 +119,14 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       figure;imshow(imadm_mex(polar_img));
     end
 
-    ell_egg = pixels2elliptic2(egg_path,size(polar_img),axes_length(:,nimg),parameters.safety);
-    cart_egg = elliptic2carth2(ell_egg,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+    ell_egg = pixels2elliptic(egg_path,size(polar_img),axes_length(:,nimg),parameters.safety);
+    cart_egg = elliptic2carth(ell_egg,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+
   
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(cart_egg);
+    %plot(cart_egg(:,1), cart_egg(:,2), 'g');
+    %draw_ellipse(centers(:, nimg), axes_length(:,nimg), orientations(1,nimg), 'r');
+
     %orientations(1,nimg) = orientations(1,nimg) + pi
 
     %eggshell(nimg).raw = [inner_egg egg_path outer_egg];
@@ -156,14 +164,19 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       img = imnorm(double(load_data(mymovie.dic, nimg)));
     end
 
-    polar_img = elliptic_coordinate2(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
     polar_size = size(polar_img);
 
-    egg_path = carth2elliptic2(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-    egg_path = elliptic2pixels2(egg_path, polar_size, axes_length(:,nimg), parameters.safety);
+    egg_path = carth2elliptic(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
+
+    if (isempty(egg_path))
+      return;
+    end
+
+    egg_path = elliptic2pixels(egg_path, polar_size, axes_length(:,nimg), parameters.safety);
     egg_path = adapt_path(polar_size, egg_path);
 
-    [inner_egg, outer_egg] = detect_eggshell(polar_size, egg_path, axes_length(:,nimg), parameters.eggshell_weights.eta, eggshell(nimg).thickness);
+    [inner_egg, outer_egg] = detect_eggshell(polar_size, egg_path, axes_length(:,nimg), parameters.safety, parameters.eggshell_weights.eta, eggshell(nimg).thickness);
     %inner_egg = adapt_path(size(polar_img), parameters.safety, eggshell(nimg).raw(:,1));
     %egg_path = adapt_path(size(polar_img), parameters.safety, eggshell(nimg).raw(:,2));
     %outer_egg = adapt_path(size(polar_img), parameters.safety, eggshell(nimg).raw(:,3));
@@ -201,8 +214,8 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       %cortex_path = remove_polar_body(polar_img, cortex_path, parameters.cortex_params, parameters.scoring_func{2}, parameters.cortex_weights, opts);
     end
 
-    ellpts = pixels2elliptic2(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
-    carths = elliptic2carth2(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+    ellpts = pixels2elliptic(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
+    carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
 
     %cortex(nimg).raw = cortex_path;
     %cortex(nimg).elliptic = ellpts;

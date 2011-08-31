@@ -94,7 +94,7 @@ function mymovie = time_cell_cycle(mymovie, opts)
   cytok_frame = min([traces{left_cytok}(:, 3); traces{right_cytok}(:, 3)]);
   cytok_pos = median([traces{left_cytok}(:, 1); 2*pi - traces{right_cytok}(:, 1)]);
 
-  mymovie.(type).timing.cytokinesis = cytok_frame;
+  mymovie.metadata.timing.cytokinesis = cytok_frame;
 
   params = [0.5 0.7 0.5];
   pc_frames = frames;
@@ -115,7 +115,7 @@ function mymovie = time_cell_cycle(mymovie, opts)
 
   pc_frame = ceil(mymean([pc_left; pc_right]));
 
-  mymovie.(type).timing.pseudocleavage = pc_frame;
+  mymovie.metadata.timing.pseudocleavage = pc_frame;
 
   traces = {};
   prev_pts = [];
@@ -196,7 +196,7 @@ function mymovie = time_cell_cycle(mymovie, opts)
     end
   end
 
-  mymovie.(type).timing.pronuclear_meeting = pnm_frame;
+  mymovie.metadata.timing.pronuclear_meeting = pnm_frame;
 
   return;
 end

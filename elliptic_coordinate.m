@@ -1,74 +1,89 @@
-function [elliptic_img] = elliptic_coordinate(img, center, axes_length, orient, safety, ellsize, circular)
+function [elliptic_img] = elliptic_coordinate(img, varargin)
 
-  if (nargin < 5)
-    safety = 1;
-    ellsize = [];
-    circular = false;
-  elseif (nargin < 6)
-    if (islogical(safety))
-      circular = safety;
-      safety = 1;
-      ellsize = [];
-    elseif (prod(size(safety)) > 1)
-      ellsize = safety;
-      safety = 1;
-    else
-      ellsize = [];
+  [center, axes_length, orient, safety, ellsize, circular, type] = parse_inputs(varargin{:});
+
+  done = false;
+  while (~done)
+    try
+      elliptic_img = zeros(ellsize);
+      done = true;
+    catch ME
+      warning(['The resolution of the elliptical projection is reduced as it contains more elements than the maximum available memory (' num2str(prod(ellsize)) ')']);
+      ellsize = ceil(ellsize / 10);
+      ellsize(ellsize < 1) = 1;
     end
-  elseif (nargin < 7)
-    if (~islogical(ellsize))
-      circular = false;
-    elseif (prod(size(safety)) > 1)
-      [ellsize, circular] = deal(safety, ellsize);
-      safety = 1;
-    else
-      circular = ellsize;
-      ellsize = [];
+  end
+
+  if (isempty(axes_length) | any(axes_length == 0))
+    return;
+  end
+
+  row = [0:ellsize(2)-1].';
+  col = ones(size(row));
+
+  for i=1:ellsize(1)
+    
+    [x, y] = pixels2elliptic(col * i, row, ellsize, axes_length, safety, type);
+    [x, y] = elliptic2carth(x, y, center, axes_length, orient, type);
+
+    elliptic_img(i,:) = bilinear(img,x,y);
+  end
+
+  return;
+end
+
+function [center, axes_length, orient, safety, ellsize, circular, type] = parse_inputs(varargin)
+
+  center = [];
+  axes_length = [];
+  orient = [];
+  safety = 1.2;
+  ellsize = [];
+  circular = false;
+  type = 'hyperbolic';
+
+  for i=1:length(varargin)
+    var_type = get_type(varargin{i});
+    switch var_type
+      case 'num'
+        if (isempty(center))
+          center = varargin{i};
+        elseif (isempty(axes_length))
+          axes_length = varargin{i};
+        elseif (isempty(orient))
+          orient = varargin{i};
+        elseif (numel(varargin{i}) == 1)
+          safety = varargin{i};
+        else
+          ellsize = varargin{i};
+        end
+      case 'char'
+        type = varargin{i};
+      case 'bool'
+        circular = varargin{i};
     end
+  end
+
+  if (isempty(axes_length))
+    return;
+  end
+
+  if (length(circular) == 1)
+    circular = [circular circular];
   end
 
   if(isempty(ellsize))
     perif = ceil(ellipse_circum(axes_length * safety)-1);
     width = ceil(axes_length(1) * safety) + 1;
-  else
-    perif = ellsize(1);
-    width = ellsize(2);
-  end
+    ellsize = [perif, width];
 
-  if (perif < 1)  
-    perif = 1;
-  end
-  if (width < 1)
-    width = 1;
-  end
-
-  [h,w] = size(img);
-  done = false;
-  while (~done)
-    try
-      elliptic_img = zeros(perif,width);
-      done = true;
-    catch ME
-      warning(['The resolution of the elliptical projection is reduced as it contains more elements than the maximum available (' num2str(perif * width) ')']);
-      perif = perif / 2;
-      width = width / 2;
+    nums = prod(ellsize);
+    if (nums > 1e7)
+      ellsize = floor(ellsize / (nums / 1e7));
     end
   end
 
-  if (any(axes_length == 0))
-    return;
-  end
-
-  row = [0:width-1].';
-  col = ones(size(row));
-
-  for i=1:perif
-    
-    [x, y] = pixels2elliptic(col * i, row, [perif, width], safety);
-    [x, y] = elliptic2carth(x, y, center, axes_length, orient);
-
-    elliptic_img(i,:) = bilinear_mex(img,x,y);
-  end
+  ellsize(ellsize < 1) = 1;
 
   return;
 end

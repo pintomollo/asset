@@ -81,6 +81,8 @@ function [field_values] = extract_fields(mystruct, nframe, type, fields, crop)
           continue;
         end
         tmp_value = tmp_double;
+      elseif (isempty(tmp_value))
+        tmp_value = NaN(1, 2);
       end
       if (crop)
         tmp_value = realign(tmp_value, crop_size, center, orient);

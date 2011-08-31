@@ -69,7 +69,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
       old_orient = orientations(1,nimg);
     end
 
-    polar_img = elliptic_coordinate2(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
     polar_img = imnorm(polar_img,[],[],'rows');
 
     if (opts.compute_probabilities)
@@ -83,8 +83,8 @@ function mymovie = dp_markers(mymovie, nimg, opts)
       egg_path = dynamic_programming(polar_img, parameters.eggshell_params, parameters.scoring_func{1}, parameters.eggshell_weights, opts);
     end
 
-    ellpts = pixels2elliptic2(egg_path,size(polar_img), axes_length(:,nimg),parameters.safety);
-    carths = elliptic2carth2(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+    ellpts = pixels2elliptic(egg_path,size(polar_img), axes_length(:,nimg),parameters.safety);
+    carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(carths);
 
     %eggshell(nimg).raw = egg_path;
@@ -146,12 +146,14 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     %img = medfilt2(img,parameters.noise.median);
     img = imnorm(img);
 
-    polar_img = elliptic_coordinate2(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
     polar_size = size(polar_img);
 
-    egg_path = carth2elliptic2(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-    egg_path = elliptic2pixels2(egg_path, polar_size, axes_length(:,nimg), parameters.safety);
+    egg_path = carth2elliptic(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
+    egg_path = elliptic2pixels(egg_path, polar_size, axes_length(:,nimg), parameters.safety);
+
     egg_path = adapt_path(polar_size, egg_path);
+
     %egg_path = adapt_path(size(polar_img), parameters.safety, ellpts);
 
     parameters.cortex_weights.path = egg_path;
@@ -169,8 +171,8 @@ function mymovie = dp_markers(mymovie, nimg, opts)
       cortex_path = remove_polar_body(polar_img, cortex_path, parameters.cortex_params, parameters.scoring_func{2}, parameters.cortex_weights, opts);
     end
 
-    ellpts = pixels2elliptic2(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
-    carths = elliptic2carth2(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+    ellpts = pixels2elliptic(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
+    carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
 
     if (opts.measure_performances)
       [estimation] = detect_ellipse(img, true, opts);

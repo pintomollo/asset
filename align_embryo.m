@@ -24,6 +24,14 @@ function mymovie = align_embryo(mymovie, opts)
 
   for i=1:nframes
     carth = mymovie.(type).ruffles(i).carth;
+
+    if (isempty(carth))
+      continue;
+    end
+
+    %if (i==50)
+    %  keyboard
+    %end
     ell = carth2elliptic(carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
     ell = [ell i*ones(size(ell, 1), 1)];
     pts = [pts; ell];

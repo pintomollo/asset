@@ -40,6 +40,13 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
   if (size(XY, 1) < 4)
 
     return;
+  else
+    x = unique(XY(:, 1));
+    y = unique(XY(:, 2));
+
+    if (numel(x) == 1 | numel(y) == 1)
+      return;
+    end
   end
 
   A = EllipseDirectFit(XY);
@@ -55,7 +62,7 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
   y0 = (a*f - b*d) / delta;
   center = real([x0; y0]);
 
-  numer = 2*(a*f^2 + c*d^2 + g*b^2 - 2*b*d*f - a*c*g);
+  numer = 2*(a*(f^2) + c*(d^2) + g*(b^2) - 2*b*d*f - a*c*g);
   denom = sqrt((a-c)^2 + 4*b^2);
   a0 = sqrt(numer / (delta * (denom - (a + c))));
   b0 = sqrt(numer / (delta * (-denom - (a + c))));
@@ -65,6 +72,7 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
       orientation = 0;
     else
       orientation = pi / 2;
+
     end
   else
     if (a < c)

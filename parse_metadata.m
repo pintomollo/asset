@@ -35,21 +35,25 @@ function metadata = parse_metadata(fname, opts)
     end
 
     if (~isempty(mymovie) & ~isempty(mymovie.dic))
-      z_pos = NaN(1, length(mymovie.dic.eggshell));
+      z_pos = NaN(3, length(mymovie.dic.eggshell));
     end
 
     % Read the first line
     line = fgetl(fid);
     index = -1;
+    plane = -1;
     pos = NaN;
+    count = 1;
     % Loop until we have read the whole file
     while ischar(line)
 
       if (any(line == '{'))
-        if (index > 0)
-          z_pos(index) = pos;
+        if (index > 0 & plane > 0)
+          z_pos(:, count) = [index plane pos].';
+          count = count + 1;
         end
         index = -1;
+        plane = -1;
         pos = NaN;
       else
         tokens = regexp(line, '^\s*"(.+)": "?(.*?)"?,?$','tokens');
@@ -63,6 +67,8 @@ function metadata = parse_metadata(fname, opts)
               pos = str2double(tokens{2});
             case 'Frame'
               index = str2double(tokens{2}) + 1;
+            case 'Slice'
+              plane = str2double(tokens{2}) + 1;
             otherwise
               disp(['Parsing incomplete ...']);
           end
@@ -73,9 +79,15 @@ function metadata = parse_metadata(fname, opts)
       line = fgetl(fid);
     end
 
+    if (index > 0 & plane > 0)
+      z_pos(:, count) = [index plane pos].';
+      count = count + 1;
+    end
+
     fclose(fid);
 
-    metadata.z_pos = z_pos;
+    z_pos = sortrows(z_pos.').';
+    metadata.z_pos = z_pos(3, :);
   end
 
   if (~isempty(mymovie))

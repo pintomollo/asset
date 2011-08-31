@@ -73,8 +73,8 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
       axes_length = mymovie.dic.axes_length(:,nimg);
       orientation = mymovie.dic.orientations(:,nimg);
 
-      egg = carth2elliptic(egg, center, axes_length, orientation) + params.safety;
-      cor = carth2elliptic(cor, center, axes_length, orientation);
+      egg = carth2elliptic(egg, center, axes_length, orientation, 'radial') + params.safety;
+      cor = carth2elliptic(cor, center, axes_length, orientation, 'radial');
 
       [egg, indx] = align(egg);
       cor = align(cor);
@@ -92,8 +92,8 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
       theta = [theta(end)-2*pi; theta(1:end); theta(1)+2*pi];
       new_cortex = cor(:,2) - interp1q(theta, correction, cor(:,1));
 
-      new_egg = elliptic2carth(egg(:,1), new_egg, center, axes_length, orientation);
-      new_cortex = elliptic2carth(cor(:,1), new_cortex, center, axes_length, orientation);
+      new_egg = elliptic2carth(egg(:,1), new_egg, center, axes_length, orientation, 'radial');
+      new_cortex = elliptic2carth(cor(:,1), new_cortex, center, axes_length, orientation, 'radial');
 
       eggshell(nimg).carth = new_egg;
       cortex(nimg).carth = new_cortex;

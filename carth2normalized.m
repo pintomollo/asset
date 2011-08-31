@@ -18,7 +18,7 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
       if (isempty(warper))
         warped = get_struct('warper',1);
 
-        if (length(varargin) < 3)
+        if (length(varargin) < 3 |isempty(pts))
           return;
         end
 
@@ -34,6 +34,12 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
 
         warped.warp = carth2elliptic(pts, warped.original.centers, warped.original.axes_length, warped.original.orientations);
       else
+        if (isempty(pts))
+          warped = [];
+          ell_pts = pts;
+          return;
+        end
+
         ell_pts = carth2elliptic(pts, warper.original.centers, warper.original.axes_length, warper.original.orientations);
 
         if (isempty(ell_pts))

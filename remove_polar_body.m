@@ -58,11 +58,7 @@ function [path, emissions] = remove_polar_body(img, path, params, scoring_func, 
           ends = ends(ends > 0);
           ends = min(ends);
 
-          try
           myrange = myrange + [start ends];
-          catch
-            beep;keyboard
-          end
           if (around)
             full_range = [myrange(1):height 1:myrange(2)];
           else
@@ -70,6 +66,8 @@ function [path, emissions] = remove_polar_body(img, path, params, scoring_func, 
           end
 
           rad_range = [min(path(myrange(1)), path(myrange(2))) max(path(myrange(1)), path(myrange(2)))] + [-security security];
+          rad_range(rad_range < 0) = 1;
+          rad_range(rad_range > width) = width;
           
           subimg = img(full_range, rad_range(1):rad_range(2));
           params.init = round(path(myrange(1)) - rad_range(1) + 1);

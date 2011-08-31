@@ -11,7 +11,7 @@ function [x,y] = draw_ellipse(center,axes_length,orientation,npts)
   t = [0:2*pi/npts:2*pi];
   r = ones(1,npts+1);
 
-  [x,y] = elliptic2carth([t;r], center, axes_length, orientation);
+  [x,y] = elliptic2carth([t;r], center, axes_length, orientation, 'radial');
   %x=axes_length(1)*cos(t)*cos(orientation) - axes_length(2)*sin(t)*sin(orientation) + center(1);
   %y=axes_length(1)*cos(t)*sin(orientation) + axes_length(2)*sin(t)*cos(orientation) + center(2);
 

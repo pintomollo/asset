@@ -22,7 +22,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
   size150 = round(npixels/150);
 
   all_ellipses = cell(nframes, 1);
-  all_estims = cell(nframes, 1);
+  all_estim = cell(nframes, 1);
 
   %c = [3 6 7 8 19 26 31 35 45 60 63 67 69 70 75 78 81];
   %nframes = length(c);
@@ -48,7 +48,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
 
     img =  img((size10+1):(size10+h),(size10+1):(size10+w));
 
-    if(~any(any(img)))
+    if(~any(img) | (sum(img(:)) / prod(imgsize) > 0.9))
       %beep;keyboard
       continue;
     end
@@ -69,8 +69,8 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
       continue;
     end
 
-      %imshow(img);
-      %hold on
+    %imshow(img);
+    %hold on
     for i=1:length(estim)
       tmp_estim = estim{i};
       tmp_estim = tmp_estim(:,[2 1]);
@@ -112,6 +112,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
       %scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
       %scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
 
+      %hold on;
       %for j = 1:size(ellipses, 1)
       %  draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
       %end
@@ -178,6 +179,10 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
     end
 
     [ellipse, score] = fit_distance(tmp);
+
+    %myplot(tmp, 'c')
+    %draw_ellipse(ellipse(1, 1:2), ellipse(1, 3:4), ellipses(1, 5), 'm');
+    
     segments{i} = tmp;
     ellipses(i,:) = ellipse;
     scores(i) = score;
@@ -299,9 +304,10 @@ end
 function [ellipse, avg] = fit_distance(pts)
 
   ellipse = NaN(1, 5);
+  avg = Inf;
 
   [c, a, o] = fit_ellipse(pts);
-  ell_pts = carth2elliptic(pts, c, a, o);
+  ell_pts = carth2elliptic(pts, c, a, o, 'radial');
 
   dist = abs(ell_pts(:,2) - 1);
 
@@ -310,15 +316,16 @@ function [ellipse, avg] = fit_distance(pts)
 
   if (isempty(pts))
     dist = [];
-    avg = Inf;
-    stds = Inf;
 
     return;
   end
 
   [c, a, o] = fit_ellipse(pts);
+  if (any(isnan(c)))
+    return;
+  end
   ellipse = [c.' a.' o];
-  ell_pts = carth2elliptic(pts, c, a, o);
+  ell_pts = carth2elliptic(pts, c, a, o, 'radial');
 
   dist = abs(ell_pts(:,2) - 1);
   avg = mean(dist);

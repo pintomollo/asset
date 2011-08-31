@@ -59,8 +59,8 @@ function mymovie = find_ruffles(mymovie, opts)
     %figure;myplot(pts);hold on;
     %myplot(conv,'r');
 
-    ell_pts = carth2elliptic(pts, center, axes_length, orient);
-    ell_conv = carth2elliptic(conv, center, axes_length, orient);
+    ell_pts = carth2elliptic(pts, center, axes_length, orient, 'radial');
+    ell_conv = carth2elliptic(conv, center, axes_length, orient, 'radial');
     indx = find(ell_conv(1:end-1,1) > ell_conv(2:end,1));
 
     if (~isempty(indx))
