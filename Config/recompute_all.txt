@@ -1,0 +1,6 @@
+% Sets the parameters such that everything is recomputed
+
+segmentation_type all
+recompute true
+measure_performances true
+analysed_fields carth estim

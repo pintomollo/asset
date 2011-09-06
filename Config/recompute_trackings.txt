@@ -1,0 +1,7 @@
+% Sets the parameters such that only the manual trackings are recomputed
+
+segmentation_type all
+recompute true
+segment false
+measure_performances true
+analysed_fields carth estim

@@ -1,0 +1,8 @@
+% Sets the parameters such that we learn PH cortex segmentation
+
+segmentation_type markers
+measure_performances true
+max_frames 10
+do_ml cmaes
+parse_frames random
+verbosity 0

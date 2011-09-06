@@ -1,0 +1,8 @@
+% A comment
+% Create a prefix for targeting subfields of the structure :
+% #field.subfield 
+
+segmentation_type all
+recompute true
+measure_performances true
+analysed_fields carth estim

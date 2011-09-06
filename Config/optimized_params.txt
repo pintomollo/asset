@@ -1,0 +1,208 @@
+%%%%%%%%%%%%%% DIC Parameters %%%%%%%%%%%%%%%%%%%%%
+
+%% Eggshell DIC : 6 parameters
+
+#segmentation_parameters.dic.eggshell_params
+%score 1.8947e-4 GODLIKE
+alpha 0.8961
+beta 0.2317
+gamma 0.9544
+
+%score 2.1386e-4
+%alpha 0.8678
+%beta 0.3755
+%gamma 0.9473
+
+%score 2.2321e-4
+%alpha 0.4245
+%beta 0.2111
+%gamma 0.9925
+
+%alpha 0.7868
+%beta 0.5354
+%gamma 0.6441
+
+%alpha 0.6510
+%beta 0.6279
+%gamma 0.5816
+
+%alpha 0.6446
+%beta 0.6322
+%gamma 0.5774
+
+%alpha 0.6686
+%beta 0.6603
+%gamma 0.6007
+
+%alpha 0.5329
+%beta 0.8426
+%gamma 0.2902
+
+#segmentation_parameters.dic.eggshell_weights
+alpha 0.3415
+beta 0.0205
+eta 0.5042
+
+%alpha 0.4043
+%beta 0.0213
+%eta 0.4583
+
+%alpha 0.7505
+%beta 0.0023
+%eta 0.4689
+
+%alpha 0.4942
+%beta 0.0178
+%eta 0.4375
+
+%alpha 0.5074
+%beta 0.0039
+%eta 0.4353
+
+%alpha 0.4952
+%beta 0.0035
+%eta 0.4392
+
+%alpha 0.6530
+%beta 0.0095
+%eta 0.4146
+
+%alpha 0.3345
+%beta 0.0168
+%eta 0.4774
+
+%% Cortex DIC : 8 parameters
+
+#segmentation_parameters.dic.cortex_params
+% score 3.9062e-4
+alpha 0.8798
+beta 0.0396
+gamma 0.4971
+
+% score 3.9114e-4
+alpha 0.8749
+beta 0.0351
+gamma 0.4757
+
+%alpha 0.8284
+%beta 0.0429
+%gamma 0.4229
+
+%alpha 0.8662
+%beta 0.0658
+%gamma 0.3710
+
+%alpha 0.8657
+%beta 0.0831
+%gamma 0.3166
+
+%alpha 0.6579
+%beta 0.0589
+%gamma 0.4599
+
+#segmentation_parameters.dic.cortex_weights
+alpha 0.1638
+beta 0.5368
+gamma 0.5946
+delta 0.7353
+epsilon 0.8889
+
+%alpha 0.1455
+alpha 0.1632
+beta 0.5642
+gamma 0.6266
+delta 0.9247
+epsilon 0.9062
+
+%alpha 0.1455
+%beta 0.6405
+%gamma 0.5366
+%delta 0.9808
+%epsilon 0.9999
+
+%alpha 0.1861
+%beta 0.5138
+%gamma 0.6269
+%delta 0.8564
+%epsilon 0.9294
+
+%alpha 0.1552
+%beta 0.5112
+%gamma 0.5577
+%delta 0.9837
+%epsilon 1.0202
+
+%alpha 0.001
+%beta 0.7253
+%gamma 0.3905
+%delta 0.5873
+%epsilon 0.9446
+
+%%%%%%%%%%%%% Markers Parameters %%%%%%%%%%%%%%%%%
+
+%% Eggshell Markers : 4 parameters
+
+#segmentation_parameters.markers.eggshell_params
+% score 0.0012 GODLIKE
+alpha 0.9016
+beta 0.2107
+gamma 0.9531 
+
+% score 0.0013
+%alpha 0.8656
+%beta 0.1714
+%gamma 0.9025 
+
+%alpha 0.3
+%beta 0.421319
+%gamma 0.99999 
+
+#segmentation_parameters.markers.eggshell_weights
+alpha 0.00098
+
+%alpha 0.0041
+
+%alpha 0.105817
+
+%% Cortex Markers : 5 parameters
+
+#segmentation_parameters.markers.cortex_params
+% original better
+alpha 0.225
+beta 0.35
+gamma 0.95
+
+% score 2.7249e-04 CMAES
+%alpha 0.3335
+%beta 0.2941
+%gamma 0.6278
+
+% score 2.7250e-04 CMAES
+%alpha 0.3346
+%beta 0.2946
+%gamma 0.6280
+
+% score 2.7328e-04
+%alpha 0.1819
+%beta 0.5581
+%gamma 0.6472
+
+%alpha 0.17288 
+%beta 0.64147 
+%gamma 0.64499
+
+#segmentation_parameters.markers.cortex_weights
+alpha 0.475
+beta 0.045
+
+%alpha 0.5228
+%beta 1e-10
+
+%alpha 0.5243
+%beta 0.00007
+
+%alpha 0.4920
+%beta 0.000001
+
+%alpha 0.51603
+%beta 0.00001
