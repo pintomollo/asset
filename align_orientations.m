@@ -29,6 +29,8 @@ function orients = align_orientations(orients, aim, dim)
       last_dim = 2;
   end
 
+  % Test
+  
   [m, n, o, p, q] = size(orients);
   orient_size = [m, n, o, p, q];
 
