@@ -65,5 +65,13 @@ function install_ASSET
     mkdir('TmpData');
   end
 
+  if (~exist('Config', 'dir'))
+    cd('celegans-analysis');
+    if (exist('Config', 'dir'))
+      movefile('Config', '..');
+    end
+    cd ..;
+  end
+
   return;
 end

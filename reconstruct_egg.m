@@ -37,17 +37,17 @@ function mymovie = reconstruct_egg(mymovie, opts)
   orientations(1, ~goods) = NaN;
 
   obj_orient = median(orientations(goods));
-  thresh = pi/32;
+  thresh = pi/16;
   oks = (abs(orientations - obj_orient) < thresh);
 
   ratios = axes_length(1,:) ./ axes_length(2, :);
   obj_ratio = median(ratios(oks));
-  thresh = 0.05;
+  thresh = 0.1;
   oks = oks & (abs(ratios - obj_ratio) < thresh);
 
   obj_center = mean(centers(:, oks), 2);
   dist = sqrt(sum(bsxfun(@minus, centers, obj_center).^2, 1));
-  thresh = 10;
+  thresh = 20;
   oks = oks & (dist < thresh);
 
   obj_center = mean(centers(:, oks), 2);
