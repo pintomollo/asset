@@ -54,7 +54,7 @@ function mymovie = cortical_signal(mymovie, opts)
     %nimg = randi(nframes)
     nimg = i;
     %nimg = i + 73
-    %nimg = 52
+    %nimg = 45
     %keyboard
 
     cortex = mymovie.data.cortex(nimg).carth;
@@ -200,12 +200,20 @@ function mymovie = cortical_signal(mymovie, opts)
     end
   end
 
-  if (false)
-  %if (opts.recompute|~isfield(mymovie.data, 'domain')|isempty(mymovie.data.domain))
+  %if (false)
+  if (opts.recompute|~isfield(mymovie.data, 'domain')|isempty(mymovie.data.domain))
+    mymovie = carth2normalized(mymovie, opts);
+
+  params = opts.quantification.params;
+  weights = opts.quantification.weights;
+  init_params = opts.quantification.init_params;
+
     img = gather_quantification(mymovie, opts);
     img = imnorm(img);
-    opts.quantification.params.init = sub2ind(size(img,2)*[1 1], [1:size(img,2)],[1:size(img,2)]);
-    path = dynamic_prog_2d(img, opts.quantification.params, @weight_domain_borders, opts.quantification.weights, opts);
+    %opts.quantification.params.init = sub2ind(size(img,2)*[1 1], [1:size(img,2)],[1:size(img,2)]);
+      path = dynamic_prog_2d(img, params, @weight_domain, weights, @init_domain, init_params, opts);
+
+    %path = dynamic_prog_2d(img, opts.quantification.params, @weight_domain_borders, opts.quantification.weights, opts);
     mymovie.data.domain = path / size(img, 2);
   end
 

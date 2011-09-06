@@ -40,11 +40,13 @@ function [bests, alpha] = estimate_gamma(x, y)
   %gammas = (lambda^alpha / gamma(alpha)) * x .^ (alpha - 1) .* exp(-lambda * orig_x);
   bests = nlinfit(x, y, @gamma_function, [lambda alpha]);
 
-  %figure;
-  %plot(x, y);
-  %hold on;
+  if (false)
+  figure;
+  plot(x, y);
+  hold on;
   %plot(x, gamma_function([lambda, alpha], x), 'r')
-  %plot(x, gamma_function(bests, x), 'k')
+  plot(x, gamma_function(bests, x), 'k')
+  end
 
   if (nargout == 2)
     alpha = bests(2);

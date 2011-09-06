@@ -27,7 +27,24 @@ function [res] = combine_quantifications(mymovies)
 
   for i=1:nmovies
     load(mymovies{i});
+    try
     [tmp_quant, ~, cytos(i)] = gather_quantification(mymovie, opts);
+
+
+    %img = gather_quantification(mymovie, opts);
+    img = imnorm(tmp_quant);
+    %opts.quantification.params.init = sub2ind(size(img,2)*[1 1], [1:size(img,2)],[1:size(img,2)]);
+    path = dynamic_prog_2d(img, opts.quantification.params, @weight_domain_borders, opts.quantification.weights, opts);
+    mymovie.data.domain = path / size(img, 2);
+    save(mymovie.experiment, 'mymovie', 'opts');
+
+    continue;
+
+
+    catch ME
+      display(['Error in file: ' mymovie.experiment]);
+      continue;
+    end
 
     if (1-cytos(i) < first)
       first = 1-cytos(i);

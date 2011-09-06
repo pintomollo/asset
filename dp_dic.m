@@ -49,7 +49,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
 
   %%keyboard
- % nimg
+ %nimg
 
   parameters = opts.segmentation_parameters.dic;
       mymovie.dic.parameters = parameters;
@@ -77,6 +77,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       return;
     end
 
+    img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
     %orientations(1,nimg) = orientations(1,nimg) + pi;
 
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
@@ -162,6 +163,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
     if (isempty(img))
       img = imnorm(double(load_data(mymovie.dic, nimg)));
+      img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
     end
 
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
@@ -235,7 +237,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       figure;imshow(polar_cortex);
       hold on;plot(cortex_path,[1:length(cortex_path)],'Color',[1 0.5 0]);
       plot(egg_path,[1:length(cortex_path)],'g');
-      ell = elliptic2pixels2([0 1; 2*pi 1], polar_size, axes_length(:,nimg), parameters.safety);
+      ell = elliptic2pixels([0 1; 2*pi 1], polar_size, axes_length(:,nimg), parameters.safety);
       plot(ell(:,2), [1 length(cortex_path)], 'm');
       %plot(carths(:,1),carths(:,2),'r');
 

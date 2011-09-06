@@ -48,7 +48,10 @@ function [ellpts, radius] = carth2elliptic(varargin)
       ga = sqrt((x + focus).^2 + y.^2);
       gb = sqrt((x - focus).^2 + y.^2);
 
-      ellpts(:,1) = sign(y) .* acos((ga - gb) / (2*focus));
+      signs = sign(y);
+      signs(signs==0) = 1;
+
+      ellpts(:,1) = signs .* acos((ga - gb) / (2*focus));
       ellpts(:,2) = acosh((ga + gb) / (2*focus));
 
     case 'radial'

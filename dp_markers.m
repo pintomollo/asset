@@ -69,6 +69,8 @@ function mymovie = dp_markers(mymovie, nimg, opts)
       old_orient = orientations(1,nimg);
     end
 
+    img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
+
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
     polar_img = imnorm(polar_img,[],[],'rows');
 
@@ -126,6 +128,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
     update(2, nimg) = true;
     img = imnorm(double(load_data(mymovie.cortex,nimg)));
+    img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
 
     if (opts.verbosity == 3)
       figure;imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));

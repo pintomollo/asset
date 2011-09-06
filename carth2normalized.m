@@ -14,7 +14,7 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
   end
 
   switch opts.warp_type
-    case 'radial'
+    case {'radial', 'hyperbolic'}
       if (isempty(warper))
         warped = get_struct('warper',1);
 
@@ -32,7 +32,8 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
           warped.reference.orientations = varargin{6};
         end
 
-        warped.warp = carth2elliptic(pts, warped.original.centers, warped.original.axes_length, warped.original.orientations);
+        warp = carth2elliptic(pts, warped.original.centers, warped.original.axes_length, warped.original.orientations, opts.warp_type);
+        warped.warp = linearize_egg(warp);
       else
         if (isempty(pts))
           warped = [];
@@ -40,17 +41,20 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
           return;
         end
 
-        ell_pts = carth2elliptic(pts, warper.original.centers, warper.original.axes_length, warper.original.orientations);
+        ell_pts = carth2elliptic(pts, warper.original.centers, warper.original.axes_length, warper.original.orientations, opts.warp_type);
 
         if (isempty(ell_pts))
           warped = [];
         else
+          [ordered, index] = sort(ell_pts(:,1));
+          [~, index] = sort(index); 
+
           %keyboard
 
-          corr = interp_elliptic(warper.warp, ell_pts(:,1));
-          ell_pts(:,2) = ell_pts(:,2) ./ corr(:,2);
+          corr = interp_elliptic(warper.warp, ordered);
+          ell_pts(:,2) = ell_pts(:,2) ./ corr(index,2);
 
-          warped = elliptic2carth(ell_pts, warper.reference.centers, warper.reference.axes_length, warper.reference.orientations);
+          warped = elliptic2carth(ell_pts, warper.reference.centers, warper.reference.axes_length, warper.reference.orientations, opts.warp_type);
         end
       end
   end
@@ -99,6 +103,31 @@ function mymovie = convert_struct(mymovie, opts)
         end
       end
       mymovie.(field).warpers = warpers;
+    end
+  end
+
+  return;
+end
+
+function pts = linearize_egg(pts)
+
+  theta = pts(:,1);
+  dt = diff(theta);
+  step = median(dt);
+  
+  negs = (dt < 0);
+  smalls = (abs(dt) < 2*step) & negs;
+  others = ~smalls & negs;
+  
+  pts = pts(~smalls, :);
+  others = others(~smalls);
+
+  if (sum(others) > 1)
+    error('Invalid eggshell as it is not linearly increasing')
+  else
+    indx = find(others);
+    if (~isempty(indx))
+      pts = [pts(indx+1:end,:); pts(1:indx,:)];
     end
   end
 

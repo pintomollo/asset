@@ -23,7 +23,7 @@ function mymovie =  detect_dic_nuclei(mymovie, opts)
   %rand_frames = randperm(nframes);
   %classes = cell([10 1]);
 
-  nuclei = get_struct('ruffles', [nframes, 1]);
+  nuclei = get_struct('ruffles', [1, nframes]);
 
   for i=1:nframes
     nimg = i;
@@ -101,15 +101,15 @@ function mymovie =  detect_dic_nuclei(mymovie, opts)
 
     %save('spots.mat', 'classes');
 
-    %l = bwlabel(bw, 8);
-    %l(l==0) = img(l==0);
-    %imagesc(l);
+    l = bwlabel(bw, 8);
+    l(l==0) = img(l==0);
+    imagesc(l);
     %drawnow
     %subplot(121);imshow(img);
     %subplot(122);imagesc(bwlabel(bw, 8));
-    %title(num2str(nimg));
+    title(num2str(nimg));
 
-    %saveas(gca, ['frame-' num2str(nimg) '-' num2str(a) '.png']);
+    saveas(gca, ['frame-' num2str(nimg) '.png']);
 
     %end
 %    end

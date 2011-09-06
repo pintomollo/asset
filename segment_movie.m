@@ -1,28 +1,54 @@
 function [mymovie, updated] = segment_movie(mymovie, opts)
+% SEGMENT_MOVIE performs the segmentation of the provided recording, detecting the
+% position of the eggshell and the cellular membrane in each frame independently.
+% By default, this function will try to avoid recomputing the segmentation. To force
+% it, set the parameter 'recompute' to true (help load_parameters.m).
+%
+%   MYMOVIE = SEGMENT_MOVIE(MYMOVIE, OPTS) segments MYMOVIE using the parameters
+%   specified in OPTS (see get_struct('ASSET')). The results are stored in MYMOVIE in
+%   the field corresponding to the segmented channel.
+%
+%   [MYMOVIE, UPDATED] = SEGMENT_MOVIE(...) returns whether MYMOVIE has been UPDATED
+%   by this function.
+%
+%   [...] = SEGMENT_MOVIE(MYMOVIE) uses the default value for OPTS as provided by
+%   get_struct('ASSET').
+%
+% Gonczy & Naef labs, EPFL
+% Simon Blanchoud
+% 02.09.2011
 
+  % Nothing has changed yet
   updated = false;
 
+  % Set the default value if need be
   if (nargin < 2)
     opts = get_struct('ASSET', 1);
   end
       
+  % Get the size of the problem, using the correct channel
   switch (opts.segmentation_type)
+
+    % The default channel which we should always have
     case {'dic', 'all'}
       [nframes imgsize ] = size_data(mymovie.dic);
+
+    % The marker segmentation is a bit more problematic as there might be no channel
+    % for the eggshell
     case 'markers'
       if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
         [nframes imgsize ] = size_data(mymovie.eggshell);
       else
         [nframes imgsize ] = size_data(mymovie.cortex);
       end
+
+    % Somehow the input parameters do not make sense
     otherwise
       error 'None of the expected field are present in ''mymovie''';
   end
 
-  if (nargin < 2)
-    opts.segmentation_parameters = set_image_size(opts.segmentation_parameters, imgsize);
-  end
-
+  % Try as hard as possible not to recompute the segmentation !!
+  % Basically if there is some data already, we assume they are good and keep them.
   if (~opts.recompute && strncmp(opts.do_ml, 'none', 4)) && ...
      (((strncmp(opts.segmentation_type, 'dic', 3) | strncmp(opts.segmentation_type, 'all', 3)) && ...
        (isfield(mymovie.dic, 'eggshell') && isfield(mymovie.dic, 'cortex')) && ...
@@ -35,6 +61,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     return;
   end
 
+  % Progress bar
   if (opts.verbosity > 0)
     hwait = waitbar(0,'Segmenting Frames','Name','ASSET');
   end

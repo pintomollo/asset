@@ -358,6 +358,12 @@ function mystruct = get_struct(type, nstruct)
                         'reference', ref, ...
                         'warp', []);
 
+    % The structure containing the information to correlate the Z-axis with the others
+    case 'z-correlation'
+      mystruct = struct('bkg', 3.628, ...
+                        'long_axis', 0.991, ...
+                        'short_axis', -0.577);
+
     % If the required type of structure has not been implemented, return an empty one
     otherwise
       mystruct = struct();

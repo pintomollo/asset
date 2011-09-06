@@ -26,6 +26,7 @@ function mymovie = time_cell_cycle(mymovie, opts)
  
   nbins = 16;
 
+  cortex = cell(1, nframes);
   pts = zeros(0, 3);
 
   for i=1:nframes
@@ -33,6 +34,7 @@ function mymovie = time_cell_cycle(mymovie, opts)
     ell = carth2elliptic(carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
     ell = [ell i*ones(size(ell, 1), 1)];
     pts = [pts; ell];
+    cortex{i} = carth2elliptic(mymovie.(type).cortex(i).carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
   end
 
   bins = [0:2*pi/nbins:2*pi + 1e-5];
@@ -94,7 +96,12 @@ function mymovie = time_cell_cycle(mymovie, opts)
   cytok_frame = min([traces{left_cytok}(:, 3); traces{right_cytok}(:, 3)]);
   cytok_pos = median([traces{left_cytok}(:, 1); 2*pi - traces{right_cytok}(:, 1)]);
 
-  mymovie.metadata.timing.cytokinesis = cytok_frame;
+  if (cytok_frame == 1)
+    mymovie.metadata.timing.cytokinesis = NaN;
+    cytok_frame = nframes;
+  else
+    mymovie.metadata.timing.cytokinesis = cytok_frame;
+  end
 
   params = [0.5 0.7 0.5];
   pc_frames = frames;
@@ -112,6 +119,23 @@ function mymovie = time_cell_cycle(mymovie, opts)
   pc_right = round(max_frame - ((alpha_right - 1) / lambda_right) + 1);
 
   %keyboard
+
+  if (false)
+  figure;hold on;
+  for i=1:nframes
+    plot3(cortex{i}(:,1),cortex{i}(:,2),i*ones(size(cortex{i}(:,2))), 'b');
+  end
+  for i=1:length(traces);
+    if (i == left_pc|i == right_pc)
+      colors = 'r';
+    elseif (i == left_cytok|i == right_cytok)
+      colors = 'g';
+    else
+      colors = 'k';
+    end
+    plot3(traces{i}(:,1), traces{i}(:,2), traces{i}(:,3), ['-o' colors]);
+  end
+  end
 
   pc_frame = ceil(mymean([pc_left; pc_right]));
 
@@ -194,6 +218,10 @@ function mymovie = time_cell_cycle(mymovie, opts)
       pnm_frame = i;
       break;
     end
+  end
+
+  if (pnm_frame == pc_frame)
+    pnm_frame = NaN;
   end
 
   mymovie.metadata.timing.pronuclear_meeting = pnm_frame;

@@ -8,7 +8,7 @@ function mymovie = reconstruct_egg(mymovie, opts)
   orientations = align_orientations(orientations);
 
   mymovie = parse_metadata(mymovie, opts);
-  real_z = mymovie.metadata.z_pos;
+  real_z = mymovie.metadata.z_position;
 
   goods = true(nframes, 1);
   paths = cell(nframes, 1);
@@ -37,18 +37,18 @@ function mymovie = reconstruct_egg(mymovie, opts)
   orientations(1, ~goods) = NaN;
 
   obj_orient = median(orientations(goods));
-  thresh = pi/16;
+  thresh = pi/32;
   oks = (abs(orientations - obj_orient) < thresh);
 
   ratios = axes_length(1,:) ./ axes_length(2, :);
   obj_ratio = median(ratios(oks));
   thresh = 0.05;
-  oks = (abs(ratios - obj_ratio) < thresh);
+  oks = oks & (abs(ratios - obj_ratio) < thresh);
 
   obj_center = mean(centers(:, oks), 2);
   dist = sqrt(sum(bsxfun(@minus, centers, obj_center).^2, 1));
-  thresh = 20;
-  oks = (dist < thresh);
+  thresh = 10;
+  oks = oks & (dist < thresh);
 
   obj_center = mean(centers(:, oks), 2);
   obj_ratio = mean(ratios(oks));
@@ -65,7 +65,7 @@ function mymovie = reconstruct_egg(mymovie, opts)
       continue;
     end
     pts = paths{i};
-    pts = bsxfun(@minus, pts, obj_center.');
+    pts = bsxfun(@minus, pts, obj_center.') * opts.pixel_size;
 
     pts(:,2) = -pts(:,2);
 
@@ -100,38 +100,46 @@ function mymovie = reconstruct_egg(mymovie, opts)
   %hold on;
   %draw_ellipse(c,a,o, 'r')
 
-%  figure;
-%  plot3(centers(1,:), centers(2,:), real_z);
-%  figure;
-%  plot(ratios, real_z);
-%  hold on;
-%  plot(ratios(oks), real_z(oks), 'r');
-%  figure;
-%  plot(orientations, real_z);
-%  hold on;
-%  plot(orientations(oks), real_z(oks), 'r');
+  if (true)
+  figure;
+  plot3(centers(1,:), centers(2,:), real_z);
+  hold on;
+  plot3(centers(1,oks), centers(2,oks), real_z(oks), 'r');
+  figure;
+  plot(ratios, real_z);
+  hold on;
+  plot(ratios(oks), real_z(oks), 'r');
+  figure;
+  plot(orientations, real_z);
+  hold on;
+  plot(orientations(oks), real_z(oks), 'r');
 
-%%  figure;
-%  hold on;
-%  for i=1:nframes
+  figure;
+  hold on;
+  for i=1:nframes
 
     %pts = mymovie.dic.eggshell(i).carth;
-%    if (~oks(i))
-%      continue;
-%    end
-%    pts = paths{i};
+    if (~oks(i))
+      %pts = paths{i};
+      %if (~isempty(pts))
+      %  plot3(pts(:,1), pts(:,2), real_z(i)*ones(size(pts(:,1))), 'y');
+      %end
+      continue;
+    end
+    pts = paths{i};
 
-%    rescale = (1 - (real_z(i)/coefs(3))^2);
+    rescale = sqrt(1 - (real_z(i)/coefs(3))^2);
     %[centers(:,i), axes_length(:,i), orientations(1,i)] = fit_ellipse(pts);
 
     %plot3(x,y,z_pos(i)*ones(size(x)));
-%    [x,y] = draw_ellipse([0;0], coefs(1:2)*rescale, 0);
-%    plot3(x*opts.pixel_size,y*opts.pixel_size,real_z(i)*ones(size(x)), 'r');
+    [x,y] = draw_ellipse([0;0], coefs(1:2)*rescale, 0);
+    plot3(x,y, real_z(i)*ones(size(x)), 'r');
+
     %[x,y] = draw_ellipse(centers(:, i), new_axes(:, i), orientations(i));
     %plot3(x*opts.pixel_size,y*opts.pixel_size,mymovie.metadata.z_pos(i)*ones(size(x)), 'b');
-  %  plot3(pts(:,1)*opts.pixel_size,pts(:,2)*opts.pixel_size, real_z(i)*ones(size(pts(:,1))), 'g');
-  %end
-
+    plot3(pts(:,1), pts(:,2), real_z(i)*ones(size(pts(:,1))), 'g');
+  end
+  end
 
   return;
 

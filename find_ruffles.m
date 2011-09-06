@@ -51,6 +51,12 @@ function mymovie = find_ruffles(mymovie, opts)
     axes_length = mymovie.(type).axes_length(:,i);
     orient = mymovie.(type).orientations(1,i);
   
+    x = unique(pts(:,1));
+    y = unique(pts(:,2));
+    if (numel(x) == 1 | numel(y)==1)
+      continue;
+    end
+
     conv = pts(convhull(pts(:,1),pts(:,2)),:);
     if (~ispolycw(conv(:,1),conv(:,2)))
       conv = conv([end:-1:1],:);

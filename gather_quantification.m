@@ -1,7 +1,5 @@
 function [datas, bkg, cyto, theta] = gather_quantification(mymovie, opts)
 
-  %keyboard
-
   npts = 500;
 
   nframes = size_data(mymovie.data);  
@@ -26,6 +24,7 @@ function [datas, bkg, cyto, theta] = gather_quantification(mymovie, opts)
   end
 
   for i=1:nframes
+    
     warper = mymovie.data.warpers(i);
 
     if (isfield(mymovie.data.quantification, 'carth') & ~isempty(mymovie.data.quantification(i).carth))
@@ -89,9 +88,15 @@ function [datas, bkg, cyto, theta] = gather_quantification(mymovie, opts)
   if (strncmp(type, 'direct', 6))
     dist = dist * opts.pixel_size;
     boundaries = max(abs(dist));
+
+    if (boundaries > 1e4)
+      error('Too many elements');
+    end
+
     boundaries(1) = -boundaries(1);
     full_indexes = [fliplr([0:-resolution:boundaries(1)]) resolution:resolution:boundaries(2)];
     npts = length(full_indexes);
+
     datas = NaN(nframes, npts);
 
   %keyboard

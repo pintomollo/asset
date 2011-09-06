@@ -292,7 +292,7 @@ trackings = handles.trackings;
 name = num2str(handles.current);
 
 if (isfield(mymovie, 'metadata'))
-  name = [name ':' num2str(mymovie.metadata.z_pos(handles.current)) ':' num2str(mymovie.metadata.z_rel(handles.current))];
+  %name = [name ':' num2str(mymovie.metadata.z_pos(handles.current)) ':' num2str(mymovie.metadata.z_rel(handles.current))];
 end
 
 set(hFig, 'Name', ['ASSET Results (' name ')']);

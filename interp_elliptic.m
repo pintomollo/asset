@@ -83,7 +83,7 @@ function [new_angles, path] = interp_elliptic(varargin)
   orig_angles(orig_angles < min_angle) = orig_angles(orig_angles < min_angle) + drange;
   orig_angles(orig_angles > max_angle) = orig_angles(orig_angles > max_angle) - drange;
 
-  % Re-align the data such that they ahave increasing angular values
+  % Re-align the data such that they have increasing angular values
   indx = find(orig_angles(1:end-1) > orig_angles(2:end), 1);
   if (~isempty(indx))
     orig_angles = orig_angles([indx+1:end 1:indx]);

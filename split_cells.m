@@ -108,14 +108,19 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
 
       %ellipses = ellipses(ratio < max_ratio, :);
 
-      %scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
-      %scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
-      %scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
+      if (opts.verbosity == 3)
+        figure
+        imshow(img);
+        hold on
+        scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
+        scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
+        scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
 
-      %hold on;
-      %for j = 1:size(ellipses, 1)
-      %  draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
-      %end
+        %hold on;
+        for j = 1:size(ellipses, 1)
+          draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
+        end
+      end
       %title(num2str(nimg));
       %hold off
 
@@ -163,6 +168,8 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
 
   %keyboard
 
+  %figure;
+  %hold on;
   for i=1:nsegments
 
     if (i == nsegments)

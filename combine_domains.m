@@ -28,22 +28,44 @@ function [res] = combine_domains(mymovies)
   for i=1:nmovies
     load(mymovies{i});
 
+    if (isfield(mymovie.data, 'domain') & ~isempty(mymovie.data.domain))
+      tmp_path = mymovie.data.domain;
+    else
+      continue;
+    end
+
+    try
     img = gather_quantification(mymovie, opts);
+    catch ME
+      continue;
+    end
 %%[img,~,cytos(i)] = gather_quantification(mymovie, opts);
 
     %tmp_path = mymovie.data.domain;
-
     [h,w] = size(img);
 
     imagesc(imnorm(img));
     hold on
-    %plot(tmp_path(:, 1)*w,[1:h], 'k');
-    %plot(tmp_path(:, 2)*w,[1:h], 'k');
+    plot(tmp_path(:, 1)*w,[1:h], 'k');
+    plot(((tmp_path(:,1) + tmp_path(:, 2))*w)-1,[1:h], 'k');
+    plot(((tmp_path(:,1) - tmp_path(:, 2))*w)+1,[1:h], 'k');
 
 %%plot([1 size(img,2)],[cytos(i) cytos(i)], 'k');
 
     saveas(gca, [mymovies{i}(1:end-5) '-DP.png']);
     hold off
+
+    plot(tmp_path(:,1)*w * opts.pixel_size, 'k');
+    hold on;
+    plot(((tmp_path(:,2) *w) - 1) * opts.pixel_size, 'r');
+    saveas(gca, [mymovies{i}(1:end-5) '-domain.png']);
+    hold off
+
+    if (isfield(mymovie, 'metadata') & isfield(mymovie.metadata, 'timing'))
+      mymovie.metadata.timing
+    else
+      'none'
+    end
 
     %paths{i} = tmp_path;
   end

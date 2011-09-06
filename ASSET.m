@@ -261,7 +261,7 @@ function [mymovie,trackings] = ASSET(varargin)
 
   % Catch the error overall
   catch ME
-    if (exist('mymovie', 'var') & isfield(mymovie.experiment) & ~isempty(mymovie.experiment))
+    if (exist('mymovie', 'var') & isfield(mymovie, 'experiment') & ~isempty(mymovie.experiment))
       warning(['Error during the analysis of ' mymovie.experiment ':']);
     else
       warning(['Error during the analysis:']);
