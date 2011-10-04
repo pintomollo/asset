@@ -319,7 +319,7 @@ function window = get_window(img, pos, wsize)
   [h,w] = size(img);
 
   % Initialize the window
-  window = NaN(2*wsize + 1);
+  window = zeros(2*wsize + 1);
 
   % Create an index vector to compute which pixels lie outside the image 
   indx = [1:2*wsize+1];

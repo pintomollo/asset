@@ -21,10 +21,10 @@ function [mymovie,trackings] = ASSET(varargin)
 %     - application         ('')/'ruffling'/...     Additional(s) analysis based on the segmentation, can
 %                                                   be a cell array (see perform_application.m)
 %     - auto_save           true/(false)            Save after every step of the analysis
-%     - ccd_pixel_size      (6.45)/...              Camera's pixel size to convert pixels to µm
+%     - ccd_pixel_size      (6.45)/...              Camera's pixel size to convert pixels to ï¿½m
 %     - config_file         ('')/'file.txt'         File containing all the field/VALUE pairs
 %                                                   (see Config/example.txt)
-%     - magnification       (63)/...                Microscope's magnification to convert pixels to µm
+%     - magnification       (63)/...                Microscope's magnification to convert pixels to ï¿½m
 %     - overwrite           (true)/false            Saves the results in the same MAT-file as before
 %     - recompute           true/(false)            Recompute the whole analysis
 %     - segmentation_type   ('dic')/'markers'/...   Channel(s) used to perform the segmentation, can be
@@ -288,6 +288,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
   mymovie = [];
   trackings = [];
   opts = [];
+  real_mat = true;
   
   % Check what we got as inputs
   if (nargin > 0)
@@ -347,7 +348,6 @@ function [mymovie, trackings, opts] = parse_input(varargin)
       % So for now on, we suppose that it's really a MAT-file
       % but that we have not loaded it yet.
       done = false;
-      real_mat = true;
       waiting_time = 0;
 
       % We'll try until we loaded it

@@ -72,7 +72,7 @@ int mean_and_amplitude(double *x,double *z,double *m,double *a,int n,extrema_t *
   if (ex->n_min+ex->n_max <7){
     return 1;
   }
-  //mexPrintf("%f,", z[n-1]);
+  /* mexPrintf("%f,", z[n-1]); */
   /* add extra points at the edges */
   boundary_conditions(x,z,n,ex);
 
