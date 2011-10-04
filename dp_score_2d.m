@@ -133,7 +133,8 @@ function [bests, indxs] =  dp_score_2d(datas, prev_datas, prev_dist, prev_dir, i
   %    do_probs = false;
   %  end
     %size_prob = size_prob(1);
-    tmp_inf = Inf(1, max(size_prob));
+    tmp_inf = Inf(1, min(size_prob));
+    min_size = length(tmp_inf);
     max_dir = 2*max(dists, [], 1);
     weighted_max = (alpha .* beta .* (1-gamma) .* delta) ./ max_dir;
     [tmp_i, tmp_j] = ind2sub(window_size, window_indx);
@@ -159,7 +160,7 @@ function [bests, indxs] =  dp_score_2d(datas, prev_datas, prev_dist, prev_dir, i
 
           crossing = zeros(size_prob);
           for j=diag_indx
-            crossing = crossing + diag(tmp_inf(1:end-abs(j)), j);
+            crossing(1:min_size, 1:min_size) = crossing(1:min_size, 1:min_size) + diag(tmp_inf(1:end-abs(j)), j);
           end
       end
       %disp([num2str(prev_val(i))  ' '  num2str(new_values(1))  ' '  num2str(datas(1))  ' '  num2str(prev_dist(i)) ' ' num2str(prev_dir(i))])

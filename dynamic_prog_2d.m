@@ -39,6 +39,11 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
   %  emission = zeros(nsteps, nhood, w);
   %  transitions = zeros(1,nhood+2);
   %end
+  if (all(isnan(wimg(:))) | all(isnan(init_weight(:))) | params.spawn_percentile == -1)
+    warning('Wrong parameter set preventing the segmentation !');
+
+    return;
+  end
 
   %if (isempty(init))
   %  init = squeeze(dist(1,:,:));
@@ -103,7 +108,12 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
   %  subdist = dist(end, params.final);
   %  tmp(end,1) = params.final(find(subdist == min(subdist), 1));
   %else
+  try
     tmp(end,1) = find(dist(end,:,:) == min(min(dist(end,:,:))),1);
+  catch ME  
+    beep;
+    keyboard;
+  end
   %end
 
   for j=1:nsteps-1

@@ -302,33 +302,46 @@ function [mymovie, trackings, opts] = parse_input(varargin)
     % Maybe the name of the MAT-file was provided
     elseif (ischar(varargin{1}))
       
-      % We allow several files to be analyzed consecutively by using
-      % the regular expression metacharacter '*'
-      if (~isempty(findstr(varargin{1}, '*')))
+      files = regexpdir(pwd, varargin{1});
+
+      if (numel(files) > 1)
+        for i=1:length(files)
+          ASSET(files{i}, varargin{2:end});
+        end
+
+        % Do not forget to stop here !
+        return;
+      elseif (numel(files) == 1)
+        varargin{1} = files{1};
+      end
+
+      %% We allow several files to be analyzed consecutively by using
+      %% the regular expression metacharacter '*'
+      %if (~isempty(findstr(varargin{1}, '*')))
 
 
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       % 2. Use simple dir & regexp to allow [1-3] or \b and stuff in name
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        % List all the MAT-files corresponding to the pattern
-        datas = dir(varargin{1});
+      %  % List all the MAT-files corresponding to the pattern
+      %  datas = dir(varargin{1});
 
-        % Chech whether the file is in a subdirectory
-        indx = strfind(varargin{1}, filesep);
-        dirpath = '';
-        if (~isempty(indx))
-          dirpath = varargin{1}(1:indx(end));
-        end
+      %  % Chech whether the file is in a subdirectory
+      %  indx = strfind(varargin{1}, filesep);
+      %  dirpath = '';
+      %  if (~isempty(indx))
+      %    dirpath = varargin{1}(1:indx(end));
+      %  end
 
-        % Run them one after the other one
-        for i=1:length(datas)
-          ASSET([dirpath datas(i).name], varargin{2:end});
-        end
+      %  % Run them one after the other one
+      %  for i=1:length(datas)
+      %    ASSET([dirpath datas(i).name], varargin{2:end});
+      %  end
 
-        % Do not forget to stop here !
-        return;
-      end
+      %  % Do not forget to stop here !
+      %  return;
+      %end
 
       % Now we'll try to load the corresponding MAT-file.
       % So for now on, we suppose that it's really a MAT-file

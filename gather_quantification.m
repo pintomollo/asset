@@ -45,22 +45,26 @@ function [datas, bkg, cyto, theta] = gather_quantification(mymovie, opts)
 
         npts = length(pts);
 
-        ell_pts = carth2elliptic(cortex, warper.reference.centers, warper.reference.axes_length, warper.reference.orientations);
+        %ell_pts = carth2elliptic(cortex, warper.reference.centers, warper.reference.axes_length, warper.reference.orientations, 'radial');
 
-        thresh = median(diff(ell_pts(:,1))) * 1.5;
+        %thresh = median(diff(ell_pts(:,1))) * 1.5;
 
-        goods = (abs(ell_pts(:,1)) <= thresh);
-        max_r = max(ell_pts(goods,2));
-        post_indx = find(goods & ell_pts(:,2) == max_r, 1);
+        goods = (cortex(:,1) > 0);
+        max_r = min(abs(cortex(goods,2)));
+        post_indx = find(goods & abs(cortex(:,2)) == max_r, 1);
 
-        goods = (abs(abs(ell_pts(:,1)) - pi) < thresh);
-        max_r = max(ell_pts(goods,2));
-        ant_indx = find(goods & ell_pts(:,2) == max_r, 1);
+        goods = (cortex(:,1) < 0);
+        max_r = min(abs(cortex(goods,2)));
+        ant_indx = find(goods & abs(cortex(:,2)) == max_r, 1);
 
-        if (isempty(post_indx) || isempty(ant_indx))
-          beep;
-          keyboard;
-        end
+        %goods = (abs(ell_pts(:,1)) <= thresh);
+        %max_r = max(ell_pts(goods,2));
+
+        %post_indx = find(goods & ell_pts(:,2) == max_r, 1);
+
+        %goods = (abs(abs(ell_pts(:,1)) - pi) < thresh);
+        %max_r = max(ell_pts(goods,2));
+        %ant_indx = find(goods & ell_pts(:,2) == max_r, 1);
 
         pts = pts * total_dist;
         pts = pts - pts(post_indx);

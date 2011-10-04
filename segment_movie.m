@@ -91,7 +91,8 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   %keyboard
 
   for i = 1:max_frames
-    nframe = frames(i);
+    nframe = 2
+    %nframe = frames(i);
 
     if (strncmp(opts.segmentation_type, 'dic', 3) | strncmp(opts.segmentation_type, 'all', 3))
       mymovie = dp_dic(mymovie, nframe, opts);
@@ -110,6 +111,9 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
           mymovie = duplicate_segmentation(mymovie, 'markers', tmp_opts, nframe);
           tmp_opts = opts;
           tmp_opts.recompute = true;
+
+
+        keyboard
           mymovie = dp_markers(mymovie, nframe, tmp_opts);
         end
       else

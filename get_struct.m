@@ -286,7 +286,7 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('final', [], ...                % Final position used for backtracking DP
                         'init', [], ...                 % Initial position for DP (see dynamic_programming.m)
                         'nhood', 0, ...                 % Neighborhood explored during dynamic programming (nhood pixels on each side)
-                        'prohibit', 'diag', ...         % Prohibiting particular moves
+                        'prohibit', 'none', ...         % Prohibiting particular moves
                         'spawn_percentile', -1, ...     % Score used when spawning a new path (as percentile of the previous step)
                         'alpha', 0, ...                 % Weights of the different smoothness terms
                         'beta', 0, ...                  %  "
