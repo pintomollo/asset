@@ -87,7 +87,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
     ellpts = pixels2elliptic(egg_path,size(polar_img), axes_length(:,nimg),parameters.safety);
     carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
-    carths = carths(all(carths > 0 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
+    carths = carths(all(carths >= 1 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
 
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(carths);
 
@@ -178,7 +178,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
     ellpts = pixels2elliptic(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
     carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
-    carths = carths(all(carths > 0 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
+    carths = carths(all(carths >= 1 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
 
     if (opts.measure_performances)
       [estimation] = detect_ellipse(img, true, opts);

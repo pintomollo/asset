@@ -123,7 +123,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     ell_egg = pixels2elliptic(egg_path,size(polar_img),axes_length(:,nimg),parameters.safety);
     cart_egg = elliptic2carth(ell_egg,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
 
-    cart_egg = cart_egg(all(cart_egg > 0 & bsxfun(@le, cart_egg , fliplr(size(img))), 2), :);
+    cart_egg = cart_egg(all(cart_egg >= 1 & bsxfun(@le, cart_egg , fliplr(size(img))), 2), :);
   
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(cart_egg);
     %plot(cart_egg(:,1), cart_egg(:,2), 'g');
@@ -220,7 +220,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     ellpts = pixels2elliptic(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
     carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
 
-    carths = carths(all(carths > 0 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
+    carths = carths(all(carths >= 1 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
 
     %cortex(nimg).raw = cortex_path;
     %cortex(nimg).elliptic = ellpts;
