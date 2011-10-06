@@ -8,7 +8,7 @@ nhood [11 7]
 alpha [0.575 0.1]
 beta [0.65 0.4]
 gamma [0.15 0.3]
-spawn_percentile 0.2
+spawn_percentile 0.05
 prohibit 'none'
 
 #quantification.weights

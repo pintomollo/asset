@@ -6,7 +6,7 @@ function mymovie = resolve_dv(mymovie)
   pos = NaN(nframes,2);
 
   %mymovie.data.dv_inverted = false;
-  if (~isfield(mymovie.data.centrosomes, 'warped'))
+  if (~isfield(mymovie.data.centrosomes, 'warped') |Êisempty(mymovie.data.centrosomes(1).warped))
     mymovie = carth2normalized(mymovie);
   end
 

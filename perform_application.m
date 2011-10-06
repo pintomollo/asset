@@ -4,7 +4,7 @@ function mymovie = perform_application(mymovie, opts)
     opts.application = {opts.application};
   end
 
-  done_ruffles = false;
+  done_timing = false;
 
   for i=1:length(opts.application)
     if (~isempty(opts.application{i}))

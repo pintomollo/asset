@@ -19,8 +19,13 @@ function mymovie = track_centrosomes(mymovie, opts)
     return;
   end
 
-  % The the recording size
+  % The recording size
   [nframes, imgsize] = size_data(mymovie.data);
+
+  % Make sure the data have been copied to the current field
+  if (~isfield(mymovie.data, 'centers') | isempty(mymovie.data.centers) | opts.recompute)
+    mymovie = duplicate_segmentation(mymovie, 'data', opts);
+  end
 
   % Identify the candidate spots
   spots = detect_spots(mymovie.data, opts);

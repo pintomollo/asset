@@ -8,10 +8,10 @@ function centrosome_movie(mymovie, fname)
   for i=1:nframes
     nimg = i;
 
-    img = load_data(mymovie.data, i);
-    img = realign(img, [480 640], mymovie.dic.centers(:,i), mymovie.dic.orientations(1,i));
-    centr1 = realign(mymovie.data.centrosomes(1).position([2:-1:1],i),[480 640],mymovie.dic.centers(:,nimg), mymovie.dic.orientations(1,nimg)).';
-    centr2 = realign(mymovie.data.centrosomes(2).position([2:-1:1],i),[480 640],mymovie.dic.centers(:,nimg), mymovie.dic.orientations(1,nimg)).';
+    img = load_data(mymovie.data, nimg);
+    img = realign(img, [480 640], mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg));
+    centr1 = realign(mymovie.data.centrosomes(nimg).carth(1,:),[480 640],mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)).';
+    centr2 = realign(mymovie.data.centrosomes(nimg).carth(2,:),[480 640],mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)).';
 
     if (isempty(himg))
       himg = imshow(img);

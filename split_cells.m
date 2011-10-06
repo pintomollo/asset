@@ -1,4 +1,4 @@
-function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
+function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
 
   if (nargin == 2)
     opts = estim_only;
@@ -8,10 +8,14 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts)
   [h,w,nframes] = size(imgs);
   imgsize = [w, h];
 
-  max_ratio = 1/3;
-  angle_thresh = pi/20;
-  max_dist = 15;
-  max_score = 0.05;
+  if (nargin == 4)
+    [max_ratio, angle_thresh, max_dist, max_score] = deal(params(1), params(2), params(3), params(4));
+  else
+    max_ratio = 1/3;
+    angle_thresh = pi/20;
+    max_dist = 15;
+    max_score = 0.05;
+  end
 
   max_dist = max_dist / opts.pixel_size;
 
