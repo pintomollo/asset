@@ -5,13 +5,14 @@ function mymovie = resolve_dv(mymovie)
   thresh = 5;
   pos = NaN(nframes,2);
 
-  %mymovie.data.dv_inverted = false;
-  if (~isfield(mymovie.data.centrosomes, 'warped')|isempty(mymovie.data.centrosomes(1).warped))
+  if (~isfield(mymovie.data.centrosomes, 'warped'))
     mymovie = carth2normalized(mymovie);
   end
 
   for i=1:nframes
-    pos(i,:) = mymovie.data.centrosomes(i).warped(2,:);
+    if (any(~isnan(mymovie.data.centrosomes(i).carth(:))))
+      pos(i,:) = mymovie.data.centrosomes(i).warped(2,:);
+    end
   end
 
   pos = pos(~isnan(pos(:,1)),:);
