@@ -101,7 +101,7 @@ function mymovie = track_centrosomes(mymovie, opts)
   end
 
   % Check whether there is need to invert the D-V axis
-  mymovie = resolve_dv(mymovie);
+  %mymovie = resolve_dv(mymovie);
 
   return;
 end
