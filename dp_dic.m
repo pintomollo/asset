@@ -167,7 +167,12 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
     end
 
+    try
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    catch ME
+      beep;
+      keyboard
+    end
     polar_size = size(polar_img);
 
     egg_path = carth2elliptic(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));

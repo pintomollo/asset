@@ -145,6 +145,10 @@ function [bests, indxs] =  dp_score_2d(datas, prev_datas, prev_dist, prev_dir, i
 
 
       switch prohibit
+        case 'horiz'
+          crossing = zeros(size_prob);
+          crossing(:, [1:tmp_j(i) end+tmp_j(i)+1:end]) = Inf;
+
         case 'diag'
 
           diag_indx = (tmp_j(i) - tmp_i(i));

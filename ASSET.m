@@ -303,7 +303,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
     % Maybe the name of the MAT-file was provided
     elseif (ischar(varargin{1}))
       
-      files = regexpdir(pwd, varargin{1});
+      files = regexpdir(pwd, varargin{1}, false);
 
       if (numel(files) > 1)
         for i=1:length(files)

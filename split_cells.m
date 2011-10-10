@@ -9,13 +9,20 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
   imgsize = [w, h];
 
   if (nargin == 4)
-    [max_ratio, angle_thresh, max_dist, max_score] = deal(params(1), params(2), params(3), params(4));
+    [max_ratio, angle_thresh, max_score] = deal(params(1), params(2), params(3));
   else
-    max_ratio = 1/3;
-    angle_thresh = pi/20;
-    max_dist = 15;
+    max_ratio = 0.5;
+    angle_thresh = 0.2;
     max_score = 0.05;
+
+    %%%%%%%%%%%%% ADD OVERLAP
+
+    %max_ratio = 1/3;
+    %angle_thresh = pi/20;
+    %max_dist = 15;
+    %max_score = 0.05;
   end
+  max_dist = 15;
 
   max_dist = max_dist / opts.pixel_size;
 

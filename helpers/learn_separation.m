@@ -14,19 +14,19 @@ function params = learn_separation(mymovie, nneighs, opts)
   img = [];
 
   frames = randperm(nframes);
-  frames = frames(1:10);
+  frames = frames(1:20);
 
       opt = cmaes('defaults');
       opt.MaxFunEvals = 100000;
       opt.TolFun = 1e-25;
-      opt.LBounds = zeros(4,1);
+      opt.LBounds = zeros(3,1);
       opt.SaveFilename = '';
       opt.EvalParallel = 'yes';
       opt.LogPlot = 'false';
 
       opt.LogFilenamePrefix = ['ML-' mymovie.experiment];
 
-  params = [1/3, pi/20, 15, 0.05].';
+  params = [0.2, 0.3, 0.5].';
   nparams = length(params);
 
   for nimg = frames
@@ -59,6 +59,12 @@ function params = learn_separation(mymovie, nneighs, opts)
       [ellipse, estim] =  split_cells(img, false, opts, new_p);
       err_all(i) = abs(size(ellipse, 1) - nneighs);
     end
+
+    %figure;imshow(img);
+    %hold on;
+    %for i=1:size(ellipse, 1)
+    %  draw_ellipse(ellipse(i, 1:2), ellipse(i, 3:4), ellipse(i, 5));
+    %end
 
     if (flip)
       err_all = err_all.';

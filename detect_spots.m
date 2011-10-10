@@ -88,7 +88,7 @@ function spots = detect_spots(imgs, opts)
     
     % If we have a file, we load the image
     if (~isempty(fname))
-      img = load_data(fname, i);
+      img = imnorm(double(load_data(fname, i)));
 
     % Otherwise we get the plane
     else
