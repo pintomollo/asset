@@ -30,8 +30,6 @@ function mymovie = track_centrosomes(mymovie, opts)
   % Identify the candidate spots
   spots = detect_spots(mymovie.data, opts);
 
-  beep;beep;keyboard
-
   % Start a very simple tracking, base don the fact that we look for two and only
   % two particles
 
@@ -103,7 +101,7 @@ function mymovie = track_centrosomes(mymovie, opts)
   end
 
   % Check whether there is need to invert the D-V axis
-  %mymovie = resolve_dv(mymovie);
+  mymovie = resolve_dv(mymovie);
 
   return;
 end
