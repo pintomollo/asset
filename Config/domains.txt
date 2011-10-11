@@ -14,4 +14,4 @@ prohibit 'horiz'
 #quantification.weights
 alpha 0.18
 beta 0.3
-gamma 0.03
+gamma 0.04
