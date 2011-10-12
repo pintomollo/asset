@@ -41,9 +41,9 @@ function [pac, hits] = impac(contour, nsteps, thresh, method)
     % Rough incircle radius estimation (from the bounding box)
     thresh = 0.1 * min((max(contour, [], 1) - min(contour, [], 1))) / 2.5;
 
-    %if (method(1) == 'i')
+    if (method(1) == 'i')
       thresh = thresh / 4;
-    %end
+    end
   end
 
   if (isempty(nsteps))
