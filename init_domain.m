@@ -1,8 +1,9 @@
-function weight = init_domain(img, params)
+function [weight, init_weight] = init_domain(img, params)
   
   alpha = params.alpha;
   beta = 1 / params.beta;
   gamma = params.gamma;
+  delta = params.delta;
   
   npts = size(img, 2);
   nsize = floor(npts / 2);
@@ -15,6 +16,8 @@ function weight = init_domain(img, params)
   
   weight = 1 ./ (1 + exp(-alpha * (init_weight - beta)));
   weight(weight > 1 - gamma) = Inf;
+  init_weight = 1 ./ (1 + exp(-delta * (init_weight - beta)));
+  init_weight(init_weight > 1 - gamma) = Inf;
 
   return;
 end

@@ -11,7 +11,7 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
 
   %init = params.init; 
   
-  path = zeros(h,1);
+  path = NaN(h,2);
   if (isempty(weight_params))
     wimg = weight(img);
   else
@@ -31,7 +31,7 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
   %init_weight = init_weight / max(init_weight(:));
   %init_weight = init_weight.^0.2;
 
-  init_weight = init(img, init_params);
+  [init_weight, first_weight] = init(img, init_params);
 
   dist = zeros([nsteps size_problem]);
   map = zeros([nsteps size_problem]);
@@ -60,7 +60,7 @@ function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init
   %if (do_probs)
   %  [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params);
   %else
-    [tmp_dist, tmp_map] = dp_score_2d(prev_wimg, [], [], [], init_weight, params);
+    [tmp_dist, tmp_map] = dp_score_2d(prev_wimg, [], [], [], first_weight, params);
   %end
     dist(1,:,:) = tmp_dist;
     map(1,:,:) = tmp_map;

@@ -1,4 +1,4 @@
-function [datas, bkg, cyto, theta] = gather_quantification(mymovie, opts)
+function [datas, theta] = gather_quantification(mymovie, opts)
 
   npts = 500;
 
@@ -7,7 +7,6 @@ function [datas, bkg, cyto, theta] = gather_quantification(mymovie, opts)
   theta = theta(1:end-1);
 
   datas = NaN(nframes, npts);
-  bkg = NaN(nframes, 7);
   dist = NaN(nframes, 2);
 
   type = 'direct';
@@ -110,12 +109,8 @@ function [datas, bkg, cyto, theta] = gather_quantification(mymovie, opts)
       new_intens(full_indexes < dist(i,1) | full_indexes > dist(i,2),:) = NaN;
       datas(i, :) = new_intens(:, 2);
     end
-  end
 
-  if (isfield(mymovie.data, 'cytokinesis'))
-    cyto = mymovie.data.cytokinesis;
-  else
-    cyto = 0;
+    theta = full_indexes;
   end
 
   return;

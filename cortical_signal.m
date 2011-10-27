@@ -169,6 +169,9 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).carth = cortex(:, :);
 
       if (false)
+      figure;imshow(imnorm(img));hold on;
+      quiver(cortex(:,1), cortex(:, 2), dperp(:, 1), dperp(:, 2), 'r')
+
       estim4 = gaussian([params4(1:3) 0], dpos);
       clim = [min(values(:)) max(values(:))];
       figure;imagesc(gaussian(signal, dpos));

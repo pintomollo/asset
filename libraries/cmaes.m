@@ -962,9 +962,10 @@ while isempty(stopflag)
     end
 
     % Assigned penalized fitness
+    %bnd.arpenalty = (bnd.weights ./ bnd.scale)' * (arxvalid - arx).^2; 
     bnd.arpenalty = (bnd.weights ./ bnd.scale)' * (arxvalid - arx).^2; 
 
-    fitness.sel = fitness.raw + bnd.arpenalty;
+    fitness.sel = fitness.raw + bnd.arpenalty.';
 
   end % handle boundaries
   % ----- end handle boundaries -----
