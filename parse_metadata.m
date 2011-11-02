@@ -1,6 +1,15 @@
-function metadata = parse_metadata(fname, opts)
+function metadata = parse_metadata(fname, base_dir, opts)
 
-  metadata = [];
+  if (nargin < 3)
+    if (isstruct(base_dir))
+      opts = base_dir;
+      base_dir = '.';
+    else
+      opts = get_struct('ASSET');
+    end
+  end
+
+  metadata = get_struct('metadata');
   mymovie = [];
   z_pos = [];
   if (isstruct(fname))
@@ -9,16 +18,24 @@ function metadata = parse_metadata(fname, opts)
   end
 
   if (~exist(fname, 'file'))
-    if (exist([fname '.txt'], 'file'))
+    if (exist([fname '.txt'], 'file') == 2)
       fname = [fname '.txt'];
-    elseif (exist(['Movies' filesep fname], 'file'))
+    elseif (exist([base_dir filesep fname], 'file') == 2)
+      fname = [base_dir filesep fname];
+    elseif (exist([base_dir filesep fname '.txt'], 'file') == 2)
+      fname = [base_dir filesep fname '.txt'];
+    elseif (exist(['Movies' filesep fname], 'file') == 2)
       fname = ['Movies' filesep fname];
-    elseif (exist(['Movies' filesep fname '.txt'], 'file'))
+    elseif (exist(['Movies' filesep fname '.txt'], 'file') == 2)
       fname = ['Movies' filesep fname '.txt'];
-    elseif (exist(['Movies' filesep 'metadata' filesep fname], 'file'))
+    elseif (exist(['Movies' filesep 'metadata' filesep fname], 'file') == 2)
       fname = ['Movies' filesep 'metadata' filesep fname];
-    elseif (exist(['Movies' filesep 'metadata' filesep fname '.txt'], 'file'))
+    elseif (exist(['Movies' filesep 'metadata' filesep fname '.txt'], 'file') == 2)
       fname = ['Movies' filesep 'metadata' filesep fname '.txt'];
+    elseif (exist(['metadata' filesep fname], 'file') == 2)
+      fname = ['metadata' filesep fname];
+    elseif (exist(['metadata' filesep fname '.txt'], 'file') == 2)
+      fname = ['metadata' filesep fname '.txt'];
     else
       fname = [];
     end

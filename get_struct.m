@@ -124,6 +124,17 @@ function mystruct = get_struct(type, nstruct)
                         'groups',{{}}, ...                  % Name of the shape groups found in the file (see load_shapes.m)
                         'shapes',[]);                       % Shapes extracted from the file
 
+    % Structure used to handle the metadata provided by the microscope
+    case 'metadata'
+      mystruct = struct('acquisition_time', [], ...
+                        'channels', {{}}, ...
+                        'channel_index', [], ...
+                        'exposure_time', [], ...
+                        'frame_index', [], ...
+                        'plane_index', [], ...
+                        'z_position', []);
+
+
     % Parameters used to perform machine learning (see find_parameters.m)
     case 'ml_params'                              
       mystruct = struct('ml_type', '', ...                  % Type of segmentation which is optimized (eggshell, cortex)
@@ -138,7 +149,8 @@ function mystruct = get_struct(type, nstruct)
                         'dic', [], ...                      % DIC channel of the experiment & results of the segmentation
                         'eggshell', [], ...                 % Eggshell channel (fluorescence)
                         'experiment', '', ...               % Name of the experiment
-                        'markers', []);                     % Result of the fluorescent segmentation
+                        'markers', [], ...                  % Result of the fluorescent segmentation
+                        'metadata', []);
 
     % Parameters used for the quantification of the signal
     case 'quantification'

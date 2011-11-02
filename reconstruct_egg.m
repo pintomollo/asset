@@ -12,6 +12,30 @@ function mymovie = reconstruct_egg(mymovie, opts)
   orientations = mymovie.dic.orientations;
   orientations = align_orientations(orientations);
 
+  sharpness = zeros(nframes, 3);
+  for i=1:nframes
+    tmp_pts = mymovie.dic.eggshell(i).carth;
+    if (~isempty(tmp_pts))
+      img = imnorm(double(load_data(mymovie.dic, i)));
+      img = imadm(img, 0, false);
+      edges = bilinear(img, tmp_pts(:,1), tmp_pts(:,2));
+
+%      figure;subplot(1,2,1);
+%      imshow(img);
+%      hold on;
+%      plot(tmp_pts(:,1), tmp_pts(:,2), 'r');
+%      subplot(1,2,2)
+%      plot(edges);
+%      pause
+
+      sharpness(i, 1) = mean(edges);
+      sharpness(i, 2) = median(edges);
+      sharpness(i, 3) = std(edges);
+    end 
+  end
+
+  %keyboard
+
   mymovie = parse_metadata(mymovie, opts);
   real_z = mymovie.metadata.z_position;
 
@@ -98,9 +122,31 @@ goods = (abs(dist) < real_thresh);
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%% ADDD NCLUSTER CHOOSING: E.G. JUMP METHOD
 
-  clusters = zeros(1, nframes);
+  %%% TEST JUMP
+
   correl = corr(dists(:, goods)); 
-  clusters(goods) = kmeans(correl, nclusters, 'emptyaction' ,'drop', 'replicates', 5);
+  factor = -(size(correl, 2) / 2);
+  j = zeros(10, 1);
+  for i=1:10
+    [clusters{i}, c] = kmeans(correl, i, 'emptyaction' ,'drop', 'replicates', 5);
+    if i == 1
+      j(i) = mean(sum(bsxfun(@minus, correl, c).^2, 2));
+    else
+      j(i) = mean(mahal(c, correl)); 
+    end
+  end
+
+  res = diff(j);
+
+  keyboard
+
+  %%%% END TEST
+
+  clusters = zeros(1, nframes);
+  %correl = corr(dists(:, goods)); 
+  [clusters(goods), c, s, d] = kmeans(correl, nclusters, 'emptyaction' ,'drop', 'replicates', 5);
+
+  keyboard
   %[~, indxs] = sort(clusters);
   
   cluster_count = zeros(nclusters, 1);

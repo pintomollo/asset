@@ -4,8 +4,6 @@ function opts = find_domain(opts)
     opts = get_struct('ASSET');
     opts = load_parameters(opts, 'domains');
     opts.do_ml = 'cmaes';
-
-    keyboard
   end
 
   uuid = randi(1000, 1);
@@ -29,8 +27,8 @@ function opts = find_domain(opts)
       opt = cmaes('defaults');
       opt.MaxFunEvals = 100000;
       opt.TolFun = dp;
-      opt.LBounds = zeros(nparams,1) + lbound;
-      opt.UBounds = zeros(nparams,1) + ubound;
+      %opt.LBounds = zeros(nparams,1) + lbound;
+      %opt.UBounds = zeros(nparams,1) + ubound;
       opt.SaveFilename = '';
       opt.LogFilenamePrefix = log_name;
       opt.EvalParallel = 'yes';
@@ -83,7 +81,6 @@ function opts = find_domain(opts)
     end
     err_all = NaN(1, nevals);
 
-    counts = counts + 1;
     if (counts > niter)
       counts = 0;
       manuals = manuals([2:end 1]);
@@ -97,11 +94,14 @@ function opts = find_domain(opts)
 
     for i = 1:nevals
       new_p = p_all(:, i);
+      real_p = new_p;
+      real_p(real_p <= 0) = dp;
+      real_p(real_p > 1) = 1 - dp;
 
-      fix_round = (mod(new_p,1) == 0);
-      new_p(fix_round) = new_p(fix_round) + dp;
+      %fix_round = (mod(new_p,1) == 0);
+      %new_p(fix_round) = new_p(fix_round) + dp;
 
-      opts.quantification = insert_parameters(opts.quantification, new_p, opts);
+      opts.quantification = insert_parameters(opts.quantification, real_p, opts);
 
       path = dynamic_prog_2d(orig.domain, opts.quantification.params, @weight_domain, opts.quantification.weights, @init_domain, opts.quantification.init_params, opts);
 
@@ -113,14 +113,11 @@ function opts = find_domain(opts)
       if (length(errors) == 0)
         err = Inf;
       else
-        err = mean(errors) + std(errors) + exp(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound)) - 1;
+        err = mean(errors) + std(errors) + exp(3*(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound))) - 1;
       end
 
       err_all(i) = err;
     end
-
-    disp(p_all) 
-    disp(err_all)
 
     if (flip)
       err_all = err_all.';
@@ -130,6 +127,8 @@ function opts = find_domain(opts)
       % ML crashes when all values are non-numerical
       err_all(1) = 1e5;
     end
+
+    counts = counts + nevals;
 
     return;
   end

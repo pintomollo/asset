@@ -109,11 +109,19 @@ function [mymovie] = open_movie(mymovie, opts)
     nchannels = length(files);
     channels = get_struct('channel',[1 nchannels]);
 
+    % Retrieve the base directory of the recordings
+    base_dir = '';
+
     % Open each channel separatly. The policy is used to remember the user's choice 
     policy = 0;
     for i=1:nchannels
       channels(i).file = [dirpath files(i).name];
       channels(i).file = relativepath(channels(i).file);
+
+      % Get the directory in which the reocrdings are stored
+      if (isempty(base_dir))
+        [base_dir] = fileparts(channels(i).file);
+      end
 
       % We convert the provided type into a more handy one
       [channels(i).fname, policy] = convert_movie(channels(i).file, policy, opts);
@@ -122,11 +130,14 @@ function [mymovie] = open_movie(mymovie, opts)
     % Ask the user to identify the different channels
     mymovie = identify_channels(channels, opts);
 
-    % Rescale the channels (including some filtering)
-    mymovie = rescale_movie(mymovie, opts);
-
     % Use the movie name as the name for the entire experiment
     mymovie.experiment = name;
+
+    % Load the metadata if they exist
+    mymovie = parse_metadata(mymovie, base_dir, opts);
+
+    % Rescale the channels (including some filtering)
+    mymovie = rescale_movie(mymovie, opts);
   end
 
   return;

@@ -1,10 +1,11 @@
 function export_movie(mymovie, opts)
 
   if (nargin < 2)
-    opts = struct('compression', '', ...
-                  'max_export', 1, ...
-                  'crop_export', true, ...
-                  'parse_export', 'normal');
+    opts = get_struct('ASSET');
+    %opts = struct('compression', '', ...
+    %              'max_export', 1, ...
+    %              'crop_export', true, ...
+    %              'parse_export', 'normal');
 
   end
 
@@ -28,7 +29,7 @@ function export_movie(mymovie, opts)
         crop_export = opts.crop_export;
 
         if (crop_export)
-          if (isfield(mymovie.(field)(k), 'centers'))
+          if (isfield(mymovie.(field)(k), 'centers') & ~isempty(mymovie.(field)(k).centers))
             lookup_field = field;
             lookup_indx = k;
           elseif (isfield(mymovie, 'markers') && isfield(mymovie.markers, 'centers'))
@@ -172,19 +173,19 @@ function export_movie(mymovie, opts)
 %
 %        has_metadata = false;
 %      end
-    omexmlMeta = loci.formats.MetadataTools.createOMEXMLMetadata();
-    r = loci.formats.ImageReader();
-    r.setMetadataStore(omexmlMeta);
-    r.setId(absolutepath(mymovie.(field)(k).file));
+    %omexmlMeta = loci.formats.MetadataTools.createOMEXMLMetadata();
+    %r = loci.formats.ImageReader();
+    %r.setMetadataStore(omexmlMeta);
+    %r.setId(absolutepath(mymovie.(field)(k).file));
 
-      if (crop_export)
-        omexmlMeta.setPixelsSizeX(ome.xml.model.primitives.PositiveInteger(java.lang.Integer(crop_size(2))), 0);
-        omexmlMeta.setPixelsSizeY(ome.xml.model.primitives.PositiveInteger(java.lang.Integer(crop_size(1))), 0);
+    %  if (crop_export)
+    %    omexmlMeta.setPixelsSizeX(ome.xml.model.primitives.PositiveInteger(java.lang.Integer(crop_size(2))), 0);
+    %    omexmlMeta.setPixelsSizeY(ome.xml.model.primitives.PositiveInteger(java.lang.Integer(crop_size(1))), 0);
 %        omexmlMeta.setPixelsSizeX(java.lang.Integer(crop_size(2)), 0, 0);
 %        omexmlMeta.setPixelsSizeY(java.lang.Integer(crop_size(1)), 0, 0);
-      end
+    %  end
 
-    r.close();
+    %r.close();
 
 %      omexmlMeta.setPixelsSizeT(java.lang.Integer(max_frames), 0, 0);
 %      for i = 1:max_frames
@@ -199,22 +200,22 @@ function export_movie(mymovie, opts)
       %if (isequal(new_file(1),'.'))
       %  new_file = fullfile(pwd, new_file(2:end));
       %end
-      new_file = absolutepath(new_file);
+      %new_file = absolutepath(new_file);
 
-      pType = char(omexmlMeta.getPixelsType(0).getValue());
+      %pType = char(omexmlMeta.getPixelsType(0).getValue());
 
-      vmin = double(intmin(pType));
-      vmax = double(intmax(pType));
+      %vmin = double(intmin(pType));
+      %vmax = double(intmax(pType));
 
       %keyboard
 
       %w = loci.formats.ImageWriter();
-      w = loci.formats.out.OMETiffWriter();
+      %w = loci.formats.out.OMETiffWriter();
       %w = OMETiffWriter();
       %w = BufferedImageWriter(w);
-      w.setMetadataRetrieve(omexmlMeta);
-      w.setId(new_file);
-      w.setWriteSequentially(true);
+      %w.setMetadataRetrieve(omexmlMeta);
+      %w.setId(new_file);
+      %w.setWriteSequentially(true);
       %w.setInterleaved(false);
 
       if(isempty(opts.compression))
@@ -230,20 +231,22 @@ function export_movie(mymovie, opts)
         opts.compression = compression(sel);
       end
       % Set the compression
-      w.setCompression(java.lang.String(opts.compression));
+      %w.setCompression(java.lang.String(opts.compression));
 
       %viewer = ImageViewer();
       %viewer.setVisible(true);
       %imgs = javaArray('java.awt.image.BufferedImage',1)
 
-      for p = 1:length(frames)
+      nframes = length(frames);
+
+      for p = 1:nframes
 
         % Load an image and convert it to the BufferedImage type of LOCI
-        if (p == 1)
-          [img, reader] = load_data(mymovie.(field)(k), frames(p));
-        else
-          img = load_data(reader, frames(p));
-        end
+        %if (p == 1)
+        %  [img, reader] = load_data(mymovie.(field)(k), frames(p));
+        %else
+          img = imnorm(double(load_data(mymovie.(field)(k), frames(p))));
+        %end
 
         %keyboard
 
@@ -251,27 +254,30 @@ function export_movie(mymovie, opts)
           img = imalign(img, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
         end
 
+        new_file = save_data(new_file, img, nframes);
+
 %        img = im2java(img);
 %        img = AWTImageTools.makeBuffered(img, colorModel);
 
-        img = img * (vmax - vmin) + vmin;
-        img = cast(img, pType);
+        %img = img * (vmax - vmin) + vmin;
+        %img = cast(img, pType);
 
         %viewer.setImages(imgs);
         img = img.';
         %img = 
-        img = typecast(img(:), 'uint8');
-        w.saveBytes(p - 1, img);
+        %img = typecast(img(:), 'uint8');
+        %w.saveBytes(p - 1, img);
         %w.saveImage(img, 0, nframe == frames(end), nframe == frames(end));
+
       end
 
-      try
-        w.close();
-        reader.close();
-      catch ME
-        disp(ME.message);
-        continue;
-      end
+      %try
+        %w.close();
+        %reader.close();
+      %catch ME
+      %  disp(ME.message);
+      %  continue;
+      %end
     end
   end
 
