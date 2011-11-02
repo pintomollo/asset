@@ -15,7 +15,7 @@ function links = track_spots(spots, opts)
   frame_weight = opts.spot_tracking.linking_function;
   max_frames = opts.spot_tracking.frame_window;
 
-  % If the size of the puxels has been set, we can compute the actual spot size
+  % If the size of the pixels has been set, we can compute the actual spot size
   if (opts.pixel_size > 0)
     
     % The maximal size of the spot in pixels
@@ -37,6 +37,7 @@ function links = track_spots(spots, opts)
 
   all_assign = [];
   prev_max = NaN;
+  frame_weight = @mutual_distance;
 
   for i=1:nframes
 
@@ -90,6 +91,8 @@ function links = track_spots(spots, opts)
     return;
   end
 
+  return;
+  
   avg_movement = mean(all_assign);
 
   starts = zeros(0, ndim+2);
@@ -144,7 +147,7 @@ function links = track_spots(spots, opts)
 
     prev_starts = indx_starts;
   end
-
+  
   nstarts = size(starts, 1);
   nends = size(ends, 1);
   ninterm = size(interm, 1);

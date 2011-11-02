@@ -260,6 +260,7 @@ function [result, r] = load_data(fid, indexes)
         %if (istmp)
         %    arr = reshape(arr, [height width]);
         %else
+            
             arr = reshape(arr, ssize([2 1]))';
         %end
         %end

@@ -125,23 +125,25 @@ function spots = detect_spots(imgs, opts)
         continue;
       end
 
-      % Otherwse we store our initial guess for later comparison
+      % Otherwise we store our initial guess for later comparison
       init_conds(j, 1:end-2) = gauss_params;
       
       % Check whether there was another initial condition close to ours, as similar initial conditions would converge
       % to the same optimization, we can then jsut skip this "costly" step
-      indx = find((init_conds(1:j-1, 1) == gauss_params(1)) & (init_conds(1:j-1, 2) == gauss_params(2)), 1);
-      dists = hypot(init_conds(1:j-1, 1) - gauss_params(1), init_conds(1:j-1, 2) - gauss_params(2));
+      
+      %indx = find((init_conds(1:j-1, 1) == gauss_params(1)) & (init_conds(1:j-1, 2) == gauss_params(2)), 1);
+      [dists] = hypot(init_conds(1:j-1, 1) - gauss_params(1), init_conds(1:j-1, 2) - gauss_params(2));
 
+      
       % We use a fixed threshold to define the distance to our initial condition
-      indx = find(dists < dist_thresh, 1);
+      indx = find(dists < dist_thresh, 1); 
 
       % If no such "close" initial condition exists, we optimize our new candidate
       if (isempty(indx))
 
         % We use MATLAB non-linear solver with the gaussian-fitting error function
         [best] = lsqnonlin(@fit_gaussian, gauss_params, [], [], opts);
-
+        
         % If the final fit has no amplitude (4th parameter), this is not a valid spot
         if (best(4) == 0)
           % Reset the initial conditions not to misslead other candidates, and skip 
@@ -184,8 +186,11 @@ function spots = detect_spots(imgs, opts)
 
     % Average the different optimization results, this is why we copy the optimized results
     % from close initial conditions, so that each dot "weights" accordingly in the final position
-    results = mymean(results, 3);
-
+    
+    temp_res=mymean(results(:,1:end-1,:),3);
+    results=cat(2,temp_res,mysum(results(:,6,:),3));
+    clear temp_res
+    
     % Remove NaN solutions
     if (~isempty(results))
       spot = results(~isnan(results(:, 1)), :);
@@ -252,7 +257,7 @@ function spots = detect_spots(imgs, opts)
 end
 
 function [gauss_params] = estimate_spot(img, estim_pos, wsize, noise_thresh)
-% This function performs the initial esitmation of the size and shape of the spot
+% This function performs the initial estimation of the size and shape of the spot
 
   % Extract a window around the candidate spot
   spots = get_window(img, estim_pos, wsize);

@@ -1,4 +1,4 @@
-function mymovie = track_centrosomes(mymovie, opts)
+function mymovie = track_centrosomes3D(mymovie, opts) %work in progress
 % TRACK_CENTROSOMES detects and tracks over time the position of the two centrosomes
 % in a fluorescence time-lapse recording. This algorithm is designed to find two and
 % only two "particles".
@@ -22,14 +22,22 @@ function mymovie = track_centrosomes(mymovie, opts)
   % The recording size
   [nframes, imgsize] = size_data(mymovie.data);
 
+  planes=mymovie.data.planes;
+  timesteps=nframes/planes; %3D
+  
   % Make sure the data have been copied to the current field
   if (~isfield(mymovie.data, 'centers') | isempty(mymovie.data.centers))
     mymovie = duplicate_segmentation(mymovie, 'data', opts);
     save(mymovie.experiment, 'mymovie', 'trackings','opts');
   end
-
+  
+  for i = 1:timesteps
+    stack(:,:,1:5)=load_data(mymovie.data.fname,i:timesteps:nframes);
+    projection(:,:,i)=max(stack,[],3);
+  end  
+  
   % Identify the candidate spots
-  spots = detect_spots(mymovie.data, opts);
+  spots = detect_spots(projection, opts);
 
   % Start a very simple tracking, base don the fact that we look for two and only
   % two particles
@@ -44,7 +52,7 @@ function mymovie = track_centrosomes(mymovie, opts)
 
   % We'll start by collecting the position of the centrosomes frame by frame
   tmp_pts = zeros(0, 3);
-  for i=1:nframes
+  for i=1:timesteps
 
     % Extract the current set of candidates
     nimg = i;
@@ -74,13 +82,13 @@ function mymovie = track_centrosomes(mymovie, opts)
         tmp_pts = [centr1(i,: ) i; centr2(i,:) i];
     end
 
-    % Amazingly fancy display
-    if (opts.verbosity == 3)
-      imshow(imnorm(double(load_data(mymovie.data, nimg))));
-      hold on;
-      scatter(pts(:,2), pts(:,1))
-      hold off;
-    end
+    % Amazingly fancy display - not working for 3D
+    %if (opts.verbosity == 3)
+    %  imshow(imnorm(double(load_data(mymovie.data, nimg))));
+    %  hold on;
+    %  scatter(pts(:,2), pts(:,1))
+    %  hold off;
+    % end
   end
 
   % Group the two centrosomes and resolve the X-Y vs I-J problem of indexes
@@ -97,12 +105,15 @@ function mymovie = track_centrosomes(mymovie, opts)
   end
 
   % Store the results in mymovie
-  for i=1:nframes
-    mymovie.data.centrosomes(i).carth = [pts(i,1:2); pts(i,3:4)];
+  for j=1:planes  
+    for i=1:timesteps
+        a=[i j i+(planes*(j-1))]    
+        mymovie.data.centrosomes(i+(planes*(j-1))).carth = [pts(i,1:2); pts(i,3:4)];
+    end
   end
 
   % Check whether there is need to invert the D-V axis
-  mymovie = resolve_dv(mymovie);
+  %mymovie = resolve_dv(mymovie);
 
   return;
 end

@@ -28,7 +28,7 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('analyzed_fields', {{'carth'}}, ... % Fields in mymovie used for the analyis
                         'application', {{''}}, ...          % List of the applications (other than segmentation) that will be performed
                         'auto_save', true, ...              % Automatically save the intermediate results
-                        'ccd_pixel_size', 6.45, ...         % X-Y size of the pixels in µm (of the CCD camera, without magnification)
+                        'ccd_pixel_size', 6.45, ...         % X-Y size of the pixels in ï¿½m (of the CCD camera, without magnification)
                         'compression', 'LZW', ...           % Compression used for the data files (prompted is empty)
                         'compute_probabilities', false, ... % Compute the posterior probability
                         'config_file', '', ...              % Name of the configuration file that will be loaded 
@@ -52,7 +52,7 @@ function mystruct = get_struct(type, nstruct)
                         'overwrite', true, ...              % Overwrite the previous data by saving in the same MAT-file
                         'parse_export', 'normal', ...       % How export is performed (normal or random)
                         'parse_frames', 'normal', ...       % Order of the frames for the segmentation (normal or random)
-                        'pixel_size', 0, ...                % X-Y size of the pixels in µm (computed as ccd_pixel_size / magnification)
+                        'pixel_size', 0, ...                % X-Y size of the pixels in ï¿½m (computed as ccd_pixel_size / magnification)
                         'quantification', get_struct('quantification'), ... % Parameters of the quantification
                         'recompute', false, ...             % Recompute previously computed features (mainly segmentaiton and trackings)
                         'segment', true, ...                % Perform the segmentation (useful when combine with recompute)
@@ -84,6 +84,7 @@ function mystruct = get_struct(type, nstruct)
                         'max', -Inf, ...                    % Original maximum value used for rescaling
                         'min', Inf, ...                     % Original minimum value used for rescaling
                         'neighbors', [], ...
+                        'planes',1,...                      % Number of planes in a z-stack 
                         'orientations', zeros(1, 0), ...    
                         'type', 'dic', ...                  % Type of channel (dic, eggshell, cortex, data)
                         'timing', get_struct('timing'), ... % Timing of the cell cycle
