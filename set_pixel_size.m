@@ -1,7 +1,8 @@
 function params = set_pixel_size(params, pixel_size)
 % SET_PIXEL_SIZE computes the actual size of the pixel in the image using the CCD
-% camera pixel size and the magnification. In addition, it computes the other values
-% in the parameter structure which values depend on "pixel_size" (see get_struct.m).
+% camera pixel size, the magnification and the binning. In addition, it computes the
+% other values in the parameter structure which values depend on "pixel_size"
+% (see get_struct.m).
 % 
 %   OPTS = SET_PIXEL_SIZE(OPTS) computes pixel_size using the fields 'ccd_pixel_size'
 %   and 'magnification' of a generic parameter structure OPTS (e.g. get_struct('ASSET')).
@@ -37,7 +38,11 @@ function params = set_pixel_size(params, pixel_size)
     return;
   elseif (nargin == 1 | isempty(pixel_size))
     if (isfield(params, 'ccd_pixel_size') & isfield(params, 'magnification'))
-      pixel_size = params.ccd_pixel_size / params.magnification;
+      if (isfield(params, 'binning'))
+        pixel_size = params.binning * params.ccd_pixel_size / params.magnification;
+      else
+        pixel_size = params.ccd_pixel_size / params.magnification;
+      end
       params.pixel_size = pixel_size;
     else
       pixel_size = [];

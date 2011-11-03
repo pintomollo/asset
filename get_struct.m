@@ -28,7 +28,8 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('analyzed_fields', {{'carth'}}, ... % Fields in mymovie used for the analyis
                         'application', {{''}}, ...          % List of the applications (other than segmentation) that will be performed
                         'auto_save', true, ...              % Automatically save the intermediate results
-                        'ccd_pixel_size', 6.45, ...         % X-Y size of the pixels in ï¿½m (of the CCD camera, without magnification)
+                        'binning', 1, ...                   % Pixel binning used during acquisition
+                        'ccd_pixel_size', 6.45, ...         % X-Y size of the pixels in µm (of the CCD camera, without magnification)
                         'compression', 'LZW', ...           % Compression used for the data files (prompted is empty)
                         'compute_probabilities', false, ... % Compute the posterior probability
                         'config_file', '', ...              % Name of the configuration file that will be loaded 

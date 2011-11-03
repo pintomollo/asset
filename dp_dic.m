@@ -21,9 +21,9 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     else
       [nframes, imgsize] = size_data(mymovie.dic);
 
-      centers = zeros(2,nframes);
-      axes_length = zeros(2,nframes);
-      orientations = zeros(1,nframes);
+      centers = NaN(2,nframes);
+      axes_length = NaN(2,nframes);
+      orientations = NaN(1,nframes);
 
       update = false(2,nframes);
 

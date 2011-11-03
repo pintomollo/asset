@@ -22,9 +22,9 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
     eggshell = mymovie.(type).eggshell;
     cortex = mymovie.(type).cortex;
   else
-    centers = zeros(2,nframes);
-    axes_lengths = zeros(2,nframes);
-    orientations = zeros(1,nframes);
+    centers = NaN(2,nframes);
+    axes_lengths = NaN(2,nframes);
+    orientations = NaN(1,nframes);
     eggshell = get_struct('eggshell',[1,nframes]);
     cortex = get_struct('cortex',[1,nframes]);
   end
@@ -63,6 +63,11 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
       img = double(load_data(mymovie.dic,nimg)) / maxval;
 
       egg = mymovie.dic.eggshell(nimg).carth;
+      
+      if (isempty(egg))
+        continue;
+      end
+
       cor = mymovie.dic.cortex(nimg).carth;
       intens = bilinear_mex(img, egg);
       mins = min(intens);

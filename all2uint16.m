@@ -61,6 +61,14 @@ function infos = get_infos(img)
         minval = intmin(type);
         maxval = intmax(type);
         is_signed = false;
+      otherwise
+        warning(['Unkown image data type:' class(img)]);
+
+        infos = struct('is_signed', false, ...
+                       'offset', 0, ...
+                       'scaling', 1);
+
+        return;
   end
 
   % Get the futur range of values

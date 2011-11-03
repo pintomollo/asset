@@ -37,7 +37,6 @@ function links = track_spots(spots, opts)
 
   all_assign = [];
   prev_max = NaN;
-  frame_weight = @mutual_distance;
 
   for i=1:nframes
 

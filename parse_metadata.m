@@ -166,12 +166,43 @@ function metadata = parse_metadata(fname, base_dir, opts)
     exposure = exposure(goods);
     group = group(goods);
 
-    [time, order] = sort(time);
-    frame = frame(order);
-    plane = plane(order);
-    pos = pos(order);
-    exposure = exposure(order);
-    group = group(order);
+    frames = unique(frame);
+    planes = unique(plane);
+    channels = unique(group);
+    sizes = [length(channels), length(frames), length(planes)];
+
+    order = sub2ind(sizes(2:3), frame, plane);
+    sizes = [sizes(1) prod(sizes(2:3))];
+    order = sub2ind(sizes, group, order);
+
+    tmp = NaN(sizes);
+    tmp(order) = pos;
+    pos = tmp;
+    tmp(order) = frame;
+    frame = tmp;
+    tmp(order) = plane;
+    plane = tmp;
+    tmp(order) = time;
+    time = tmp;
+    tmp(order) = exposure;
+    exposure = tmp;
+    tmp(order) = group;
+    group = tmp;
+
+    [iindx, jindx] = find(isnan(pos));
+
+    for i = iindx
+      for j = jindx
+        if (j > 1)
+          pos(i, j) = pos(i, j-1);
+          frame(i, j) = frame(i, j-1) + 1;
+          plane(i, j) = plane(i, j-1);
+          time(i, j) = time(i, j-1);
+          exposure(i, j) = exposure(i, j-1);
+          group(i, j) = group(i, j-1);
+        end
+      end
+    end
 
     metadata.z_position = pos;
     metadata.frame_index = frame;

@@ -54,8 +54,11 @@ function [pac, hits] = impac(contour, nsteps, thresh, method)
   pac = NaN(size(contour));
   switch method
     case 'recursive'
-      indx = ceil(size(contour) / 2);
-      pac(1:indx, :) = pac_recursive(contour(1:indx, :), thresh);
+      indx = ceil(size(contour, 1) / 2);
+      
+      if (indx > 0)
+        pac(1:indx, :) = pac_recursive(contour(1:indx, :), thresh);
+      end
       pac(indx:end, :) = pac_recursive(contour(indx:end, :), thresh);
     case 'iterative'
       pac = pac_iterative(contour, nsteps, thresh);
@@ -87,7 +90,7 @@ function pac = pac_recursive(contour, thresh)
 
   pac([1 end_indx], :) = contour([1 end_indx], :);
 
-  if (end_indx == 1 | size(contour, 1) < 3)
+  if (end_indx < 3 | size(contour, 1) < 3)
     return;
   end
 
