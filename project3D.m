@@ -17,6 +17,12 @@ function [mymovie] = project3D(mymovie, proj_func, opts)
   % Make sure we have the metadata information
   if (~isfield(mymovie, 'metadata')|isempty(mymovie.metadata)|~isfield(mymovie.metadata, 'frame_index')|isempty(mymovie.metadata.frame_index))
     mymovie = parse_metadata(mymovie, opts);
+
+    if (~isfield(mymovie, 'metadata')|isempty(mymovie.metadata)|~isfield(mymovie.metadata, 'frame_index')|isempty(mymovie.metadata.frame_index))
+      warning('Sorry, cannot project a 4D recording without metadata !');
+
+      return;
+    end
   end
 
   channel_type = regexp(mymovie.data.file, '.+_(\w+)\.ome\.tiff?', 'tokens');
@@ -43,7 +49,6 @@ function [mymovie] = project3D(mymovie, proj_func, opts)
   fid = '';
 
   for nimg = indexes
-    try
     currents = (frames == nimg);
     stack = double(load_data(mymovie.data, all_frames(currents)));
     stack(:,:,planes(currents)) = stack;
@@ -58,9 +63,6 @@ function [mymovie] = project3D(mymovie, proj_func, opts)
     end
 
     fid = save_data(fid, projection_img, nframes);
-    catch
-      keyboard
-    end
   end
 
   projection.fname = fid;
