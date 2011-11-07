@@ -13,6 +13,10 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode, minrange, max
     maxrange = 1;
   end
 
+  if (isempty(img))
+    return;
+  end
+
   [h w] = size(img);
 
   if (isempty(minval))

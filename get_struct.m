@@ -323,7 +323,7 @@ function mystruct = get_struct(type, nstruct)
                         'frame_window', 3, ...          % Considered number of frames for the gap closing algorithm (see track_spots.m)
                         'gap_function', @relative_distance, ... % Function used to measure the gap-closing weight
                         'joining_function', @merging_distance, ... % Same but for the joinging weight
-                        'splitting_function', @merging_distance, ... % For the splitting weight
+                        'splitting_function', @splitting_distance, ... % For the splitting weight
                         'linking_function', @mutual_distance, ... % And for the frame-to-frame linking 
                         'max_size', 3, ...              % Maximal size (in um) of the spots
                         'noise_thresh', 3);             % Threshold used to remove the nosie (see imatrou.m)

@@ -89,8 +89,6 @@ function links = track_spots(spots, opts)
   if (max_frames == 0)
     return;
   end
-
-  return;
   
   avg_movement = mean(all_assign);
 
@@ -168,20 +166,19 @@ function links = track_spots(spots, opts)
   trans_dist = (mutual_dist.' < Inf) * min(mutual_dist(:));
   trans_dist(trans_dist == 0) = Inf;
 
-  [merge_dist, merge_weight, alt_weight] = joining_weight(ends, interm, spots);
+  [merge_dist, merge_weight, alt_weight] = joining_weight(ends, interm, spots, links);
   frame_indx = -bsxfun(@minus, ends(:,end), interm(:,end).');
   merge_weight = merge_dist .* merge_weight;
   merge_weight(merge_dist > spot_max_movement | frame_indx ~= 1) = Inf;
   alt_weight = avg_movement * alt_weight;
-  alt_weight(merge_weight == Inf) = Inf;
+  alt_weight = repmat(alt_weight, [ceil(nends / ninterm) 1]);
 
-  [split_dist, split_weight, alt_split_weight] = splitting_weight(interm, starts, spots);
+  [split_dist, split_weight, alt_split_weight] = splitting_weight(interm, starts, spots, links);
   frame_indx = -bsxfun(@minus, interm(:,end), starts(:,end).');
   split_weight = split_dist .* split_weight;
   split_weight(split_dist > spot_max_movement | frame_indx ~= 1) = Inf;
   alt_split_weight = avg_movement * alt_split_weight;
-  alt_split_weight(split_weight == Inf) = Inf;
-
+  alt_split_weight = repmat(alt_split_weight, [1, ceil(nstarts / ninterm)]);
 
   % Note that end-end merging and start-start splitting is not allowed by this
   % algorithm, which might make sense...
@@ -191,11 +188,16 @@ function links = track_spots(spots, opts)
   dist(1:nends,nstarts+ninterm+1:end) = alt_dist(1:nends,1:nends);
 
   dist(nends+1:nends+ninterm,1:nstarts) = split_weight;
-  dist(nends+1:nends+ninterm,nstarts+ninterm+1:end) = alt_weight;
+  dist(nends+1:nends+ninterm,nstarts+ninterm+1:end) = alt_split_weight(:, 1:nends);
 
   dist(nends+ninterm+1:end,1:nstarts) = alt_dist(1:nstarts,1:nstarts);
-  dist(nends+ninterm+1:end,nstarts+1:nstarts+ninterm) = alt_split_weight;
+  dist(nends+ninterm+1:end,nstarts+1:nstarts+ninterm) = alt_weight(1:nstarts, :);
   dist(nends+ninterm+1:end,nstarts+ninterm+1:end) = trans_dist;
+
+  disp('Let''s go !')
+
+  figure;
+  imagesc(dist)
 
   [assign, cost] = munkres(dist);
 
@@ -215,6 +217,8 @@ function links = track_spots(spots, opts)
     end
     links{target(end)} = [links{target(end)}; reference];
   end
+
+  keyboard
 
   return
 end

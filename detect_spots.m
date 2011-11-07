@@ -6,13 +6,12 @@ function spots = detect_spots(imgs, opts)
 %   SPOTS = DETECT_SPOTS(IMG, OPTS) returns a list of detect spots in IMG using the
 %   parameters provided by OPTS. It uses the parameters in the field 'spot_tracking'
 %   (get_struct('spot_trackings')) along with the 'pixel_size' (help set_pixel_size).
-%   SPOTS is a Nx7 matrix where each row has the structure [x y s A b p i]:
+%   SPOTS is a Nx6 matrix where each row has the structure [x y s A b p]:
 %     - x,y   the subpixel mean of the gaussian
 %     - s     the sigma of the gaussian
 %     - A     the amplitude of the gaussian
 %     - b     the background signal of the gaussian
 %     - p     the detection score as returned by IMATROU
-%     - i     the frame index in which the spot was detected
 %
 %   SPOTS = DETECT_SPOTS(IMG) uses the default values as provided by get_struct('ASSET').
 %
@@ -114,7 +113,7 @@ function spots = detect_spots(imgs, opts)
     
     % Initialize the intermediate variables used to store the detections
     results = NaN(nspots, 6, nspots);
-    init_conds = NaN(nspots, 7);
+    init_conds = NaN(nspots, 6);
 
     % We then loop over every candidate spot to refine our search
     for j = 1:nspots
@@ -199,7 +198,6 @@ function spots = detect_spots(imgs, opts)
       if (~isempty(spot))
         [junk, indx] = sort(spot(:, end), 1, 'descend');
         spot = spot(indx,:);
-        spot = [spot ones(size(spot, 1), 1) * i];
 
         % In case there is only one frame, we return the spots directly
         if (nframes == 1)
@@ -213,9 +211,9 @@ function spots = detect_spots(imgs, opts)
     end
 
     if (iscell(spots) & isempty(spots{i}))
-      spots{i} = NaN(0, 7);
+      spots{i} = NaN(0, 6);
     elseif (isempty(spots))
-      spots = NaN(0, 7);
+      spots = NaN(0, 6);
     end
   end
 
