@@ -60,10 +60,44 @@ function [field_values] = extract_fields(mystruct, nframe, type, fields, crop)
     try
       switch fields{2,i}
         case 'img'
-          tmp_value = double(load_data(mystruct.(fields{1,i}), nframe));
+          if (isfield(mystruct.(fields{1,i}), 'projection'));
+            tmp_value = double(load_data(mystruct.(fields{1,i}).projection, nframe));
+          else
+            tmp_value = double(load_data(mystruct.(fields{1,i}), nframe));
+          end
           tmp_value = imnorm(imhotpixels(tmp_value));
         case 'axes'
           tmp_value = bsxfun(@plus, [zeros(1,2); [cos(orient) -sin(orient)] * axes_length(1,1); [-sin(orient) -cos(orient)] * axes_length(2,1)], center');
+        case 'carth'
+          if (strncmp(fields{1,i}, 'centrosomes', 11))
+
+          tmp_value = mystruct.(type).(fields{1,i})(nframe).(fields{2,i});
+          if (nframe > 1)
+            links = mystruct.(type).(fields{1,i})(nframe).cluster;
+            linked = tmp_value(links(:,1), :);
+            tmp_old = mystruct.(type).(fields{1,i})(nframe-1).(fields{2,i});
+            linked_old = tmp_old(links(:,2),:);
+
+
+          else
+            linked = [];
+            linked_old = [];
+
+          end
+
+          npts = size(linked, 1);
+          ntotal = size(tmp_value, 1);
+          full_mat = NaN(npts + 2*ntotal, 2);
+          indexes = [0:npts-1]*3;
+          full_mat(indexes+1,:) = linked;
+          full_mat(indexes+2,:) = linked_old;
+
+          remainings = setdiff([1:ntotal].', unique(links(:,1)));
+          full_mat((3*npts)+1:2:end,:) = tmp_value(remainings, :);
+          tmp_value = full_mat;
+        else
+          tmp_value = mystruct.(type).(fields{1,i})(nframe).(fields{2,i});
+        end
         otherwise
           tmp_value = mystruct.(type).(fields{1,i})(nframe).(fields{2,i});
       end

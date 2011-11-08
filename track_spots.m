@@ -105,7 +105,7 @@ function links = track_spots(spots, opts)
     indx_interm = links{i}(:,1);
     indx_starts = [];
 
-    if (~isempty(spots{i}))
+    %if (~isempty(spots{i}))
         
       nstarts = size(spots{i},1);
       indx_starts = setdiff([1:nstarts], indx_interm);
@@ -114,16 +114,16 @@ function links = track_spots(spots, opts)
       if (nstarts>0)
         starts(end+1:end+nstarts,:) = [spots{i}(indx_starts,:) indx_starts(:) ones(nstarts,1)*i];
       end
-    end
+    %end
 
-    if (~isempty(spots{i-1}))                
+    %if (~isempty(spots{i-1}))                
       nends = size(spots{i-1},1);
       indx_ends = setdiff([1:nends], links{i}(:,2));
       nends = length(indx_ends);
       if (nends>0)
         ends(end+1:end+nends,:) = [spots{i-1}(indx_ends,:) indx_ends(:) ones(nends,1)*i-1];
       end
-    end
+    %end
 
     if (~isempty(spots{i}))
         
@@ -200,6 +200,8 @@ function links = track_spots(spots, opts)
   imagesc(dist)
 
   [assign, cost] = munkres(dist);
+  
+  hold on;scatter(assign, [1:length(assign)])
 
   for i=1:nends+ninterm
     if (assign(i) <= nstarts)
@@ -218,46 +220,5 @@ function links = track_spots(spots, opts)
     links{target(end)} = [links{target(end)}; reference];
   end
 
-  keyboard
-
   return
-end
-
-function ruffles = close_gap(ruffles, first, last)
-
-  %keyboard
-
-  first_indx = first(3);
-  last_indx = last(3);
-
-  indx = find(all(ruffles(first_indx).carth(:,1) == first(1,1) & ruffles(first_indx).carth(:,2) == first(1,2), 2));
-  indx2 = find(all(ruffles(last_indx).carth(:,1) == last(1,1) & ruffles(last_indx).carth(:,2) == last(1,2), 2));
-
-  dist = last_indx - first_indx;
-
-  if (dist > 1)
-
-    dmov = diff([first(1,1:2); last(1,1:2)]);
-    interm_pos = first(ones(1,dist-1),1:2) +  ([1:dist-1] / dist).' * dmov;
-
-    for i=1:dist-1
-      frame_indx = i+first_indx;
-      ruffles(frame_indx).carth(end+1,:) = interm_pos(i,:);
-      ruffles(frame_indx).cluster(end+1,1) = indx;
-      ruffles(frame_indx).bounds(end+1,:) = 0;
-      ruffles(frame_indx).properties(end+1,:) = 0;
-
-      indx = length(ruffles(frame_indx).cluster(:,1));
-    end
-
-    ruffles(last_indx).cluster(indx2,1) = indx;
-  else
-    if (ruffles(last_indx).cluster(indx2,1) == 0)
-      ruffles(last_indx).cluster(indx2,1) = indx;
-    else
-      ruffles(last_indx).cluster(indx2,2) = indx;
-    end
-  end
-
-  return;
 end

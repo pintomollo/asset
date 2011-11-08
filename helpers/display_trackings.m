@@ -11,11 +11,10 @@ function display_trackings(trackings, links)
     trackings = cell(nframes, 1);
     links = cell(nframes, 1);
 
-    for i=1:nframes-1
+    for i=1:nframes
       trackings{i} = mytracks(i).carth;
       links{i} = mytracks(i).cluster;
     end
-    trackings{end} = mytracks(end).carth;
   end
 
   figure;

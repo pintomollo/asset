@@ -114,6 +114,7 @@ handles = struct('trackings',trackings, ...
                                    'img', -1, ...
                                    'lines', [], ...
                                    'pts',[], ...
+                                   'ruffles', [], ...
                                    'errors', hTable1), ...
                  'cortex',struct('axes', hCortex, ...
                                  'img', -1, ...
@@ -388,6 +389,7 @@ switch handles.type
   otherwise
     fields = {handles.type, handles.type, 'eggshell', 'cortex', 'eggshell', 'ruffles', 'centrosomes'; ...
               'img', 'img', 'carth',      'carth',    'axes',   'carth',    'carth'};
+
 end
 
 if (~isempty(trackings))
@@ -426,8 +428,8 @@ if (ishandle(handles.eggshell.img))
     case 'markers'
       set(handles.cortex.pts(1), 'XData', values{7}(:,1), 'YData', values{7}(:,2));
     otherwise
-      set(handles.cortex.pts(1), 'XData', values{7}(1,1), 'YData', values{7}(1,2));
-      set(handles.cortex.pts(2), 'XData', values{7}(2,1), 'YData', values{7}(2,2));
+      set(handles.cortex.pts(1), 'XData', values{7}(:,1), 'YData', values{7}(:,2));
+%      set(handles.cortex.pts(2), 'XData', values{7}(:,1), 'YData', values{7}(:,2));
   end
   %set(handles.cortex.ruffles(2), 'XData', ruf_cor(:,1), 'YData', ruf_cor(:,2));
   %set(handles.cortex.ruffles(3), 'XData', ruf_int(:,1), 'YData', ruf_int(:,2));
@@ -452,8 +454,8 @@ else
     case 'markers'
       handles.cortex.pts(1) = line(values{7}(:,1),values{7}(:,2),'Color',[1 1 0],'Parent',handles.cortex.axes);
     otherwise
-      handles.cortex.pts(1) = line(values{7}(1,1),values{7}(1,2),'Marker','o','Color',[1 0 0],'Parent',handles.cortex.axes);
-      handles.cortex.pts(2) = line(values{7}(2,1),values{7}(2,2),'Marker','o','Color',[0 0 1],'Parent',handles.cortex.axes);
+      handles.cortex.pts(1) = line(values{7}(:,1),values{7}(:,2),'Marker','o','Color',[1 0 0],'Parent',handles.cortex.axes);
+%      handles.cortex.pts(2) = line(values{7}(2,1),values{7}(2,2),'Marker','o','Color',[0 0 1],'Parent',handles.cortex.axes);
   end
   %handles.cortex.ruffles(2) = line(ruf_cor(:,1),ruf_cor(:,2),'Marker','*','Color',[0 1 0],'LineStyle','none','Parent',handles.cortex.axes);
   %handles.cortex.ruffles(3) = line(ruf_int(:,1),ruf_int(:,2),'Marker','*','Color',[0 0 1],'LineStyle','none','Parent',handles.cortex.axes);
