@@ -14,6 +14,11 @@ function mymovie = track_centrosomes(mymovie, spots, opts)
 % Simon Blanchoud
 % 01.09.2011
 
+  if (nargin == 2)
+    opts = spots;
+    spots = {{}};
+  end
+
   % Check whether we actually do have to compute anything 
   if (isfield(mymovie.data, 'centrosomes') & ~isempty(mymovie.data.centrosomes) & ~opts.recompute)
     return;
@@ -28,12 +33,17 @@ function mymovie = track_centrosomes(mymovie, spots, opts)
   if (isfield(mymovie.data, 'projection') & ~isempty(mymovie.data.projection) & exist(mymovie.data.projection.fname, 'file') == 2)
 
     [nframes, imgsize] = size_data(mymovie.data.projection);
-    %spots = detect_spots(mymovie.data.projection, opts);
+
+    if (isempty(spots))
+      spots = detect_spots(mymovie.data.projection, opts);
+    end
   else
     % The recording size
     [nframes, imgsize] = size_data(mymovie.data);
     % Identify the candidate spots
-    %spots = detect_spots(mymovie.data, opts);
+    if (isempty(spots))
+      spots = detect_spots(mymovie.data, opts);
+    end
   end
 
   %%%%%%%%% SHOULD NOT BE HARD-CODED

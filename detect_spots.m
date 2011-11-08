@@ -126,7 +126,7 @@ function spots = detect_spots(imgs, opts)
       end
 
       % Otherwise we store our initial guess for later comparison
-      init_conds(j, 1:end-2) = gauss_params;
+      init_conds(j, 1:end-1) = gauss_params;
       
       % Check whether there was another initial condition close to ours, as similar initial conditions would converge
       % to the same optimization, we can then jsut skip this "costly" step
