@@ -53,7 +53,7 @@ function mymovie = find_ruffles(mymovie, opts)
   
     x = unique(pts(:,1));
     y = unique(pts(:,2));
-    if (numel(x) == 1 | numel(y)==1)
+    if (numel(x) < 5 | numel(y) < 5)
       continue;
     end
 
