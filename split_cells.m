@@ -218,7 +218,7 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
   scores(slender_parts) = Inf;
 
   %keyboard
-  [ellipses, segments] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
+  [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
 
   for i=1:nsegments
     if (slender_parts(i))
@@ -235,16 +235,18 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
         ellipses(indx, :) = new_ellipses(indx, :);
         segments{indx} = [segments{indx}; segments{i}];
         segments{i} = [];
+        scores(indx) = val;
       end
     end
   end
 
+  ellipses = ellipses(scores <= max_score & (ellipses(:, 4) ./ ellipses(:, 3)) >= max_ratio, :);
   ellipses = ellipses(~any(isnan(ellipses), 2), :);
 
   return;
 end
 
-function [ellipses, segments] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score)
+function [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score)
   
   nsegments = length(segments);
   improved = false;
@@ -313,7 +315,7 @@ function [ellipses, segments] = combine_ellipses(segments, ellipses, scores, max
   end
 
   if (improved)
-    [ellipses, segments] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
+    [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
   end
 
   return;
