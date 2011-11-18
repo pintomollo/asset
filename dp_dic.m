@@ -47,8 +47,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     return;
   end
 
-
-  %%keyboard
+  %keyboard
  %nimg
 
   parameters = opts.segmentation_parameters.dic;
@@ -73,6 +72,14 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(img, false, opts);
     end
     if (isnan(orientations(1,nimg)))
+      mymovie.dic.eggshell(nimg) = get_struct('eggshell');
+      mymovie.dic.centers = centers;
+      mymovie.dic.axes_length = axes_length;
+      mymovie.dic.orientations = orientations;
+      mymovie.dic.neighbors = neighbors;
+      mymovie.dic.cortex = get_struct('cortex');
+      mymovie.dic.neighbors = get_struct('reference');
+
       warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
       return;
     end
@@ -105,6 +112,19 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
     [egg_path, egg_shift] = detect_eggshell(polar_img, outer_egg, axes_length(:,nimg), parameters.safety, parameters.eggshell_weights.eta);
     %keyboard
+    if (~(egg_shift > 0))
+      mymovie.dic.eggshell(nimg) = get_struct('eggshell');
+      mymovie.dic.centers(:, nimg) = NaN;
+      mymovie.dic.axes_length(:, nimg) = NaN;
+      mymovie.dic.orientations(1, nimg) = NaN;
+      mymovie.dic.neighbors = neighbors;
+      mymovie.dic.cortex = get_struct('cortex');
+      mymovie.dic.neighbors = get_struct('reference');
+
+      warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
+      return;
+    end
+
 
     if (opts.verbosity == 3)
       figure; imshow(polar_img)

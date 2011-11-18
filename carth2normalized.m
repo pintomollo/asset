@@ -83,7 +83,7 @@ function mymovie = convert_struct(mymovie, opts)
       %first = true;
       for k=1:length(subfields)
         if (~(isempty(mymovie.(field).(subfields{k}))) & isfield(mymovie.(field).(subfields{k}), 'carth') & ~strncmp(subfields{k}, 'eggshell', 8))
-          subfield = subfields{k};
+          subfield = subfields{k}
           for j = 1:nframes
             if (isempty(warpers(j).warp) | opts.recompute)
               warpers(j) = carth2normalized(mymovie.(field).eggshell(j).carth, [], opts, mymovie.(field).centers(:,j), mymovie.(field).axes_length(:,j), mymovie.(field).orientations(1,j));
