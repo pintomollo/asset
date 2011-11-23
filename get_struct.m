@@ -117,7 +117,8 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('carth', [], ...                    % Nx2 matrix of points representing the contour in Cartesian coordinates
                         'estim', [], ...                    % Initial segmentation (without DP, as used in the paper)
                         'temperatures', [], ...             % Temperatures found to compute the posterior probability
-                        'thickness', 0);                    % Thickness of the eggshell in ER
+                        'thickness', 0, ...                 % Thickness of the eggshell in ER
+                        'warped', []);                      % Normalized position
     
     % Structure used to handle tracking files (see import_trackings.m)
     case 'file'

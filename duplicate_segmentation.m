@@ -69,6 +69,7 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
       end
 
       cor = mymovie.dic.cortex(nimg).carth;
+
       intens = bilinear_mex(img, egg);
       mins = min(intens);
       range = max(intens) - mins;

@@ -31,6 +31,7 @@ hFig = figure(...
 'Tag','domains_fig',...
 'Resize','off',...
 'UserData',[],...
+'Interruptible', 'off', ...
 'Visible','off');
 %'Position',[104 6 212 54],...
 
@@ -39,18 +40,19 @@ hAxes = axes(...
 'Units','characters',...
 'Color',get(0,'defaultaxesColor'),...
 'ColorOrder',get(0,'defaultaxesColorOrder'),...
+'Interruptible', 'off', ...
 'FontSize',10,...
 'Tag','domain');
 %'Position',[3.5 9.5 95 95],...
 
 hFrameFig = figure(...
 'Colormap',mygray, ....
-'MenuBar','none',...
 'NumberTitle','off',...
 'HandleVisibility','callback',...
 'Tag','frame_fig',...
 'UserData',[],...
 'Visible','off');
+%'MenuBar','none',...
 
   handles = struct('display', hFrameFig,  ...
                    'axes', hAxes, ...
@@ -66,7 +68,9 @@ hFrameFig = figure(...
   update_display(hFig);
 
   uiwait(hFig);
+
   delete(hFig);
+  delete(hFrameFig);
   drawnow;
 
   return;
@@ -244,6 +248,18 @@ case 31
     set(handles.axes,'YLim',yaxes);
   end
 
+case double('c')
+% Clear the drawing
+
+  setPosition(handles.polygon, NaN(1,2));
+  %delete(handles.polygon);
+  drawnow;
+  [~, x, y] = roipoly();
+
+  setPosition(handles.polygon, [x,y]);
+  uiwait(hfig);
+  %handles.polygon = impoly(handles.axes, [x y], 'Closed', true);
+
 case double('z')
 
 % z key:  Zoom in.
@@ -261,7 +277,7 @@ case double('Z')
     handles.zoom = 1;
   end
 
-case 13 % Enter, confirm and next
+case 32 % Space, confirm and next
       store_path(hfig);
 
       handles.previous = handles.current;
@@ -282,7 +298,7 @@ case 49 % 1, zoom normal
 
 otherwise
 
-  disp(key)
+  %disp(key)
 
 end
 
@@ -311,7 +327,12 @@ function mouseClick(hobj, event_data)
     frame = 1;
   end
 
+
   handles = get(hfig, 'UserData');
+
+  set(handles.display, 'Name', 'loading...');
+  drawnow;
+
   name = handles.domains{handles.current};
   indx = strfind(name, '.');
   name = name(1:indx(1)-1);
@@ -319,21 +340,59 @@ function mouseClick(hobj, event_data)
   name = [name(1:indx(end)-1) '_.mat'];
 
   tmp = load(name);
-  img1 = imnorm(double(load_data(tmp.mymovie.dic, frame)));
+  %img1 = imnorm(double(load_data(tmp.mymovie.dic, frame)));
   img2 = imnorm(double(load_data(tmp.mymovie.data, frame)));
 
-  childs = get(handles.display);
+  opts = get_struct('ASSET');
+  [~, pos] = gather_quantification(tmp.mymovie, opts);
+
+  pts = insert_ruffles(tmp.mymovie.markers.cortex(frame).carth, tmp.mymovie.markers.ruffles(frame).carth, tmp.mymovie.markers.ruffles(frame).paths);
+  [lin_pts, tot_length] = carth2linear(pts);
+
+  xy = getPosition(handles.polygon);
+  xi = xy(:,1);
+  yi = round(xy(:,2));
+
+  x_pos = round(xi(yi == frame));
+  
+  if (~isempty(x_pos))
+
+    tot_length = tot_length * opts.pixel_size^2;
+    lin_pos = pos(x_pos);
+    lin_pts = lin_pts * tot_length;
+
+    dist = abs(cat(3, bsxfun(@minus, lin_pts, lin_pos), bsxfun(@minus, lin_pts - tot_length, lin_pos)));
+    dist = min(dist, [], 3);
+    [~, indx] = min(dist, [], 1);
+
+    pts = pts(indx, :);
+    if (isempty(pts))
+      pts = NaN(1, 2);
+    end
+  else
+    pts = NaN(1,2);
+  end
+
+  childs = get(handles.display, 'Children');
   if (isempty(childs))
-    haxes = subplot(121, 'Parent', handles.display);
-    haxes(2) = subplot(122, 'Parent', handles.display);
-    %haxes = axes('Parent', handles.display);
+    %haxes = subplot(1,2,1, 'Parent', handles.display);
+    %haxes(2) = subplot(1,2,2, 'Parent', handles.display);
+    haxes = axes('Parent', handles.display);
     set(handles.display, 'Visible', 'on');
   else
-    haxes = childs(1:2);
+    %haxes = childs(1:2);
+    haxes = childs;
   end
   drawnow;
-  imshow(img1, 'Parent', haxes(1));
-  imshow(img2, 'Parent', haxes(2));
+  %imshow(img1, 'Parent', haxes(1));
+  imshow(img2, 'Parent', haxes);
+  hold(haxes, 'on');
+  scatter(haxes, pts(:, 1), pts(:, 2), 'r');
+  hold(haxes, 'off');
+  set(handles.display, 'Name', ['Frame ' num2str(frame)]);
+  drawnow;
+
+  %set(handles.display,'Visible', 'on');
 
   return;
 end
@@ -368,7 +427,8 @@ if (handles.previous ~= handles.current)
     %aspect(handles.axes, [aspect_ratio]);
     set(handles.axes,'Visible', 'off');
     %colormap(handles.axes, jet);
-    set(hFig, 'Colormap', jet);
+    j = jet(128);
+    set(hFig, 'Colormap', j);
   end
   set(hFig,'Visible', 'on');
 
@@ -385,9 +445,7 @@ if (handles.previous ~= handles.current)
   handles.polygon = impoly(handles.axes, pos, 'Closed', true);
   end
 
-  refresh
   drawnow
-    colormap(jet);
 %  drawnow
 set(hFig,'UserData',handles);
 end
@@ -402,31 +460,34 @@ function store_path(hFig)
   [h,w] = size(domain);
 
   xy = getPosition(handles.polygon);
-  xi = xy(:,1);
-  yi = xy(:,2);
+  [tmp_xy, i, j] = unique(xy, 'rows');
 
-     start = find(yi == min(yi), 1);
+  xy = NaN(size(xy));
+  xy(i, :) = tmp_xy;
+  xy = xy(~any(isnan(xy), 2), :);
+
+  xi = xy(:,1);
+  yi = floor(xy(:,2));
+
+    start = find(yi == min(yi), 1);
     if (start ~= 1)
       xi = [xi(start:end); xi(1:start-1)];
       yi = [yi(start:end); yi(1:start-1)];
     end
-    start = round(yi(1));
-
-    dy = [0; sign(diff(yi))];
-    ends = find(dy == -dy(2), 1, 'first');
-    dist = hypot(diff(xi(ends-1:ends+1)), diff(yi(ends-1:ends+1)));
-  
-    if (dist(1) > dist(2))
-      ends = ends-1;
+    if (yi(1) >= yi(2))
+      xi = xi([1 end:-1:2]);
+      yi = yi([1 end:-1:2]);
     end
+    start = yi(1);
 
+    dy = sign(diff(yi));
+    ends = find(dy ~= 1, 1, 'first');
+  
     half1 = [xi(1:ends) yi(1:ends)];
     half2 = [xi([ends+1:end 1]) yi([ends+1:end 1])];
-
-    if (dy(2) < 0)
-      half1 = half1([end:-1:1], :);
-    else
-      half2 = half2([end:-1:1], :);
+    half2 = half2([end:-1:1], :);
+    if (half2(1, 2) ~= half1(1, 2))
+      half2 = [half1(1,:); half2];
     end
     half1(end, 2) = h;
     half2(end, 2) = h;
@@ -445,7 +506,11 @@ function store_path(hFig)
     %tmp = load(handles.domains{handles.current});
     %[tmp.path path]
     %keyboard
+    
+    %figure;scatter(path(:, 1), path(:, 2))
+
     save(handles.domains{handles.current}, 'domain', 'path');
+
 
   return;
 end

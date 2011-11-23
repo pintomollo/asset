@@ -260,13 +260,13 @@ function [mymovie,trackings] = ASSET(varargin)
   end
 
   % Catch the error overall
-  catch ME
+  catch
     if (exist('mymovie', 'var') & isfield(mymovie, 'experiment') & ~isempty(mymovie.experiment))
       warning(['Error during the analysis of ' mymovie.experiment ':']);
     else
       warning(['Error during the analysis:']);
     end
-    print_all(ME);
+    print_all(lasterror());
     working = false;
   end
 
@@ -274,7 +274,7 @@ function [mymovie,trackings] = ASSET(varargin)
   if (~exist('opts', 'var') | opts.verbosity > 1)
     try
       mariosong(working);
-    catch ME
+    catch
     end
   end
 
