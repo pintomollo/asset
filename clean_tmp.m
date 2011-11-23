@@ -1,4 +1,8 @@
-function clean_tmp
+function clean_tmp(do_it_really)
+
+  if (nargin == 0)
+    do_it_really = true;
+  end
 
   ls_dir = dir('*.mat'); 
   used_tmp = [];
@@ -15,7 +19,10 @@ function clean_tmp
 
     if (is_empty)
       disp(['Deleting ' ls_dir(i).name]);
-      delete(ls_dir(i).name);
+
+      if (do_it_really)
+        delete(ls_dir(i).name);
+      end
     else
       tmp_tmp = recursive_tmp(mymovie);
       used_tmp = [used_tmp; tmp_tmp];
@@ -39,7 +46,10 @@ function clean_tmp
       tmp_token = str2double(char(tokens{1}));
       if (~any(used_tmp == tmp_token))
         disp(['Deleting ' ls_dir(d).name]);
-        delete([tmp_dir ls_dir(d).name]);
+
+        if (do_it_really)
+          delete([tmp_dir ls_dir(d).name]);
+        end
       end
     end
   end
