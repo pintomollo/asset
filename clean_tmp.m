@@ -4,45 +4,21 @@ function clean_tmp
   used_tmp = [];
 
   for i=1:length(ls_dir)
+    disp(['Checking in ' ls_dir(i).name '...']);
+
     load(ls_dir(i).name);
 
     if (~exist('mymovie', 'var'))
       continue;
     end
+    is_empty = recursive_empty(mymovie);
 
-    is_empty = recursive_empty(mymovie, true);
-
-    %fields = fieldnames(mymovie);
-    %for j=1:length(fields)
-    %  if (~isempty(mymovie.(fields{j})))
-    %    if (isfield(mymovie.(fields{j}), 'file'))
-    %      for k=1:length(mymovie.(fields{j}))
-    %        if (exist(mymovie.(fields{j})(k).file) == 0)
-    %          is_empty = true;
-    %        end
-    %      end
-    %    end
-    %  end
-    %end
     if (is_empty)
       disp(['Deleting ' ls_dir(i).name]);
-      %delete(ls_dir(i).name);
+      delete(ls_dir(i).name);
     else
       tmp_tmp = recursive_tmp(mymovie);
       used_tmp = [used_tmp; tmp_tmp];
-
-      %for j=1:length(fields)
-      %  if (~isempty(mymovie.(fields{j})))
-      %    if (isfield(mymovie.(fields{j}), 'fname'))
-      %      for k=1:length(mymovie.(fields{j}))
-      %        [tmp tokens] = regexp(mymovie.(fields{j})(k).fname,'tmpmat(\d+)\.*','match','tokens');
-      %        if (length(tokens)~=0)
-      %          used_tmp = [used_tmp; str2double(char(tokens{1}))];
-      %        end
-      %      end
-      %    end
-      %  end
-      %end
     end
 
     clearvars -except 'ls_dir' 'used_tmp';
@@ -63,7 +39,7 @@ function clean_tmp
       tmp_token = str2double(char(tokens{1}));
       if (~any(used_tmp == tmp_token))
         disp(['Deleting ' ls_dir(d).name]);
-        %delete([tmp_dir ls_dir(d).name]);
+        delete([tmp_dir ls_dir(d).name]);
       end
     end
   end
@@ -71,22 +47,41 @@ function clean_tmp
   return;
 end
 
-function is_empty = recursive_empty(mystruct, is_empty)
+function is_empty = recursive_empty(mystruct)
 
   fields = fieldnames(mystruct);
-  for j=1:length(fields)
-    if (~isempty(mystruct.(fields{j})))
-      if (isfield(mystruct.(fields{j}), 'file'))
-        for k=1:length(mystruct.(fields{j}))
-          if (exist(mystruct.(fields{j})(k).file) ~= 0)
-            is_empty = false;
 
-            return;
+  indx = ismember(fields, 'file');
+  is_empty = true;
+
+  if (any(indx))
+    if (exist(mystruct.file) ~= 0)
+      is_empty = false;
+
+      return;
+    end
+
+    fields = fields(~indx);
+  end
+
+  for j=1:length(fields)
+    if (isstruct(mystruct.(fields{j})))
+      for k=1:length(mystruct.(fields{j}))
+        if (k==1)
+          sub_fields = fieldnames(mystruct.(fields{j})(k));
+          has_struct = any(ismember(sub_fields, 'file'));
+          if (~has_struct)
+            for s = 1:length(sub_fields)
+              if (isstruct(mystruct.(fields{j})(k).(sub_fields{s})))
+                has_struct = true;
+                break;
+              end
+            end
           end
         end
-      elseif (isstruct(mystruct.(fields{j})))
-        for k=1:length(mystruct.(fields{j}))
-          is_empty = recursive_empty(mystruct.(fields{j})(k), is_empty);
+
+        if (has_struct)
+          is_empty = recursive_empty(mystruct.(fields{j})(k));
 
           if (~is_empty)
             return;
@@ -105,17 +100,35 @@ function tmps = recursive_tmp(mystruct)
   used_tmp = [];
 
   fields = fieldnames(mystruct);
+
+  indx = ismember(fields, 'fname');
+
+  if (any(indx))
+    [tmp tokens] = regexp(mystruct.fname,'tmpmat(\d+)\.*','match','tokens');
+    if (length(tokens)~=0)
+      used_tmp = [used_tmp; str2double(char(tokens{1}))];
+    end
+
+    fields = fields(~indx);
+  end
+
   for j=1:length(fields)
-    if (~isempty(mystruct.(fields{j})))
-      if (isfield(mystruct.(fields{j}), 'fname'))
-        for k=1:length(mystruct.(fields{j}))
-          [tmp tokens] = regexp(mystruct.(fields{j})(k).fname,'tmpmat(\d+)\.*','match','tokens');
-          if (length(tokens)~=0)
-            used_tmp = [used_tmp; str2double(char(tokens{1}))];
+    if (isstruct(mystruct.(fields{j})))
+      for k=1:length(mystruct.(fields{j}))
+        if (k==1)
+          sub_fields = fieldnames(mystruct.(fields{j})(k));
+          has_struct = any(ismember(sub_fields, 'file'));
+          if (~has_struct)
+            for s = 1:length(sub_fields)
+              if (isstruct(mystruct.(fields{j})(k).(sub_fields{s})))
+                has_struct = true;
+                break;
+              end
+            end
           end
         end
-      elseif (isstruct(mystruct.(fields{j})))
-        for k=1:length(mystruct.(fields{j}))
+
+        if (has_struct)
           tmp_tmp = recursive_tmp(mystruct.(fields{j})(k));
 
           tmps = [tmps; tmp_tmp];
