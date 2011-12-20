@@ -16,10 +16,11 @@ function mymovie = follow_invaginations(mymovie, opts)
   centers = mymovie.(type).centers;
   axes_length = mymovie.(type).axes_length;
   orientations = mymovie.(type).orientations;
+  neighbors = mymovie.(type).neighbors;
 
   inner_thresh = 0.02;
   
-  coef = -2;
+  coef = -1;
   
   for nimg=1:nframes
     %nimg = floor(rand(1)*nframes)+1
@@ -38,6 +39,8 @@ function mymovie = follow_invaginations(mymovie, opts)
       maxs = bounds(:,3:4);
 
       img = double(load_data(mymovie.(channel), nimg));
+      img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
+
       if (strncmp(type, 'markers',7))
         img = gaussian_mex(img, parameters.noise.gaussian);
         img = median_mex(img, parameters.noise.median);
@@ -55,16 +58,16 @@ function mymovie = follow_invaginations(mymovie, opts)
       dist_thresh = inner_thresh * polar_size(2);
 
       ell_path = carth2elliptic(path, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-      ell_path = elliptic2pixels(ell_path, polar_size, parameters.safety);
+      ell_path = elliptic2pixels(ell_path, polar_size, axes_length(:, nimg), parameters.safety);
       ell_path = adapt_path(polar_size, ell_path);
 
       ell_ruffles = carth2elliptic(ruffles, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-      ell_ruffles = elliptic2pixels(ell_ruffles, polar_size, parameters.safety);
+      ell_ruffles = elliptic2pixels(ell_ruffles, polar_size, axes_length(:, nimg), parameters.safety);
 
       ell_mins = carth2elliptic(mins, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-      ell_mins = elliptic2pixels(ell_mins, polar_size, parameters.safety);
+      ell_mins = elliptic2pixels(ell_mins, polar_size, axes_length(:, nimg), parameters.safety);
       ell_maxs = carth2elliptic(maxs, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-      ell_maxs = elliptic2pixels(ell_maxs, polar_size, parameters.safety);
+      ell_maxs = elliptic2pixels(ell_maxs, polar_size, axes_length(:, nimg), parameters.safety);
 
       ell_mins = round(ell_mins(:, [2 1]));
       ell_mins(ell_mins(:,2) < 1, 2) = ell_mins(ell_mins(:,2) < 1, 2) + flipped_size(2);
@@ -120,6 +123,9 @@ function mymovie = follow_invaginations(mymovie, opts)
         inv_intens = weight_img(sub2ind(flipped_size, inv_path(:,1), inv_path(:,2)));
         worst = find([inv_intens(1:end-1); Inf] >= mean_intens, 1);
         indx = find(inv_intens(1:worst) < thresh, 1, 'last');
+        if (isempty(indx))
+          indx = 1;
+        end
         
         inv_dist = ell_path(inv_path(:,2)) -inv_path(:,1);
         %min_indx = find(inv_dist == min(inv_dist(inv_dist > 0)), 1, 'last');
@@ -151,10 +157,8 @@ function mymovie = follow_invaginations(mymovie, opts)
             if (opts.verbosity == 3)
               myplot(inv_path,'r');
             end
-
-            %keyboard
             
-            inv_path = pixels2elliptic(inv_path,polar_size,parameters.safety);
+            inv_path = pixels2elliptic(inv_path,polar_size, axes_length(:,nimg),parameters.safety);
             inv_path = elliptic2carth(inv_path,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
             paths{i} = inv_path;
             inv_length(i,1) = sum(sqrt(sum(diff(inv_path, [], 1).^2, 2)));
@@ -163,8 +167,9 @@ function mymovie = follow_invaginations(mymovie, opts)
 
             is_valid = true;
             for j=1:i-1
-              if (is_valid & inv_length(j,1) > 0 & all(paths{i}(end,:) == paths{j}(end,:)))
-                if (tmp_mins(i) < tmp_mins(j))
+              if (is_valid && inv_length(j,1) > 0 && all(paths{i}(end,:) == paths{j}(end,:)))
+                %keyboard
+                if (sum((paths{i}(1,:) - ruffles(i,:)).^2) < sum((paths{j}(1,:) - ruffles(j,:)).^2))
                   paths{j} = [];
                   inv_length(j,1) = 0;
                 else

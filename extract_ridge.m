@@ -29,9 +29,9 @@ function values = extract_ridge(params, pos, dperp, opts)
     dist = exp(-sqrt(sum(bsxfun(@minus, window, pos(i,:)).^2, 2)) ./ gaussian_var);
 
     % Integral
-    %values(i) = sum((window_params(:, 3) .* window_params(:,2) .* factor) .* (dist / sum(dist)));
+    values(i) = sum((window_params(:, 3) .* window_params(:,2) .* factor) .* (dist / sum(dist)));
     % Amplitude
-    values(i) = sum(window_params(:, 3) .* (dist / sum(dist)));
+    %values(i) = sum(window_params(:, 3) .* (dist / sum(dist)));
   end
   %subplot(221)
   %scatter(centers(:,1), centers(:,2), 'b');

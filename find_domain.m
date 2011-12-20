@@ -1,4 +1,4 @@
-function opts = find_domain(opts)
+function opts = find_domain(opts, uuid)
 
   if (nargin == 0)
     opts = get_struct('ASSET');
@@ -6,13 +6,16 @@ function opts = find_domain(opts)
     opts.do_ml = 'cmaes';
   end
 
-  uuid = randi(1000, 1);
+  if (opts.uuid == 0)
+    opts.uuid = randi(1000, 1);
+  end
+
   manuals = dir('*-Manual-DP.mat');
   manuals = manuals(randperm(length(manuals)));
 
   p0 = gather_parameters(opts.quantification, opts);
   nparams = length(p0);
-  log_name = ['ML-' num2str(uuid) '-domain'];
+  log_name = ['ML-' num2str(opts.uuid) '-domain'];
 
   niter = 10;
   counts = niter+1;
@@ -90,6 +93,7 @@ function opts = find_domain(opts)
       orig.domain = imnorm(tmp);
     end
 
+    estim_mid = size(orig.domain, 2) / 2;
     %keyboard
 
     for i = 1:nevals
@@ -105,15 +109,17 @@ function opts = find_domain(opts)
 
       path = dynamic_prog_2d(orig.domain, opts.quantification.params, @weight_domain, opts.quantification.weights, @init_domain, opts.quantification.init_params, opts);
 
-      errors = sum(abs(path - orig.path), 2);
-      errors(isnan(errors)) = 2*path(isnan(errors), 2);
-      errors(isnan(errors)) = 2*orig.path(isnan(errors), 2);
+      errors = abs(path - orig.path);
+      errors(:, 1) = errors(:, 1) * 2;
+      errors = sum(errors, 2);
+      errors(isnan(errors)) = 2*abs(path(isnan(errors), 2) - estim_mid);
+      errors(isnan(errors)) = 2*abs(orig.path(isnan(errors), 2) - estim_mid);
       errors = errors(~isnan(errors));
 
       if (length(errors) == 0)
         err = Inf;
       else
-        err = mean(errors) + std(errors) + exp(3*(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound))) - 1;
+        err = mean(errors(:)) + std(errors(:)) + exp(3*(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound))) - 1;
       end
 
       err_all(i) = err;

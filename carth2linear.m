@@ -1,18 +1,14 @@
-function [linear, total_distance] = carth2linear(pts_x, pts_y, ruffles, ruffles_path)
+function [linear, total_distance] = carth2linear(pts_x, pts_y, ruffles_path)
   
   if (nargin == 1)
     pts_y = [];
   end
   if (nargin < 3)
-    ruffles = [];
-  end
-  if (nargin < 4)
     ruffles_path = {};
   end
 
-  if (size(pts_y, 2) == 2)
-    ruffles_path = ruffles;
-    ruffles = pts_y;
+  if (iscell(pts_y))
+    ruffles_path = pts_y;
     pts_y = [];
   end
 
@@ -23,7 +19,7 @@ function [linear, total_distance] = carth2linear(pts_x, pts_y, ruffles, ruffles_
 
   circular = true;
 
-  [pts_x, pts_y] = insert_ruffles(pts_x, pts_y, ruffles, ruffles_path);
+  [pts_x, pts_y] = insert_ruffles(pts_x, pts_y, ruffles_path);
 
   if (pts_x(1) ~= pts_x(end) | pts_y(1) ~= pts_y(end))
     pts_x = [pts_x; pts_x(1)];

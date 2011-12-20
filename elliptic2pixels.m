@@ -4,12 +4,7 @@ function [ptsi, ptsj] = elliptic2pixels(varargin)
 
   ptsi = zeros(length(theta),2);
 
-  try
   ptsi(:,1) = (theta * imgsize(1) / (2 * pi)) + 1;
-  catch
-    beep;
-    keyboard
-  end
   switch type
     case 'radial'
     case 'hyperbolic'
@@ -23,7 +18,6 @@ function [ptsi, ptsj] = elliptic2pixels(varargin)
       theta = elliptic2pixels(theta, rads, imgsize, axes_length, safety, 'hyperbolic');
   end
   ptsi(:,2) = (rads * (imgsize(2) - 1) / safety) + 1;
-
 
   if (nargout == 2)
     ptsj = ptsi(:,2);

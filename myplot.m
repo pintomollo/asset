@@ -13,6 +13,12 @@ function handles = myplot(pts, varargin)
     [m, n] = size(pts);
   end
 
+  if (m*n == 0)
+    handles = [];
+
+    return;
+  end
+
   if (n == 1)
     if (length(args) > 0 & isnumeric(args{1}))
       tmp = args{1};

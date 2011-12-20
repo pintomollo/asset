@@ -346,8 +346,13 @@ function mouseClick(hobj, event_data)
   opts = get_struct('ASSET');
   [~, pos] = gather_quantification(tmp.mymovie, opts);
 
-  pts = insert_ruffles(tmp.mymovie.markers.cortex(frame).carth, tmp.mymovie.markers.ruffles(frame).carth, tmp.mymovie.markers.ruffles(frame).paths);
+  pts = insert_ruffles(tmp.mymovie.markers.cortex(frame).carth, tmp.mymovie.markers.ruffles(frame).paths);
   [lin_pts, tot_length] = carth2linear(pts);
+  [ell_pts] = carth2elliptic(pts, tmp.mymovie.markers.centers(:, frame), tmp.mymovie.markers.axes_length(:, frame), tmp.mymovie.markers.orientations(1, frame));
+
+  center = lin_pts(find(abs(ell_pts(:,1)) == min(abs(ell_pts(:,1))), 1));
+  lin_pts = lin_pts - center;
+  lin_pts(lin_pts < -tot_length) = lin_pts(lin_pts < -tot_length) + tot_length;
 
   xy = getPosition(handles.polygon);
   xi = xy(:,1);
@@ -430,7 +435,7 @@ if (handles.previous ~= handles.current)
     j = jet(128);
     set(hFig, 'Colormap', j);
   end
-  set(hFig,'Visible', 'on');
+  set(hFig,'Visible', 'on', 'Name', handles.domains{handles.current});
 
   pos = tmp.path(:,1) - tmp.path(:,2);
   pos = [pos, [1:length(pos)].'];
@@ -454,6 +459,8 @@ end
 
 function store_path(hFig)
 
+  %keyboard
+
   handles = get(hFig, 'UserData');
 
   domain = get(handles.img, 'CData');
@@ -469,10 +476,17 @@ function store_path(hFig)
   xi = xy(:,1);
   yi = floor(xy(:,2));
 
+  yi(yi < 1) = 1;
+  yi(yi > h) = h;
+
     start = find(yi == min(yi), 1);
     if (start ~= 1)
       xi = [xi(start:end); xi(1:start-1)];
       yi = [yi(start:end); yi(1:start-1)];
+    end
+    if (yi(1) == yi(2) & xi(1) == xi(2))
+      xi = xi(2:end);
+      yi = yi(2:end);
     end
     if (yi(1) >= yi(2))
       xi = xi([1 end:-1:2]);
@@ -480,8 +494,13 @@ function store_path(hFig)
     end
     start = yi(1);
 
-    dy = sign(diff(yi));
-    ends = find(dy ~= 1, 1, 'first');
+    dx = abs(diff(xi));
+    ends = find(yi == max(yi), 1);
+    if (dx(ends) < dx(ends-1))
+      ends = ends - 1;
+    end
+
+    %ends = find(dy ~= 1, 1, 'first');
   
     half1 = [xi(1:ends) yi(1:ends)];
     half2 = [xi([ends+1:end 1]) yi([ends+1:end 1])];
@@ -491,6 +510,11 @@ function store_path(hFig)
     end
     half1(end, 2) = h;
     half2(end, 2) = h;
+
+    [~, indx] = unique(half1(:, 2));
+    half1 = half1(indx, :);
+    [~, indx] = unique(half2(:, 2));
+    half2 = half2(indx, :);
 
     indexes = [start:h].';
     x1 = interp1q(half1(:, 2), half1(:, 1), indexes);
