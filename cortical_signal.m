@@ -144,6 +144,8 @@ function mymovie = cortical_signal(mymovie, opts)
         tmp_val = emdc(valid_dpos, valid_line);
         smoothed = sum(tmp_val(end-1:end, :), 1);
         
+        keyboard
+
         line_params = estimate_front(valid_dpos, smoothed, curr_params, rescale(j));
         line_params = lsqcurvefit(@front, line_params, valid_dpos.', valid_line.', curr_bounds(1,:), curr_bounds(2, :), optims);
 
@@ -245,7 +247,7 @@ function new_params = estimate_front(x, y, params, is_invag)
 
   params_sigmoid = estimate_piecewise(x, y, params, is_invag);
 
-  estim = piecewise_background(params_sigmoid, x);
+  [estim, junk] = front([params_sigmoid 0], x);
   peak_range = get_peak(x, y-estim);
   params_gaussian = estimate_gaussian(x(peak_range), y(peak_range)-estim(peak_range));
 
@@ -348,49 +350,6 @@ function params = estimate_gaussian(x,y)
   return;
 end
 
-function [y1, y2] = front(p, x)
-
-  fliped = false;
-  if (size(x,1) ~= 1)
-    x = x.';
-    fliped = true;
-  end
-
-  if (numel(p) == 6)
-    p = [p(1:2) NaN p(3:end)];
-  end
-
-  y1 = piecewise_background(p(:, 1:end-1), x);
-  y2 = gaussian([p(:, [1:2 end]) zeros(size(p(:,1)))], x);
-
-  if (fliped)
-    y1 = y1.';
-    y2 = y2.';
-  end
-
-  if (nargout == 1)
-    y1 = y1 + y2;
-  end
-
-  return;
-end
-
-function y = gaussian(p, x)
-
-  if (any(isnan(p)) | any(isinf(p)))
-    y = zeros(size(x));
-
-    return;
-
-  elseif (size(p, 2) < 4)
-    p = [p zeros(size(p, 1), 1)];
-  end
-
-  y = bsxfun(@plus, bsxfun(@times, p(:, 3), exp(bsxfun(@rdivide, -(bsxfun(@minus,x,p(:,1)).^2), (2*(p(:, 2).^2))))), p(:, 4));
-
-  return;
-end
-
 function params = estimate_piecewise(x, y, params, is_invag)
 
   if (nargin < 3)
@@ -408,7 +367,8 @@ function params = estimate_piecewise(x, y, params, is_invag)
   dy = differentiator(x, y, true);
 
   if (~isempty(params))
-    gauss = imnorm(gaussian([params(1) 2*params(2) params(end) 0.1 * params(end)], x));
+    gauss = params(end)*exp((-(x-params(1)).^2) / (8*(params(2)^2))) + 0.1 * params(end);
+    gauss = imnorm(gauss);
     ddy = -differentiator(x, dy .* gauss, true);
   else
     ddy = -differentiator(x, dy, true);
@@ -462,46 +422,6 @@ function params = estimate_piecewise(x, y, params, is_invag)
 
     params = real([center peak_params(2)/2 vals(1) vals3.']);
   end
-
-  return;
-end
-
-function y = piecewise_background(p, x)
-  
-  if (size(p, 2) == 5)
-    p = [p(:, [1:2]) NaN(size(p,1), 1) p(:, 3:end)];
-  end
-
-  problems = (any(p(:, 2:3) <= 0, 2) | any(~isfinite(p(:,[1:2 4:end])), 2));
-  invags = (isnan(p(:, 3)) & ~problems);
-
-  y = zeros(size(p, 1), length(x));
-
-  p(:, 2) = 1.75*p(:,2);
-
-  neg = bsxfun(@lt, x, p(:, 1) - p(:, 2));
-  pos = bsxfun(@gt, x, p(:, 1) + p(:, 2));
-  middle = (~neg & ~pos);
-
-  knots = [-p(:, 5).*(-p(:, 2)) + p(:, 6), ...
-           p(:, 6) - p(:, 4).*(1 - exp(-p(:, 3).*p(:, 2)))];
-
-  tmp = bsxfun(@minus, p(:, 6), bsxfun(@times, p(:, 4), (1 - exp(bsxfun(@times, -p(:, 3), bsxfun(@minus, x, p(:, 1)))))));
-
-  if (any(invags))
-    knots(invags, 2) = -p(invags, 4).*p(invags,2) + p(invags,6);
-    tmp(invags, :) = bsxfun(@plus, bsxfun(@times, -p(invags, 4), bsxfun(@minus, x, p(invags, 1))), p(invags, 6));
-  end
-
-  y(pos) = tmp(pos);
-
-  tmp = bsxfun(@plus, bsxfun(@times, bsxfun(@rdivide, diff(knots, [], 2), 2*p(:, 2)), bsxfun(@minus, x, p(:, 1))), mean(knots, 2));
-  y(middle) = tmp(middle);
-
-  tmp = bsxfun(@plus, bsxfun(@times, -p(:, 5), bsxfun(@minus, x, p(:, 1))), p(:, 6));
-  y(neg) = tmp(neg);
-
-  y(problems, :) = 0;
 
   return;
 end

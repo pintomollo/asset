@@ -45,6 +45,10 @@ function install_ASSET
       eval(['mex MEX' filesep 'median_mex.c']);
       eval(['mex MEX' filesep 'imadm_mex.c']);
       eval(['mex MEX' filesep 'emdc.c']);
+
+      include_path = uigetdir('/usr/local/include', 'Select the directory containing the LEVMAR include files (.h)');
+
+      eval(['mex -I' include_path ' -llapack -lblas -llevmar MEX' filesep 'fit_front_mex.c']);
     catch ME
       warning('Could not compile the MEX funtions, ASSET can still run without them but more slowly. Consider fixing this problem for more efficiency.');
     end
