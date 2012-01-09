@@ -1,5 +1,5 @@
 function [linear, total_distance] = carth2linear(pts_x, pts_y, ruffles_path)
-  
+
   if (nargin == 1)
     pts_y = [];
   end

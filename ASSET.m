@@ -305,6 +305,10 @@ function [mymovie, trackings, opts] = parse_input(varargin)
       
       files = regexpdir(pwd, varargin{1}, false);
 
+      if (numel(files) == 0)
+        files = regexpdir(pwd, [varargin{1} '.mat'], false);
+      end
+
       if (numel(files) > 1)
         for i=1:length(files)
           ASSET(files{i}, varargin{2:end});

@@ -1,5 +1,28 @@
 function mymovie = reconstruct_egg(mymovie, opts)
 
+  [nframes, imgsize] = size_data(mymovie.dic);
+  mymovie = parse_metadata(mymovie, opts);
+  real_z = mymovie.metadata.z_position;
+
+  pts = cell(nframes, 1);
+  all_coords = zeros(0,3);
+  goods = true(nframes, 1);
+  for i=1:nframes
+    tmp_pts = mymovie.dic.eggshell(i).carth;
+    if (~isempty(tmp_pts))
+      npts = size(tmp_pts, 1);
+      tmp_pts = tmp_pts * opts.pixel_size;
+      pts{i} = tmp_pts;
+    else
+      goods(i) = false;
+    end
+  end
+
+  cluster_eggs(pts, real_z, goods);
+
+  return;
+
+
   %%%%%%%%% ERRORS IN MOVIES 8 13 16 17 18
 
 
@@ -74,6 +97,13 @@ goods = (abs(dist) < real_thresh);
   orient = orient + 2*pi*(orient < 0);
 
   z_coef = sqrt(1 - ((real_z - fit_center(3)).^2 / fit_axes(3).^2));
+  while (any(imag(z_coef)))
+    disp('Estimation problem, rescaling the axes !');
+    fit_axes = fit_axes * 2;
+
+    z_coef = sqrt(1 - ((real_z - fit_center(3)).^2 / fit_axes(3).^2));
+  end
+
   new_axes = fit_axes(1:2, 1) * z_coef;
 
 %  thresh = pi/16;
@@ -90,7 +120,7 @@ goods = (abs(dist) < real_thresh);
 %  oks = oks & (dist < thresh);
 
 %  dist = NaN(nframes, 1);
-  npts = 128;
+  npts = 128*8;
   dists = NaN(npts, nframes);
   pos = [0:npts-1] * (2*pi / npts);
 
@@ -115,38 +145,43 @@ goods = (abs(dist) < real_thresh);
     end
   end
 
-  nclusters = 4;
+  nclusters = 2:6;
+  nneigh = max(sum(goods), 15);
 
+  clusters = zeros(1, nframes);
+  correl = corr(dists(:, goods)); 
+  clusters(goods) = stsc(1 - (correl), nclusters, nneigh);
+  nclusters = max(clusters(:));
 
-  %%keyboard
+  %keyboard
 
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%% ADDD NCLUSTER CHOOSING: E.G. JUMP METHOD
 
   %%% TEST JUMP
 
-  correl = corr(dists(:, goods)); 
-  factor = -(size(correl, 2) / 2);
-  j = zeros(10, 1);
-  for i=1:10
-    [clusters{i}, c] = kmeans(correl, i, 'emptyaction' ,'drop', 'replicates', 5);
-    if i == 1
-      j(i) = mean(sum(bsxfun(@minus, correl, c).^2, 2));
-    else
-      j(i) = mean(mahal(c, correl)); 
-    end
-  end
-
-  res = diff(j);
-
-  keyboard
-
-  %%%% END TEST
-
-  clusters = zeros(1, nframes);
   %correl = corr(dists(:, goods)); 
-  [clusters(goods), c, s, d] = kmeans(correl, nclusters, 'emptyaction' ,'drop', 'replicates', 5);
+  %factor = -(size(correl, 2) / 2);
+  %j = zeros(10, 1);
+  %for i=1:10
+  %  [clusters{i}, c] = kmeans(correl, i, 'emptyaction' ,'drop', 'replicates', 5);
+  %%  if i == 1
+  %    j(i) = mean(sum(bsxfun(@minus, correl, c).^2, 2));
+  %  else
+  %    j(i) = mean(mahal(c, correl)); 
+  %  end
+  %end
 
-  keyboard
+  %res = diff(j);
+
+  %keyboard
+
+  %%%%% END TEST
+
+  %clusters = zeros(1, nframes);
+  %correl = corr(dists(:, goods)); 
+  %[clusters(goods), c, s, d] = kmeans(correl, nclusters, 'emptyaction' ,'drop', 'replicates', 5);
+
+  %keyboard
   %[~, indxs] = sort(clusters);
   
   cluster_count = zeros(nclusters, 1);
@@ -155,6 +190,8 @@ goods = (abs(dist) < real_thresh);
   end 
   [~, best_cluster] = max(clusters_count);
   
+  keyboard
+
   all_coords = zeros(0,3);
   for i=1:nframes
     if (clusters(i) == best_cluster)
@@ -659,6 +696,107 @@ plot(real_z(goods), b(goods), 'r');
   return;
 end
 
+function [fit_axes, goods] = cluster_eggs(paths, real_z, goods)
+
+  all_coords = zeros(0,3);
+  neggs = length(paths);
+
+  for i=1:neggs
+    if (goods(i))
+      all_coords = [all_coords; [paths{i} ones(size(paths{i}, 1), 1)*real_z(i)]];
+    end
+  end
+
+  [c, a, orient] = fit_ellipse(all_coords(:, 1:2));
+  new_coords = realign(all_coords(:, 1:2), [0;0], c, orient);
+
+  [fit_center, fit_axes, fit_angle] = ellipsoid_fit([new_coords all_coords(:,3)], 1);
+  %orient = atan2(-fit_angle(2,1), fit_angle(1,1));
+  %orient = orient + 2*pi*(orient < 0);
+  fit_axes = abs(fit_axes);
+
+  z_coef = sqrt(1 - ((real_z - fit_center(3)).^2 / fit_axes(3).^2));
+  while (any(imag(z_coef)))
+    disp('Estimation problem, rescaling the axes !');
+    fit_axes = fit_axes * 2;
+
+    z_coef = sqrt(1 - ((real_z - fit_center(3)).^2 / fit_axes(3).^2));
+  end
+
+  new_axes = fit_axes(1:2, 1) * z_coef;
+
+  npts = 128*8;
+  dists = NaN(npts, neggs);
+  pos = [0:npts-1] * (2*pi / npts);
+
+  for i=1:neggs
+    if (goods(i))
+      tmp_pts = paths{i};
+      %npts = size(tmp_pts, 1);
+
+      %[ell] = draw_ellipse(fit_center(1:2), new_axes(:, i), orient);
+      %nell = size(ell, 1);
+
+      ell_pts = carth2elliptic(tmp_pts, fit_center(1:2), new_axes(:, i), orient, 'radial');
+
+      [~, dists(:, i)] = interp_elliptic(ell_pts, pos);
+    end
+  end
+  
+  nclusters = 1:6;
+  nneigh = max(sum(goods), 15);
+
+  clusters = zeros(1, neggs);
+  correl = corr(dists(:, goods)); 
+  clusters(goods) = stsc(1 - (correl), nclusters, nneigh);
+  nclusters = max(clusters(:));
+
+  cluster_count = zeros(nclusters, 1);
+  for i=1:nclusters
+    clusters_count(i) = sum(clusters == i);
+  end 
+  [~, best_cluster] = max(clusters_count);
+  
+  goods = (clusters == best_cluster);
+
+  npts = 128*8;
+  dists = NaN(npts, neggs);
+  pos = [0:npts-1] * (2*pi / npts);
+
+  for i=1:neggs
+    if (goods(i))
+      tmp_pts = paths{i};
+      %npts = size(tmp_pts, 1);
+
+      %[ell] = draw_ellipse(fit_center(1:2), new_axes(:, i), orient);
+      %nell = size(ell, 1);
+
+      ell_pts = carth2elliptic(tmp_pts, fit_center(1:2), new_axes(:, i), orient, 'radial');
+
+      [~, dists(:, i)] = interp_elliptic(ell_pts, pos);
+    end
+  end
+
+  dists = mean(abs(dists), 1);
+  dists = dists(goods);
+
+  dists = bsxfun(@minus, dists.', dists);
+   
+  clusters = zeros(1, neggs);
+  correl = corr(dists(:, goods)); 
+  clusters(goods) = stsc(1 - (correl), nclusters, nneigh);
+  nclusters = max(clusters(:));
+
+  cluster_count = zeros(nclusters, 1);
+  for i=1:nclusters
+    clusters_count(i) = sum(clusters == i);
+  end 
+  [~, best_cluster] = max(clusters_count);
+  
+  goods = (clusters == best_cluster);
+ 
+  return;
+end
 
 function [axes_size, centers] = estimate_axes(axes_length, z_pos, axes_ratio)
 
