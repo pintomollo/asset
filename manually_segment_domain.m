@@ -334,10 +334,8 @@ function mouseClick(hobj, event_data)
   drawnow;
 
   name = handles.domains{handles.current};
-  indx = strfind(name, '.');
-  name = name(1:indx(1)-1);
-  indx = strfind(name, '-');
-  name = [name(1:indx(end)-1) '_.mat'];
+  indx = strfind(name, 'DP');
+  name = [name(1:indx(1)-2) '_.mat'];
 
   tmp = load(name);
   %img1 = imnorm(double(load_data(tmp.mymovie.dic, frame)));
@@ -346,7 +344,8 @@ function mouseClick(hobj, event_data)
   opts = get_struct('ASSET');
   [~, pos] = gather_quantification(tmp.mymovie, opts);
 
-  pts = insert_ruffles(tmp.mymovie.markers.cortex(frame).carth, tmp.mymovie.markers.ruffles(frame).paths);
+  %pts = insert_ruffles(tmp.mymovie.markers.cortex(frame).carth, tmp.mymovie.markers.ruffles(frame).paths);
+  pts = tmp.mymovie.data.quantification(frame).carth;
   [lin_pts, tot_length] = carth2linear(pts);
   [ell_pts] = carth2elliptic(pts, tmp.mymovie.markers.centers(:, frame), tmp.mymovie.markers.axes_length(:, frame), tmp.mymovie.markers.orientations(1, frame));
 
@@ -359,10 +358,10 @@ function mouseClick(hobj, event_data)
   yi = round(xy(:,2));
 
   x_pos = round(xi(yi == frame));
-  
+
   if (~isempty(x_pos))
 
-    tot_length = tot_length * opts.pixel_size^2;
+    tot_length = tot_length * opts.pixel_size;
     lin_pos = pos(x_pos);
     lin_pts = lin_pts * tot_length;
 
@@ -411,7 +410,21 @@ if (handles.previous ~= handles.current)
   handles.previous = handles.current;
 
   if (~isfield(tmp, 'domain'))
-    tmp.domain = tmp.img;
+    if (isfield(tmp, 'img'))
+      tmp.domain = tmp.img;
+    elseif (isfield(tmp, 'mymovie'))
+      tmp.domain = gather_quantification(tmp.mymovie, tmp.opts);
+      tmp.path = NaN(0, 2);
+
+      name = (handles.domains{handles.current});
+      if (strncmp(name(end-2:end), 'mat', 3))
+        name = name(1:end-4);
+      end
+      name = [name 'DP.mat'];
+      handles.domains{handles.current} = name;
+
+      tmp = rmfield(tmp, 'mymovie');
+    end
   end
 
   if (~strncmp(class(tmp.domain), 'double', 6))

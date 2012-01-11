@@ -22,9 +22,10 @@ function mymovie = follow_invaginations(mymovie, opts)
   
   coef = -1;
   
-  for nimg=1:nframes
+  for i = 1:nframes
+    nimg = i;
     %nimg = floor(rand(1)*nframes)+1
-    %nimg = 28;
+    %nimg = 47
     
     ruffles = mymovie.(type).ruffles(nimg).carth;
     nruffles = size(ruffles,1);
@@ -33,7 +34,7 @@ function mymovie = follow_invaginations(mymovie, opts)
     if (nruffles > 0)
 
       inv_length = zeros(nruffles, 1);
-      tmp_mins = zeros(nruffles, 1);
+      %tmp_mins = zeros(nruffles, 1);
       bounds = mymovie.(type).ruffles(nimg).bounds;
       mins = bounds(:,1:2);
       maxs = bounds(:,3:4);
@@ -120,8 +121,26 @@ function mymovie = follow_invaginations(mymovie, opts)
        %     keyboard
        %   end
 
+
+       %%%%%%%% TRYING TO CONSIDER INVAGINATIONS THAT ARE BRIGHT ONLY AFTER
+
         inv_intens = weight_img(sub2ind(flipped_size, inv_path(:,1), inv_path(:,2)));
-        worst = find([inv_intens(1:end-1); Inf] >= mean_intens, 1);
+        %worst = find([inv_intens(1:end-1); Inf] >= mean_intens, 1);
+
+        val_test = ([inv_intens(1:end-1); Inf] >= mean_intens);
+        transitions = find([2; diff(val_test)]);
+        domains = diff([transitions; size(inv_intens, 1)]);
+        domain_vals = val_test(transitions);
+
+        worst = transitions(1);
+        for d = 2:length(domains)
+          if (domain_vals(d) == 1)
+            worst = transitions(d);
+          elseif (domains(d) <= domains(d-1))
+            break;
+          end
+        end
+
         indx = find(inv_intens(1:worst) < thresh, 1, 'last');
         if (isempty(indx))
           indx = 1;
@@ -134,8 +153,9 @@ function mymovie = follow_invaginations(mymovie, opts)
           last_neg = 1;
         end
 
-        if (last_neg <= indx)
-          min_indx = find([true; (inv_dist(last_neg+1:indx) < inv_dist(last_neg:indx-1))], 1, 'last') + last_neg-1;
+        %if (last_neg <= indx)
+        if (last_neg+1 < indx & inv_dist(indx) > dist_thresh)
+          %min_indx = find([true; (inv_dist(last_neg+1:indx) < inv_dist(last_neg:indx-1))], 1, 'last') + last_neg-1;
 
           %keyboard
           if (opts.verbosity == 3)
@@ -145,14 +165,15 @@ function mymovie = follow_invaginations(mymovie, opts)
             myplot(inv_path(:,[2 1]),'g');
           end
 
-          if (indx > 1 & inv_dist(indx) > dist_thresh)
+          %if (indx > 1 & inv_dist(indx) > dist_thresh)
 
-            if (min_indx ~= 1)
-              min_indx = min_indx - 1;
-              inv_path(min_indx,1) = ell_path(inv_path(min_indx,2));
-            end
+            %if (min_indx ~= 1)
+            %  min_indx = min_indx - 1;
+            %  inv_path(min_indx,1) = ell_path(inv_path(min_indx,2));
+            %end
 
-            inv_path = inv_path(min_indx:indx,[2 1]);
+            %inv_path = inv_path(min_indx:indx,[2 1]);
+            inv_path = inv_path(last_neg+1:indx,[2 1]);
             
             if (opts.verbosity == 3)
               myplot(inv_path,'r');
@@ -163,7 +184,7 @@ function mymovie = follow_invaginations(mymovie, opts)
             paths{i} = inv_path;
             inv_length(i,1) = sum(sqrt(sum(diff(inv_path, [], 1).^2, 2)));
 
-            tmp_mins(i) = min_indx;
+            %tmp_mins(i) = min_indx;
 
             is_valid = true;
             for j=1:i-1
@@ -179,7 +200,7 @@ function mymovie = follow_invaginations(mymovie, opts)
                 end
               end
             end
-          end
+          %end
         end
       end
       mymovie.(type).ruffles(nimg).properties = [mymovie.(type).ruffles(nimg).properties inv_length];

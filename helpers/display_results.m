@@ -275,7 +275,7 @@ set(hfig,'UserData',handles);
 switch handles.type
   case 'markers'
     set(handles.cortex.pts(1), 'Marker','none','Color',[1 1 0]);
-    set(handles.cortex.pts(2), 'XData',NaN,'YData',NaN);
+    %set(handles.cortex.pts(2), 'XData',NaN,'YData',NaN);
   otherwise
     set(handles.cortex.pts(1), 'Marker','o','Color',[1 0 0]);
 end

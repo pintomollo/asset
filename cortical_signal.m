@@ -29,10 +29,6 @@ function mymovie = cortical_signal(mymovie, opts)
     window_shape = window_shape / sum(window_shape(:));
   end
 
-  if (opts.recompute | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
-    mymovie = duplicate_segmentation(mymovie, 'data', opts);
-  end
-
   if (opts.quantification.use_ruffles)
     if (opts.recompute | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
     %if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
@@ -43,12 +39,18 @@ function mymovie = cortical_signal(mymovie, opts)
       for j=1:nframes
         if (~isempty(mymovie.(type).ruffles(j).paths))
           do_it = false;
+
+          break;
         end
       end
       if (do_it)
         mymovie = follow_invaginations(mymovie, opts);
       end
     end
+  end
+
+  if (opts.recompute | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
+    mymovie = duplicate_segmentation(mymovie, 'data', opts);
   end
 
   % Progress bar
@@ -69,14 +71,14 @@ function mymovie = cortical_signal(mymovie, opts)
                    Inf Inf Inf Inf Inf Inf];
 
 
-    %nimg = randi(nframes)
     nimg = i;
-    %nimg = i + 85
-    %nimg = 91
+    %nimg = randi(nframes)
+    %nimg = i + 5
+    %nimg = 6
 
     cortex = mymovie.data.cortex(nimg).carth;
     if (opts.quantification.use_ruffles)
-      [ cortex, rescale] = insert_ruffles(cortex, mymovie.(type).ruffles(nimg).paths);
+      [ cortex, rescale] = insert_ruffles(cortex, mymovie.data.ruffles(nimg).paths);
     else
       rescale = false(size(cortex, 1), 1);
     end
@@ -87,6 +89,8 @@ function mymovie = cortical_signal(mymovie, opts)
 
       ph = double(load_data(mymovie.cortex, nimg));
       ph = mask_neighbors(ph, mymovie.data.centers(:,nimg), mymovie.data.axes_length(:,nimg), mymovie.data.orientations(1,nimg), mymovie.data.neighbors(nimg), opts);
+
+  %keyboard
 
       %ell_cortex = carth2elliptic(cortex, mymovie.data.centers(:, nimg), mymovie.data.axes_length(:, nimg), mymovie.data.orientations(1, nimg));
 
@@ -126,6 +130,8 @@ function mymovie = cortical_signal(mymovie, opts)
       %values = bilinear(img, all_pos_x, all_pos_y);
       %values = reshape(values, [size(cortex,1) nbins]);
       
+      %%%%%%%%% BE CAREFULL OF MEMORY IF TOO LARGE !! 
+
       [values, dperp, dpos] = perpendicular_sampling(img, cortex, opts);
       [ph_values] = perpendicular_sampling(ph, cortex, dperp, dpos, opts);
 
@@ -164,7 +170,12 @@ function mymovie = cortical_signal(mymovie, opts)
         valid_dpos = dpos(valids);
 
         tmp_val = emdc(valid_dpos, valid_line);
-        smoothed = sum(tmp_val(end-1:end, :), 1);
+
+        if (size(tmp_val, 1) > 2)
+          smoothed = sum(tmp_val(end-1:end, :), 1);
+        else
+          smoothed = tmp_val(end, :);
+        end
         
         %keyboard
 
@@ -184,6 +195,7 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).front = signal(:, [1 2 end]);
       mymovie.data.quantification(nimg).bkg = signal(:, [3:end-1]);
       mymovie.data.quantification(nimg).carth = cortex;
+
     else
 
       %tmp_cortex = [cortex(end,:); cortex; cortex(1,:)];
@@ -213,11 +225,11 @@ function mymovie = cortical_signal(mymovie, opts)
     weights = opts.quantification.weights;
     init_params = opts.quantification.init_params;
 
-    img = gather_quantification(mymovie, opts);
-    img = imnorm(img);
-    path = dynamic_prog_2d(img, params, @weight_domain, weights, @init_domain, init_params, opts);
+    %img = gather_quantification(mymovie, opts);
+    %img = imnorm(img);
+    %path = dynamic_prog_2d(img, params, @weight_domain, weights, @init_domain, init_params, opts);
 
-    mymovie.data.domain = path / size(img, 2);
+    %mymovie.data.domain = path / size(img, 2);
   end
 
   if (opts.verbosity > 0)
@@ -270,7 +282,12 @@ function [params, bounds, slopes] = estimate_mean(x, ys, is_invag, bounds, optim
       slopes = ones(size(ys, 1), 1) * params(end-1);
     else
       imf = emdc([], y);
-      slopes = imf(end, :).';
+
+      if (size(imf, 1) > 2)
+        slopes = sum(imf(end-1:end, :), 1).';
+      else
+        slopes = imf(end, :).';
+      end
     end
 
     if (is_invag)
@@ -303,7 +320,8 @@ function new_params = estimate_front(x, y, params, is_invag)
   peak_range = get_peak(x, y-estim);
   params_gaussian = estimate_gaussian(x(peak_range), y(peak_range)-estim(peak_range));
 
-  new_params = [params_sigmoid(1) params_gaussian(2) params_sigmoid(3:end-1) params_sigmoid(end)+params_gaussian(end) params_gaussian(3:end-1)];
+  %new_params = [params_sigmoid(1) params_gaussian(2) params_sigmoid(3:end-1) params_sigmoid(end)+params_gaussian(end) params_gaussian(3:end-1)];
+  new_params = [mean([params_sigmoid(1) params_gaussian(1)]) params_gaussian(2) params_sigmoid(3:end-1) params_sigmoid(end) params_gaussian(3:end-2) diff(params_gaussian([end end-1]))];
 
   return;
 end
@@ -324,7 +342,8 @@ function [range, center] = get_peak(x, y)
 
   x = x - center;
 
-  mins = find(y(1:end-2) > y(2:end-1) & y(2:end-1) <= y(3:end)) + 1;
+  mins = find(dy(1:end-1) < 0 & dy(2:end) >= 0)+1;
+  %mins = find(y(1:end-2) > y(2:end-1) & y(2:end-1) <= y(3:end)) + 1;
   maxs = [];
   lmin = mins(x(mins) < 0);
   if (isempty(lmin))
@@ -359,10 +378,13 @@ function [range, center] = get_peak(x, y)
     best_min = 1;
   end
 
-  range = min(-x(lmin(best_min)), x(rmin(all_indx(best_min))));
-  center = [center range];
-  range = (x >= -range & x <= range);
+  range = mean([-x(lmin(best_min)), x(rmin(all_indx(best_min)))]);
 
+  % Approx 1/20
+  center = [center range/2.45];
+
+  range = (x >= -range & x <= range);
+  
   return;
 end
 
@@ -421,15 +443,16 @@ function params = estimate_piecewise(x, y, params, is_invag)
   if (~isempty(params))
     gauss = (0.9*exp(-((x-params(1)).^2) / (8*(params(2)^2))) + 0.1);
     ddy = -differentiator(x, dy .* gauss, true);
+    dddy = differentiator(x, ddy, true);
     
-    maxs = find(dy(1:end-1)>0 & dy(2:end) <= 0) + 1;
+    maxs = find(dddy(1:end-1) > 0 & dddy(2:end) <= 0) + 1;
 
     [~, indx] = min(abs(x(maxs) - params(1)));
     indx = maxs(indx);
 
-    if (isempty(indx))
-      [~, indx] = max(ddy);
-    end
+    %if (isempty(indx))
+   %   [~, indx] = max(ddy);
+    %end
   else
     ddy = -differentiator(x, dy, true);
     [~, indx] = max(ddy);
@@ -444,16 +467,21 @@ function params = estimate_piecewise(x, y, params, is_invag)
   [peak, peak_params] = get_peak(x - center, ddy);
 
   center = center + peak_params(1);
-  peak_params(2) = 1.5*peak_params(2);
+
+  % Correction for estimating 2nd derivative
+  peak_params(2) = sqrt(3)*peak_params(2);
+  
+  % Approx 1/5
+  peak_dist = 1.79*peak_params(2);
 
   dx = range(x);
   
-  if (peak_params(2) > dx/4)
+  if (peak_dist > dx/4)
     x_neg = (x < center - dx/4);
     x_pos = (x > center + dx/4);
   else
-    x_neg = (x < center - peak_params(2));
-    x_pos = (x > center + peak_params(2));
+    x_neg = (x < center - peak_dist);
+    x_pos = (x > center + peak_dist);
   end
 
   if (sum(x_neg) < 3)
@@ -468,7 +496,7 @@ function params = estimate_piecewise(x, y, params, is_invag)
     vals3 = [[zeros(size(x(x_neg).')) (center - x(x_neg).') ones(size(x(x_neg))).']; ...
              [(center - x(x_pos).') zeros(size(x(x_pos).')) ones(size(x(x_pos).'))]] \ [(y(x_neg)).'; y(x_pos).'];
 
-    params = [center peak_params(2)/2 vals3.'];
+    params = [center peak_params(2) vals3.'];
   else
 
     %valids = (dy < 0) & x_pos;
@@ -493,7 +521,7 @@ function params = estimate_piecewise(x, y, params, is_invag)
     vals3 = [[zeros(size(x(x_neg).')) (center - x(x_neg).') ones(size(x(x_neg))).']; ...
              [-(1 - exp(vals(1)*(center - x(x_pos).'))) zeros(size(x(x_pos).')) ones(size(x(x_pos).'))]] \ [(y(x_neg)).'; y(x_pos).'];
 
-    params = [center peak_params(2)/2 vals(1) vals3.'];
+    params = [center peak_params(2) vals(1) vals3.'];
   end
 
   return;

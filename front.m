@@ -36,7 +36,8 @@ function y = piecewise_background(p, x)
 
   y = zeros(size(p, 1), length(x));
 
-  p(:, 2) = 1.75*p(:,2);
+  % Approx 1/5: x(1/n) = sqrt(2*log(n))*var
+  p(:, 2) = 1.79*p(:,2);
 
   neg = bsxfun(@lt, x, p(:, 1) - p(:, 2));
   pos = bsxfun(@gt, x, p(:, 1) + p(:, 2));

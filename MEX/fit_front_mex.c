@@ -45,7 +45,7 @@ double *pos=(double *)adata;
 double min_pos, max_pos, width, center, variance, base, knot1, knot2, slope, mid_point;
 
   center = p[0];
-  width = 1.75*p[1];
+  width = 1.79*p[1];
   min_pos = center - width;
   max_pos = center + width;
   variance = 2*pow(p[1], 2);

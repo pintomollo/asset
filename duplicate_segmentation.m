@@ -41,6 +41,10 @@ function mymovie = duplicate_segmentation(mymovie, type, opts, nframe)
     mymovie.(type).cytokinesis = mymovie.(orig_type).cytokinesis;
   end
 
+  if (isfield(mymovie.(orig_type), 'ruffles'))
+    mymovie.(type).ruffles = mymovie.(orig_type).ruffles;
+  end
+
   if (nargin == 4)
     frames = nframe;
   else
