@@ -93,7 +93,9 @@ function mymovie = find_ruffles(mymovie, opts)
     first = find(dist < thresh, 1);
 
     for j=first:length(dist)
-      if (dist(j) < thresh & local_max > thresh)
+      if (~isfinite(dist(j)))
+        break;
+      elseif (dist(j) < thresh & local_max > thresh)
         local_max = 0;
         indxs(end, 3) = j;
 
@@ -133,7 +135,7 @@ function mymovie = find_ruffles(mymovie, opts)
     %plot([1:length(dist)], dist); hold on;
 
     new_indxs = zeros(0,3);
-
+    
     for j=1:size(indxs,1)
       tmp = local_maxs(indxs(j,:), dist);
       tmp = tmp(1:2, tmp(3,:) > hard_thresh / sub_coef);
@@ -215,6 +217,7 @@ function sort_mins = order_ruffles(path, mins, maxs)
 %  %keyboard
 %
   d = -(bsxfun(@minus, mins_val, maxs_val'));
+  d(isnan(d)) = min(d(:)) - 1;
   dindx = ones(npts);
 
   for i=1:npts
@@ -224,7 +227,14 @@ function sort_mins = order_ruffles(path, mins, maxs)
 
     while (~found)
       td = d .* dindx .* mask;
+
       indxs = find(td==max(max(td)));
+
+      if (td(indxs(1)) == 0)
+        row = -1;
+        break;
+      end
+
       [rows,cols] = ind2sub([npts npts], indxs);
 
       jndx = 1;
@@ -248,10 +258,15 @@ function sort_mins = order_ruffles(path, mins, maxs)
       end
     end
 
-    sort_mins(:,i) = [mins(:,row);maxs(:,col)];
-    indexes = [indexes [mins(1,row); maxs(1,col)]];
-    dindx(row,:) = 0;
-    dindx(:,col) = 0;
+    if (row < 0)
+      sort_mins = sort_mins(:, ~any(sort_mins == 0, 1));
+      break;
+    else
+      sort_mins(:,i) = [mins(:,row);maxs(:,col)];
+      indexes = [indexes [mins(1,row); maxs(1,col)]];
+      dindx(row,:) = 0;
+      dindx(:,col) = 0;
+    end
   end
      
 

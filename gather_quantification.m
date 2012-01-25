@@ -20,7 +20,7 @@ function [datas, theta] = gather_quantification(mymovie, opts)
     case 'linear'
       range = [-0.5 0.5];
     case 'direct'
-      resolution = 0.05;
+      resolution = 0.5;
       tmp_pts = cell(nframes, 2);
   end
 
@@ -36,6 +36,7 @@ function [datas, theta] = gather_quantification(mymovie, opts)
         cortex = insert_ruffles(cortex, mymovie.markers.ruffles(i).paths);
       end
     end
+
 
     %if (opts.quantification.use_ruffles)
     %  [ cortex, rescale] = insert_ruffles(cortex, mymovie.markers.ruffles(i).paths);
@@ -122,6 +123,19 @@ function [datas, theta] = gather_quantification(mymovie, opts)
 
   %keyboard
     for i=1:nframes
+
+        % KEEP only half of the invagination, choose base on intensity
+%      if (i==25)
+%      cortex = mymovie.data.cortex(i).carth;
+%      if (opts.quantification.use_ruffles)
+%        [cortex, is_ruffle] = insert_ruffles(cortex, mymovie.markers.ruffles(i).paths);
+%      end
+%        intens = mymovie.data.quantification(i).cortex(tmp_pts{i,2});
+%
+%        keyboard
+%      end
+
+
       pts = tmp_pts{i,1}; % * opts.pixel_size;
       new_intens = interp_elliptic(pts, mymovie.data.quantification(i).cortex(tmp_pts{i,2}), full_indexes, dist(i,:));
       new_intens(full_indexes < dist(i,1) | full_indexes > dist(i,2),:) = NaN;
