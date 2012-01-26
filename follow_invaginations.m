@@ -20,12 +20,13 @@ function mymovie = follow_invaginations(mymovie, opts)
 
   %inner_thresh = 0.02;
   jump_coef = 0.05;
-  coef = 3;
+  coef = 3.5;
+  straighten_coef = 0.5;
 
   for i = 1:nframes
     nimg = i;
     %nimg = floor(rand(1)*nframes)+1
-    %nimg = 84 + i
+    %nimg = 16 + i
     
     ruffles = mymovie.(type).ruffles(nimg).carth;
     nruffles = size(ruffles,1);
@@ -82,6 +83,7 @@ function mymovie = follow_invaginations(mymovie, opts)
       %ell_bounds(ell_bounds < 1) = ell_bounds(ell_bounds < 1) + flipped_size(2);
       %ell_bounds(ell_bounds > flipped_size(2)) = ell_bounds(ell_bounds > flipped_size(2)) - flipped_size(2);
 
+      parameters.cortex_params.beta = (1 - straighten_coef)*parameters.cortex_params.beta + straighten_coef;
       [junk, map, dist] = dynamic_programming(polar_img, parameters.cortex_params, segment_func, parameters.cortex_weights, opts, true);
 
       dist_path = bilinear_mex(dist, vert_indx, ell_path);
@@ -128,9 +130,10 @@ function mymovie = follow_invaginations(mymovie, opts)
         inv_intens = weight_img(sub2ind(flipped_size, inv_path(:,1), inv_path(:,2)));
 
         val_test = ([inv_intens(1:end-1); Inf] >= thresh(inv_path(1,1):-1:1));
-        transitions = find([2; diff(val_test)]);
-        domains = diff([transitions; size(inv_intens, 1)]);
-        domain_vals = val_test(transitions);
+        %transitions = find([2; diff(val_test)]);
+        %domains = diff([transitions; size(inv_intens, 1)]);
+        %domain_vals = val_test(transitions);
+        [transitions, domains, domain_vals] = boolean_domains(val_test);
 
         good_domains = ((~domain_vals & (domains > [0; domains(1:end-1)])) | (domain_vals & domains < jump_thresh));
         indx = find(~good_domains, 1);

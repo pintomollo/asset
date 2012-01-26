@@ -120,21 +120,7 @@ function [datas, theta] = gather_quantification(mymovie, opts)
     npts = length(full_indexes);
 
     datas = NaN(nframes, npts);
-
-  %keyboard
     for i=1:nframes
-
-        % KEEP only half of the invagination, choose base on intensity
-%      if (i==25)
-%      cortex = mymovie.data.cortex(i).carth;
-%      if (opts.quantification.use_ruffles)
-%        [cortex, is_ruffle] = insert_ruffles(cortex, mymovie.markers.ruffles(i).paths);
-%      end
-%        intens = mymovie.data.quantification(i).cortex(tmp_pts{i,2});
-%
-%        keyboard
-%      end
-
 
       pts = tmp_pts{i,1}; % * opts.pixel_size;
       new_intens = interp_elliptic(pts, mymovie.data.quantification(i).cortex(tmp_pts{i,2}), full_indexes, dist(i,:));

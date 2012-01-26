@@ -8,6 +8,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
 
     for i = 1:nframes
       nimg = i;
+      %nimg = 93 + i
 
       %cortex = mymovie.data.cortex(nimg).carth;
       %if (opts.quantification.use_ruffles)
@@ -22,6 +23,8 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
       if (size(mymovie.data.quantification(nimg).front, 1) ~= size(cortex, 1))
         error('Quantification and path do not correspond, you need to recompute both.')
       end
+
+      rescale = isnan(mymovie.data.quantification(nimg).bkg(:,1));
 
       mymovie.data.quantification(nimg).cortex = extract_ridge(mymovie.data.quantification(nimg).front, cortex, dperp, rescale, opts);
     end
@@ -81,7 +84,48 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
 
   %pause
 
+  [pos, len, val] = boolean_domains(rescale);
+  ndom = length(pos);
 
+  for i=1:ndom
+    if (val(i))
+      prev_indx = (i-1);
+      if (prev_indx < 1)
+        prev_indx = prev_indx + ndom;
+      end
+      next_indx = (i+1);
+      if (next_indx > ndom)
+        next_indx = next_indx - ndom;
+      end
+
+      if (len(prev_indx) > len(i))
+        tmp_len = len(i);
+      else
+        tmp_len = len(prev_indx);
+      end
+
+      left_vals = values(pos(prev_indx)+len(prev_indx) - [1:tmp_len]);
+
+      if (len(next_indx) > len(i))
+        tmp_len = len(i);
+      else
+        tmp_len = len(next_indx);
+      end
+
+      right_vals = values(pos(next_indx) - 1 + [1:tmp_len]);
+
+      if (ttest2(left_vals, right_vals))
+        curr_vals = values([pos(i):pos(i)+len(i)-1]);
+        half = round(len(i)/2);
+
+        if (ttest2(curr_vals, left_vals, 0.05, 'right'))
+          values([pos(i):pos(i)+half-1]) = median(left_vals) + std(left_vals)*randn(1, half);
+        else
+          values(pos(i)+len(i) - [1:half]) = median(right_vals) + std(right_vals)*randn(1, half);
+        end
+      end
+    end
+  end
 
   return;
 end

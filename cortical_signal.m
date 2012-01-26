@@ -30,8 +30,8 @@ function mymovie = cortical_signal(mymovie, opts)
   end
 
   if (opts.quantification.use_ruffles)
-    %if (opts.recompute | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
-    if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
+    if (opts.recompute | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
+    %if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
       mymovie = find_ruffles(mymovie, opts);
       mymovie = follow_invaginations(mymovie, opts);
     elseif (~isfield(mymovie.(type).ruffles, 'paths') | isempty(mymovie.(type).ruffles(1).paths))
@@ -104,11 +104,6 @@ function mymovie = cortical_signal(mymovie, opts)
       bounds_invag(:, 1) = bounds(:, 1) + bounds(:, 2);
       bounds_invag(:, 2) = 2*bounds(:,2);
       [params_invag, bounds_invag, slopes(rescale, :)] = estimate_mean(dpos, values(rescale, :), true, bounds_invag, optims);
-
-      %%%%%%%%%%%%%%%% MIGHT BE A PROBLEM....
-      bounds(end, 2) = 5*params(end);
-
-      %keyboard
 
       signal = NaN(npts, 7); 
 
