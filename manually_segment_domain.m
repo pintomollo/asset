@@ -32,8 +32,8 @@ hFig = figure(...
 'Resize','off',...
 'UserData',[],...
 'Interruptible', 'off', ...
+'Position',[10 10 200 60],...
 'Visible','off');
-%'Position',[104 6 212 54],...
 
 hAxes = axes(...
 'Parent',hFig,...
@@ -437,7 +437,20 @@ if (handles.previous ~= handles.current)
   img = imnorm(img);
 
   if (ishandle(handles.img))
+
+    tmpx = get(handles.axes, 'XLim');
+    tmpy = get(handles.axes, 'YLim');
+
+    newx = [0 size(img, 2)];
+    newy = [0 size(img, 1)];
+
+    scaling = max(diff(newx)/diff(tmpx), diff(newy)/diff(tmpy));
+
     set(handles.img,'CData', img);
+    zoom(1/scaling)
+
+    set(handles.axes,'YLim',newy, 'XLim',newx);
+    handles.zoom = 1;
   else
 
     %handles.img = imagesc(img,'Parent', handles.axes,'CDataMapping', 'scaled');
@@ -480,6 +493,19 @@ function store_path(hFig)
   [h,w] = size(domain);
 
   xy = getPosition(handles.polygon);
+
+  if (all(isnan(xy(:))))
+    btn = questdlg('No segmentation detected, what do you want to do ? Note that you need to double-click on the polygon to save it...', 'Manual segmentation ?', 'Ignore', 'Cancel', 'Cancel');
+
+    switch btn
+      case 'Ignore'
+        path = NaN(1,2);
+        save(handles.domains{handles.current}, 'domain', 'path');
+      case 'Cancel'
+        return;
+    end
+  else
+
   [tmp_xy, i, j] = unique(xy, 'rows');
 
   xy = NaN(size(xy));
@@ -547,6 +573,7 @@ function store_path(hFig)
     %figure;scatter(path(:, 1), path(:, 2))
 
     save(handles.domains{handles.current}, 'domain', 'path');
+  end
 
 
   return;

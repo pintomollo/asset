@@ -268,6 +268,8 @@ function [mymovie,trackings] = ASSET(varargin)
     end
     print_all(lasterror());
     working = false;
+
+    close all hidden force;
   end
 
   % It's over, let's notify it !

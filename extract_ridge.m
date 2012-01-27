@@ -104,6 +104,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
         tmp_len = len(prev_indx);
       end
 
+      % need circular pixel picking
       left_vals = values(pos(prev_indx)+len(prev_indx) - [1:tmp_len]);
 
       if (len(next_indx) > len(i))
@@ -112,6 +113,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
         tmp_len = len(next_indx);
       end
 
+      % need circular pixel picking
       right_vals = values(pos(next_indx) - 1 + [1:tmp_len]);
 
       if (ttest2(left_vals, right_vals))
