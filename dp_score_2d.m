@@ -21,7 +21,7 @@ function [bests, indxs] =  dp_score_2d(datas, prev_datas, prev_dist, prev_dir, i
     gamma = [gamma gamma];
   end
   if (numel(delta) == 1)
-    delta = [delta delta];
+    delta = [delta 1-delta];
   end
 
   if (sum(delta) == 0)
@@ -147,7 +147,7 @@ function [bests, indxs] =  dp_score_2d(datas, prev_datas, prev_dist, prev_dir, i
       switch prohibit
         case 'horiz'
           crossing = zeros(size_prob);
-          crossing(:, [1:tmp_j(i) end+tmp_j(i)+1:end]) = Inf;
+          crossing(:, [1:tmp_j(i) end-tmp_j(i)+1:end]) = Inf;
 
         case 'diag'
 

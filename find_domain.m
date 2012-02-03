@@ -10,7 +10,7 @@ function opts = find_domain(opts, uuid)
     opts.uuid = randi(1000, 1);
   end
 
-  manuals = dir('*-Manual-DP.mat');
+  manuals = dir('*_DP.mat');
   manuals = manuals(randperm(length(manuals)));
 
   p0 = gather_parameters(opts.quantification, opts);

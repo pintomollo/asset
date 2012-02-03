@@ -162,14 +162,20 @@ function mystruct = get_struct(type, nstruct)
       weights = get_struct('data_parameters');
 
       params.nhood = 5;
-      params.alpha = 0.1;
-      params.beta = 0.2;
-      params.gamma = 0.5;
+      params.alpha = 0.25;
+      params.beta = 0.75;
+      params.gamma = 0.75;
+      params.delta = 0.5;
 
-      weights.alpha = 0.475;
-      weights.beta = 0.5;
-      weights.gamma = 0.5;
-      weights.delta = 0.025;
+      weights.alpha = 0.5;
+      weights.beta = 0.75;
+      weights.gamma = 0.25;
+
+      init.alpha = 0.45;
+      init.beta = 0.25;
+      init.gamma = 1e-03;
+      init.delta = 0.4;
+
 
       mystruct = struct('channel', 'data', ...              % Quantified channel
                         'field', 'cortex', ...              % Quantified field in the previously defined channel

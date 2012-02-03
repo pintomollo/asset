@@ -6,13 +6,14 @@ delta 0.4
 
 #quantification.params
 nhood [11 7]
-alpha [0.575 0.1]
-beta [0.65 0.4]
-gamma [0.15 0.3]
+alpha [0.25 0.1]
+beta [0.75 0.4]
+gamma [0.75 0.3]
+delta 0.5
 spawn_percentile 0.045
 prohibit 'horiz'
 
 #quantification.weights
-alpha 0.2
-beta 0.3
-gamma 0.15
+alpha 0.5
+beta 0.75
+gamma 0.25

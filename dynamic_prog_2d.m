@@ -1,5 +1,7 @@
 function [path] = dynamic_prog_2d(img, params, weight, weight_params, init, init_params, opts)
 
+  %keyboard
+
   [h,w] = size(img);
 
   %nhood = params.nhood;

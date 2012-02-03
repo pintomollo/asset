@@ -421,6 +421,12 @@ if (handles.previous ~= handles.current)
         name = name(1:end-4);
       end
       name = [name 'DP.mat'];
+
+      if (exist(name) == 2)
+        tmptmp = load(name);
+        tmp.path = tmptmp.path;
+      end
+
       handles.domains{handles.current} = name;
 
       tmp = rmfield(tmp, 'mymovie');
@@ -434,7 +440,8 @@ if (handles.previous ~= handles.current)
   else
     img = tmp.domain;
   end
-  img = imnorm(img);
+  clim = prctile(img(:), [0.1, 99.9]);
+  img = imnorm(img, clim(1), clim(2));
 
   if (ishandle(handles.img))
 

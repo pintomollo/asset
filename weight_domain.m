@@ -2,62 +2,23 @@ function weight = weight_domain(img, params)
 
   alpha = params.alpha;
   beta = params.beta;
-  gamma = 1/params.gamma;
+  gamma = params.gamma;
 
   [nrows,npts] = size(img);
   nsize = floor(npts/2) + 1;
-  img = imnorm(img, [], [], 'row');
+  
   img = gaussian_mex(img, 0.6);
+  minmax = prctile(img(:), [0.1 99.9]);
+  img = imnorm(img, minmax(1), minmax(2));
 
-  all_derivatives = zeros(nrows, npts, nsize);
-  domain_value = zeros(nrows, npts, nsize);
+  weight = zeros(nrows, npts, nsize);
 
-  left_deriv = zeros(nrows, npts);
-  right_deriv = zeros(nrows, npts);
-  left_sum = zeros(nrows, npts);
-  right_sum = zeros(nrows, npts);
-  left_size = zeros(nrows, npts);
-  right_size = zeros(nrows, npts);
+  derivatives = 0.5 * imnorm(differentiator(img, 2));
 
-  %line = img(40, :);
+  left_indexes = [1:npts];
+  right_indexes = left_indexes;
 
-  %valids = ~isnan(line);
-  %line(~valids) = 0;
-  %dist = cumsum(valids);
-
-  %domain_size = bsxfun(@minus, dist, dist.') + 1;
-  %vals = cumsum(line);
-  %domain_integral = bsxfun(@minus, vals, [0 vals(1:end-1)].');
-  
-  %domain = domain_integral ./ domain_size;
-  %outside = (vals(end) - domain_integral) ./ (npts - domain_size);
-  %domain_vals = beta * (1 - domain) + (1-beta)*outside;
-
-  %valids_deriv = (valids & valids([2:end 1]));
-  %dist = cumsum(valids_deriv);
-
-  %derivatives = diff([line line(1)]) ./ diff([0 dist]);
-  %derivatives = 1 ./ (1 + exp(-delta * derivatives));
-  
-  %left_deriv = gamma * (1-derivatives);
-  %right_deriv = (1-gamma) * derivatives;
-  %derivatives = bsxfun(@plus, left_deriv.', right_deriv);
-
-  %weight = alpha * domain_vals + (1-alpha) * derivatives;
-  %weight(domain_size <= 0) = Inf;
-  %weight(isnan(weight)) = Inf;
-
-  %figure;imagesc(weight);
-
-  mirror = img(:,[end-2:end 1:end 1:3]);
-  derivatives = (39*(mirror(:,5:end-2) - mirror(:,3:npts+2)) + 12*(mirror(:,6:end-1) - mirror(:,2:npts+1)) -5*(mirror(:, 7:end) - mirror(:, 1:npts))) / 96;
-  derivatives = 1 ./ (1 + exp(-gamma * derivatives));
-  left_deriv = 0.5 * (1-derivatives);
-  right_deriv = 0.5 * derivatives;
-
-  %all_derivatives = bsxfun(@plus, left_deriv, reshape(right_deriv, [nrows, 1, npts]));
-
-  valids = ~isnan(img);
+  valids = isfinite(img);
   img(~valids) = 0;
   dist = cumsum(valids, 2);
   max_dist = dist(:,end);
@@ -66,91 +27,49 @@ function weight = weight_domain(img, params)
   vals = cumsum(img, 2);
   max_vals = vals(:, end);
 
-  left_sum = [zeros(nrows, 1) vals(:, 1:end-1)];
-  right_sum = vals;
-  left_dist = [zeros(nrows, 1) dist(:, 1:end-1)];
-  right_dist = dist;
+  img(~valids) = NaN;
+
+  sums = [zeros(nrows, 1) vals(:, 1:end-1)];
+  dists = [zeros(nrows, 1) dist(:, 1:end-1)];
 
   for i=1:nsize
 
-
     if (i == 1)
-      derivatives(derivatives < 0.5) = 1 - derivatives(derivatives < 0.5);
-      all_derivatives(:, :, i) = derivatives;
+      tmp_deriv = 4*abs(derivatives - 0.25);
+      tmp_pixels = img;
+
+      domain_value = repmat(1 - (max_vals ./ max_dist), 1, npts);
     else
-      all_derivatives(:, :, i) = left_deriv + right_deriv;
+
+      left_indexes = circshift(left_indexes, [0 1]);
+
+      domain_size = dists(:, right_indexes) - dists(:, left_indexes);
+      is_inverted = (domain_size < 0);
+      if (any(is_inverted(:)))
+        tmp_size = bsxfun(@plus, max_dist, domain_size);
+        domain_size(is_inverted) = tmp_size(is_inverted);
+      end
+
+      domain_integral = sums(:, right_indexes) - sums(:, left_indexes);
+      complement_integral = bsxfun(@plus, max_vals, domain_integral);
+      domain_integral(is_inverted) = complement_integral(is_inverted);
+
+      domain = domain_integral ./ domain_size;
+      outside = bsxfun(@minus, max_vals, domain_integral) ./ bsxfun(@minus, max_dist, domain_size);
+
+      domain_value = beta .* (1-domain) + (1-beta) .* outside;
+
+      right_indexes = circshift(right_indexes, [0 -1]);
+
+      tmp_deriv = 0.5 - derivatives(:, left_indexes) + derivatives(:, right_indexes);
+      tmp_pixels = (img(:, left_indexes) + img(:, right_indexes)) ./ 2;
     end
-    left_deriv = circshift(left_deriv, [0 1]);
-    right_deriv = circshift(right_deriv, [0 -1]);
 
-    domain_size = right_dist - left_dist;
-    is_inverted = (domain_size < 0);
-
-    if (any(is_inverted(:)))
-      tmp_size = bsxfun(@plus, max_dist, domain_size);
-      domain_size(is_inverted) = tmp_size(is_inverted);
-    end
-
-    domain_integral = right_sum - left_sum;
-    complement_integral = bsxfun(@plus, max_vals, domain_integral);
-    domain_integral(is_inverted) = complement_integral(is_inverted);
-
-    domain = domain_integral ./ domain_size;
-    outside = bsxfun(@minus, max_vals, domain_integral) ./ bsxfun(@minus, max_dist, domain_size);
-    domain_value(:, :, i) = beta .* (1-domain) + (1-beta) .* outside;
-
-    left_dist = circshift(left_dist, [0 1]);
-    right_dist = circshift(right_dist, [0 -1]);
-
-    left_sum = circshift(left_sum, [0 1]);
-    right_sum = circshift(right_sum, [0 -1]);
+    pixel_value = gamma .* tmp_deriv + (1-gamma) .* tmp_pixels;
+    weight(:, :, i) = alpha .* domain_value + (1-alpha) .* pixel_value;
   end
 
-  %domain_size = bsxfun(@minus, reshape(dist, [nrows 1 npts]), dist) + 1;
-  %is_inverted = (domain_size < 0);
-  %domain_size(is_inverted) = domain_size(is_inverted) + npts;
-
-  %vals = cumsum(img, 2);
-  %domain_integral = bsxfun(@minus, reshape(vals, [nrows, 1, npts]), [zeros(nrows, 1) vals(:, 1:end-1)]);
-  %complement_integral = bsxfun(@plus, vals(:, end), domain_integral);
-  %domain_integral(is_inverted) = complement_integral(is_inverted);
-  
-  %domain = domain_integral ./ domain_size;
-  %outside = bsxfun(@minus, vals(:, end), domain_integral) ./ (npts - domain_size);
-  %domain_value = beta .* (1-domain) + (1-beta).*outside;
-  
-  %keyboard
-
-  weight = (alpha * domain_value) + ((1-alpha) * all_derivatives);
-  %weight(domain_size <= 0) = Inf;
   weight(isnan(weight)) = Inf;
-
-  %figure;imagesc(squeeze(weight(40,:,:)));
-
-  %keyboard
   
-  return;
-  
-  
-  domain_prop = domain_size ./ (npts + 1 - domain_size);
-
-  vals = cumsum(line);
-  domain_integral = bsxfun(@minus, vals, vals.');
-  
-  relative_mean = ((vals(end) - domain_integral) ./ domain_integral) .* domain_prop;
-  relative_mean(domain_prop <= 0) = Inf;
-  relative_mean(isnan(relative_mean)) = Inf;
-
-  pts = [1:npts];
-  pts = pts(valids);
-  smoothed = emdc(pts, line(valids));
-  smoothed = sum(smoothed(2:end, :));
-  derivatives = diff([smoothed smoothed(1)]) ./ diff([pts pts(1)+npts]);
-
-
-  keyboard
-
-  %sums = cumsum(img, 2);
-
   return;
 end
