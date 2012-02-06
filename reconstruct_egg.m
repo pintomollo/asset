@@ -7,18 +7,42 @@ function mymovie = reconstruct_egg(mymovie, opts)
   pts = cell(nframes, 1);
   all_coords = zeros(0,3);
   goods = true(nframes, 1);
+  sharpness = zeros(nframes, 1);
+  all_edges = cell(nframes, 1);
+
   for i=1:nframes
     tmp_pts = mymovie.dic.eggshell(i).carth;
     if (~isempty(tmp_pts))
       npts = size(tmp_pts, 1);
+
+      img = imnorm(double(load_data(mymovie.dic, i)));
+      img = imadm(img, 0, false);
+      edges = perpendicular_sampling(img, tmp_pts, opts);
+      edges = max(edges(:, 55:75), [], 2);
+
+      %sharpness(i, 1) = mean(edges);
+      sharpness(i) = median(edges);
+      %sharpness(i, 3) = std(edges);
+
+
       tmp_pts = tmp_pts * opts.pixel_size;
       pts{i} = tmp_pts;
+
+      all_edges{i} = edges;
     else
       goods(i) = false;
     end
   end
 
+  goods = (sharpness > mean(sharpness(goods)));
   cluster_eggs(pts, real_z, goods);
+  
+  tmp = [];
+  for i = 1:nframes
+    tmp = [tmp; all_edges{i}];
+  end
+
+  keyboard
 
   return;
 
@@ -759,6 +783,8 @@ function [fit_axes, goods] = cluster_eggs(paths, real_z, goods)
   
   goods = (clusters == best_cluster);
 
+  return;
+
   npts = 128*8;
   dists = NaN(npts, neggs);
   pos = [0:npts-1] * (2*pi / npts);
@@ -778,9 +804,9 @@ function [fit_axes, goods] = cluster_eggs(paths, real_z, goods)
   end
 
   dists = mean(abs(dists), 1);
-  dists = dists(goods);
+  %dists = dists(goods);
 
-  dists = bsxfun(@minus, dists.', dists);
+  %dists = bsxfun(@minus, dists.', dists);
    
   clusters = zeros(1, neggs);
   correl = corr(dists(:, goods)); 
@@ -810,6 +836,25 @@ nelems = length(z_pos);
 
   axes_size = [a1; a3(2)];
   centers = [c1; c3(2)];
+
+  return;
+end
+
+function plot_3d_ellipse(pts, z_pos)
+  
+  nframes = length(pts);
+
+  for i=1:nframes
+    path = pts{i};
+    if (isempty(path))
+      continue;
+    end
+    
+    [c, a, o] = fit_ellipse(path);
+    [x, y] = draw_ellipse(c, a, o);
+    plot3(x,y,z_pos(i)*ones(size(x)));
+    plot3(path(:,1),path(:,2),z_pos(i)*ones(size(path(:,1))));
+  end
 
   return;
 end
