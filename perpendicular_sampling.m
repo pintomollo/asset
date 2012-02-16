@@ -4,14 +4,23 @@ function [values, perp_path, dpos] = perpendicular_sampling(img, path, perp_path
     [path, opts] = deal(img, path);
     img = [];
     perp_path = [];
+    dpos = [];
   elseif (nargin == 3)
     opts = perp_path;
     perp_path = [];
+    dpos = [];
+  elseif (nargin == 4)
+    if (all(size(path) == size(perp_path)))
+      opts = dpos;
+      dpos = [];
+    else
+      opts = dpos;
+      dpos = perp_path;
+      perp_path = [];
+    end
   end
 
   if (isempty(perp_path))
-    bin_dist = 64;
-    bin_step = 1;
 
     [dist, tot_dist] = carth2linear(path);
     dist = dist * tot_dist;
@@ -27,16 +36,25 @@ function [values, perp_path, dpos] = perpendicular_sampling(img, path, perp_path
     end
 
     perp_path = bsxfun(@rdivide, perp_path, hypot(perp_path(:,1), perp_path(:,2))); 
+  end
+
+  if (isempty(dpos))
+    bin_dist = 64;
+    bin_step = 1;
     dpos = [-bin_dist:bin_step:bin_dist];
+  elseif (numel(dpos) == 2 & dpos(1) > dpos(2))
+    bin_dist = dpos(1);
+    bin_step = dpos(2);
+    dpos = [-bin_dist:bin_step:bin_dist];
+  end
 
-    if (isempty(img))
-      values = perp_path;
-      perp_path = dpos;
+  if (isempty(img))
+    values = perp_path;
+    perp_path = dpos;
 
-      dpos = [];
+    dpos = [];
 
-      return;
-    end
+    return;
   end
 
   all_pos_x = bsxfun(@plus, perp_path(:,1) * dpos, path(:,1));
