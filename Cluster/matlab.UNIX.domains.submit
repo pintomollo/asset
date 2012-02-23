@@ -1,7 +1,7 @@
 universe = vanilla
 requirements = (HAS_MATLAB =?= TRUE) && (MATLAB_VERSION == "'R2008A'" || MATLAB_VERSION == "'R2008B'" || MATLAB_VERSION == "'R2008a'" || MATLAB_VERSION == "'R2008b'" || MATLAB_VERSION == "'R2009A'" || MATLAB_VERSION == "'R2009a'" || MATLAB_VERSION == "'R2009B'" || MATLAB_VERSION == "'R2009b'" || MATLAB_VERSION == "'R2010a'" || MATLAB_VERSION == "'R2010A'" || MATLAB_VERSION == "'R2010b'" || MATLAB_VERSION == "'R2010B'" || MATLAB_VERSION == "'R2011A'" || MATLAB_VERSION == "'R2011a'" || MATLAB_VERSION == "'R2011b'" || MATLAB_VERSION == "'R2011B'") && (OpSys == "LINUX" || OpSys == "OSX") && (SHARED_STORAGE == TRUE) && (SCC_NODE == TRUE)
 
-environment = "MATLAB=$$(MATLAB_PATH) CPUUID=$(Cluster)$(Process)"
+environment = "MATLAB_BIN=$$(MATLAB_PATH) CPUUID=$(Cluster)$(Process)"
 getenv = true 
 executable = matlab_domains.sh
 should_transfer_files = YES

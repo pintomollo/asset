@@ -55,7 +55,7 @@ function [ellpts, radius] = carth2elliptic(varargin)
       ellpts(:,2) = acosh((ga + gb) / (2*focus));
 
     case 'radial'
-      ratio = axes_length(1) / axes_length(2);
+      %ratio = axes_length(1) / axes_length(2);
 
       long_axe = x/axes_length(1);
       short_axe = y/axes_length(2);

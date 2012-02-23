@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export HOME=/tmp
 cd /scratch/blanchou
 
 #tar -xf CelegansAnalysis.tar
@@ -38,5 +39,5 @@ cd /scratch/blanchou
 #pwd
 #ls -lhR .matlab
 #ls -lahR
-eval "$MATLAB -nodisplay -nosplash -r ml_domain\($CPUUID\)"
+eval "$MATLAB_BIN -nodisplay -nosplash -r ml_domain\($CPUUID\)"
 
