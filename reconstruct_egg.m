@@ -26,7 +26,7 @@ function mymovie = reconstruct_egg(mymovie, opts)
   sharpness = zeros(nframes, 1);
   all_edges = cell(nframes, 1);
 
-  if (true)
+  if (false)
   for i=1:nframes
     tmp_pts = mymovie.dic.eggshell(i).carth;
     if (~isempty(tmp_pts))
@@ -213,8 +213,9 @@ end
 
 function [fit_axes, errs] = estimate_z(all_coords, axes_length)
 
-  [indxs, i, j] = unique(all_coords(:, 4));
-  neggs = length(indxs);
+  [indxs, i, j] = unique(all_coords(:, [4 6]), 'rows');
+  [tmp, k, l] = unique(indxs(:,2));
+  neggs = size(indxs, 1);
   errs = ones(neggs, 1);
 
   p0 = axes_length;
@@ -235,16 +236,23 @@ function [fit_axes, errs] = estimate_z(all_coords, axes_length)
 
     z_err = errs;
     ell_coords = carth2elliptic(pts(:, 1:2), [0;0], ax(1:2), 0, 'radial');
-    dist = mymean(ell_coords(:,2), 1, pts(:,4));
-    z_pos = ax(3)*sqrt(1 - dist.^2);
+    dist = mymean(ell_coords(:,2) .* sign(pts(:,3) + 1e-10), 1, pts(:,6));
+    dist = dist(l);
+    z_pos = ax(3)*sqrt(1 - dist.^2) .* sign(dist);
     imag_z = (imag(z_pos) ~= 0);
     
-    tmp_pts = [pts(:,1:2) z_pos(j) all_coords(:,4)];
+    tmp_pts = [pts(:,1:2) pts(:,3) - z_pos(j) all_coords(:,4)];
     tmp_pts = tmp_pts(~imag_z(j),:);
 
     err = ellipse_distance_mex(tmp_pts, [0;0;0], ax, 0);
     err = err + sum(abs(ax(ax < lbound)));
-    z_err(~imag_z) = err;
+    
+    try 
+    z_err(~imag_z) = err(l);
+    catch
+    beep;
+    keyboard
+    end
 
     return;
   end
