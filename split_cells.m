@@ -14,6 +14,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
     max_ratio = 0.5;
     angle_thresh = 0.2;
     max_score = 0.05;
+    max_overlap = 0.4;
 
     %%%%%%%%%%%%% ADD OVERLAP
 
@@ -114,7 +115,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
 
       %myplot(tmp_estim);
 
-      ellipses = fit_segments(tmp_estim, indxs(concaves), borders, max_ratio, max_dist, max_score);
+      ellipses = fit_segments(tmp_estim, indxs(concaves), borders, max_ratio, max_dist, max_score, max_overlap);
       %ratio = ellipses(:, 3) ./ ellipses(:, 4);
 
       %ellipses = ellipses(ratio < max_ratio, :);
@@ -168,7 +169,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
   return;
 end
 
-function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist, max_score)
+function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist, max_score, max_overlap)
 
   nsegments = length(junctions);
   ellipses = NaN(nsegments, 5);

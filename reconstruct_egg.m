@@ -111,11 +111,11 @@ function mymovie = reconstruct_egg(mymovie, opts)
   end
 
   centers(3,isnan(centers(3,:))) = 0;
-  axes_length = fit_relative_ellipse(all_pts, centers, axes_length, orient);
+  [axes_length, relative_z] = fit_relative_ellipse(all_pts, centers, axes_length, orient);
 
   centers = centers(:, frames);
   orient = orient(1, frames);
-  relative_z = relative_position(pts, centers, axes_length, orient);
+  relative_z = relative_position(pts, relative_z, centers, axes_length, orient);
 
   mymovie.metadata.center_3d = centers;
   mymovie.metadata.axes_length_3d = axes_length;
@@ -125,7 +125,7 @@ function mymovie = reconstruct_egg(mymovie, opts)
   return;
 end
 
-function [relative_z] = relative_position(pts, centers, axes_length, orient)
+function [relative_z] = relative_position(pts, z, centers, axes_length, orient)
 
   nframes = length(pts);
   relative_z = NaN(1, nframes);
@@ -140,7 +140,7 @@ function [relative_z] = relative_position(pts, centers, axes_length, orient)
   return;
 end
 
-function [axes_length] = fit_relative_ellipse(pts, centers, axes_length, orient)
+function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, centers, axes_length, orient)
 
   all_coords = NaN(0, size(pts{1}, 2)+1);
   max_iter = 500;
@@ -150,17 +150,21 @@ function [axes_length] = fit_relative_ellipse(pts, centers, axes_length, orient)
     all_coords = [all_coords; [realign(pts{i}(:,1:2), [0;0], centers(1:2, i), orient(i)) pts{i}(:,3)-centers(3,i) pts{i}(:,4:5) ones(size(pts{i}(:,4)))*i]];
   end
 
-  indxs = unique(all_coords(:,4));
+  indxs = unique(all_coords(:,6));
+  tmp_z = NaN(1, neggs);
 
   for i=1:max_iter
     prev = indxs;
 
-    [a, errs(1, i), p, indxs] = filter_frames(all_coords, axes_length, indxs);
+    [a, z, errs(1, i), p, indxs] = filter_frames(all_coords, axes_length, indxs);
 
     if ((i>1 & errs(i) > errs(i-1)) | (i>2 & (errs(i-2) - errs(i-1) > errs(i - 1) - errs(i))))
       break;
     else
       axes_length = a;
+      relative_z = tmp_z;
+      
+      relative_z(indxs) = z;
     end
 
     if (isempty(indxs) | numel(indxs) == numel(prev))
@@ -173,7 +177,7 @@ function [axes_length] = fit_relative_ellipse(pts, centers, axes_length, orient)
   return;
 end
 
-function [fit_axes, err, all_coords, indxs] = filter_frames(all_coords, axes_length, indxs)
+function [fit_axes, rel_z, err, all_coords, indxs] = filter_frames(all_coords, axes_length, indxs)
 
   neggs = length(indxs);
 
@@ -196,7 +200,7 @@ function [fit_axes, err, all_coords, indxs] = filter_frames(all_coords, axes_len
   all_coords = all_coords(current, :);
   goods = goods(current);
 
-  [a, e] = estimate_z(all_coords(goods,:), axes_length);
+  [a, z, e] = estimate_z(all_coords(goods,:), axes_length);
   [m, s] = mymean(e);
   valids = (e < m + 2*s);
 
@@ -204,14 +208,14 @@ function [fit_axes, err, all_coords, indxs] = filter_frames(all_coords, axes_len
   all_coords = all_coords(current,:);
   goods = goods(current);
 
-  [fit_axes, e] = estimate_z(all_coords, a);
+  [fit_axes, rel_z, e] = estimate_z(all_coords, a);
   err = mymean(e);
   indxs = unique(all_coords(:, 4));
-
+  
   return;
 end
 
-function [fit_axes, errs] = estimate_z(all_coords, axes_length)
+function [fit_axes, rel_z, errs] = estimate_z(all_coords, axes_length)
 
   [indxs, i, j] = unique(all_coords(:, [4 6]), 'rows');
   [tmp, k, l] = unique(indxs(:,2));
@@ -227,12 +231,12 @@ function [fit_axes, errs] = estimate_z(all_coords, axes_length)
 
   fit_axes = bests(1:3);
 
-  errs = fit_z(fit_axes, all_coords);
+  [errs, rel_z] = fit_z(fit_axes, all_coords);
   errs = errs(:);
 
   return;
 
-  function [z_err] = fit_z(ax, pts)  
+  function [z_err, z_pos] = fit_z(ax, pts)  
 
     z_err = errs;
     ell_coords = carth2elliptic(pts(:, 1:2), [0;0], ax(1:2), 0, 'radial');
@@ -247,12 +251,7 @@ function [fit_axes, errs] = estimate_z(all_coords, axes_length)
     err = ellipse_distance_mex(tmp_pts, [0;0;0], ax, 0);
     err = err + sum(abs(ax(ax < lbound)));
     
-    try 
-    z_err(~imag_z) = err(l);
-    catch
-    beep;
-    keyboard
-    end
+    z_err(~imag_z) = err;
 
     return;
   end
