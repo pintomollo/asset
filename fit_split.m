@@ -11,26 +11,29 @@ function [p] = fit_split(mymovie, opts)
   estim_only = false; 
   ellipses = cell(nframes, 1);
  
-  if (false)
+  
+  %if (true)
+  if (exist([mymovie.experiment '-split.mat'], 'file') ~= 2)
   for i=1:nframes
     img = imnorm(double(load_data(mymovie.dic, i)));
 
-    imshow(img);hold on;
+    %imshow(img);hold on;
 
     img = imadm_mex(img);
     thresh = graythresh(img);
     img = (img > thresh*0.5*(max(img(:))) );
 
-    [ellipse, estim] =  split_cells(img, estim_only, opts, P);
+    %[ellipse, estim] =  split_cells(img, estim_only, opts, P);
+    [ellipse, estim] =  split_cells(img, estim_only, opts);
 
-        for j = 1:size(ellipse, 1)
-          draw_ellipse(ellipse(j, 1:2), ellipse(j, 3:4), ellipse(j, 5));
-        end
-        hold off;
+    %    for j = 1:size(ellipse, 1)
+    %      draw_ellipse(ellipse(j, 1:2), ellipse(j, 3:4), ellipse(j, 5));
+    %    end
+    %    hold off;
 
     ellipses{i} = ellipse;
 
-    print('-dpng', ['./PNG/separate1-' mymovie.experiment  '-' num2str(i) '.png']);
+    %print('-dpng', ['./PNG/separate1-' mymovie.experiment  '-' num2str(i) '.png']);
   end
 
   save([mymovie.experiment '-split.mat'], 'ellipses');
