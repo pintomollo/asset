@@ -130,10 +130,14 @@ function [relative_z] = relative_position(pts, z, centers, axes_length, orient)
   nframes = length(pts);
   relative_z = NaN(1, nframes);
 
-  keyboard
-
   for i=1:nframes
-    if (~isempty(pts{i}))
+    if (isnan(z(i)) & ~isempty(pts{i}))
+      ell_coords = carth2elliptic(pts{i}(:, 1:2), centers(1:2, i), axes_length(1:2), orient(i), 'radial');
+      dist = mymean(ell_coords(:,2));
+      z_pos = axes_length(3)*sqrt(1 - dist.^2);
+      relative_z(i) = real(z_pos);  
+    else
+      relative_z(i) = z(i);
     end
   end
 
@@ -188,7 +192,7 @@ function [fit_axes, rel_z, err, all_coords, indxs] = filter_frames(all_coords, a
   goods = filter_goods(goods, 15);
 
   for i=1:neggs
-    current = (all_coords(:,4) == indxs(i));
+    current = (all_coords(:,6) == indxs(i));
     if ((sum(goods(current)) / sum(current)) < 0.25)
       goods(current) = false;
       indxs(i) = NaN;
@@ -196,22 +200,32 @@ function [fit_axes, rel_z, err, all_coords, indxs] = filter_frames(all_coords, a
   end
 
   indxs = indxs(isfinite(indxs));
-  current = ismember(all_coords(:,4), indxs);
+  current = ismember(all_coords(:,6), indxs);
   all_coords = all_coords(current, :);
   goods = goods(current);
 
   [a, z, e] = estimate_z(all_coords(goods,:), axes_length);
   [m, s] = mymean(e);
-  valids = (e < m + 2*s);
+  valids = (e < m + 2*s) & (~imag(z));
 
-  current = ismember(all_coords(:,4), indxs(valids));
+  if (~any(valids))
+    fit_axes = a;
+    err = mymean(e);
+    rel_z = z;
+    all_coords = all_coords(goods, :);
+    indxs = unique(all_coords(:, 6));
+
+    return;
+  end
+
+  current = ismember(all_coords(:,6), indxs(valids));
   all_coords = all_coords(current,:);
   goods = goods(current);
 
   [fit_axes, rel_z, e] = estimate_z(all_coords, a);
   err = mymean(e);
-  indxs = unique(all_coords(:, 4));
-  
+  indxs = unique(all_coords(:, 6));
+
   return;
 end
 
@@ -251,6 +265,7 @@ function [fit_axes, rel_z, errs] = estimate_z(all_coords, axes_length)
     err = ellipse_distance_mex(tmp_pts, [0;0;0], ax, 0);
     err = err + sum(abs(ax(ax < lbound)));
     
+    z_err(imag_z) = dist(imag_z);
     z_err(~imag_z) = err;
 
     return;
@@ -275,6 +290,7 @@ function [center, axes_length, orient, all_coords] = fit_absolute_ellipse(pts)
     prev = indxs;
 
     [c,a,o, errs(1, i), p, indxs] = filter_planes(all_coords, indxs);
+    errs
 
     if ((i>1 & errs(i) > errs(i-1)) | (i>2 & (errs(i-2) - errs(i-1) > errs(i - 1) - errs(i))))
       break;

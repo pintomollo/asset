@@ -1,0 +1,19 @@
+#quantification.init_params
+alpha 0
+beta 0
+gamma 0
+delta 0
+
+#quantification.params
+nhood 11
+alpha 0.75
+beta 0.2
+gamma 0.75
+delta 0
+spawn_percentile 0
+
+#quantification.weights
+alpha 0.5
+beta 0.25
+gamma 0.5
+delta 0

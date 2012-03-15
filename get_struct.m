@@ -139,7 +139,11 @@ function mystruct = get_struct(type, nstruct)
 
     % Parameters used to perform machine learning (see find_parameters.m)
     case 'ml_params'                              
-      mystruct = struct('ml_type', '', ...                  % Type of segmentation which is optimized (eggshell, cortex)
+      mystruct = struct('config', {{}}, ...                 % Parameters of the optimization
+                        'evolution', {{}}, ...              % "Path" of the optimization
+                        'goal', [], ...
+                        'initial_condition', [], ...        % Starting position for the optimization
+                        'ml_type', '', ...                  % Type of segmentation which is optimized (eggshell, cortex)
                         'params', [], ...                   % Current value of the optimized parameters
                         'score', Inf);                      % Score of the current iteration
 

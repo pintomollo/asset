@@ -3,6 +3,11 @@ function [x,y] = draw_ellipse(center,axes_length,orientation,npts)
   if(nargin<4)
     npts=128;
     color = 'b';
+    if (nargin == 1)
+      orientation = center(5);
+      axes_length = center(3:4);
+      center = center(1:2);
+    end
   elseif(ischar(npts))
     color = npts;
     npts = 128;

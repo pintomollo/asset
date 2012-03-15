@@ -9,21 +9,15 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
   imgsize = [w, h];
 
   if (nargin == 4)
-    [max_ratio, angle_thresh, max_score] = deal(params(1), params(2), params(3));
+    [max_ratio, angle_thresh, max_score, max_overlap, max_dist] = deal(params(1), params(2), params(3), params(4), params(5));
   else
     max_ratio = 0.5;
     angle_thresh = 0.2;
     max_score = 0.05;
     max_overlap = 0.4;
 
-    %%%%%%%%%%%%% ADD OVERLAP
-
-    %max_ratio = 1/3;
-    %angle_thresh = pi/20;
-    %max_dist = 15;
-    %max_score = 0.05;
+    max_dist = 15;
   end
-  max_dist = 15;
 
   max_dist = max_dist / opts.pixel_size;
 
@@ -36,20 +30,15 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
   all_ellipses = cell(nframes, 1);
   all_estim = cell(nframes, 1);
 
-  %c = [3 6 7 8 19 26 31 35 45 60 63 67 69 70 75 78 81];
-  %nframes = length(c);
-
   for n = 1:nframes
     %nimg = randi(nframes, 1);
     nimg = n;
     %nimg = 23
-    %nimg = c(n);
 
     img = imgs(:, :, nimg);
- 
-    resized = false(h+(2*size10), w+(2*size10));
-    resized((size10+1):(size10+h),(size10+1):(size10+w)) = img;
-    img = resized;
+
+    %imagesc(img);hold on;
+    img = padarray(img, [size10 size10]);
 
     img = imdilate(img, strel('disk', size150));
     img = imfill(img, 'holes');
@@ -61,47 +50,23 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
     img =  img((size10+1):(size10+h),(size10+1):(size10+w));
 
     if(~any(img) | (sum(img(:)) / prod(imgsize) > 0.9))
-      %beep;keyboard
       continue;
     end
 
     estim = bwboundaries(img, 8, 'noholes');
-    
-
-    %figure;imshow(img);
-    %hold on;
-    %keyboard
     if (isempty(estim))
       continue;
     end
-
 
     if (estim_only)
       all_estim{n} = estim{1};
       continue;
     end
 
-    %imshow(img);
-    %hold on
     for i=1:length(estim)
       tmp_estim = estim{i};
       tmp_estim = tmp_estim(:,[2 1]);
 
-      %ptsx = emdc([], tmp_estim(:, 1));
-      %ptsy = emdc([], tmp_estim(:, 2));
-
-      %if (size(ptsx, 1) > 2)
-      %  ptsx = sum(ptsx(end-1:end, :));
-      %else
-      %  ptsx = ptsx(end, :);
-      %end
-      %if (size(ptsy, 1) > 2)
-      %  ptsy = sum(ptsy(end-1:end, :));
-      %else
-      %  ptsy = ptsy(end, :);
-      %end
-
-      %tmp_estim = [ptsx.' ptsy.'];
       [pac, indxs] = impac(tmp_estim);
 
       borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize-1), 2));
@@ -113,12 +78,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
       concaves = [concaves; true(size(border_indx))];
       concaves = concaves(indx_indx);
 
-      %myplot(tmp_estim);
-
       ellipses = fit_segments(tmp_estim, indxs(concaves), borders, max_ratio, max_dist, max_score, max_overlap);
-      %ratio = ellipses(:, 3) ./ ellipses(:, 4);
-
-      %ellipses = ellipses(ratio < max_ratio, :);
 
       if (opts.verbosity == 3)
         figure
@@ -133,28 +93,18 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
           draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
         end
       end
-      %title(num2str(nimg));
-      %hold off
 
       if (i == 1)
         all_ellipses{n} = ellipses;
         all_estim{n} = tmp_estim;
-      %  all_pts{n, 2} = tmp_estim;
-      %  all_pts{n, 3} = indxs;
-      %  all_pts{n, 4} = concaves;
       else
         all_ellipses{n} = [all_ellipses{n}; ellipses];
         all_estim{n} = [all_estim{n}; [NaN, NaN]; tmp_estim];
-      %  all_pts{n, 3} = [all_pts{n, 3}; indxs];
-      %  all_pts{n, 4} = [all_pts{n, 4}; concaves];
       end
     end
     if (i > 1)
       all_estim{n} = [all_estim{n}; [NaN, NaN]];
     end
-
-    %pause
-    %keyboard
   end
 
   if (nframes == 1)
@@ -176,12 +126,7 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
   npts = size(pts, 1);
   segments = cell(nsegments, 1);
   scores = Inf(nsegments, 1);
-  slender_parts = false(nsegments, 1);
 
-  %keyboard
-
-  %figure;
-  %hold on;
   for i=1:nsegments
 
     if (i == nsegments)
@@ -198,48 +143,13 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
     end
 
     [ellipse, score] = fit_distance(tmp);
-
-    %myplot(tmp, 'c')
-    %draw_ellipse(ellipse(1, 1:2), ellipse(1, 3:4), ellipses(1, 5), 'm');
     
     segments{i} = tmp;
     ellipses(i,:) = ellipse;
     scores(i) = score;
-    if ~(score < max_score & (ellipse(4) / ellipse(3)) > max_ratio)
-      slender_parts(i) = true;
-    end
   end
 
-  if (all(slender_parts))
-    [~, indx] = min(scores);
-    slender_parts(indx) = false;
-  end
-
-  ellipses(slender_parts, :) = NaN;
-  scores(slender_parts) = Inf;
-
-  %keyboard
-  [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
-
-  for i=1:nsegments
-    if (slender_parts(i))
-      new_scores = Inf(nsegments, 1);
-      new_ellipses = Inf(nsegments, 5);
-      %myplot(segments{i}, 'm');
-      for j=1:nsegments
-        if (~isnan(ellipses(j, 1)))
-          [new_ellipses(j,:), new_scores(j)] = fit_distance([segments{i}; segments{j}]);
-        end
-      end
-      [val, indx] = min(new_scores);
-      if (val < max_score & (new_ellipses(indx,4) / new_ellipses(indx, 3)) > max_ratio)
-        ellipses(indx, :) = new_ellipses(indx, :);
-        segments{indx} = [segments{indx}; segments{i}];
-        segments{i} = [];
-        scores(indx) = val;
-      end
-    end
-  end
+  [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score, max_overlap);
 
   ellipses = ellipses(scores <= max_score & (ellipses(:, 4) ./ ellipses(:, 3)) >= max_ratio, :);
   ellipses = ellipses(~any(isnan(ellipses), 2), :);
@@ -247,8 +157,8 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
   return;
 end
 
-function [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score)
-  
+function [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score, max_overlap)
+
   nsegments = length(segments);
   improved = false;
   %new_scores = scores;
@@ -276,7 +186,8 @@ function [ellipses, segments, scores] = combine_ellipses(segments, ellipses, sco
       %end
 
       % Ellipse selection
-      if (avg > max_score | (ellipse(4) / ellipse(3)) < max_ratio)
+      if (avg > max_score | (ellipse(4) / ellipse(3)) < max_ratio | overlaps(ellipses, ellipse, [i,j]) > max_overlap)
+      %if (avg > max_score | (ellipse(4) / ellipse(3)) < max_ratio)
         continue;
 
       % Case 1
@@ -316,7 +227,26 @@ function [ellipses, segments, scores] = combine_ellipses(segments, ellipses, sco
   end
 
   if (improved)
-    [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score);
+    [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score, max_overlap);
+  end
+
+  return;
+end
+
+function [overlap] = overlaps(ellipses, ellipse, indxs)
+
+  overlap = 0;
+  curr_area = prod(ellipse(3:4))*pi;
+
+  for i=1:size(ellipses, 1)
+    if (all(i ~= indxs) & ~isnan(ellipses(i, 1)))
+      tmp = ellipse_ellipse_area_mex(ellipse(5), ellipse(3), ellipse(4), ellipse(1), ellipse(2), ellipses(i,5), ellipses(i,3), ellipses(i,4), ellipses(i,1), ellipses(i,2));
+      tmp = tmp / curr_area;
+
+      if (tmp > overlap)
+        overlap = tmp;
+      end
+    end
   end
 
   return;
@@ -326,6 +256,10 @@ function [ellipse, avg] = fit_distance(pts)
 
   ellipse = NaN(1, 5);
   avg = Inf;
+
+  if (isempty(pts))
+    return;
+  end
 
   [c, a, o] = fit_ellipse(pts);
   ell_pts = carth2elliptic(pts, c, a, o, 'radial');

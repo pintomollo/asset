@@ -2,22 +2,24 @@ function opts = find_domain(opts, uuid)
 
   if (nargin == 0)
     opts = get_struct('ASSET');
-    opts = load_parameters(opts, 'domains');
     opts.do_ml = 'cmaes';
   end
+  %opts = load_parameters(opts, 'domains');
+  opts = load_parameters(opts, 'domain_center');
 
   if (opts.uuid == 0)
-    opts.uuid = randi(1000, 1);
+    opts.uuid = now + cputime;
   end
 
   manuals = dir('*_DP.mat');
   manuals = manuals(randperm(length(manuals)));
 
   p0 = gather_parameters(opts.quantification, opts);
-  nparams = length(p0);
-  log_name = ['ML-' num2str(opts.uuid) '-domain'];
 
-  niter = 10;
+  nparams = length(p0);
+  log_name = ['ML-' num2str(opts.uuid) '-domain_'];
+
+  niter = 1;
   counts = niter+1;
   orig = [];
 
@@ -51,7 +53,8 @@ function opts = find_domain(opts, uuid)
       opt(9) = 1e-10;
       opt(12) = 1;
       opt(13) = 1;
-    
+   
+
       bounds = [zeros(nparams, 1) + lbound zeros(nparams, 1) + ubound];
       [pbest, tr, te] = pso_Trelea_vectorized(@error_function, nparams, NaN, bounds, 0, opt, '', p0(:).', [log_name 'evol']);
       p = pbest(1:end-1);
@@ -84,16 +87,21 @@ function opts = find_domain(opts, uuid)
     end
     err_all = NaN(1, nevals);
 
-    if (counts > niter)
-      counts = 0;
-      manuals = manuals([2:end 1]);
-      orig = load(manuals(1).name);
-      tmp = double(orig.domain);
-      tmp(orig.domain == intmax(class(orig.domain))) = NaN;
-      orig.domain = imnorm(tmp);
-    end
+    %if (counts > niter)
+    %  counts = 0;
+    %  manuals = manuals([2:end 1]);
+    %  orig = load(manuals(1).name);
 
-    estim_mid = size(orig.domain, 2) / 2;
+    %  while (isempty(orig.path))
+    %    manuals = manuals([2:end]);
+    %    orig = load(manuals(1).name);
+    %  end
+      %tmp = double(orig.domain);
+      %tmp(orig.domain == intmax(class(orig.domain))) = NaN;
+      %orig.domain = imnorm(tmp);
+    %end
+
+    %estim_mid = size(orig.domain, 2) / 2;
     %keyboard
 
     for i = 1:nevals
@@ -106,23 +114,48 @@ function opts = find_domain(opts, uuid)
       %new_p(fix_round) = new_p(fix_round) + dp;
 
       opts.quantification = insert_parameters(opts.quantification, real_p, opts);
+      
+      for m=1:length(manuals)
+        
+        orig = load(manuals(m).name);
+        if (size(orig.path, 1) ~= size(orig.domain, 1))
+          continue;
+        end
+        estim_mid = size(orig.domain, 2) / 2;
 
-      path = dynamic_prog_2d(orig.domain, opts.quantification.params, @weight_domain, opts.quantification.weights, @init_domain, opts.quantification.init_params, opts);
+        path = dynamic_programming(orig.domain, opts.quantification.params, @weight_symmetry, opts.quantification.weights, opts);
 
-      errors = abs(path - orig.path);
-      errors(:, 1) = errors(:, 1) * 2;
-      errors = sum(errors, 2);
-      errors(isnan(errors)) = 2*abs(path(isnan(errors), 2) - estim_mid);
-      errors(isnan(errors)) = 2*abs(orig.path(isnan(errors), 2) - estim_mid);
-      errors = errors(~isnan(errors));
+        wimg = weight_symmetry(orig.domain, opts.quantification.weights);
+        values = bilinear_mex(wimg, path, 1:length(path));
+        indx = find(values < opts.quantification.weights.gamma, 1, 'first');
 
-      if (length(errors) == 0)
-        err = Inf;
-      else
-        err = mean(errors(:)) + std(errors(:)) + exp(3*(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound))) - 1;
+        if (isempty(indx))
+          indx = length(path);
+        end
+
+        path(1:indx-1) = NaN;
+
+        %path = dynamic_prog_2d(orig.domain, opts.quantification.params, @weight_domain, opts.quantification.weights, @init_domain, opts.quantification.init_params, opts);
+
+        errors = abs(path(:) - orig.path(:,1));
+        %errors(:, 1) = errors(:, 1) * 2;
+        %errors = sum(errors, 2);
+        errors(isnan(errors)) = 2*abs(path(isnan(errors), 1) - estim_mid);
+        errors(isnan(errors)) = 2*abs(orig.path(isnan(errors), 1) - estim_mid);
+        errors = errors(~isnan(errors));
+
+        if (length(errors) == 0)
+          err = Inf;
+        else
+          err = mean(errors(:)) + std(errors(:)) + exp(3*(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound))) - 1;
+        end
+
+        if (isnan(err_all(i)))
+        err_all(i) = err;
+        else
+        err_all(i) = err_all(i) + err;
+        end
       end
-
-      err_all(i) = err;
     end
 
     if (flip)
