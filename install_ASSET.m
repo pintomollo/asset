@@ -47,6 +47,7 @@ function install_ASSET
       eval(['mex MEX' filesep 'emdc.c']);
       eval(['mex MEX' filesep 'evrot.cpp']);
       eval(['mex MEX' filesep 'scale_dist.cpp']);
+      eval(['mex MEX' filesep 'ellipse_ellipse_area_mex.c MEX' filesep 'ellipse_ellipse_overlap.c']);
 
       include_path = uigetdir('/usr/local/include', 'Select the directory containing the LEVMAR include files (.h)');
 
