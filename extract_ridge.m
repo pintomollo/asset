@@ -10,12 +10,6 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
       nimg = i;
       %nimg = 93 + i
 
-      %cortex = mymovie.data.cortex(nimg).carth;
-      %if (opts.quantification.use_ruffles)
-      %  [ cortex, rescale] = insert_ruffles(cortex, mymovie.markers.ruffles(nimg).paths);
-      %else
-      %  rescale = false(size(cortex, 1), 1);
-      %end
       cortex = mymovie.data.quantification(nimg).carth;
 
       [dperp, dpos] = perpendicular_sampling(cortex, opts);

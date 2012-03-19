@@ -161,33 +161,21 @@ function [ellipses, segments, scores] = combine_ellipses(segments, ellipses, sco
 
   nsegments = length(segments);
   improved = false;
-  %new_scores = scores;
-  %new_ellipses = ellipses;
   max_pow = max_dist^2;
 
   for i=1:nsegments
     if (isinf(scores(i)))
       continue
     end
-    %new_scores(:) = Inf;
+
     for j=i+1:nsegments
       if (isinf(scores(j)))
         continue
       end
       [ellipse, avg] = fit_distance([segments{i}; segments{j}]);
-      %if (avg <= min(scores([i j])) + ((scores(i)+scores(j))/4))
-      %  improved(i) = true;
-      %  segments{i} = [segments{i}; segments{j}];
-      %  segments{j} = [];
-      %  scores(i) = avg;
-      %  scores(j) = Inf;
-      %  ellipses(j, :) = NaN;
-      %  ellipses(i, :) = ellipse;
-      %end
 
       % Ellipse selection
       if (avg > max_score | (ellipse(4) / ellipse(3)) < max_ratio | overlaps(ellipses, ellipse, [i,j]) > max_overlap)
-      %if (avg > max_score | (ellipse(4) / ellipse(3)) < max_ratio)
         continue;
 
       % Case 1
@@ -206,24 +194,7 @@ function [ellipses, segments, scores] = combine_ellipses(segments, ellipses, sco
         ellipses(i, :) = ellipse;
         improved = true;
       end
-
-      %new_scores(j) = avg;
-      %new_ellipses(j,:) = ellipse;
-      %new_scores(j,i) = ellipse(3) / ellipse(4);
     end
-
-    %new_scores(new_scores > min(scores(i), scores) + ((scores(i)+scores)/5)) = Inf;
-    %new_scores(~((new_ellipses(:,3) ./ new_ellipses(:,4)) < max_ratio)) = Inf;
-    %[a, indx] = min(new_scores);
-    %if (~isinf(a))
-    %    segments{i} = [segments{i}; segments{indx}];
-    %    segments{indx} = [];
-    %    scores(i) = avg;
-    %    scores(indx) = Inf;
-    %    ellipses(indx, :) = NaN;
-    %    ellipses(i, :) = new_ellipses(indx,:);
-    %    improved = true;
-    %end
   end
 
   if (improved)
@@ -284,7 +255,6 @@ function [ellipse, avg] = fit_distance(pts)
 
   dist = abs(ell_pts(:,2) - 1);
   avg = mean(dist);
-  %stds = std(dist);
 
   return;
 end

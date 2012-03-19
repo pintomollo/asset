@@ -45,7 +45,11 @@ function display_3d_egg(mymovie, opts, save_frames)
     hold on;
     draw_ellipse(mymovie.dic.centers(:, nimg), mymovie.dic.axes_length(:, nimg), mymovie.dic.orientations(1, nimg));
     if (isreal(z_coef))
+      if (z_coef ~= 1)
       draw_ellipse(mymovie.metadata.center_3d(1:2,i) / opts.pixel_size, mymovie.metadata.axes_length_3d(1:2) * z_coef / opts.pixel_size, mymovie.metadata.orientation_3d(1,i), 'r');
+      else
+      draw_ellipse(mymovie.metadata.center_3d(1:2,i) / opts.pixel_size, mymovie.metadata.axes_length_3d(1:2) * z_coef / opts.pixel_size, mymovie.metadata.orientation_3d(1,i), 'y');
+      end
     end
 
     if (save_frames)

@@ -59,17 +59,15 @@ function mymovie = cortical_signal(mymovie, opts)
   end
 
   optims = optimset('Display', 'off');
-      bin_dist = 64;
-      bin_step = 1;
+  bin_dist = 64;
+  bin_step = 1;
   
   for i=1:nframes
+    bounds = [-Inf bin_step 0 0 -Inf 0 0; ...
+               Inf Inf Inf Inf Inf Inf Inf];
 
-  bounds = [-Inf bin_step 0 0 -Inf 0 0; ...
-             Inf Inf Inf Inf Inf Inf Inf];
-
-  bounds_invag = [-Inf bin_step -Inf -Inf 0 0; ...
-                   Inf Inf Inf Inf Inf Inf];
-
+    bounds_invag = [-Inf bin_step -Inf -Inf 0 0; ...
+                     Inf Inf Inf Inf Inf Inf];
 
     nimg = i;
     %nimg = randi(nframes)
@@ -89,8 +87,6 @@ function mymovie = cortical_signal(mymovie, opts)
 
       ph = double(load_data(mymovie.cortex, nimg));
       ph = mask_neighbors(ph, mymovie.data.centers(:,nimg), mymovie.data.axes_length(:,nimg), mymovie.data.orientations(1,nimg), mymovie.data.neighbors(nimg), opts);
-
-      %%%%%%%%% BE CAREFULL OF MEMORY IF TOO LARGE !! 
 
       [values, dperp, dpos] = perpendicular_sampling(img, cortex, opts);
       [ph_values] = perpendicular_sampling(ph, cortex, dperp, dpos, opts);
@@ -142,7 +138,6 @@ function mymovie = cortical_signal(mymovie, opts)
         line_params = estimate_front(valid_dpos, smoothed, curr_params, rescale(j));
         line_params = max(line_params, curr_bounds(1,:));
         line_params = min(line_params, curr_bounds(2,:));
-        %line_params = lsqcurvefit(@front, line_params, valid_dpos.', valid_line.', curr_bounds(1,:), curr_bounds(2, :), optims);
         line_params = fit_front(@front, line_params, valid_dpos.', valid_line.', curr_bounds(1,:), curr_bounds(2, :), optims);
 
         if (rescale(j))
@@ -157,14 +152,6 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).carth = cortex;
 
     else
-
-      %tmp_cortex = [cortex(end,:); cortex; cortex(1,:)];
-      %dpos = (tmp_cortex(3:end, :) - tmp_cortex(1:end-2, :)) / 2;
-
-      %dperp = [-dpos(:,2) dpos(:,1)];
-      %dperp = bsxfun(@rdivide, dperp, hypot(dperp(:,1), dperp(:,2))); 
-
-      %signal = mymovie.data.quantification(nimg).front;
 
       [dperp, dpos] = perpendicular_sampling(cortex, opts);
     end
@@ -216,14 +203,12 @@ function [params, bounds, slopes] = estimate_mean(x, ys, is_invag, bounds, optim
   x = x(valids);
 
   imf = emdc(x, y);
-  %y = sum(imf(2:end, :), 1);
   if (size(imf, 1) > 2)
     smoothed = sum(imf(end-1:end, :), 1);
   else
     smoothed = imf(end, :);
   end
 
-  %params = estimate_front(x, y, [], is_invag);
   tmp_params = [];
   if (isfinite(bounds(2,2)))
     tmp_params = mean(bounds(:,1:2), 1);
@@ -232,7 +217,6 @@ function [params, bounds, slopes] = estimate_mean(x, ys, is_invag, bounds, optim
   params = estimate_front(x, smoothed, tmp_params, is_invag);
   params = max(params, bounds(1,:));
   params = min(params, bounds(2,:));
-  %params = lsqcurvefit(@front, params, x, y, bounds(1,:), bounds(2, :), optims);
   params = fit_front(@front, params, x, y, bounds(1,:), bounds(2, :), optims);
 
   if (nargout == 3)

@@ -12,33 +12,32 @@ function [p] = fit_split(mymovie, opts)
   ellipses = cell(nframes, 1);
  
   
-  %if (true)
   if (exist([mymovie.experiment '-split.mat'], 'file') ~= 2)
-  for i=1:nframes
-    img = imnorm(double(load_data(mymovie.dic, i)));
+    for i=1:nframes
+      img = imnorm(double(load_data(mymovie.dic, i)));
 
-    %imshow(img);hold on;
+      %imshow(img);hold on;
 
-    img = imadm_mex(img);
-    thresh = graythresh(img);
-    img = (img > thresh*0.5*(max(img(:))) );
+      img = imadm_mex(img);
+      thresh = graythresh(img);
+      img = (img > thresh*0.5*(max(img(:))) );
 
-    %[ellipse, estim] =  split_cells(img, estim_only, opts, P);
-    [ellipse, estim] =  split_cells(img, estim_only, opts);
+      %[ellipse, estim] =  split_cells(img, estim_only, opts, P);
+      [ellipse, estim] =  split_cells(img, estim_only, opts);
 
-    %    for j = 1:size(ellipse, 1)
-    %      draw_ellipse(ellipse(j, 1:2), ellipse(j, 3:4), ellipse(j, 5));
-    %    end
-    %    hold off;
+      %    for j = 1:size(ellipse, 1)
+      %      draw_ellipse(ellipse(j, 1:2), ellipse(j, 3:4), ellipse(j, 5));
+      %    end
+      %    hold off;
 
-    ellipses{i} = ellipse;
+      ellipses{i} = ellipse;
 
-    %print('-dpng', ['./PNG/separate1-' mymovie.experiment  '-' num2str(i) '.png']);
-  end
+      %print('-dpng', ['./PNG/separate1-' mymovie.experiment  '-' num2str(i) '.png']);
+    end
 
-  save([mymovie.experiment '-split.mat'], 'ellipses');
+    save([mymovie.experiment '-split.mat'], 'ellipses');
   else
-  load([mymovie.experiment '-split.mat']);
+    load([mymovie.experiment '-split.mat']);
   end
  
   [n,m] = size(ellipses{1});
@@ -70,7 +69,6 @@ function [p] = fit_split(mymovie, opts)
   goods = sum(~isnan(real_ell),3);
   goods = (goods(:,1) > nframes/2);
 
-  %avg_ell = mymean(real_ell(goods, :, :), 3);
   avg_ell = NaN(0,m);
 
   img = NaN(ssize);
@@ -138,19 +136,7 @@ function [p] = fit_split(mymovie, opts)
 
         [ellipse] = split_cells(img, estim_only, opts, new_p);
 
-        %if (nevals > 1)
-        %figure;imshow(dic_img);hold on;
-
-        %  for j=1:length(match_ell)
-        %  draw_ellipse(avg_ell(j, 1:2), avg_ell(j, 3:4), avg_ell(j, 5), 'r');
-        %  end
-        %end
-
         for k=1:size(ellipse, 1)
-          %if (nevals > 1)
-          %draw_ellipse(ellipse(k, 1:2), ellipse(k, 3:4), ellipse(k, 5));
-          %end
-
           ell_area = prod(ellipse(k,3:4))*pi;
           max_overlap = Inf;
           for j=1:size(avg_ell, 1)
@@ -171,10 +157,6 @@ function [p] = fit_split(mymovie, opts)
 
         err_all(i) = err_all(i) + 1.5*sum(avg_area(~match_ell));
       end
-
-      %if (nevals>1)
-      %keyboard
-      %end
     end
 
     for i = 1:nevals
