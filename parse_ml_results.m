@@ -55,6 +55,8 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
     evol_indx = 0;
   end
 
+  nline = 1;
+
   nparams = NaN;
   lparams = NaN;
   while ischar(line)
@@ -130,11 +132,21 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
         end
       end
 
-      if (ntokens > 5 && numel(tokens{2}) > 0 && tokens{2}(1) ~= '%')
-        ml_id = regexp(tokens{1}, '[a-zA-Z]+([0-9]+)', 'tokens');
+      if (ntokens > 5 && numel(tokens{2}) > 0)
+        if (strncmp(tokens{1}, '>>', 2))
+          shift = 1;
+        else
+          shift = 0;
+        end
+
+        ml_id = regexp(tokens{1 + shift}, '[a-zA-Z]+([0-9]+)', 'tokens');
         if (~isempty(ml_id))
           ml_id = str2num(ml_id{1}{1});
           
+          if (tokens{2 + shift}(1) == '%')
+            curr_id = -1;
+          end
+
           if (ml_id ~= curr_id)
             if (~isnan(curr_id) & isfinite(curr_score))
               if (isempty(params(nparams).score)|| any(~isfinite(params(nparams).score)) || nbests==1)
@@ -252,8 +264,8 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
                 evol(evol_indx, :) = [score myparams];
               end
             end
-          elseif (first)
-            warning('Found a negative score, make sure this is normal as they are ignored!');
+          elseif (first & isfinite(score))
+            warning(['Found a negative score on line ' num2str(nline) ', make sure this is normal as they are ignored!']);
             first = false;
           end
         end
@@ -261,6 +273,7 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
     end
 
     line = fgetl(fid);
+    nline = nline + 1;
   end
 
   if (~isnan(curr_id) & isfinite(curr_score))

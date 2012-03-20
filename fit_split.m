@@ -1,44 +1,51 @@
-function [p] = fit_split(mymovie, opts)
+function [p] = fit_split(mymovie, opts, P)
 
   %P = [  0.3676 0.049336 0.011196 0.70123 0.1047]
   %P = [0.3676 0.2 0.011196 0.70123 0.1047]
   %P = [0.3676 0.05 0.05 0.45 0.15]
   %P = [0.9809 0.0494 0.1849 0.4497 0.1573]
 
-  %P(end) = P(end)*100;
+  %P = [0.9832    0.2082    0.1490    0.4369    0.0735];
+  %P = [0.4523    0.0861    0.0117    0.7467    0.1047];
+
+
+  P(:, end) = P(:, end)*100;
 
   [nframes, ssize] = size_data(mymovie.dic);
   estim_only = false; 
   ellipses = cell(nframes, 1);
  
   
-  if (exist([mymovie.experiment '-split.mat'], 'file') ~= 2)
+  %if (exist([mymovie.experiment '-split.mat'], 'file') ~= 2)
     for i=1:nframes
+      for k=1:size(P, 1)
       img = imnorm(double(load_data(mymovie.dic, i)));
 
-      %imshow(img);hold on;
+      imshow(img);hold on;
 
       img = imadm_mex(img);
       thresh = graythresh(img);
       img = (img > thresh*0.5*(max(img(:))) );
 
-      %[ellipse, estim] =  split_cells(img, estim_only, opts, P);
-      [ellipse, estim] =  split_cells(img, estim_only, opts);
+      [ellipse, estim] =  split_cells(img, estim_only, opts, P(k,:));
+      %[ellipse, estim] =  split_cells(img, estim_only, opts);
 
-      %    for j = 1:size(ellipse, 1)
-      %      draw_ellipse(ellipse(j, 1:2), ellipse(j, 3:4), ellipse(j, 5));
-      %    end
-      %    hold off;
+          for j = 1:size(ellipse, 1)
+            draw_ellipse(ellipse(j, 1:2), ellipse(j, 3:4), ellipse(j, 5));
+          end
+          hold off;
 
-      ellipses{i} = ellipse;
+      %ellipses{i} = ellipse;
 
-      %print('-dpng', ['./PNG/separate1-' mymovie.experiment  '-' num2str(i) '.png']);
+      print('-dpng', ['./PNG/separate' num2str(k) '-' mymovie.experiment  '-' num2str(i) '.png']);
+      end
     end
 
-    save([mymovie.experiment '-split.mat'], 'ellipses');
-  else
-    load([mymovie.experiment '-split.mat']);
-  end
+    return
+    %save([mymovie.experiment '-split.mat'], 'ellipses');
+  %else
+  %  load([mymovie.experiment '-split.mat']);
+  %end
  
   [n,m] = size(ellipses{1});
   real_ell = NaN(n, m, nframes);
