@@ -58,9 +58,9 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     img = 1-img;
 
     if (opts.measure_performances)
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(img, false, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(mymovie.markers.neighbors(nimg), img, opts);
     else
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(img, false, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(mymovie.markers.neighbors(nimg), opts);
     end
 
     if (opts.verbosity == 3)
@@ -181,7 +181,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     carths = carths(all(carths >= 1 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
 
     if (opts.measure_performances)
-      [estimation] = detect_ellipse(img, true, opts);
+      [estimation] = detect_ellipse(img, opts);
     end
 
     if (opts.verbosity == 3)
@@ -207,6 +207,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     end
 
     mymovie.markers.cortex = cortex;
+    mymovie.markers.ruffles(nimg) = get_struct('ruffles');
   end
 
   mymovie.markers.parameters = parameters;
@@ -215,32 +216,32 @@ function mymovie = dp_markers(mymovie, nimg, opts)
   return;
 end
 
-function [center, axes_length, orientation, neighbors, estim] = detect_ellipse(img, estim_only, opts)
+function [center, axes_length, orientation, neighbors, estim] = detect_ellipse(neighbors, img, opts)
+
+  if (nargin == 2)
+    if (isstruct(neighbors))
+      opts = img;
+      img = [];
+      estim_only = false;
+    else
+      tmp = neighbors;
+      opts = img;
+      img = tmp;
+      neighbors = [];
+      estim_only = true;
+    end
+  else
+    estim_only = false;
+  end
 
   center = NaN(2, 1);
   axes_length = NaN(2, 1);
   orientation = NaN;
   estim = [];
-  neighbors = get_struct('reference');
 
-  neighbors.centers = center;
-  neighbors.axes_length = axes_length;
-  neighbors.orientations = orientation;
-
-  imgsize = size(img);
-  npixels = max(imgsize);
-
-  size250 = round(npixels/250);
-  size200 = round(npixels/200);
-
-  img = gaussian_mex(img, size250);
-  img = median_mex(img, size200, 3);
-  img = imnorm(img);
-
-  thresh = graythresh(img);
-  img = (img > thresh*(max(img(:))) );
-
-  [ellipse, estim] =  split_cells(img, estim_only, opts);
+  if (~isempty(img))
+    [ellipse, estim] =  split_cells(img, true, opts);
+  end
 
   if (estim_only)
     center = estim;
@@ -251,26 +252,14 @@ function [center, axes_length, orientation, neighbors, estim] = detect_ellipse(i
     return;
   end
 
-  if (numel(ellipse) == 0)
+  if (all(isnan(neighbors.centers)) | neighbors.index <= 0)
     return;
-  elseif (size(ellipse, 1) > 1)
-    imgsize = size(img);
-
-    %dist = sum(bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])/2).^2, 2);
-
-    dist = [bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])).^2 ellipse(:, [1 2]).^2];
-    dist = min(dist, [], 2);
-
-    [~, indx] = max(dist);
-    indxs = false(size(dist));
-    indxs(indx(1)) = true;
-
-    [neighbors.centers, neighbors.axes_length, neighbors.orientations] = deal(ellipse(~indxs, 1:2).', ellipse(~indxs, 3:4).', ellipse(~indxs, 5));
-
-    ellipse = ellipse(indxs,:);
   end
+  
+  [center, axes_length, orientation] = deal(neighbors.centers(:, neighbors.index), ...
+                                            neighbors.axes_length(:, neighbors.index), ...
+                                            neighbors.orientations(:, neighbors.index));
 
-  [center, axes_length, orientation] = deal(ellipse(1:2).', ellipse(3:4).', ellipse(5));
 
   return;
 end

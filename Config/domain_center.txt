@@ -1,3 +1,5 @@
+force_circularity false
+
 #quantification.init_params
 alpha 0
 beta 0

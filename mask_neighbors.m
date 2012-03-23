@@ -1,7 +1,7 @@
 function img = mask_neighbors(img, center, axes_length, orientation, neighbors, opts)
   
   nneigh = size(neighbors.centers, 2);
-  if (nneigh == 0|all(isnan(neighbors.centers(:))))
+  if (nneigh <= 0 | all(isnan(neighbors.centers(:))))
     return;
   end
 
@@ -19,13 +19,15 @@ function img = mask_neighbors(img, center, axes_length, orientation, neighbors, 
 
   mask = false(size(img));
   for i=1:nneigh
-    path = draw_ellipse(neighbors.centers(:, i), neighbors.axes_length(:, i) + growth_size, neighbors.orientations(i));
-    ell_path = carth2elliptic(path, center, axes_length, orientation, 'radial');
-    path = path(ell_path(:,2) >= 1, :);
-    mask = mask | roipoly(mask, path(:,1), path(:,2));
+    if (i ~= neighbors.index)
+      path = draw_ellipse(neighbors.centers(:, i), neighbors.axes_length(:, i) + growth_size, neighbors.orientations(i));
+      ell_path = carth2elliptic(path, center, axes_length, orientation, 'radial');
+      path = path(ell_path(:,2) >= 1, :);
+      mask = mask | roipoly(mask, path(:,1), path(:,2));
 
-    if (opts.verbosity == 3)
-      plot(path(:,1), path(:,2));
+      if (opts.verbosity == 3)
+        plot(path(:,1), path(:,2));
+      end
     end
   end
 

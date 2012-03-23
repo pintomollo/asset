@@ -60,6 +60,7 @@ function mystruct = get_struct(type, nstruct)
                         'segmentation_parameters', get_struct('segmentations'), ... % Parameters of the segmentation
                         'segmentation_type', 'dic', ...     % Type of segmentation (dic, markers, all)
                         'spot_tracking', get_struct('spot_tracking'), ... % Parameters of the spot tracking algorithm
+                        'split_parameters', get_struct('splitting'), ... % Parameters for the splitting of touching cells
                         'temperatures', get_struct('temperatures'), ... % Parameters of the posterior decoding
                         'trackings', '', ...                % List of tracking files
                         'uuid', 0 , ...                     % Universal Unique IDentifier (used in ML to identify processes) 
@@ -197,7 +198,8 @@ function mystruct = get_struct(type, nstruct)
     case 'reference'
       mystruct = struct('axes_length', [25; 15], ...        % Major and minor radii of the ellipse
                         'centers', [0; 0], ...              % Position of the ellipse
-                        'orientations', 0);                 % Tilt (in radians) of the ellipse
+                        'orientations', 0, ...              % Tilt (in radians) of the ellipse
+                        'index', 0);                        % Identificator for the current ellipse
 
     % Structure used to store the detected ruffles (see track_ruffles.m)
     case 'ruffles'
@@ -326,6 +328,15 @@ function mystruct = get_struct(type, nstruct)
                         'form', '', ...
                         'order', 0, ...
                         'pieces', 0);
+    
+    % Structure containing the parameters used for splitting touching cells
+    case 'splitting'
+      mystruct = struct('angle_thresh', 0.23, ...
+                        'max_area_diff', 2, ...
+                        'max_distance', 14.4, ...
+                        'max_overlap', 0.37, ...
+                        'max_ratio', 0.52, ...
+                        'max_score', 0.047);
 
     % Structure containing the different parameters required for tracking spots
     case 'spot_tracking'

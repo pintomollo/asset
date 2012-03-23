@@ -1,41 +1,82 @@
-function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
+function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
 
   if (nargin == 2)
     opts = estim_only;
     estim_only = false;
   end
 
-  [h,w,nframes] = size(imgs);
-  imgsize = [w, h];
+  type = opts.segmentation_type;
 
-  if (nargin == 4)
-    [max_ratio, angle_thresh, max_score, max_overlap, max_dist] = deal(params(1), params(2), params(3), params(4), params(5));
+  if (isstruct(mymovie))
+    switch type
+      case 'dic'
+        [nframes, imgsize] = size_data(mymovie.dic);
+      case 'all'
+        if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
+          opts.segmentation_type = 'markers';
+          mymovie = split_cells(mymovie, estim_only, opts);
+        end
+        opts.segmentation_type = 'dic';
+        mymovie = split_cells(mymovie, estim_only, opts);
+
+        return;
+      case 'markers'
+        if (~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
+          opts.segmentation_type = 'dic';
+          mymovie = split_cells(mymovie, estim_only, opts);
+
+          return;
+        end
+        [nframes, imgsize] = size_data(mymovie.eggshell);
+      otherwise
+        error 'None of the expected field are present in ''mymovie''';
+    end
   else
-    max_ratio = 0.5;
-    angle_thresh = 0.2;
-    max_score = 0.05;
-    max_overlap = 0.4;
-
-    max_dist = 15;
+    [h,w,nframes] = size(imgs);
+    imgsize = [w, h];
   end
 
-  max_dist = max_dist / opts.pixel_size;
+  opts.split_parameters.max_distance = opts.split_parameters.max_distance / opts.pixel_size;
 
   npixels = max(imgsize);
   size10 = round(npixels/10);
   size75 = round(npixels/75);
-  size100 = round(h*w / 100);
+  size100 = round(prod(imgsize) / 100);
   size150 = round(npixels/150);
+  size250 = round(npixels/250);
+  size200 = round(npixels/200);
 
   all_ellipses = cell(nframes, 1);
   all_estim = cell(nframes, 1);
+
+  max_nellipses = 0;
 
   for n = 1:nframes
     %nimg = randi(nframes, 1);
     nimg = n;
     %nimg = 23
 
-    img = imgs(:, :, nimg);
+    if (isstruct(mymovie))
+      
+      switch type
+        case 'dic'
+          img = double(load_data(mymovie.dic, nimg));
+          img = imadm_mex(img);
+          thresh = graythresh(img);
+          img = (img > thresh*0.5*(max(img(:))) );
+        case 'markers'
+          img = double(load_data(mymovie.eggshell, nimg));
+          img = gaussian_mex(img, size250);
+          img = median_mex(img, size200, 3);
+
+          thresh = graythresh(img);
+          img = (img > thresh*(max(img(:))) );
+        otherwise
+          error 'Not implemented yet'
+      end
+    else
+      img = mymovie(:, :, nimg);
+    end
 
     %imagesc(img);hold on;
     img = padarray(img, [size10 size10]);
@@ -47,7 +88,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
     img = imfill(img, 'holes');
     img = imerode(img, strel('disk', size75 + size150));
 
-    img =  img((size10+1):(size10+h),(size10+1):(size10+w));
+    img =  img((size10+1):(size10+imgsize(1)),(size10+1):(size10+imgsize(2)));
 
     if(~any(img) | (sum(img(:)) / prod(imgsize) > 0.9))
       continue;
@@ -59,7 +100,7 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
     end
 
     if (estim_only)
-      all_estim{n} = estim{1};
+      all_estim{nimg} = estim{1};
       continue;
     end
 
@@ -72,44 +113,175 @@ function [all_ellipses, all_estim] = split_cells(imgs, estim_only, opts, params)
       borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize-1), 2));
       border_indx = find(xor(borders, borders([2:end 1])));
 
-      concaves = compute_concavity(pac, angle_thresh);
+      concaves = compute_concavity(pac, opts.split_parameters.angle_thresh);
 
       [indxs, indx_indx] = sort([indxs; border_indx]);
       concaves = [concaves; true(size(border_indx))];
       concaves = concaves(indx_indx);
 
-      ellipses = fit_segments(tmp_estim, indxs(concaves), borders, max_ratio, max_dist, max_score, max_overlap);
+      ellipses = fit_segments(tmp_estim, indxs(concaves), borders, opts.split_parameters.max_ratio, opts.split_parameters.max_distance, opts.split_parameters.max_score, opts.split_parameters.max_overlap);
 
-      if (opts.verbosity == 3)
-        figure
-        imshow(img);
-        hold on
-        scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
-        scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
-        scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
+      %if (opts.verbosity == 3)
+        %figure
+        %imshow(img);
+        %hold on
+        %scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
+        %scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
+        %scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
 
         %hold on;
-        for j = 1:size(ellipses, 1)
-          draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
-        end
-      end
+        %for j = 1:size(ellipses, 1)
+        %  draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
+        %end
+      %end
 
       if (i == 1)
-        all_ellipses{n} = ellipses;
-        all_estim{n} = tmp_estim;
+        all_ellipses{nimg} = ellipses;
+        all_estim{nimg} = tmp_estim;
       else
-        all_ellipses{n} = [all_ellipses{n}; ellipses];
-        all_estim{n} = [all_estim{n}; [NaN, NaN]; tmp_estim];
+        all_ellipses{nimg} = [all_ellipses{nimg}; ellipses];
+        all_estim{nimg} = [all_estim{nimg}; [NaN, NaN]; tmp_estim];
       end
     end
+
+    nellipses = size(all_ellipses{nimg}, 1);
+    if (nellipses > max_nellipses)
+      max_nellipses = nellipses;
+    end
+
     if (i > 1)
-      all_estim{n} = [all_estim{n}; [NaN, NaN]];
+      all_estim{nimg} = [all_estim{nimg}; [NaN, NaN]];
     end
   end
 
   if (nframes == 1)
     all_ellipses = all_ellipses{1};
     all_estim = all_estim{1};
+
+  elseif (max_nellipses > 1)
+    display('There seems to be several cells in the images, double checking if everything is fine !');
+
+    [n, m] = size(all_ellipses{1});
+    real_ell = NaN(n, m, nframes);
+    real_ell(:,:,1) = all_ellipses{1};
+
+    dist_thresh = (opts.split_parameters.max_distance / 3)^2;
+
+    %figure;hold on;
+
+    for i=2:nframes
+      tmp_ell = all_ellipses{i};
+      for k=1:size(tmp_ell, 1)
+        found = false;
+        mpos = mymean(real_ell(:,1:2,:), 3);
+        for j=1:size(mpos, 1)
+          if (sum((mpos(j, :) - tmp_ell(k, 1:2)).^2) < dist_thresh)
+            found = true;
+            real_ell(j, :, i) = tmp_ell(k, :);
+            break;
+          end
+        end
+
+        if (~found)
+          real_ell(end+1,:,:) = NaN;
+          real_ell(end, :, 1) = tmp_ell(k,:);
+        end
+      end
+    end
+
+    goods = sum(~isnan(real_ell),3);
+    goods = (goods(:,1) > nframes/3);
+
+    avg_ell = NaN(0,m);
+
+    for i=1:size(real_ell, 1)
+      if (goods(i))
+        tmp = real_ell(i, :, :);
+        tmp = reshape(tmp(~isnan(tmp)), 5, []);
+        avg_ell(end+1,:) = median(tmp, 2);
+
+        %draw_ellipse(avg_ell(end, 1:2), avg_ell(end, 3:4), avg_ell(end, 5), 'r');
+      end
+    end
+    avg_area = prod(avg_ell(:,3:4), 2)*pi;
+    mean_area = mean(avg_area);
+    goods = (avg_area <= avg_area * opts.split_parameters.max_area_diff & ...
+             avg_area >= avg_area / opts.split_parameters.max_area_diff);
+
+    avg_ell = avg_ell(goods, :);
+    ntargets = size(avg_ell, 1);
+
+    for nimg = 1:nframes
+      
+      estim = all_estim{nimg};
+      [pac, indxs] = impac(estim);
+      concaves = compute_concavity(pac, opts.split_parameters.angle_thresh);
+
+      sides = (any(estim == 2 | bsxfun(@eq, estim, imgsize-1), 2));
+      borders = (xor(sides, sides([2:end 1])));
+      sides(borders) = false;
+
+      borders = borders | isnan(estim(:,1));
+      borders(indxs(concaves)) = true;
+
+      labels = cumsum(double(borders), 1);
+
+      estim = estim(~sides, :);
+      labels = labels(~sides);
+
+      nlabel = hist(labels, labels(end));
+      label_indx = [1:length(nlabel)];
+
+      too_few = ismember(labels, label_indx(nlabel < 10));
+      estim = estim(~too_few, :);
+      labels = labels(~too_few);
+
+      indxs = unique(labels);
+
+      ellipses = NaN(ntargets, 5);
+      scores = Inf(ntargets, 1);
+
+      for i = 1:ntargets
+        %current = ismember(labels, indxs);
+        %tmp_pts = estim(current, :);
+        ell_pts = carth2elliptic(estim, avg_ell(i, 1:2), avg_ell(i, 3:4), avg_ell(i, 5), 'radial');
+        dist = abs(ell_pts(:,2) - 1);
+
+        valids = (dist <= 2*opts.split_parameters.max_score);
+        npts = mymean(double(valids), 1, labels);
+
+        fit_indxs = indxs(npts > 0.333);
+        current = ismember(labels, fit_indxs);
+        [ellipses(i, :)] = fit_distance(estim(current, :));
+        scores(i) = overlaps(avg_ell(i,:), ellipses(i,:), NaN); 
+      end
+
+      goods = (scores > 0.75 & (ellipses(:, 4) ./ ellipses(:, 3)) >= opts.split_parameters.max_ratio);
+      ellipses(~goods, :) = avg_ell(~goods, :);
+
+       % for j = 1:size(ellipses, 1)
+       %   draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
+       % end
+
+        all_ellipses{nimg} = ellipses;
+    end
+  end
+
+  if (isstruct(mymovie))
+    neighbors = get_struct('reference');
+
+    for i=1:nframes
+      ellipse = all_ellipses{i};
+      [neighbors.centers, neighbors.axes_length, neighbors.orientations] = deal(ellipse(:, 1:2).', ellipse(:, 3:4).', ellipse(:, 5).');
+
+      dist = [bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])).^2 ellipse(:, [1 2]).^2];
+      dist = min(dist, [], 2);
+      [~, indx] = max(dist);
+
+      mymovie.(type).neighbors(i).index = indx;
+      mymovie.(type).neighbors(i) = neighbors;
+      mymovie.(type).neighbors(i).index = indx;
+    end
   end
 
   if (nargout == 1)
@@ -146,6 +318,7 @@ function ellipses = fit_segments(pts, junctions, is_border, max_ratio, max_dist,
     
     segments{i} = tmp;
     ellipses(i,:) = ellipse;
+
     scores(i) = score;
   end
 
@@ -206,16 +379,25 @@ end
 
 function [overlap] = overlaps(ellipses, ellipse, indxs)
 
-  overlap = 0;
+  if (numel(indxs) == 1 & indxs == -1)
+    overlap = zeros(size(ellipses, 1), 1);
+  else
+    overlap = 0;
+  end
   curr_area = prod(ellipse(3:4))*pi;
 
   for i=1:size(ellipses, 1)
     if (all(i ~= indxs) & ~isnan(ellipses(i, 1)))
       tmp = ellipse_ellipse_area_mex(ellipse(5), ellipse(3), ellipse(4), ellipse(1), ellipse(2), ellipses(i,5), ellipses(i,3), ellipses(i,4), ellipses(i,1), ellipses(i,2));
-      tmp = tmp / curr_area;
 
-      if (tmp > overlap)
-        overlap = tmp;
+      if (numel(overlap) == 1)
+        tmp = tmp / curr_area;
+
+        if (tmp > overlap)
+          overlap = tmp;
+        end
+      else
+        overlap(i) = tmp;
       end
     end
   end
