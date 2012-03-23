@@ -105,11 +105,11 @@ function [p] = fit_split(mymovie, opts, P)
   opt.LogPlot = 0;
   opt.Restarts = 1;
 
-  p0 = [0.5 0.2 0.05 0.4 0.15].';
+  p0 = [0.519 0.2282 0.047 0.3697 0.1436].';
   nparams = length(p0);
   
   display(['IC (' num2str(p0.') ')']);
-  [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0, 0.1, opt);
+  [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0, 0.05, opt);
   display(['Best (' num2str(p.') ')']);
 
   return;
