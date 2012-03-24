@@ -1,7 +1,7 @@
 function img = mask_neighbors(img, center, axes_length, orientation, neighbors, opts)
   
   nneigh = size(neighbors.centers, 2);
-  if (nneigh <= 0 | all(isnan(neighbors.centers(:))))
+  if (nneigh <= 1 | all(isnan(neighbors.centers(:))))
     return;
   end
 
