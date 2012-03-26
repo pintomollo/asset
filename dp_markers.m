@@ -252,7 +252,7 @@ function [center, axes_length, orientation, neighbors, estim] = detect_ellipse(n
     return;
   end
 
-  if (all(isnan(neighbors.centers)) | neighbors.index <= 0)
+  if (all(isnan(neighbors.centers(:))) | neighbors.index <= 0)
     return;
   end
   

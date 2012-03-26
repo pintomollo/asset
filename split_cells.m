@@ -223,7 +223,7 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
 
       borders = borders | isnan(estim(:,1));
       borders(indxs(concaves)) = true;
-
+      
       labels = cumsum(double(borders), 1);
 
       estim = estim(~sides, :);
@@ -481,9 +481,17 @@ function conc = compute_concavity(pts, thresh)
     half = round(npts/2);
 
     if (indx > half)
-      conc(indx - half) = true;
+      indx = indx - half;
+      if (indx < 1)
+          indx = 1;
+      end
+      conc(indx) = true;
     else
-      conc(indx + half) = true;
+      indx = indx + half;
+      if (indx > npts)
+          indx = npts;
+      end
+      conc(indx) = true;
     end
   elseif (sum(conc) == 0)
     conc([1 end]) = true;
