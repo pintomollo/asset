@@ -18,6 +18,11 @@ function mymovie = dp_markers(mymovie, nimg, opts)
       update = mymovie.markers.update;
     end
 
+    if (~isfield(mymovie.markers, 'ruffles'))
+      ruffles = get_struct('ruffles', size(eggshell));
+    else
+      ruffles = mymovie.markers.ruffles;
+    end
   elseif (isfield(mymovie, 'cortex') && isfield(mymovie, 'eggshell'))
     [nframes, imgsize] = size_data(mymovie.eggshell);
 
@@ -30,6 +35,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     eggshell = get_struct('eggshell',[1,nframes]);
     cortex = get_struct('cortex',[1,nframes]);
     neighbors = get_struct('reference',[1, nframes]);
+    ruffles = get_struct('ruffles',[1, nframes]);
   else
     error 'No suitable channels available for the markers segmentation'; 
 

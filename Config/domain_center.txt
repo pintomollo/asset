@@ -1,4 +1,5 @@
 force_circularity false
+dp_method 'normal'
 
 #quantification.init_params
 alpha 0
@@ -8,14 +9,14 @@ delta 0
 
 #quantification.params
 nhood 11
-alpha 0.75
-beta 0.2
-gamma 0.75
+alpha 0.4
+beta 0.45
+gamma 0.05
 delta 0
 spawn_percentile 0
 
 #quantification.weights
-alpha 0.5
-beta 0.25
-gamma 0.5
+alpha 0.9
+beta 0.2
+gamma 0.4
 delta 0

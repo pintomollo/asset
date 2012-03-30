@@ -18,6 +18,12 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       else
         update = mymovie.dic.update;
       end
+
+      if (~isfield(mymovie.dic, 'ruffles'))
+        ruffles = get_struct('ruffles', size(eggshell));
+      else
+        ruffles = mymovie.dic.ruffles;
+      end
     else
       [nframes, imgsize] = size_data(mymovie.dic);
 
@@ -30,16 +36,17 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       eggshell = get_struct('eggshell',[1,nframes]);
       cortex = get_struct('cortex',[1,nframes]);
       neighbors = get_struct('reference',[1, nframes]);
+      ruffles = get_struct('ruffles',[1, nframes]);
     end
 
-      mymovie.dic.eggshell = eggshell;
-      mymovie.dic.cortex = cortex;
-      mymovie.dic.centers = centers;
-      mymovie.dic.axes_length = axes_length;
-      mymovie.dic.orientations = orientations;
-      mymovie.dic.neighbors = neighbors;
-      mymovie.dic.update = update;
-
+    mymovie.dic.eggshell = eggshell;
+    mymovie.dic.cortex = cortex;
+    mymovie.dic.centers = centers;
+    mymovie.dic.axes_length = axes_length;
+    mymovie.dic.orientations = orientations;
+    mymovie.dic.neighbors = neighbors;
+    mymovie.dic.update = update;
+    mymovie.dic.ruffles = ruffles;
 
   else
     error 'No DIC available for the DIC segmentation'; 
@@ -282,10 +289,6 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
   mymovie.dic.parameters = parameters;
   mymovie.dic.update = update;
-
-  if (isempty(mymovie.dic.cortex(1).carth))
-    keyboard
-  end
 
   return;
 end

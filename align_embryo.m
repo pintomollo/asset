@@ -8,9 +8,7 @@ function mymovie = align_embryo(mymovie, opts)
     [nframes, imgsize] = size_data(mymovie.dic);
   end
   
-  if (~isfield(mymovie.(type), 'ruffles'))
-    mymovie = find_ruffles(mymovie, opts);
-  end
+  mymovie = find_ruffles(mymovie, opts);
 
   if (isfield(mymovie.(type), 'inverted'))
     actu_invert = mymovie.(type).inverted;

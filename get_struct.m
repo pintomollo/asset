@@ -204,7 +204,7 @@ function mystruct = get_struct(type, nstruct)
     % Structure used to store the detected ruffles (see track_ruffles.m)
     case 'ruffles'
       mystruct = struct('bounds', [], ...                   % Bounds of the aperture of the invagination
-                        'carth', [], ...                    % Cartesian position of the invaginations (Nx2)
+                        'carth', NaN(1, 2), ...                    % Cartesian position of the invaginations (Nx2)
                         'cluster', [], ...                  % Time cluster containing the invaginations
                         'paths', {{}}, ...                  % Segmentation of the inner part of the invagination
                         'properties', [], ...               % Various properties computed on each invagination

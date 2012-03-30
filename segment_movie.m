@@ -61,7 +61,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     return;
   end
 
-  mymovie = split_cells(mymovie, opts);
+  mymovie = split_cells(mymovie, opts)
 
   % Progress bar
   if (opts.verbosity > 0)
@@ -133,7 +133,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     mymovie.markers = align_orientations(mymovie.markers);
   end
 
-  mymovie = align_embryo(mymovie, opts);
+  mymovie = align_embryo(mymovie, opts)
 
   if (opts.verbosity > 0)
     close(hwait);
