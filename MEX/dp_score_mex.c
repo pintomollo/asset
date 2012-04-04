@@ -8,7 +8,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   double alpha, beta, gamma, inv_alpha, inv_beta, inv_gamma, smooth, norm, twonorm;
   double real_dir, tmp_dir, res, min_dist, myInf, tmp_val;
   int nhood, npts, half, i, p, *indxs, index, min_indx;
-  bool no_values;
+  bool no_values, transitions_done = false;
 
   if (nrhs < 6) {
     mexErrMsgTxt("Scoring function requires 6 inputs");
@@ -71,7 +71,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       min_indx = p + 1;
 
       for (i = -half; i <= half; i++) {
-        if (nlhs > 3 && p == 0 && !no_values) {
+        if (nlhs > 3 && !transitions_done && !no_values) {
           trans[i+half] = exp(-fabs(i)*norm*alpha*beta*gamma);
         }
 
@@ -112,6 +112,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             }
           }
         }
+      }
+      if (nlhs > 3 && !transitions_done && !no_values) {
+        transitions_done = true;
       }
 
       bests[p] = min_dist;

@@ -2,7 +2,7 @@ function opts = find_domain(opts, uuid)
 
   if (nargin == 0)
     opts = get_struct('ASSET');
-    opts.do_ml = 'cmaes';
+    opts.do_ml = 'godlike';
   end
   %opts = load_parameters(opts, 'domains');
   opts = load_parameters(opts, 'domain_center');
@@ -11,7 +11,7 @@ function opts = find_domain(opts, uuid)
     opts.uuid = now + cputime;
   end
 
-  manuals = dir('*_DP.mat');
+  manuals = dir('1056-*_DP.mat');
   manuals = manuals(randperm(length(manuals)));
 
   p0 = gather_parameters(opts.quantification, opts);
@@ -32,6 +32,7 @@ function opts = find_domain(opts, uuid)
       opt = cmaes('defaults');
       opt.MaxFunEvals = 100000;
       opt.TolFun = dp;
+      opt.TolX = dp;
       %opt.LBounds = zeros(nparams,1) + lbound;
       %opt.UBounds = zeros(nparams,1) + ubound;
       opt.SaveFilename = '';
@@ -45,7 +46,7 @@ function opts = find_domain(opts, uuid)
         opt.LogPlot = 0;
       end
       
-      [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0, 0.35, opt);
+      [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0, 0.15, opt);
     case 'pso'
       opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 dp 250 NaN 0 0];
       opt(2) = 10000;
@@ -121,33 +122,45 @@ function opts = find_domain(opts, uuid)
         if (size(orig.path, 1) ~= size(orig.domain, 1))
           continue;
         end
-        estim_mid = size(orig.domain, 2) / 2;
+        %estim_mid = size(orig.domain, 2) / 2;
 
         path = dynamic_programming(orig.domain, opts.quantification.params, @weight_symmetry, opts.quantification.weights, opts);
 
-        wimg = weight_symmetry(orig.domain, opts.quantification.weights);
-        values = bilinear_mex(wimg, path, 1:length(path));
-        indx = find(values < opts.quantification.weights.gamma, 1, 'first');
+%  hold off;
+%  imagesc(orig.domain);
+%  hold on;
+%  plot(path(:, 1),[1:size(orig.domain,1)], 'k');
+%  plot(orig.path(:, 1),[1:size(orig.domain,1)], 'r');
+%  drawnow
 
-        if (isempty(indx))
-          indx = length(path);
-        end
 
-        path(1:indx-1) = NaN;
+
+        %wimg = weight_symmetry(orig.domain, opts.quantification.weights);
+        %values = bilinear_mex(wimg, path, 1:length(path));
+        %indx = find(values < opts.quantification.weights.gamma, 1, 'first');
+
+        %if (isempty(indx))
+        %  indx = length(path);
+        %end
+
+        %path(1:indx-1) = NaN;
 
         %path = dynamic_prog_2d(orig.domain, opts.quantification.params, @weight_domain, opts.quantification.weights, @init_domain, opts.quantification.init_params, opts);
 
         errors = abs(path(:) - orig.path(:,1));
         %errors(:, 1) = errors(:, 1) * 2;
         %errors = sum(errors, 2);
-        errors(isnan(errors)) = 2*abs(path(isnan(errors), 1) - estim_mid);
-        errors(isnan(errors)) = 2*abs(orig.path(isnan(errors), 1) - estim_mid);
+        %errors(isnan(errors)) = 2*abs(path(isnan(errors), 1) - estim_mid);
+        %errors(isnan(errors)) = 2*abs(orig.path(isnan(errors), 1) - estim_mid);
         errors = errors(~isnan(errors));
 
         if (length(errors) == 0)
           err = Inf;
         else
-          err = mean(errors(:)) + std(errors(:)) + exp(3*(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound))) - 1;
+          dpath = differentiator(path);
+          ddpath = differentiator(dpath);
+
+          err = mean(errors(:)) + mean(abs(ddpath(:))) + 0.5*mean(abs(dpath(:))) + exp(5*(sum(lbound - new_p(new_p < lbound)) + sum(new_p(new_p > ubound) - ubound))) - 1;
         end
 
         if (isnan(err_all(i)))

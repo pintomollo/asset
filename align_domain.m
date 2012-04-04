@@ -8,7 +8,12 @@ function [domain, pos, center_indx] = align_domain(mymovie, opts, path)
     path = mymovie.data.domain;
   end
 
-  [img, pos] = gather_quantification(mymovie, opts);
+  if (isstruct(mymovie))
+    [img, pos] = gather_quantification(mymovie, opts);
+  else
+    img = mymovie;
+    pos = [1:size(img, 2)];
+  end
   %path = path * opts.pixel_size;
 
   [h,w] = size(img);

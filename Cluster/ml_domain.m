@@ -16,7 +16,8 @@ function ml_domain(CPUUID)
 
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',opts.uuid));
 
-  t = floor(rand(1) * 3);
+  %t = floor(rand(1) * 3);
+  t = 1;
 
   switch (t)
     case 0
