@@ -6,7 +6,7 @@ function fit_domains(fname)
 
   for indx = 1:length(mymovies)
     kymo = load(mymovies(indx).name);
-    kymo.opts = load_parameters(kymo.opts, 'domain_center');
+    kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
     domain = imnorm(gather_quantification(kymo.mymovie, kymo.opts));
     kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
 
@@ -63,7 +63,7 @@ function fit_domains(fname)
           try
             ml_kymograph(data, kymo);
           catch
-            'Aargh !'
+            print_all(lasterror)
           end
         end
       end
