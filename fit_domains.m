@@ -4,12 +4,12 @@ function fit_domains(fname)
   data = pseset('fitting');
   data.fit_noise = 0.075;
 
-  for indx = 1:length(mymovies)
-    kymo = load(mymovies(indx).name);
+  for findx = 1:length(mymovies)
+    kymo = load(mymovies(findx).name);
     kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
     domain = imnorm(gather_quantification(kymo.mymovie, kymo.opts));
     kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
-
+    
     nreplicates = 3;
     for t = 0:3
       switch t
@@ -59,7 +59,8 @@ function fit_domains(fname)
         end
 
         for i = 1:nreplicates
-          display([mymovies(indx).name ': ' num2str([t u i]) ]);
+            
+          display([mymovies(findx).name ': ' num2str([findx t u i]) ]);
           try
             ml_kymograph(data, kymo);
           catch
