@@ -20,11 +20,16 @@ function [domain, pos, center_indx] = align_domain(mymovie, opts, path)
 
   valids = ~isnan(img);
   path = round(path(:,1));
-  last = find(~isnan(path), 1, 'last');
-  path(last+1:end) = path(last);
-  first = find(~isnan(path), 1, 'first');
-  path(1:first-1) = path(first);
-  width = NaN(h, 2);;
+
+  if (any(isnan(path(:))))
+    last = find(~isnan(path), 1, 'last');
+    path(last+1:end) = path(last);
+    first = find(~isnan(path), 1, 'first');
+    path(1:first-1) = path(first);
+  end
+
+  center_indx = round(w/2);
+  domain = NaN(h, w);
 
   indxs = [1:w];
   for i=1:h
@@ -40,69 +45,22 @@ function [domain, pos, center_indx] = align_domain(mymovie, opts, path)
       right = path(i);
     end
 
-    width(i,:) = [left, right];
-  end
-  shift = bsxfun(@minus, width, path);
-  center_indx = max(abs(shift(:))) + 1;
+    npts = right - left + 1;
+    nleft = min(round(npts/2) + 1, center_indx);
+    nright = npts - nleft;
 
-  domain = NaN(h, 2*center_indx-1);
+    nfirst = max(path(i) - nleft + 1, left);
+    nlast = min(path(i) + nright, right);
+
+    try
+    domain(i, center_indx - nleft + 1 : center_indx + nright) = [img(i, nlast+1:right) img(i, nfirst:nlast), img(i, left:nfirst-1)];
+    catch
+      keyboard
+    end
+  end
+
   resolution = median(diff(pos));
-  pos = [-(center_indx-1):center_indx-1] * resolution;
-  %rel_pos = pos;
-
-  for i=1:h
-    indxs = [width(i,1) : width(i,2)];
-    domain(i,indxs - path(i) + center_indx) = img(i, indxs);
-  end
-
-  %center_indx = find(pos == 0);
-  %center = (path(:, 1) - center_indx);
-  %center = -1;
-
-  %keyboard
-
-  %for i=h:-1:1
-  %  line = img(i,:);
-  %  if (~isnan(path(i,1)))
-  %    center = round(path(i, 1));
-  %  elseif (center < 0)
-  %    center = center_indx;
-  %  end
-
-  %  min_indx = find(~isnan(line), 1, 'first');
-  %  max_indx = find(~isnan(line), 1, 'last');
-
-  %  min_pos = (min_indx - center) * resolution;
-  %  max_pos = (max_indx - center) * resolution;
-%
-  %  if (min_pos < sides(1))
-  %    nmin = round((sides(1) - min_pos) / resolution);
-  %    sides(1) = min_pos;
-  %  else
-  %    nmin = 0;
-  %  end
-  %  if (max_pos > sides(2))
-  %    nmax = round((max_pos - sides(2)) / resolution);
-  %    sides(2) = max_pos;
-  %  else
-  %    nmax = 0;
-  %  end     
-  %  if (i==h)
-  %    domain = img(i, min_indx:max_indx);
-  %  else
-  %    nrows = size(domain, 1);
-  %    domain = [NaN(nrows, nmin), domain, NaN(nrows, nmax)];
-
-  %    first_indx = round((min_pos - sides(1))/resolution) + 1;
-      %last_indx = (sides(2) - max_pos) / resolution;
-%
-  %    domain(end+1, first_indx:first_indx+(max_indx-min_indx)) = line(min_indx:max_indx);
-
-  %  end
-  %end
-  %domain = flipud(domain);
-  %pos = [fliplr([0:-resolution:sides(1)]) resolution:resolution:(sides(2)+1)];
-  %pos = pos(1:size(domain, 2));
+  pos = ([1:w] - center_indx) * resolution;
 
   return;
 end

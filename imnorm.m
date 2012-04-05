@@ -37,7 +37,7 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode, minrange, max
       maxval = max(img(:));
     end
   end
-  
+
   img = (img - (minval - minrange)) .* ((maxrange - minrange) ./ (maxval - minval));
   img(img < minrange) = minrange;
   img(img > maxrange) = maxrange;
