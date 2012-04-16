@@ -1,11 +1,46 @@
-function fit_domains(fname)
+function fit_domains(fname, incremental, share_work)
+
+  if (nargin < 2)
+    incremental = false;
+    share_work = false;
+  elseif (nargin < 3)
+    share_work = true;
+  end
 
   mymovies = dir(fname);
   data = pseset('fitting');
   data.fit_noise = 0.075;
 
+  if (incremental)
+    mymovies = struct2cell(mymovies);
+    mymovies = mymovies(1,:).';
+
+    fid = fopen('fittings.txt', 'r');
+    if (fid > 2)
+      dones = {};
+      line = fgetl(fid);
+      while (ischar(line))
+        tmp = regexp(line, ' ', 'split');
+        dones(end+1) = {[tmp{2} '.mat']};
+        line = fgetl(fid);
+      end
+      fclose(fid);
+      todos = ~ismember(mymovies, dones);
+      mymovies = mymovies(todos);
+    end
+
+    if (share_work)
+      mymovies = mymovies(randi(length(mymovies)))
+    end
+  end
+
   for findx = 1:length(mymovies)
-    kymo = load(mymovies(findx).name);
+    if (incremental)
+      kymo = load(mymovies{findx});
+    else
+      kymo = load(mymovies(findx).name);
+    end
+
     kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
     domain = imnorm(gather_quantification(kymo.mymovie, kymo.opts));
     kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
@@ -60,7 +95,11 @@ function fit_domains(fname)
 
         for i = 1:nreplicates
             
-          display([mymovies(findx).name ': ' num2str([findx t u i]) ]);
+          if (incremental)
+            display([mymovies{findx} ': ' num2str([findx t u i]) ]);
+          else
+            display([mymovies(findx).name ': ' num2str([findx t u i]) ]);
+          end
           try
             ml_kymograph(data, kymo);
           catch
