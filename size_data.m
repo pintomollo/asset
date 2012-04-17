@@ -30,7 +30,6 @@ function [nframes, ssize, pixelType, r] = size_data(fname)
     if(isstruct(fname) & isfield(fname, 'fname'))
       fid = fopen(fname.fname, 'r');
     else
-      %infos = imfinfo(fname);
       fid = fopen(fname, 'r');
     end
 
@@ -56,10 +55,25 @@ function [nframes, ssize, pixelType, r] = size_data(fname)
     else
       filename = fopen(fid);  % Get the full pathname if not in pwd.
       fclose(fid);
+      
+      idx = find(filename == '.');
+      format = '';
+      if (~isempty(idx))
+        extension = lower(filename(idx(end)+1:end));
+        % Look up the extension in the file format registry.
+        fmt_s = imformats(extension);
+        tf = feval(fmt_s.isa, filename);
+            
+        if (tf)
+          format = fmt_s.ext{1};
+        end
+      end
 
-      % Determine filetype from file.
-      [format, fmt_s] = imftype(filename);
-      infos = feval(fmt_s.info, filename);
+      if (isempty(format))
+        infos = imfinfo(fname);
+      else
+        infos = feval(fmt_s.info, filename);
+      end
 
       nframes = length(infos);
       ssize = [infos(1).Height infos(1).Width];

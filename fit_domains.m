@@ -30,7 +30,7 @@ function fit_domains(fname, incremental, share_work)
     end
 
     if (share_work)
-      mymovies = mymovies(randi(length(mymovies)))
+      mymovies = mymovies(randi(length(mymovies)));
     end
   end
 
