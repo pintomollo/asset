@@ -20,7 +20,7 @@ function struct_size(mystruct, indent, mult, total)
       tmp = whos('myfield');
       nelems = prod(tmp.size);
       display([indent names{i} ':' num2str(100 * (tmp.bytes * mult) / total) '%'])
-      if (isstruct(myfield))
+      if (isstruct(myfield) & ~isempty(myfield))
         struct_size(mystruct.(names{i})(1), [' ' indent], mult * nelems, total);
       end
 
