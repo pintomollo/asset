@@ -119,7 +119,7 @@ function [bests, indxs] =  dp_score_2d(datas, prev_datas, prev_dist, prev_dir, i
     prev_dir(new_segments) = curr_indx(new_segments);
 
     tmp = bsxfun(@minus, prev_dir(:) - curr_indx(:), [0 npts -npts]);
-    [~, indxs] = min(abs(tmp), [], 2);
+    [junk, indxs] = min(abs(tmp), [], 2);
     prev_dir = tmp(sub2ind([npts, 3], curr_indx(:), indxs)) + real_indx(ceil(nhood/2));
     prev_dir = reshape(prev_dir, size_prob);
     prev_dir = back_indx(prev_dir);

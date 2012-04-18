@@ -43,7 +43,7 @@ function mymovie = align_embryo(mymovie, opts)
   inverted = false(3,1);
   inverted(1) = (sum(myhist(1:nbins/8)) > sum(myhist(end-(nbins/8)+1:end)));
 
-  [~, cytok_pos] = max(myhist(nbins/8+1:end-(nbins/8)));
+  [junk, cytok_pos] = max(myhist(nbins/8+1:end-(nbins/8)));
   inverted(2) = (cytok_pos > nbins/8);
 
   if (inverted(1) ~= inverted(2))

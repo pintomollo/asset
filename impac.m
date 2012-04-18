@@ -95,7 +95,7 @@ function pac = pac_recursive(contour, thresh)
   end
 
   dist = abs(segment(1, 1)*(pac(1,2) - contour(2:end_indx-1, 2)) - (pac(1, 1) - contour(2:end_indx-1, 1))*segment(1,2)) ./ hypot(segment(1, 1), segment(1, 2));
-  [~, indx] = max(dist);
+  [junk, indx] = max(dist);
   indx = indx(1);
 
   if (dist(indx) > thresh)
@@ -118,7 +118,7 @@ function pac = pac_iterative(contour, nsteps, thresh)
     segment = contour(i + nsteps, :) - contour(i, :);
 
     dist = abs(segment(1, 1)*(contour(i,2) - contour(i+1:i+nsteps-1, 2)) - (contour(i, 1) - contour(i+1:i+nsteps-1, 1))*segment(1,2)) ./ hypot(segment(1, 1), segment(1, 2));
-    [~, indx] = max(dist);
+    [junk, indx] = max(dist);
     indx = indx(1);
 
     if (dist(indx) > thresh)

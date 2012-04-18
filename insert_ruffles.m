@@ -16,7 +16,7 @@ function [ptsx, ptsy, indexes] = insert_ruffles(ptsx, ptsy, path)
       indx = find(ptsx == insert(1, 1) & ptsy == insert(1, 2), 1);
       if (isempty(indx))
         dist = ((ptsx - insert(1, 1)).^2 + (ptsy - insert(1, 2)).^2);
-        [~, indx] = min(dist);
+        [junk, indx] = min(dist);
         indx = indx(1);
 
         if (dist > 1e-10)

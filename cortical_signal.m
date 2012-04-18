@@ -276,10 +276,10 @@ function [range, center] = get_peak(x, y)
 
   ymax = find(dy(1:end-1) > 0 & dy(2:end) <= 0)+1;
   if (isempty(ymax))
-    [~, center] = min(abs(x));
+    [junk, center] = min(abs(x));
     center = x(center);
   else
-    [~, center] = min(abs(x(ymax)));
+    [junk, center] = min(abs(x(ymax)));
     center = x(ymax(center));
   end
 
@@ -309,12 +309,12 @@ function [range, center] = get_peak(x, y)
   corrs = ones(size(lmin));
   all_indx = zeros(size(lmin));
   for i=1:length(lmin)
-    [~, all_indx(i)] = min(abs(x(rmin) + x(lmin(i))));
+    [junk, all_indx(i)] = min(abs(x(rmin) + x(lmin(i))));
     indexes = [lmin(i):rmin(all_indx(i))];
     corrs(i) = gaussian_correlation(x(indexes), y(indexes), 0.05);
   end
 
-  [~, best_min] = max(corrs);
+  [junk, best_min] = max(corrs);
 
   if (isempty(best_min))
     best_min = 1;
@@ -395,7 +395,7 @@ function params = estimate_piecewise(x, y, params, is_invag)
   
   maxs = find(dddy(1:end-1) > 0 & dddy(2:end) <= 0) + 1;
 
-  [~, indx] = min(abs(x(maxs) - center));
+  [junk, indx] = min(abs(x(maxs) - center));
   indx = maxs(indx);
 
   if (isempty(indx))

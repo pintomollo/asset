@@ -56,7 +56,7 @@ function [best_coefs, shift] = calibrate_dic_correction(mymovie, trackings, opts
 
   function curr_err = regress_dic(curr_shift)
 
-    [~, indx] = min(abs(thetas-curr_shift))
+    [junk, indx] = min(abs(thetas-curr_shift))
     corrs = corrections([indx:end 1:indx-1], :, :);
 
     [coefs, stats] = robustfit(intensity, corrs(:));
@@ -124,14 +124,14 @@ function [intensity, ranges, corrections] = gather_corrections(mymovie, tracking
     dic_egg = reference.eggshell(nimg).carth;
     tmp_intens = bilinear(img, dic_egg(:,1), dic_egg(:,2));
     dic_egg = carth2elliptic(dic_egg, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg), 'radial');
-    [~, intensity(:, nimg)] = interp_elliptic(dic_egg(:,1), tmp_intens, thetas);
+    [junk, intensity(:, nimg)] = interp_elliptic(dic_egg(:,1), tmp_intens, thetas);
 
-    [~, dic_egg] = interp_elliptic(dic_egg, thetas);
+    [junk, dic_egg] = interp_elliptic(dic_egg, thetas);
 
     for f = 1:nfields
       tmp_path = target.(fields{f}).carth;
       tmp_path = carth2elliptic(tmp_path, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg), 'radial');
-      [~, tmp_path] = interp_elliptic(tmp_path, thetas);
+      [junk, tmp_path] = interp_elliptic(tmp_path, thetas);
 
       fluo_path(:, nimg, f) = tmp_path;
 
@@ -140,7 +140,7 @@ function [intensity, ranges, corrections] = gather_corrections(mymovie, tracking
       else
         tmp_path = reference.(fields{f}).carth;
         tmp_path = carth2elliptic(tmp_path, centers(:, nimg), axes_length(:, nimg), orientations(1, nimg), 'radial');
-        [~, tmp_path] = interp_elliptic(tmp_path, thetas);
+        [junk, tmp_path] = interp_elliptic(tmp_path, thetas);
       end
 
       dic_path(:, nimg, f) = tmp_path;

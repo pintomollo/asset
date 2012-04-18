@@ -238,7 +238,7 @@ function [ellipse, num_votes] = imellipse(img, wsize, thresh, angle_thresh, radi
     [results, nvotes] = vote_1d(votes, binning);
 
     if (~isempty(results))
-      [~, ells] = carth2elliptic(votes(:,1:2), results(1:2), results(3:4), results(5));
+      [junk, ells] = carth2elliptic(votes(:,1:2), results(1:2), results(3:4), results(5));
       done = (ells <= 1);
       votes = votes(~done, :);
       nvotes = sum(done);
@@ -587,7 +587,7 @@ function [results, nvotes] = vote_1d(votes, binning)
     edges = [min(data)-epsilon:binning(i):max(data) max(data)+epsilon];
     counts = histc(data, edges);
 
-    [~, best] = max(counts);
+    [junk, best] = max(counts);
     indx = (data >= edges(best) & data <= edges(best+1));
     accepted = accepted & indx;
   end

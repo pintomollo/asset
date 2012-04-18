@@ -90,7 +90,7 @@ function outside_paths = path_periphery(paths, varargin)
         end
 
         % We bin the angular position with respect to the defined positions (theta)
-        [~, ibin] = histc(polar(:,1), outside_theta);
+        [junk, ibin] = histc(polar(:,1), outside_theta);
 
         % Loop over each bin to get the outter most point
         for b=1:nbins

@@ -254,7 +254,7 @@ case double('c')
   setPosition(handles.polygon, NaN(1,2));
   %delete(handles.polygon);
   drawnow;
-  [~, x, y] = roipoly();
+  [junk, x, y] = roipoly();
 
   setPosition(handles.polygon, [x,y]);
   uiwait(hfig);
@@ -342,7 +342,7 @@ function mouseClick(hobj, event_data)
   img2 = imnorm(double(load_data(tmp.mymovie.data, frame)));
 
   opts = get_struct('ASSET');
-  [~, pos] = gather_quantification(tmp.mymovie, opts);
+  [junk, pos] = gather_quantification(tmp.mymovie, opts);
 
   %pts = insert_ruffles(tmp.mymovie.markers.cortex(frame).carth, tmp.mymovie.markers.ruffles(frame).paths);
   pts = tmp.mymovie.data.quantification(frame).carth;
@@ -367,7 +367,7 @@ function mouseClick(hobj, event_data)
 
     dist = abs(cat(3, bsxfun(@minus, lin_pts, lin_pos), bsxfun(@minus, lin_pts - tot_length, lin_pos)));
     dist = min(dist, [], 3);
-    [~, indx] = min(dist, [], 1);
+    [junk, indx] = min(dist, [], 1);
 
     pts = pts(indx, :);
     if (isempty(pts))
@@ -557,9 +557,9 @@ function store_path(hFig)
     half1(end, 2) = h;
     half2(end, 2) = h;
 
-    [~, indx] = unique(half1(:, 2));
+    [junk, indx] = unique(half1(:, 2));
     half1 = half1(indx, :);
-    [~, indx] = unique(half2(:, 2));
+    [junk, indx] = unique(half2(:, 2));
     half2 = half2(indx, :);
 
     indexes = [start:h].';

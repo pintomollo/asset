@@ -43,7 +43,7 @@ function mymovie = time_cell_cycle(mymovie, opts)
   myhist = counts(1:nbins/2) + counts(end-1:-1:end-nbins/2);
 
   size_front = nbins / 8;
-  [~, cytok_pos] = max(myhist(size_front+1:end-size_front));
+  [junk, cytok_pos] = max(myhist(size_front+1:end-size_front));
   cytok_pos = cytok_pos + size_front;
   cytok_pos = [cytok_pos nbins - cytok_pos + 1];
 
@@ -195,7 +195,7 @@ function mymovie = time_cell_cycle(mymovie, opts)
   lengths(end+1) = 0;
   lengths(end+1) = 0;
 
-  [~, indxs] = sort(lengths);
+  [junk, indxs] = sort(lengths);
   bests = indxs([end end-1]);
   traces = traces(bests);
   nucl1 = traces{1};
@@ -284,14 +284,14 @@ function [left_indx, right_indx] = find_pairs(frames, traces, params, target)
              (1-alpha)*(beta * (1 - (right(:,2) / norm_factor)) + ...
               (1-beta) * (nframes - right(:, 4)) / norm_factor);
       
-      [~, right_indx] = min(dist);
+      [junk, right_indx] = min(dist);
     end
   elseif (numel(right) == 0)
     dist = alpha * abs(left(:, 1) - target) / (pi/8) + ...
            (1-alpha)*(beta * (1 - (left(:,2) / norm_factor)) + ....
             (1-beta) * (nframes - left(:, 4)) / norm_factor);
 
-    [~, left_indx] = min(dist);
+    [junk, left_indx] = min(dist);
   else
     dist = Inf(size(left, 1), size(right, 1));
     for i=1:size(left, 1)

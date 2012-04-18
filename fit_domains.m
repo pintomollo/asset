@@ -1,15 +1,31 @@
 function fit_domains(fname, incremental, share_work)
 
+  %addpath('./celegans-analysis/');
+  %addpath('./celegans-analysis/libraries/');
+  %addpath('./pse/');
+
   if (nargin < 2)
-    incremental = false;
-    share_work = false;
+    incremental = true;
+    share_work = true;
   elseif (nargin < 3)
     share_work = true;
   end
 
-  mymovies = dir(fname);
   data = pseset('fitting');
   data.fit_noise = 0.075;
+
+  mymovies = [];
+  if (ischar(fname))
+    mymovies = dir(fname);
+  end
+  if (isempty(mymovies))
+    data.uuid = fname;
+    if (ischar(data.uuid))
+      data.uuid = str2double(data.uuid);
+    end
+    
+    mymovies = dir('1056-*_.mat');
+  end
 
   if (incremental)
     mymovies = struct2cell(mymovies);
@@ -94,14 +110,16 @@ function fit_domains(fname, incremental, share_work)
         end
 
         for i = 1:nreplicates
-            
+          
+          options = num2str([findx t u i]); 
+          
           if (incremental)
-            display([mymovies{findx} ': ' num2str([findx t u i]) ]);
+            display([mymovies{findx} ': ' options]);
           else
-            display([mymovies(findx).name ': ' num2str([findx t u i]) ]);
+            display([mymovies(findx).name ': ' options]);
           end
           try
-            ml_kymograph(data, kymo);
+            ml_kymograph(data, kymo, options);
           catch
             print_all(lasterror)
           end

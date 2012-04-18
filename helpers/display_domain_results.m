@@ -166,7 +166,7 @@ function data = plot_all_domains(timings, names)
       tmp = load(manuals(i).name);
       path = tmp.path;
       tmp = load(names{index});
-      [~, pos] = gather_quantification(tmp.mymovie, tmp.opts);
+      [junk, pos] = gather_quantification(tmp.mymovie, tmp.opts);
       data(end+1,:) = {names{index}, timings(index, :), path, pos};
     end
   end

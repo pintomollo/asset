@@ -47,7 +47,7 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
           warped = [];
         else
           [ordered, index] = sort(ell_pts(:,1));
-          [~, index] = sort(index); 
+          [junk, index] = sort(index); 
 
           %keyboard
 

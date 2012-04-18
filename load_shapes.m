@@ -142,7 +142,7 @@ function [shapes, groups] = load_shapes(fname)
         % We need to knoe the group they belong to
         group = regexp(line,'^group=(\w+)','tokens');
         if(~isempty(group))
-          [~, group_indx] = ismember(group{1}, groups);
+          [junk, group_indx] = ismember(group{1}, groups);
         else
 
           % And in which slice they are
