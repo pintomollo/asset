@@ -42,5 +42,10 @@ function [img, minval, maxval] = imnorm(img, minval, maxval, mode, minrange, max
   img(img < minrange) = minrange;
   img(img > maxrange) = maxrange;
 
+  if (any(isnan(img(:))))
+    range = maxval - minval;
+    img(range == 0) = 0;
+  end
+
   return;
 end

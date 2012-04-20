@@ -4,7 +4,7 @@ function vals = bilinear(img, x, y, circular)
     y = x(2,:);
     x = x(1,:);
 
-    circular = false;
+    circular = 0;
   elseif (nargin < 4)
     if (islogical(y))
       circular = y;
@@ -12,7 +12,7 @@ function vals = bilinear(img, x, y, circular)
       y = x(2,:);
       x = x(1,:);
     else
-      circular = false;
+      circular = 0;
     end
   end
 

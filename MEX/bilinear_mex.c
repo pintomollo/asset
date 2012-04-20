@@ -1,15 +1,17 @@
 #include <math.h>
 #include "mex.h"
 
+#define MOD(x, y) (int)((x) - (y) * floor((double)(x) / (double)(y)))
+
 /* Bilinear interpolation */
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-  int i, xf, yf, xc, yc;
+  int i, xf, yf, xc, yc, boundary_x = 0, boundary_y = 0;
   double dxf, dyf, dxc, dyc, x, y;
   mwSize w, h, m, n, nvals;
   double *x_indx, *y_indx, *tmp, *img, *values;
-  bool free_memory = false, circular_x = false, circular_y = false, *tmp_bool;
+  bool free_memory = false;
 
   if (nrhs < 2) {
     mexErrMsgTxt("Not enough input arguments (2 is the minimum) !");
@@ -64,13 +66,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     m = mxGetM(prhs[1]); 
     n = mxGetN(prhs[1]);
 
-    tmp_bool = mxGetLogicals(prhs[3]);
-    circular_x = tmp_bool[0];
+    tmp = mxGetPr(prhs[3]);
+    boundary_x = (int)tmp[0];
 
     if (mxGetNumberOfElements(prhs[3]) > 1) {
-      circular_y = tmp_bool[1];
+      boundary_y = (int)tmp[1];
     } else {
-      circular_y = tmp_bool[0];
+      boundary_y = boundary_x;
     }
   }
    
@@ -108,28 +110,78 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       dyc = yc - y;
     }
 
-    if (circular_x) {
-      xf = fmod(xf, w);
-      xc = fmod(xc, w);
+    switch (boundary_x) {
+      // Circular
+      case 1 :
+        xf = MOD(xf, w);
+        xc = MOD(xc, w);
 
-      if (xf == 0) {
-        xf = w-1;
-      }
-      if (xc == 0) {
-        xc = w-1;
-      }
+        break;
+      // Replicate
+      case 2 :
+        if (xf >= w) {
+          xf = w-1;
+        } else if (xf < 0) {
+          xf = 0;
+        }
+        if (xc >= w) {
+          xc = w-1;
+        } else if (xc < 0) {
+          xc = 0;
+        }
+        break;
+      // Symmetric
+      case 3 :
+        xf = MOD(xf, 2*w);
+        xc = MOD(xc, 2*w);
+
+        if (xf >= w) {
+         xf = 2*w - xf - 1;
+        }
+        if (xc >= w) {
+         xc = 2*w - xc - 1;
+        }
+        break;
+      // NaN outside
+      default :
+        break;
     }
 
-    if (circular_y) {
-      yf = fmod(yf,h);
-      yc = fmod(yc,h);
+    switch (boundary_y) {
+      // Circular
+      case 1 :
+        yf = MOD(yf, h);
+        yc = MOD(yc, h);
 
-      if (yf == 0) {
-        yf = h-1;
-      }
-      if (yc == 0) {
-        yc = h-1;
-      }
+        break;
+      // Replicate
+      case 2 :
+        if (yf >= h) {
+          yf = h-1;
+        } else if (yf < 0) {
+          yf = 0;
+        }
+        if (yc >= h) {
+          yc = h-1;
+        } else if (yc < 0) {
+          yc = 0;
+        }
+        break;
+      // Symmetric
+      case 3 :
+        yf = MOD(yf, 2*h);
+        yc = MOD(yc, 2*h);
+
+        if (yf >= h) {
+         yf = 2*h - yf - 1;
+        }
+        if (yc >= h) {
+         yc = 2*h - yc - 1;
+        }
+        break;
+      // NaN outside
+      default :
+        break;
     }
 
     if (xf >= w || yf >= h || xc < 0 || yc < 0 || xc >= w || xf < 0 || yc >= h || yf < 0) {
@@ -140,7 +192,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                   img[xc*h + yf] * dxf * dyc +
                   img[xf*h + yc] * dxc * dyf +
                   img[xc*h + yc] * dxf * dyf;
-    } 
+    }
   }
 
   if (free_memory) {

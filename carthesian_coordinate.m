@@ -12,7 +12,7 @@ function [carth_img] = carthesian_coordinate(ell_img, varargin)
     [theta,rads] = carth2elliptic(col, row * i, center, axes_length, orient, type);
     [theta,rads] = elliptic2pixels(theta, rads, ell_size, axes_length, safety, type);
     
-    carth_img(i,:) = bilinear(ell_img, rads, theta, circular);
+    carth_img(i,:) = bilinear(ell_img, rads, theta, double(circular));
   end
 
   return;

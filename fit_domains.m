@@ -119,7 +119,7 @@ function fit_domains(fname, incremental, share_work)
             display([mymovies(findx).name ': ' options]);
           end
           try
-            ml_kymograph(data, kymo, options);
+            ml_kymograph(data, kymo);
           catch
             print_all(lasterror)
           end
