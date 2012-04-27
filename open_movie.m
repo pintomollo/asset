@@ -124,7 +124,7 @@ function [mymovie] = open_movie(mymovie, opts)
       end
 
       % We convert the provided type into a more handy one
-      [channels(i).fname, policy] = convert_movie(channels(i).file, policy, opts);
+      [channels(i).fname, policy] = bftools_convert(channels(i).file, policy, opts);
     end
 
     % Ask the user to identify the different channels

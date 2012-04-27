@@ -10,61 +10,173 @@ function install_ASSET
   current_dir = '';
   if (numel(dir('get_struct.m')) == 1)
     current_dir = pwd;
-    cd ..;
   else
     current_dir = 'celegans-analysis';
+    cd(current_dir);
   end
 
   % If we can see this function, ASSET is already in the matlabpath
   if (exist('get_struct') ~= 2)
-    if (~isempty(current_dir))
-      cd(current_dir);
-    end
-
     here = pwd;
     addpath(here);
     addpath(fullfile(here, 'libraries'));
     addpath(fullfile(here, 'helpers'));
-    savepath
-
-    cd ..;
+    savepath;
   end
 
   % If this function exists, the MEX files were properly compiled already
+  is_first = true;
+  had_problem = false;
+
+  % Try to compile all the MEX functions
   if (exist('bilinear_mex') ~= 3)
-    if (~isempty(current_dir))
-      cd(current_dir);
-    end
-    
-    % Try to compile all the MEX functions
     try
-      mex -setup;
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
       eval(['mex MEX' filesep 'bilinear_mex.c']);
-      eval(['mex MEX' filesep 'dp_score_mex.c']);
-      eval(['mex MEX' filesep 'gaussian_mex.c']);
-      eval(['mex MEX' filesep 'median_mex.c']);
-      eval(['mex MEX' filesep 'imadm_mex.c']);
-      eval(['mex MEX' filesep 'emdc.c']);
-      eval(['mex MEX' filesep 'evrot.cpp']);
-      eval(['mex MEX' filesep 'scale_dist.cpp']);
-      eval(['mex MEX' filesep 'ellipse_ellipse_area_mex.c MEX' filesep 'ellipse_ellipse_overlap.c']);
-
-      include_path = uigetdir('/usr/local/include', 'Select the directory containing the LEVMAR include files (.h)');
-
-      eval(['mex -I' include_path ' -llapack -lblas -llevmar MEX' filesep 'fit_front_mex.c']);
-    catch ME
-      warning('Could not compile the MEX funtions, ASSET can still run without them but more slowly. Consider fixing this problem for more efficiency.');
+    catch 
+      had_problem = true;
     end
-
-    cd ..;
+  end
+  if (exist('dp_score_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'dp_score_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('gaussian_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'gaussian_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('median_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'median_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('imadm_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'imadm_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('emdc') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'emdc.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('ellipse_distance_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'ellipse_distance_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('symmetric_corrcoef_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'symmetric_corrcoef_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('ellipse_ellipse_area_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'ellipse_ellipse_area_mex.c MEX' filesep 'ellipse_ellipse_overlap.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('fit_front_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      include_path = uigetdir('/usr/local/include', 'Select the directory containing the LEVMAR include files (.h)');
+      eval(['mex -I' include_path ' -llapack -lblas -llevmar MEX' filesep 'fit_front_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  
+  if (had_problem)
+    warning('Could not compile all the MEX funtions, ASSET can still run without them but more slowly. Consider fixing this problem for more efficiency.');
   end
 
   % Try to use the java libraries to see if they are properly installed
-  try
-    loci.formats.ImageReader();
-    loci.formats.MetadataTools.createOMEXMLMetadata();
-  catch ME
-    warning('LOCI Bio-formats library does not seem to be installed, this will impair correct conversion of the images.\nVisit http://www.loci.wisc.edu/software/bio-formats and install the JAR libraries.')
+  if (exist('bfconvert.bat', 'file') ~= 2)
+    if (exist('bftools', 'dir'))
+      here = pwd;
+      addpath(fullfile(here, 'bftools'));
+      savepath;
+
+      if (~exist('bfconvert.bat', 'file'))
+        warning('ASSET:lociMissing', 'The LOCI command line tools are not present, this might be a problem if your recordings are not in TIFF format !\nYou can download them from http://www.loci.wisc.edu/bio-formats/downloads\nThen place the entire folder in the celegans-analysis folder.');
+      end
+    else
+      warning('ASSET:lociMissing', 'The LOCI command line tools are not present, this might be a problem if your recordings are not in TIFF format !\nYou can download them from http://www.loci.wisc.edu/bio-formats/downloads\nThen place the entire folder in the celegans-analysis folder.');
+    end
+  end
+  if (exist('bfconvert.bat', 'file') ~= 2)
+    button = questdlg('Should ASSET try to install the LOCI command line tools ?');
+
+    if (strncmpi(button, 'yes', 3))
+      try
+        rmdir('bftools', 's');
+        unzip('http://loci.wisc.edu/files/software/bftools.zip', 'bftools');
+        here = pwd;
+        addpath(fullfile(here, 'bftools'));
+        savepath;
+      catch
+        warning('ASSET:installLOCI', ['Installation failed for the following reason:\n' lasterror]);
+      end
+
+      if (exist('bfconvert.bat', 'file') == 2)
+        msgbox('Installation successfull !');
+      end
+    end
   end
 
   % This folder is required as well
@@ -72,13 +184,7 @@ function install_ASSET
     mkdir('TmpData');
   end
 
-  if (~exist('Config', 'dir'))
-    cd('celegans-analysis');
-    if (exist('Config', 'dir'))
-      movefile('Config', '..');
-    end
-    cd ..;
-  end
+  cd ..;
 
   return;
 end

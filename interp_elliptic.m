@@ -83,9 +83,22 @@ function [new_angles, path] = interp_elliptic(varargin)
   orig_angles(orig_angles < min_angle) = orig_angles(orig_angles < min_angle) + drange;
   orig_angles(orig_angles > max_angle) = orig_angles(orig_angles > max_angle) - drange;
 
+  % Remove the small backward values
+  smalls = true;
+  while (any(smalls))
+    dorig = diff(orig_angles([1:end 1]));
+    smalls = (dorig <= 0 & dorig > -drange/4);
+    orig_angles = orig_angles(~smalls);
+    orig_values = orig_values(~smalls);
+  end
+
   % Re-align the data such that they have increasing angular values
-  indx = find(orig_angles(1:end-1) > orig_angles(2:end), 1);
-  if (~isempty(indx))
+  indx = find(orig_angles(1:end-1) > orig_angles(2:end));
+
+  if (length(indx) > 1)
+    warning('Non-monotonic angular values, interpolation can produce incoherent values');
+    keyboard
+  elseif (~isempty(indx))
     orig_angles = orig_angles([indx+1:end 1:indx]);
     orig_values = orig_values([indx+1:end 1:indx], :);
   end

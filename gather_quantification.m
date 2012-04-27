@@ -112,6 +112,7 @@ function [datas, theta] = gather_quantification(mymovie, opts)
     boundaries = max(abs(dist));
 
     if (any(boundaries > 1e4))
+      keyboard
       error('Too many elements');
     end
 
