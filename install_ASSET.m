@@ -165,12 +165,21 @@ function install_ASSET
     if (strncmpi(button, 'yes', 3))
       try
         rmdir('bftools', 's');
+      catch
+        % Nothing...
+      end
+
+      try
         unzip('http://loci.wisc.edu/files/software/bftools.zip', 'bftools');
+        cd('bftools');
+        urlwrite('http://loci.wisc.edu/files/software/loci_tools.jar', 'loci_tools.jar');
+        cd ..;
         here = pwd;
         addpath(fullfile(here, 'bftools'));
         savepath;
       catch
-        warning('ASSET:installLOCI', ['Installation failed for the following reason:\n' lasterror]);
+        errs = lasterror;
+        warning('ASSET:installLOCI', ['Installation failed for the following reason:\n' errs.message]);
       end
 
       if (exist('bfconvert.bat', 'file') == 2)
