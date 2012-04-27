@@ -7,11 +7,6 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       orientations = mymovie.dic.orientations;
       eggshell = mymovie.dic.eggshell;
       cortex = mymovie.dic.cortex;
-      if (~isfield(mymovie.dic, 'neighbors'))
-        neighbors = get_struct('reference', size(eggshell));
-      else
-        neighbors = mymovie.dic.neighbors;
-      end
       
       if (~isfield(mymovie.dic, 'update'))
         update = false(size(centers));
@@ -35,8 +30,11 @@ function mymovie = dp_dic(mymovie, nimg, opts)
 
       eggshell = get_struct('eggshell',[1,nframes]);
       cortex = get_struct('cortex',[1,nframes]);
-      neighbors = get_struct('reference',[1, nframes]);
       ruffles = get_struct('ruffles',[1, nframes]);
+      
+      if (~isfield(mymovie.dic, 'neighbors') | isempty(mymovie.dic.neighbors))
+        mymovie = split_cells(mymovie, opts);
+      end
     end
 
     mymovie.dic.eggshell = eggshell;
@@ -44,7 +42,6 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     mymovie.dic.centers = centers;
     mymovie.dic.axes_length = axes_length;
     mymovie.dic.orientations = orientations;
-    mymovie.dic.neighbors = neighbors;
     mymovie.dic.update = update;
     mymovie.dic.ruffles = ruffles;
 

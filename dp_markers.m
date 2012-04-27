@@ -6,11 +6,6 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     orientations = mymovie.markers.orientations;
     eggshell = mymovie.markers.eggshell;
     cortex = mymovie.markers.cortex;
-    if (~isfield(mymovie.dic, 'neighbors'))
-      neighbors = get_struct('reference', size(eggshell));
-    else
-      neighbors = mymovie.dic.neighbors;
-    end
 
     if (~isfield(mymovie.markers, 'update'))
       update = false(size(centers));
@@ -34,8 +29,11 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
     eggshell = get_struct('eggshell',[1,nframes]);
     cortex = get_struct('cortex',[1,nframes]);
-    neighbors = get_struct('reference',[1, nframes]);
     ruffles = get_struct('ruffles',[1, nframes]);
+    
+    if (~isfield(mymovie.markers, 'neighbors') | isempty(mymovie.markers.neighbors))
+      mymovie = split_cells(mymovie, opts);
+    end
   else
     error 'No suitable channels available for the markers segmentation'; 
 

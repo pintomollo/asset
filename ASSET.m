@@ -405,7 +405,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
           else
 
             % There is a different type of error
-            error(ME);
+            rethrow(ME);
           end
         end
       end

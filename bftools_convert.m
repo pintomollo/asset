@@ -58,9 +58,14 @@ function [newfile, policy] = bftools_convert(fname, policy, opts)
   [mypath, junk] = fileparts(cmd_path);
 
   cd(mypath);
-  cmd_name = strrep(fname,' ','\ ');
 
-  [res, infos] = system(['./showinf -nopix -nometa ' cmd_name]);
+  if (ispc)
+    cmd_name = ['"' fname '"'];
+    [res, infos] = system(['showinf.bat -nopix -nometa ' cmd_name]);
+  else
+    cmd_name = strrep(fname,' ','\ ');
+    [res, infos] = system(['./showinf -nopix -nometa ' cmd_name]);
+  end
   if (res ~= 0)
     cd(curdir);
     error(infos);
@@ -74,8 +79,8 @@ function [newfile, policy] = bftools_convert(fname, policy, opts)
     error('ASSET:lociFormat', ['The metadata does not present the expected information: ''file format'' and ''RGB'' :\n\n' infos]);
   end
 
-  format = format{1};
-  is_rgb = strncmp(is_rgb{1}, 'true', 4);
+  format = format{1}{1};
+  is_rgb = strncmp(is_rgb{1}{1}, 'true', 4);
   
   if (strncmpi(format,'OME-TIFF',8) | (length(format) >= 19 & strncmpi(format([1 8 14 19]), 'TIFF', 4)) | strncmpi(format, 'TIFF', 4))
 
@@ -143,8 +148,13 @@ function [newfile, policy] = bftools_convert(fname, policy, opts)
     end
   end
   
-  cmd_newname = strrep(newname,' ','\ ');
-  [res, infos] = system(['./bfconvert -separate -channel 0 ' cmd_name ' ' cmd_newname]);
+  if (ispc)
+    cmd_newname = ['"' newname '"'];
+    [res, infos] = system(['bfconvert.bat -separate -channel 0 ' cmd_name ' ' cmd_newname]);
+  else
+    cmd_newname = strrep(newname,' ','\ ');
+    [res, infos] = system(['./bfconvert -separate -channel 0 ' cmd_name ' ' cmd_newname]);
+  end
   if (res ~= 0)
     cd(curdir);
     error(infos);

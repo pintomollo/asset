@@ -277,10 +277,13 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
       dist = [bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])).^2 ellipse(:, [1 2]).^2];
       dist = min(dist, [], 2);
       [junk, indx] = max(dist);
+      neighbors.index = indx;
 
-      mymovie.(type).neighbors(i).index = indx;
-      mymovie.(type).neighbors(i) = neighbors;
-      mymovie.(type).neighbors(i).index = indx;
+      if (isempty(mymovie.(type).neighbors))
+        mymovie.(type).neighbors = neighbors;
+      else
+        mymovie.(type).neighbors(i) = neighbors;
+      end
     end
   end
 

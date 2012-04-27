@@ -44,7 +44,7 @@ function [mymovie] = rescale_movie(mymovie, opts)
       mymovie.(field)(k).file = mymovie.(field)(k).fname;
 
       % Perfom some string formatting for the display
-      indx = findstr(mymovie.(field)(k).file, filesep);
+      indx = strfind(mymovie.(field)(k).file, filesep);
       if (isempty(indx))
         indx = 1;
       else
@@ -118,7 +118,22 @@ function [mymovie] = rescale_movie(mymovie, opts)
         % Write the filtered data, we'll rescale them in a second pass as we do not
         % know the range yet
         %writer = store_data(writer, img, i);
-        imwrite(uint16(img), tmp_fname, 'TIFF', 'Compression', mymovie.(field)(k).compression, 'WriteMode', 'append');
+        done = false;
+        waiting_time = 0;
+        while (~done)
+          try
+            imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
+            done = true;
+          catch ME
+            if (waiting_time < 20)
+              nsecs = rand(1);
+              waiting_time = waiting_time + nsecs;
+              pause(nsecs);
+            else
+              rethrow(ME)
+            end
+          end
+        end
 
         % Update the progress bar if needed
         if (opts.verbosity > 1)
@@ -157,7 +172,22 @@ function [mymovie] = rescale_movie(mymovie, opts)
         img = imnorm(img, mymovie.(field)(k).min, mymovie.(field)(k).max, '', 0, maxuint);
 
         % And save the final image
-        imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
+        done = false;
+        waiting_time = 0;
+        while (~done)
+          try
+            imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
+            done = true;
+          catch ME
+            if (waiting_time < 20)
+              nsecs = rand(1);
+              waiting_time = waiting_time + nsecs;
+              pause(nsecs);
+            else
+              rethrow(ME)
+            end
+          end
+        end
         %store_data(writer, img, i);
 
         % Update the progress bar

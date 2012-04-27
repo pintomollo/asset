@@ -28,11 +28,11 @@ if isempty(tgt_path) | isequal(tgt_path(1), '.')
 
   return;
 else
-  [file_path, name, ext, vers] = fileparts(tgt_path);
+  [file_path, name, ext] = fileparts(tgt_path);
 
   if (~isempty(ext))
     tgt_path = file_path;
-    name = [name ext vers];
+    name = [name ext];
   else
     name = [];
   end
