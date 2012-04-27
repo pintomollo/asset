@@ -82,7 +82,6 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       mymovie.dic.centers = centers;
       mymovie.dic.axes_length = axes_length;
       mymovie.dic.orientations = orientations;
-      mymovie.dic.neighbors = neighbors;
       mymovie.dic.cortex(nimg) = get_struct('cortex');
       %mymovie.dic.neighbors(nimg) = get_struct('reference');
 
@@ -127,7 +126,6 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       mymovie.dic.orientations(1, nimg) = NaN;
       %mymovie.dic.neighbors(nimg) = neighbors;
       mymovie.dic.cortex(nimg) = get_struct('cortex');
-      mymovie.dic.neighbors(nimg) = get_struct('reference');
 
       warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
       return;
@@ -183,8 +181,6 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     mymovie.dic.centers = centers;
     mymovie.dic.axes_length = axes_length;
     mymovie.dic.orientations = orientations;
-    mymovie.dic.neighbors = neighbors;
-
   end
   
   if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & strncmp(opts.ml_type, 'cortex', 6)))

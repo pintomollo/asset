@@ -40,6 +40,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     return;
   end
 
+  neighbors = mymovie.markers.neighbors;
   parameters = opts.segmentation_parameters.markers;
 
   img = [];
@@ -62,9 +63,9 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     img = 1-img;
 
     if (opts.measure_performances)
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(mymovie.markers.neighbors(nimg), img, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(neighbors(nimg), img, opts);
     else
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(mymovie.markers.neighbors(nimg), opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(neighbors(nimg), opts);
     end
 
     if (opts.verbosity == 3)
@@ -126,7 +127,6 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     mymovie.markers.axes_length = axes_length;
     mymovie.markers.orientations = orientations;
     mymovie.markers.eggshell = eggshell;
-    mymovie.markers.neighbors = neighbors;
   end
 
   
@@ -143,7 +143,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     mask = roipoly(size(img,1),size(img,2), eggshell(nimg).carth(:,1), eggshell(nimg).carth(:,2));
 
     noise = img;
-    noise(mask) = -1;;
+    noise(mask) = -1;
     img = img .* mask;
     
     minimg = mean(mean(noise(noise~=-1)));
