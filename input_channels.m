@@ -12,8 +12,10 @@ function channels = input_channels(channels)
   % Initialize the size of the movie, the possible types and compressions
   nchannels = length(channels);
   typestring = {'data'; 'dic'; 'eggshell'; 'cortex'};
-  writer = loci.formats.out.OMETiffWriter;
-  typecompress = cell(writer.getCompressionTypes());
+  %writer = loci.formats.out.OMETiffWriter;
+  %typecompress = cell(writer.getCompressionTypes());
+  typecompress = {'none', 'lzw', 'deflate', 'jpeg'};
+
 
   % Initialize the structure used for the interface
   liststring = '';
@@ -41,7 +43,7 @@ function channels = input_channels(channels)
 
     % Set the compression type
     for j = 1:length(typecompress)
-      if (strcmp(channels(i).compression, typecompress{j}))
+      if (strcmpi(channels(i).compression, typecompress{j}))
         channels(i).compression = j;
 
         break;

@@ -1,31 +1,31 @@
-function [nframes, ssize, pixelType, r] = size_data(fname)
+function [nframes, ssize] = size_data(fname)
   
-  if (nargout == 4 | isjava(fname))
-    if (~isjava(fname))
-      if(isstruct(fname) & isfield(fname, 'fname'))
-        fname = fname.fname;
-      end
-
-      fname = absolutepath(fname);
-
-      r = loci.formats.ImageReader();
-      r.setId(fname);
-    else
-      r = fname;
-    end
-
-    height = r.getSizeX();
-    width = r.getSizeY();
-    ssize = [width height];
-    nframes = r.getImageCount();
-
-    if (nargout > 2)
-      pixelType = r.getPixelType();
-    end
-    if (nargout < 4 && ~isjava(fname))
-      r.close();
-    end
-  else
+%  if (nargout == 4 | isjava(fname))
+%    if (~isjava(fname))
+%      if(isstruct(fname) & isfield(fname, 'fname'))
+%        fname = fname.fname;
+%      end
+%
+%      fname = absolutepath(fname);
+%
+%      r = loci.formats.ImageReader();
+%      r.setId(fname);
+%    else
+%      r = fname;
+%    end
+%
+%    height = r.getSizeX();
+%    width = r.getSizeY();
+%    ssize = [width height];
+%    nframes = r.getImageCount();
+%
+%    if (nargout > 2)
+%      pixelType = r.getPixelType();
+%    end
+%    if (nargout < 4 && ~isjava(fname))
+%      r.close();
+%    end
+%  else
     %Substitute imfinfos to handle natively missing files
     if(isstruct(fname) & isfield(fname, 'fname'))
       fid = fopen(fname.fname, 'r');
@@ -51,7 +51,7 @@ function [nframes, ssize, pixelType, r] = size_data(fname)
       end
 
       ssize = NaN(1,2);
-      pixelType = 'unknown';
+%      pixelType = 'unknown';
     else
       filename = fopen(fid);  % Get the full pathname if not in pwd.
       fclose(fid);
@@ -77,18 +77,19 @@ function [nframes, ssize, pixelType, r] = size_data(fname)
 
       nframes = length(infos);
       ssize = [infos(1).Height infos(1).Width];
-      if (nargout > 2)
-        switch lower(infos(1).SampleFormat(1))
-          case 'u'
-            pixelType = ['uint' num2str(infos(1).BitDepth)];
-          case 'i'
-            pixelType = ['int' num2str(infos(1).BitDepth)];
-          otherwise
-            pixelType = 'double';
-        end
-      end
+      %if (nargout > 2)
+      %  type = ['uint' num2str(infos(1).BitDepth)];
+      %  switch lower(infos(1).SampleFormat(1))
+      %    case 'u'
+      %      pixelType = ['uint' num2str(infos(1).BitDepth)];
+      %    case 'i'
+      %      pixelType = ['int' num2str(infos(1).BitDepth)];
+      %    otherwise
+%            pixelType = 'double';
+      %  end
+      %end
     end
-  end
+%  end
 
   return;
 end

@@ -11,15 +11,15 @@ function [mymovie] = rescale_movie(mymovie, opts)
 % 20.06.2011
 
   % Initialize some computer-specific variables required for the conversion
-  [junk, junk, realEndian] = computer;
-  bigEndian = ~strncmp(realEndian, 'L', 1);
+  %[junk, junk, realEndian] = computer;
+  %bigEndian = ~strncmp(realEndian, 'L', 1);
   maxuint = intmax('uint16');
 
   % Import the Java classes
-  import loci.formats.ImageReader;
-  import loci.formats.out.OMETiffWriter;
-  import loci.formats.MetadataTools;
-  import loci.formats.ChannelMerger;
+  %import loci.formats.ImageReader;
+  %import loci.formats.out.OMETiffWriter;
+  %import loci.formats.MetadataTools;
+  %import loci.formats.ChannelMerger;
 
   % A nice status-bar if possible
   if (opts.verbosity > 1)
@@ -54,35 +54,38 @@ function [mymovie] = rescale_movie(mymovie, opts)
         waitbar(0, hwait, ['Preprocessing Movie ' strrep(mymovie.(field)(k).file(indx:end),'_','\_')]);
       end
 
+      fname = absolutepath(mymovie.(field)(k).file);
+
       % Get the name of the new file
       tmp_fname = absolutepath(get_new_name('tmpmat(\d+)\.ome\.tiff?', 'TmpData'));
   
       % Create the metadata container
-      omexmlMeta = MetadataTools.createOMEXMLMetadata();
+      %omexmlMeta = MetadataTools.createOMEXMLMetadata();
 
       % Create the reader
-      reader = ImageReader();
+      %reader = ImageReader();
       % If required, try to merge separated files
-      if (opts.merge_input_files)
-        r = ChannelMerger(reader);
-      end
+      %if (opts.merge_input_files)
+      %  r = ChannelMerger(reader);
+      %end
       % Initialize it
-      reader.setMetadataStore(omexmlMeta);
-      reader.setId(absolutepath(mymovie.(field)(k).file));
+      %reader.setMetadataStore(omexmlMeta);
+      %reader.setId(absolutepath(mymovie.(field)(k).file));
       
       % Set the writer rescaled-specific parameters
-      omexmlMeta.setPixelsType(ome.xml.model.enums.PixelType.UINT16, 0);
-      omexmlMeta.setPixelsBinDataBigEndian(java.lang.Boolean(bigEndian), 0, 0);
+      %omexmlMeta.setPixelsType(ome.xml.model.enums.PixelType.UINT16, 0);
+      %omexmlMeta.setPixelsBinDataBigEndian(java.lang.Boolean(bigEndian), 0, 0);
 
       % Create the writer
-      writer = OMETiffWriter();
-      writer.setMetadataRetrieve(omexmlMeta);
-      writer.setId(tmp_fname);
-      writer.setCompression(java.lang.String(mymovie.(field)(k).compression));
-      writer.setWriteSequentially(true);
+      %writer = OMETiffWriter();
+      %writer.setMetadataRetrieve(omexmlMeta);
+      %writer.setId(tmp_fname);
+      %writer.setCompression(java.lang.String(mymovie.(field)(k).compression));
+      %writer.setWriteSequentially(true);
 
       % Get the number of frames
-      nframes = reader.getImageCount();
+      %nframes = reader.getImageCount();
+      nframes = size_data(fname);
 
       % Temporary parameters about the type of data contained in the reader
       img_params = [];
@@ -90,7 +93,7 @@ function [mymovie] = rescale_movie(mymovie, opts)
       % Loop over the frames
       for i=1:nframes
         % Convert the image into UINT16
-        [img, img_params] = all2uint16(load_data(reader, i), img_params);
+        [img, img_params] = all2uint16(load_data(fname, i), img_params);
 
         % Perform the required filtering
         if (mymovie.(field)(k).hot_pixels)
@@ -114,7 +117,8 @@ function [mymovie] = rescale_movie(mymovie, opts)
         
         % Write the filtered data, we'll rescale them in a second pass as we do not
         % know the range yet
-        writer = store_data(writer, img, i);
+        %writer = store_data(writer, img, i);
+        imwrite(uint16(img), tmp_fname, 'TIFF', 'Compression', mymovie.(field)(k).compression, 'WriteMode', 'append');
 
         % Update the progress bar if needed
         if (opts.verbosity > 1)
@@ -123,31 +127,38 @@ function [mymovie] = rescale_movie(mymovie, opts)
       end
 
       % Close both handlers
-      reader.close();
-      writer.close();
+      %reader.close();
+      %writer.close();
 
       % Get a third file to write into
-      mymovie.(field)(k).fname = get_new_name('tmpmat(\d+)\.ome\.tiff?', 'TmpData');
+      fname = tmp_fname;
+      tmp_fname = absolutepath(get_new_name('tmpmat(\d+)\.ome\.tiff?', 'TmpData'));
+      mymovie.(field)(k).fname = tmp_fname;
 
       % Reade from the new filtered file
-      reader.setId(tmp_fname);
+      %reader.setId(tmp_fname);
 
       % Create a new writer
-      writer = OMETiffWriter();
-      writer.setMetadataRetrieve(omexmlMeta);
-      writer.setId(absolutepath(mymovie.(field)(k).fname));
-      writer.setCompression(java.lang.String(mymovie.(field)(k).compression));
-      writer.setWriteSequentially(true);
+      %writer = OMETiffWriter();
+      %writer.setMetadataRetrieve(omexmlMeta);
+      %writer.setId(absolutepath(mymovie.(field)(k).fname));
+      %writer.setCompression(java.lang.String(mymovie.(field)(k).compression));
+      %writer.setWriteSequentially(true);
 
       % Loop again over the frames
       for i=1:nframes
 
         % Load and rescale using the previously measured range
-        img = load_data(reader, i);
+        try
+        img = load_data(fname, i);
+        catch
+          beep;keyboard
+        end
         img = imnorm(img, mymovie.(field)(k).min, mymovie.(field)(k).max, '', 0, maxuint);
 
         % And save the final image
-        store_data(writer, img, i);
+        imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
+        %store_data(writer, img, i);
 
         % Update the progress bar
         if (opts.verbosity > 1)
@@ -156,11 +167,11 @@ function [mymovie] = rescale_movie(mymovie, opts)
       end
 
       % Close both handlers
-      reader.close();
-      writer.close();
+      %reader.close();
+      %writer.close();
 
       % Delete the intermidary file (i.e. the filtered one)
-      delete(tmp_fname);
+      delete(fname);
     end
   end
 

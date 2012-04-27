@@ -62,7 +62,8 @@ function [mymovie] = project3D(mymovie, proj_func, opts)
         projection_img = proj_func(stack);
     end
 
-    fid = save_data(fid, projection_img, nframes);
+    %fid = save_data(fid, projection_img, nframes);
+    imwrite(projection, fid, 'TIFF', 'WriteMode', 'append');
   end
 
   projection.fname = fid;

@@ -1,4 +1,4 @@
-function [result, r] = load_data(fid, indexes)
+function [result] = load_data(fid, indexes)
 % A script for opening microscopy images in MATLAB using Bio-Formats.
 %
 % The function returns a list of image series; i.e., a cell array of cell
@@ -71,70 +71,78 @@ function [result, r] = load_data(fid, indexes)
 %     subject = metadataList.get('Subject');
 %     title = metadataList.get('Title');
 
-  if (isjava(fid) | nargout == 2)
-    [nframes, ssize, pixelType, r] = size_data(fid);
-
-    indexes = indexes(indexes > 0 & indexes <= nframes);
-
-    bpp = loci.formats.FormatTools.getBytesPerPixel(pixelType);
-    fp = loci.formats.FormatTools.isFloatingPoint(pixelType);
-    sgn = loci.formats.FormatTools.isSigned(pixelType);
-    type = char(loci.formats.FormatTools.getPixelTypeString(pixelType));
-
-    bppMax = power(2, bpp * 8);
-    little = r.isLittleEndian();
-    result = zeros([ssize length(indexes)], type);
-
-    [junk, junk, realEndian] = computer;
-    realEndian = strncmp(realEndian, 'L', 1);
-    
-    for i = 1:length(indexes)
-      arr = r.openBytes(indexes(i) - 1);
-
-      if (realEndian ~= little)
-        arr = swapbytes(arr);
-      end
-      arr = loci.common.DataTools.makeDataArray(arr, bpp, fp, little);
-
-      % Java does not have explicitly unsigned data types;
-      % hence, we must inform MATLAB when the data is unsigned
-      if ~sgn
-        switch class(arr)
-            case 'int8'
-                arr = typecast(arr, 'uint8');
-            case 'int16'
-                arr = typecast(arr, 'uint16');
-            case 'int32'
-                arr = typecast(arr, 'uint32');
-            case 'int64'
-                arr = typecast(arr, 'uint64');
-            case 'double'
-                arr = typecast(arr, 'double');
-            case {'single', 'float'}
-                arr = typecast(arr, 'single');
-        end
-      end
-
-      arr = reshape(arr, ssize([2 1]))';
-      result(:,:,i) = arr;
-    end
-
-    if (~isjava(fid) & nargout == 1)
-      r.close();
-    end
-  else
+%  if (isjava(fid) | nargout == 2)
+%    [nframes, ssize, pixelType, r] = size_data(fid);
+%
+%    indexes = indexes(indexes > 0 & indexes <= nframes);
+%
+%    bpp = loci.formats.FormatTools.getBytesPerPixel(pixelType);
+%    fp = loci.formats.FormatTools.isFloatingPoint(pixelType);
+%    sgn = loci.formats.FormatTools.isSigned(pixelType);
+%    type = char(loci.formats.FormatTools.getPixelTypeString(pixelType));
+%
+%    bppMax = power(2, bpp * 8);
+%    little = r.isLittleEndian();
+%    result = zeros([ssize length(indexes)], type);
+%
+%    [junk, junk, realEndian] = computer;
+%    realEndian = strncmp(realEndian, 'L', 1);
+%    
+%    for i = 1:length(indexes)
+%      arr = r.openBytes(indexes(i) - 1);
+%
+%      if (realEndian ~= little)
+%        arr = swapbytes(arr);
+%      end
+%      arr = loci.common.DataTools.makeDataArray(arr, bpp, fp, little);
+%
+%      % Java does not have explicitly unsigned data types;
+%      % hence, we must inform MATLAB when the data is unsigned
+%      if ~sgn
+%        switch class(arr)
+%            case 'int8'
+%                arr = typecast(arr, 'uint8');
+%            case 'int16'
+%                arr = typecast(arr, 'uint16');
+%            case 'int32'
+%                arr = typecast(arr, 'uint32');
+%            case 'int64'
+%                arr = typecast(arr, 'uint64');
+%            case 'double'
+%                arr = typecast(arr, 'double');
+%            case {'single', 'float'}
+%                arr = typecast(arr, 'single');
+%        end
+%%      end
+%
+%      arr = reshape(arr, ssize([2 1]))';
+%      result(:,:,i) = arr;
+%    end
+%
+%    if (~isjava(fid) & nargout == 1)
+%      r.close();
+%    end
+%  else
     if(isstruct(fid) & isfield(fid, 'fname'))
       fid = fid.fname;
     end
 
-    [nframes, ssize, type] = size_data(fid);
+    [nframes, ssize] = size_data(fid);
 
     indexes = indexes(indexes > 0 & indexes <= nframes);
 
-    result = zeros([ssize length(indexes)], type);
+    if (length(indexes) == 1)
+      result = imread(fid, indexes);
+    else
+      %result = imread(fid, indexes);
 
-    for i = 1:length(indexes)
-      result(:,:,i) = imread(fid, indexes(i));
+      tmp_img = imread(fid, indexes(1));
+      result = zeros([ssize length(indexes)], class(tmp_img));
+      result(:, :, 1) = tmp_img;
+
+      for i = 2:length(indexes)
+        result(:,:,i) = imread(fid, indexes(i));
+      end
     end
-  end
-end
+%  end
+%end

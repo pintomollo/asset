@@ -30,7 +30,7 @@ function mystruct = get_struct(type, nstruct)
                         'auto_save', true, ...              % Automatically save the intermediate results
                         'binning', 1, ...                   % Pixel binning used during acquisition
                         'ccd_pixel_size', 6.45, ...         % X-Y size of the pixels in µm (of the CCD camera, without magnification)
-                        'compression', 'LZW', ...           % Compression used for the data files (prompted is empty)
+                        'compression', 'lzw', ...           % Compression used for the data files (prompted is empty)
                         'compute_probabilities', false, ... % Compute the posterior probability
                         'config_file', '', ...              % Name of the configuration file that will be loaded 
                         'crop_export', false, ...           % Crop the images when exporting the results
@@ -76,7 +76,7 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('axes_length', zeros(2, 0), ...
                         'centers', zeros(2, 0), ...
                         'color', ones(1,3), ...             % Color of the channel (RGB)
-                        'compression', 'LZW', ...           % Compression used for the temporary file
+                        'compression', 'lzw', ...           % Compression used for the temporary file
                         'cortex', [], ...
                         'detrend', false, ...               % Detrend the image (see imdetrend.m)
                         'eggshell', [], ...

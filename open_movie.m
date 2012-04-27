@@ -21,7 +21,7 @@ function [mymovie] = open_movie(mymovie, opts)
     dirpath = '';
 
     % We got the file to be loaded as input !
-    if (ischar(mymovie))
+    if (ischar(mymovie) & ~isempty(mymovie))
 
       % Chech whether the file is in a subdirectory
       indx = strfind(mymovie, filesep);

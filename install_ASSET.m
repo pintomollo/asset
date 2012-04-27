@@ -188,12 +188,12 @@ function install_ASSET
     end
   end
 
+  cd ..;
+
   % This folder is required as well
   if (~exist('TmpData', 'dir'))
     mkdir('TmpData');
   end
-
-  cd ..;
 
   return;
 end

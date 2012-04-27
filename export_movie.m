@@ -9,9 +9,9 @@ function export_movie(mymovie, opts)
 
   end
 
-  import loci.formats.ImageReader;
-  import loci.formats.out.OMETiffWriter;
-  import loci.formats.MetadataTools;
+  %import loci.formats.ImageReader;
+  %import loci.formats.out.OMETiffWriter;
+  %import loci.formats.MetadataTools;
 
   %colorModel = AWTImageTools.makeColorModel(1, java.awt.image.DataBuffer.TYPE_BYTE);
   policy = 0;
@@ -92,12 +92,12 @@ function export_movie(mymovie, opts)
             case 1
               delete(new_file);
             case 3
-              try 
-                r.close();
-              catch ME
-                disp(ME.message);
-                disp('Ignoring closing Error, Continuing');
-              end
+              %try 
+              %  r.close();
+              %catch ME
+              %  disp(ME.message);
+              %  disp('Ignoring closing Error, Continuing');
+              %end
 
               continue;
           end
@@ -220,7 +220,8 @@ function export_movie(mymovie, opts)
 
       if(isempty(opts.compression))
         % Select the compression
-        compression = w.getCompressionTypes();
+        %compression = w.getCompressionTypes();
+        compression = {'none', 'lzw', 'deflate', 'jpeg'};
         [sel,ok] = listdlg('PromptString','Select a Compression',...
                       'SelectionMode','single',...
                       'ListString',char(compression));
@@ -254,7 +255,8 @@ function export_movie(mymovie, opts)
           img = imalign(img, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
         end
 
-        new_file = save_data(new_file, img, nframes);
+        imwrite(img, new_file, 'TIFF', 'WriteMode', 'append');
+        %new_file = save_data(new_file, img, nframes);
 
 %        img = im2java(img);
 %        img = AWTImageTools.makeBuffered(img, colorModel);
@@ -263,7 +265,7 @@ function export_movie(mymovie, opts)
         %img = cast(img, pType);
 
         %viewer.setImages(imgs);
-        img = img.';
+        %img = img.';
         %img = 
         %img = typecast(img(:), 'uint8');
         %w.saveBytes(p - 1, img);

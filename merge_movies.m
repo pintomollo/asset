@@ -112,7 +112,7 @@ function [fname, new_size] = append_file(new_file, old_file, frame_shift)
         fname = '';
         [nframes, imgsize] = size_data(new_file);
         for i=1:nframes
-          fname = store_data(fname, load_data(new_file, i));
+          imwrite(load_data(new_file, i), fname, 'TIFF', 'WriteMode', 'append');
         end
       else
         fname = new_file;
@@ -122,7 +122,7 @@ function [fname, new_size] = append_file(new_file, old_file, frame_shift)
 
       [nframes, imgsize] = size_data(old_file);
       for i=1:nframes
-        fname = store_data(fname, load_data(old_file, i));
+        imwrite(load_data(old_file, i), fname, 'TIFF', 'WriteMode', 'append');
       end
   end
 

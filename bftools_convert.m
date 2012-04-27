@@ -77,7 +77,7 @@ function [newfile, policy] = bftools_convert(fname, policy, opts)
   format = format{1};
   is_rgb = strncmp(is_rgb{1}, 'true', 4);
   
-  if (strncmp(format,'OME-TIFF',8))
+  if (strncmpi(format,'OME-TIFF',8) | (length(format) >= 19 & strncmpi(format([1 8 14 19]), 'TIFF', 4)) | strncmpi(format, 'TIFF', 4))
 
     % If it's already an OME-TIFF file, we do not need to convert it, so stop here
     newfile = fname;

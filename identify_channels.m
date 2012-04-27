@@ -34,6 +34,7 @@ function mymovie = identify_channels(channels, opts)
 
   % In case the verbosity is null, do not prompt for confirmation, useful for batch processing
   if (opts.verbosity > 1)
+    display('[Identify the channels]');
     channels = input_channels(channels);
   end
 
