@@ -637,7 +637,7 @@ function trackings = input_trackings(trackings, name, opts)
       end
 
       % Store the name
-      if (isempty(common_string)
+      if (isempty(common_string))
         trackings.name = regexprep(expr_name, '^\W+|\W+$|\*', '');
       else
         trackings.name = regexprep(common_string, '^\W+|\W+$', '');

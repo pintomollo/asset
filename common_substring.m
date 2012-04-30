@@ -50,7 +50,7 @@ function [new_str, end_str] = common_substring(str1, str2, replacement_str)
   end_str = str1(eindx:end);
 
   % This is a replacement problem
-  if (nargin < 3)
+  if (nargin == 3)
 
     % We add some separators between the common parts and the replacement string,
     % but check if there are some already.
