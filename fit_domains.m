@@ -1,8 +1,9 @@
 function fit_domains(fname, incremental, share_work)
 
-  %addpath('./celegans-analysis/');
-  %addpath('./celegans-analysis/libraries/');
-  %addpath('./pse/');
+  addpath('./celegans-analysis/');
+  addpath('./celegans-analysis/libraries/');
+  addpath('./celegans-analysis/helpers/');
+  addpath('./pse/');
 
   if (nargin < 2)
     incremental = true;
@@ -26,6 +27,8 @@ function fit_domains(fname, incremental, share_work)
     
     mymovies = dir('1056-*_.mat');
   end
+
+  RandStream.setDefaultStream(RandStream('mt19937ar','Seed',data.uuid));
 
   if (incremental)
     mymovies = struct2cell(mymovies);
@@ -55,6 +58,9 @@ function fit_domains(fname, incremental, share_work)
       kymo = load(mymovies{findx});
     else
       kymo = load(mymovies(findx).name);
+    end
+    if (all(isnan(get_manual_timing(kymo.mymovie, kymo.opts))))
+       error([kymo.mymovie.experiment ' has no valid timing data !']);
     end
 
     kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
@@ -119,7 +125,7 @@ function fit_domains(fname, incremental, share_work)
             display([mymovies(findx).name ': ' options]);
           end
           try
-            ml_kymograph(data, kymo);
+            ml_kymograph(data, kymo, options);
           catch
             print_all(lasterror)
           end

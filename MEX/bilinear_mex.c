@@ -111,13 +111,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     switch (boundary_x) {
-      // Circular
+      /* Circular */
       case 1 :
         xf = MOD(xf, w);
         xc = MOD(xc, w);
 
         break;
-      // Replicate
+      /* Replicate */
       case 2 :
         if (xf >= w) {
           xf = w-1;
@@ -130,7 +130,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
           xc = 0;
         }
         break;
-      // Symmetric
+      /* Symmetric */
       case 3 :
         xf = MOD(xf, 2*w);
         xc = MOD(xc, 2*w);
@@ -142,19 +142,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
          xc = 2*w - xc - 1;
         }
         break;
-      // NaN outside
+      /* NaN outside */
       default :
         break;
     }
 
     switch (boundary_y) {
-      // Circular
+      /* Circular */
       case 1 :
         yf = MOD(yf, h);
         yc = MOD(yc, h);
 
         break;
-      // Replicate
+      /* Replicate */
       case 2 :
         if (yf >= h) {
           yf = h-1;
@@ -167,7 +167,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
           yc = 0;
         }
         break;
-      // Symmetric
+      /* Symmetric */
       case 3 :
         yf = MOD(yf, 2*h);
         yc = MOD(yc, 2*h);
@@ -179,7 +179,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
          yc = 2*h - yc - 1;
         }
         break;
-      // NaN outside
+      /* NaN outside */
       default :
         break;
     }
