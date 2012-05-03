@@ -28,7 +28,7 @@ function clean_tmp(do_it_really)
       used_tmp = [used_tmp; tmp_tmp];
     end
 
-    clearvars -except 'ls_dir' 'used_tmp';
+    clearvars -except 'ls_dir' 'used_tmp' 'do_it_really';
   end
   used_tmp = unique(used_tmp);
 
