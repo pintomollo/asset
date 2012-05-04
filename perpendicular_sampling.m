@@ -23,6 +23,15 @@ function [values, perp_path, dpos] = perpendicular_sampling(img, path, perp_path
   if (isempty(perp_path))
 
     [dist, tot_dist] = carth2linear(path);
+
+    if (isempty(dist))
+      values = [];
+      perp_path = [];
+      dpos = [];
+
+      return;
+    end
+
     dist = dist * tot_dist;
 
     deriv = differentiator([dist(:), dist(:)], path, 'circular');

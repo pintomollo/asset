@@ -7,7 +7,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       orientations = mymovie.dic.orientations;
       eggshell = mymovie.dic.eggshell;
       cortex = mymovie.dic.cortex;
-      
+
       if (~isfield(mymovie.dic, 'update'))
         update = false(size(centers));
       else
@@ -31,7 +31,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       eggshell = get_struct('eggshell',[1,nframes]);
       cortex = get_struct('cortex',[1,nframes]);
       ruffles = get_struct('ruffles',[1, nframes]);
-      
+
       if (~isfield(mymovie.dic, 'neighbors') | isempty(mymovie.dic.neighbors))
         mymovie = split_cells(mymovie, opts);
       end
@@ -150,7 +150,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     cart_egg = elliptic2carth(ell_egg,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
 
     cart_egg = cart_egg(all(cart_egg >= 1 & bsxfun(@le, cart_egg , fliplr(size(img))), 2), :);
-  
+
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(cart_egg);
     %plot(cart_egg(:,1), cart_egg(:,2), 'g');
     %draw_ellipse(centers(:, nimg), axes_length(:,nimg), orientations(1,nimg), 'r');
@@ -182,7 +182,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     mymovie.dic.axes_length = axes_length;
     mymovie.dic.orientations = orientations;
   end
-  
+
   if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & strncmp(opts.ml_type, 'cortex', 6)))
     update(2,nimg) = true;
 
@@ -325,7 +325,7 @@ function [center, axes_length, orientation, neighbors, estim] = detect_ellipse(n
   if (all(isnan(neighbors.centers(:))) | neighbors.index <= 0)
     return;
   end
-  
+
   %elseif (size(neighbours.centers, 2) > 1)
     %imgsize = size(img);
 

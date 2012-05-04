@@ -28,7 +28,7 @@ function [domain, pos, center_indx] = align_domain(mymovie, opts, path)
     path(1:first-1) = path(first);
   end
 
-  center_indx = round(w/2);
+  center_indx = ceil(w/2);
   domain = NaN(h, w);
 
   indxs = [1:w];

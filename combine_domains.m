@@ -1,6 +1,10 @@
-function [res] = combine_domains(mymovies)
-  close all;
+function [res, pos] = combine_domains(mymovies, min_num)
+  %close all;
   %fname = regexprep(mymovies, '\*', '');
+
+  if (nargin == 1)
+    min_num = 2;
+  end
 
   if (ischar(mymovies))
     if (~isempty(findstr(mymovies, '*')))
@@ -21,12 +25,12 @@ function [res] = combine_domains(mymovies)
 
   nmovies = length(mymovies);
   %tmp_quant = cell(1, nmovies);
-  cytos = NaN(1, nmovies);
-  opts = get_struct('ASSET');
-  paths = cell(1, nmovies);;
+  %cytos = NaN(1, nmovies);
+  %opts = get_struct('ASSET');
+  %paths = cell(1, nmovies);;
 
-  for i=1:nmovies
-    load(mymovies{i});
+  %for i=1:nmovies
+  %  load(mymovies{i});
 
     %if (isfield(mymovie.data, 'domain') & ~isempty(mymovie.data.domain))
     %  tmp_path = mymovie.data.domain;
@@ -34,15 +38,15 @@ function [res] = combine_domains(mymovies)
     %  continue;
     %end
 
-    try
-    img = gather_quantification(mymovie, opts);
-    catch ME
-      continue;
-    end
+  %  try
+  %  img = gather_quantification(mymovie, opts);
+  %  catch ME
+  %    continue;
+  %  end
 %%[img,~,cytos(i)] = gather_quantification(mymovie, opts);
 
     %tmp_path = mymovie.data.domain;
-    [h,w] = size(img);
+  %  [h,w] = size(img);
 
     %imagesc(imnorm(img));
     %hold on
@@ -52,7 +56,7 @@ function [res] = combine_domains(mymovies)
 
 %%plot([1 size(img,2)],[cytos(i) cytos(i)], 'k');
 
-    imwrite(imnorm(img), [mymovies{i}(1:end-5) '-DP.png']);
+   % imwrite(imnorm(img), [mymovies{i}(1:end-5) '-DP.png']);
     %hold off
 
     %plot(tmp_path(:,1)*w * opts.pixel_size, 'k');
@@ -68,42 +72,118 @@ function [res] = combine_domains(mymovies)
     %end
 
     %paths{i} = tmp_path;
-  end
+  %end
 
   %res{1} = mymovies;
   %res{2} = paths;
   %res{3} = cytos;
 
-  return;
+  %return;
 
-  nframes = last - first + 1;
-  cyto = 1-first;
-  res = NaN(nframes, size(tmp_quant{i}, 2), nmovies);
-  orig_res = res;
-  maxint = double(intmax('uint16'));
+  %nframes = last - first + 1;
+  %cyto = 1-first;
+  %res = NaN(nframes, size(tmp_quant{i}, 2), nmovies);
+  %orig_res = res;
+  %maxint = double(intmax('uint16'));
 
-  y_label = [1:nframes]-cyto;
+  %y_label = [1:nframes]-cyto;
+  all_indx = 0;
+  all_cytok = 0;
+  tmp_res = [];
+  res = [];
+  count = [];
 
   for i=1:nmovies
-    tmp_frame = size(tmp_quant{i}, 1);
-    orig_res((cyto-cytos(i))+[1:tmp_frame],:,i) = tmp_quant{i}*(minmax(i,2) - minmax(i,1))/maxint + minmax(i,1);;
-    %res(:,:,i) = imnorm(orig_res(:,:,i));
+    load(mymovies{i});
+    try
+      domain = imnorm(gather_quantification(mymovie, opts));
+    catch ME
+      continue;
+    end
+    opts = load_parameters(opts, 'domain_center.txt');
+    mymovie.data.domain = dynamic_programming(domain, opts.quantification.params, @weight_symmetry, opts.quantification.weights, opts);
+    [domain, pos, indx] = align_domain(mymovie, opts);
+    boundary = min(indx - 1, size(domain, 2) - indx);
+    time = get_manual_timing(mymovie, opts);
+    time = time(end);
+    domain = domain(:,[-boundary:boundary]+indx);
+    indx = boundary + 1;
+    valids = ~isnan(domain);
 
-    imagesc(orig_res(:,:,i));
-    hold on
-    set(gca,'YTickLabel',y_label)
-    saveas(gca, [mymovies{i}(1:end-5) '.png']);
-    hold off
-    imagesc(imnorm(orig_res(:,:,i), [], [], 'row'));
-    hold on
-    set(gca,'YTickLabel',y_label)
-    saveas(gca, [mymovies{i}(1:end-5) '-scaled.png']);
-    hold off
+    if (i == 1)
+      all_indx = indx;
+      all_cytok = time;
+      tmp_res = domain;
+      tmp_res(~valids) = 0;
+      res = tmp_res;
+      count = double(valids);
+    else
+      if (boundary >= all_indx)
+        tmp_res = padarray(tmp_res, [0 boundary - all_indx + 1], 0, 'both');
+        count = padarray(count, [0 boundary - all_indx + 1], 0, 'both');
+        all_indx = boundary + 1;
+      end
+      if (time > all_cytok)
+        tmp_res = padarray(tmp_res, [time - all_cytok 0], 0, 'pre');
+        count = padarray(count, [time - all_cytok 0], 0, 'pre');
+        all_cytok = time;
+      end
+      ends = size(domain, 1) - time;
+      all_ends = size(tmp_res, 1) - all_cytok;
+
+      if (ends > all_ends)
+        tmp_res = padarray(tmp_res, [ends - all_ends 0], 0, 'post');
+        count = padarray(count, [ends - all_ends 0], 0, 'post');
+        all_ends = ends;
+      end
+
+      res = tmp_res ./ count;
+
+      width = all_indx - boundary;
+      start = all_cytok - time + 1;
+      ends = all_ends - ends;
+
+      window = res([start:end-ends], [width:end-width+1]);
+      c = robustfit(domain(valids), window(valids));
+      domain = c(1) + c(2)*domain;
+      domain(~valids) = 0;
+
+      tmp_res([start:end-ends], [width:end-width+1]) = tmp_res([start:end-ends], [width:end-width+1]) + domain;
+      count([start:end-ends], [width:end-width+1]) = count([start:end-ends], [width:end-width+1]) + double(valids);
+
+
+    %imagesc(res);
+    %drawnow;
+    end
+
+    %orig_res((cyto-cytos(i))+[1:tmp_frame],:,i) = tmp_quant{i}*(minmax(i,2) - minmax(i,1))/maxint + minmax(i,1);;
+
+    %imagesc(orig_res(:,:,i));
+    %hold on
+    %set(gca,'YTickLabel',y_label)
+    %saveas(gca, [mymovies{i}(1:end-5) '.png']);
+    %hold off
+    %imagesc(imnorm(orig_res(:,:,i), [], [], 'row'));
+    %hold on
+    %set(gca,'YTickLabel',y_label)
+    %saveas(gca, [mymovies{i}(1:end-5) '-scaled.png']);
+    %hold off
     %imagesc(res(:,:,i));
     %saveas(gca, [mymovies{i}(1:end-5) '-norm.png']);
     %imagesc(res(:,:,i));
     %saveas(gca, [mymovies{i}(1:end-5) '-norm.png']);
   end
+  res = tmp_res ./ count;
+  valids = any(isnan(res), 1);
+
+  first = all_indx - find(valids(1:all_indx), 1, 'last');
+  last = find(valids(all_indx:end), 1, 'first') - 1;
+  boundary = min(first, last);
+
+  fist = find(max(count, [], 2) >= min_num, 1, 'first');
+
+  res = imnorm(res([first:all_cytok],[-boundary:boundary]+all_indx));
+  pos = [-boundary:boundary] * median(diff(pos));
 
   %[val1, errs] = mymean(res, 3);
   %imagesc(val1);

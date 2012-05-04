@@ -9,7 +9,7 @@ function mymovie = cortical_signal(mymovie, opts)
 
   if (~opts.recompute && isfield(mymovie.data, 'quantification') && ...
      ~isempty(mymovie.data.quantification) && length(mymovie.data.quantification) == nframes)
-    
+
     return;
   end
 
@@ -21,7 +21,7 @@ function mymovie = cortical_signal(mymovie, opts)
     switch window_shape
       case 'gaussian'
         window_shape = fspecial(window_shape, ceil(window_size), opts.quantification.window_params / opts.pixel_size);
-        
+
       otherwise
         window_shape = fspecial(window_shape, ceil(window_size));
     end
@@ -61,7 +61,7 @@ function mymovie = cortical_signal(mymovie, opts)
   optims = optimset('Display', 'off');
   bin_dist = 64;
   bin_step = 1;
-  
+
   for i=1:nframes
     bounds = [-Inf bin_step 0 0 -Inf 0 0; ...
                Inf Inf Inf Inf Inf Inf Inf];
@@ -75,6 +75,11 @@ function mymovie = cortical_signal(mymovie, opts)
     %nimg = 93
 
     cortex = mymovie.data.cortex(nimg).carth;
+
+    if (isempty(cortex))
+      continue;
+    end
+
     if (opts.quantification.use_ruffles)
       [ cortex, rescale] = insert_ruffles(cortex, mymovie.data.ruffles(nimg).paths);
     else
@@ -112,7 +117,7 @@ function mymovie = cortical_signal(mymovie, opts)
           curr_bounds = bounds;
           curr_params = [params(1:4) slopes(j, 1) params(end-1:end)];
         end
-          
+
         line = values(j,:);
         valids = ~isnan(line);
 
@@ -132,7 +137,7 @@ function mymovie = cortical_signal(mymovie, opts)
         else
           smoothed = tmp_val(end, :);
         end
-        
+
         %keyboard
 
         line_params = estimate_front(valid_dpos, smoothed, curr_params, rescale(j));
@@ -155,7 +160,7 @@ function mymovie = cortical_signal(mymovie, opts)
 
       [dperp, dpos] = perpendicular_sampling(cortex, opts);
     end
-    
+
     if (opts.recompute|length(mymovie.data.quantification) < nimg|~isfield(mymovie.data.quantification(nimg), 'cortex')|isempty(mymovie.data.quantification(nimg).cortex))
       mymovie.data.quantification(nimg).cortex = extract_ridge(mymovie.data.quantification(nimg).front, cortex, dperp, rescale, opts);
     end
@@ -326,7 +331,7 @@ function [range, center] = get_peak(x, y)
   center = [center range/2.45];
 
   range = (x >= -range & x <= range);
-  
+
   return;
 end
 
@@ -347,7 +352,7 @@ function params = estimate_gaussian(x,y)
 
   orig_y = y;
   y = y - min(y);
-  
+
   y = y / sum(y);
   center = sum(x .* y);
 
@@ -392,7 +397,7 @@ function params = estimate_piecewise(x, y, params, is_invag)
 
   ddy = -differentiator(x, dy .* gauss, true);
   dddy = differentiator(x, ddy, true);
-  
+
   maxs = find(dddy(1:end-1) > 0 & dddy(2:end) <= 0) + 1;
 
   [junk, indx] = min(abs(x(maxs) - center));
@@ -410,12 +415,12 @@ function params = estimate_piecewise(x, y, params, is_invag)
 
   % Correction for estimating 2nd derivative
   peak_params(2) = sqrt(3)*peak_params(2);
-  
+
   % Approx 1/5
   peak_dist = 1.79*peak_params(2);
 
   dx = range(x);
-  
+
   if (peak_dist > dx/4)
     x_neg = (x < center - dx/4);
     x_pos = (x > center + dx/4);
@@ -432,7 +437,7 @@ function params = estimate_piecewise(x, y, params, is_invag)
   end
 
   if (is_invag)
-  
+
     vals3 = [[zeros(size(x(x_neg).')) (center - x(x_neg).') ones(size(x(x_neg))).']; ...
              [(center - x(x_pos).') zeros(size(x(x_pos).')) ones(size(x(x_pos).'))]] \ [(y(x_neg)).'; y(x_pos).'];
 

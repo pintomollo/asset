@@ -31,7 +31,7 @@ function new_name = get_new_name(pattern, folder)
   end
 
   % Create the full path to the folder
-  folder_dir = fullfile(cd_dir, folder);
+  folder_dir = absolutepath(folder, cd_dir);
 
   % Initialization
   new_tokens = [];

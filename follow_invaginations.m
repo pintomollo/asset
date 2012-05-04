@@ -27,12 +27,12 @@ function mymovie = follow_invaginations(mymovie, opts)
     nimg = i;
     %nimg = floor(rand(1)*nframes)+1
     %nimg = 16 + i
-    
+
     ruffles = mymovie.(type).ruffles(nimg).carth;
     nruffles = size(ruffles,1);
     paths = cell(nruffles, 1);
 
-    if (nruffles > 0)
+    if (nruffles > 0 & ~all(isnan(ruffles)))
 
       inv_length = zeros(nruffles, 1);
       %tmp_mins = zeros(nruffles, 1);
@@ -78,7 +78,7 @@ function mymovie = follow_invaginations(mymovie, opts)
       ell_maxs = round(ell_maxs(:, [2 1]));
       ell_maxs(ell_maxs(:,2) < 1, 2) = ell_maxs(ell_maxs(:,2) < 1, 2) + flipped_size(2);
       ell_maxs(ell_maxs(:,2) > flipped_size(2), 2) = ell_maxs(ell_maxs(:,2) > flipped_size(2), 2) - flipped_size(2);
-      
+
       %ell_bounds = round([ell_mins ell_maxs]);
       %ell_bounds(ell_bounds < 1) = ell_bounds(ell_bounds < 1) + flipped_size(2);
       %ell_bounds(ell_bounds > flipped_size(2)) = ell_bounds(ell_bounds > flipped_size(2)) - flipped_size(2);
@@ -91,7 +91,7 @@ function mymovie = follow_invaginations(mymovie, opts)
       %intens_path = bilinear_mex(weight_img, vert_indx, ell_path);
       %intens_bkg = bilinear_mex(weight_img, vert_indx, ell_path/2);
       %intens_path = bilinear_mex(polar_img, vert_indx, ell_path);
-      
+
       %mean_intens = prctile(intens_path, 50);
       %mean_bkg = prctile(intens_bkg, 50);
       %thresh = mean_intens+ coef*std(intens_path);
@@ -160,7 +160,7 @@ function mymovie = follow_invaginations(mymovie, opts)
           if (isempty(indx))
             indx = 1;
           end
-          
+
           inv_dist = ell_path(inv_path(:,2)) -inv_path(:,1);
           last_neg = find(inv_dist <= 0, 1, 'last');
           if (isempty(last_neg))
@@ -215,7 +215,7 @@ end
 function path = backtrack(map, row, col)
 
   path = zeros(row, 2);
-  
+
   path(1,:) = [row, col];
   for i=row-1:-1:1
     path(end-i+1,:) = [i, map(i+1, path(end-i,2))];
@@ -227,7 +227,7 @@ end
 function path = forwardtrack(map, dist, col)
 
   path = zeros(size(map, 1), 1);
-  
+
   path(1) = col;
   for i=2:length(path)
     indexes = find(map(i, :) == path(i-1));

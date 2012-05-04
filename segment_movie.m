@@ -25,7 +25,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   if (nargin < 2)
     opts = get_struct('ASSET', 1);
   end
-      
+
   % Get the size of the problem, using the correct channel
   switch (opts.segmentation_type)
 
@@ -114,6 +114,8 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
           tmp_opts.recompute = true;
 
           mymovie = dp_markers(mymovie, nframe, tmp_opts);
+        else
+          mymovie.markers.update = mymovie.dic.update;
         end
       else
         mymovie = dp_markers(mymovie, nframe, opts);
@@ -121,7 +123,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
 
       updated = updated || any(mymovie.markers.update(:, nframe));
     end
-  
+
     if (opts.verbosity > 0)
       waitbar(i/max_frames,hwait);
     end

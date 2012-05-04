@@ -3,8 +3,12 @@ function [ptsx, ptsy, indexes] = insert_ruffles(ptsx, ptsy, path)
   if (nargin == 2)
     path = ptsy;
 
-    ptsy = ptsx(:, 2);
-    ptsx = ptsx(:, 1);
+    if (~isempty(ptsx))
+      ptsy = ptsx(:, 2);
+      ptsx = ptsx(:, 1);
+    else
+      ptsy = ptsx;
+    end
   end
 
   indexes = false(size(ptsx));

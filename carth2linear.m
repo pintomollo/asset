@@ -13,8 +13,15 @@ function [linear, total_distance] = carth2linear(pts_x, pts_y, ruffles_path)
   end
 
   if (isempty(pts_y))
-    pts_y = pts_x(:, 2);
-    pts_x = pts_x(:, 1);
+    if (isempty(pts_x))
+      linear = [];
+      total_distance = NaN;
+
+      return;
+    else
+      pts_y = pts_x(:, 2);
+      pts_x = pts_x(:, 1);
+    end
   end
 
   circular = true;
