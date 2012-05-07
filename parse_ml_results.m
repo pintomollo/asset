@@ -1,21 +1,6 @@
-function params = parse_ml_results(fname, nbests, keep_evolution)
-  
-  if (nargin == 1)
-    nbests = 1;
-    keep_evolution = false;
-  else
-    if (islogical(nbests))
-      if (nargin == 3)
-        [nbests, keep_evolution] = deal(keep_evolution, nbests);
-      else
-        keep_evolution = nbests;
-        nbests = 1;
-      end
-    elseif (nargin == 2)
-      keep_evolution = false;
-    end
-  end
+function params = parse_ml_results(fname, varargin)
 
+  [nbests, keep_evolution, sort_method] = parse_input(varargin{:});
   params = get_struct('ml_params',1);
 
   if (~exist(fname, 'file'))
@@ -24,7 +9,7 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
 
   fid = fopen(fname, 'rt');
   if (fid<0)
-    fname = [pwd fname];
+    fname = absolutepath(pwd, fname);
     fid = fopen(fname,'rt');
     if (fid<0)
       return;
@@ -150,6 +135,7 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
           if (ml_id ~= curr_id)
             if (~isnan(curr_id) & isfinite(curr_score))
               if (isempty(params(nparams).score)|| any(~isfinite(params(nparams).score)) || nbests==1)
+
                 params(nparams).score = curr_score;
                 params(nparams).ml_type = curr_type;
                 params(nparams).params = curr_params;
@@ -170,7 +156,13 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
                 end
               else
                 tmp_score = [params(nparams).score; curr_score];
-                [score, indexes] = unique(tmp_score);
+                switch sort_method
+                  case {'none', 'unsorted'}
+                    score = tmp_score;
+                    indexes = [1:length(score)];
+                  otherwise
+                    [score, indexes] = sort(tmp_score, sort_method);
+                end
 
                 if (length(indexes) > nbests)
                   indexes = indexes(1:nbests);
@@ -333,6 +325,29 @@ function params = parse_ml_results(fname, nbests, keep_evolution)
   end
 
   fclose(fid);
+
+  return;
+end
+
+function [nbests, keep_evolution, sort_method] = parse_input(varargin)
+
+  % Initialize the outputs to be sure that we don't return unassigned variables
+  nbests = 1;
+  keep_evolution = false;
+  sort_method = 'ascend';
+
+  % Check what we got as inputs
+  for i=1:length(varargin)
+    var_type = get_type(varargin{i});
+    switch var_type
+      case 'num'
+        nbests = varargin{i};
+      case 'char'
+        sort_method = varargin{i};
+      case 'bool'
+        keep_evolution = varargin{i};
+    end
+  end
 
   return;
 end
