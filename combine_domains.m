@@ -105,6 +105,11 @@ function [res, pos] = combine_domains(mymovies, min_num)
     [domain, pos, indx] = align_domain(mymovie, opts);
     boundary = min(indx - 1, size(domain, 2) - indx);
     time = get_manual_timing(mymovie, opts);
+    if (all(isnan(time)))
+      warning(['No valid timing available for ' mymovie.experiment ', skipping.'])
+
+      continue;
+    end
     time = time(end);
     domain = domain(:,[-boundary:boundary]+indx);
     indx = boundary + 1;
@@ -180,7 +185,7 @@ function [res, pos] = combine_domains(mymovies, min_num)
   last = find(valids(all_indx:end), 1, 'first') - 1;
   boundary = min(first, last);
 
-  fist = find(max(count, [], 2) >= min_num, 1, 'first');
+  first = find(max(count, [], 2) >= min_num, 1, 'first');
 
   res = imnorm(res([first:all_cytok],[-boundary:boundary]+all_indx));
   pos = [-boundary:boundary] * median(diff(pos));

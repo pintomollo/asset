@@ -30,7 +30,7 @@ function [vars, ranges] = estimate_noise(img, wsize)
   lvar(isnan(img)) = NaN;
   vars(end+1) = mymean(lvar(:));
   %ranges(1) = range(ming(:));
-
+  
   ming = medfilt2(img, wsize);
   mvar = (img - ming).^2;
   mvar(isnan(img)) = NaN;

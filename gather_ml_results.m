@@ -17,6 +17,7 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
   end
 
   if (~exist(fname, 'file'))
+    results = [];
     return;
   end
 

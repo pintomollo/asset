@@ -30,7 +30,7 @@ function mymovie = cortical_signal(mymovie, opts)
   end
 
   if (opts.quantification.use_ruffles)
-    if (opts.recompute | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
+    if ((opts.recompute & opts.segment) | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
     %if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
       mymovie = find_ruffles(mymovie, opts);
       mymovie = follow_invaginations(mymovie, opts);
@@ -49,7 +49,7 @@ function mymovie = cortical_signal(mymovie, opts)
     end
   end
 
-  if (opts.recompute | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
+  if ((opts.recompute & opts.segment) | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
     mymovie = duplicate_segmentation(mymovie, 'data', opts);
   end
 

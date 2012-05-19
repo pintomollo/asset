@@ -4,6 +4,8 @@ function weight = weight_symmetry(img, params, repeat)
     repeat = true;
   end
 
+  img = imnorm(img);
+
   alpha = params.alpha;
   beta = 20 * params.beta;
   gamma = params.gamma;

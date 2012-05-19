@@ -49,6 +49,10 @@ function params = set_pixel_size(params, pixel_size)
     end
   end
 
+  if (isempty(params))
+    return;
+  end
+
   fields = fieldnames(params);
 
   for i=1:length(fields)

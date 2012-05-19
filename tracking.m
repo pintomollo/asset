@@ -1,80 +1,69 @@
-function ruffles = tracking(all_pts, opts)
+function links = tracking(spots, track_opts, opts)
 
-  if (isstruct(all_pts))
-    ruffles = all_pts;
-    is_struct = true;
-    nframes = length(ruffles);
-  else
-    nframes = max(all_pts(:,end));
-    ruffles = get_struct('ruffles', [nframes 1]);
-    is_struct = false;
+  % Input checking
+  if (nargin < 2)
+    opts = get_struct('ASSET');
+    track_opts = opts.spot_tracking;
+  elseif (nargin == 2)
+    if (isfield(track_opts, 'linking_function'))
+      opts = get_struct('ASSET');
+    else
+      opts = track_opts;
+      track_opts = opts.spot_tracking;
+    end
   end
 
-  max_thresh = 35;
-  min_thresh = 5e-5;
+  nframes = length(spots);
 
-  init_gap = 1.25;
-  %gap_min = 100;
+  % Initialize the output variable
+  links = cell(nframes, 1);
 
-  window_size = 4;
+  spot_max_movement = track_opts.frame_displacement;
+  frame_weight = track_opts.linking_function;
+  max_frames = track_opts.frame_window;
 
-  %if (opts.verbosity == 3)
-  %  figure;hold on;
-  %end
+  % If the size of the pixels has been set, we can compute the actual spot size
+  if (opts.pixel_size > 0)
+    
+    % The maximal size of the spot in pixels
+    spot_max_movement = (spot_max_movement / opts.pixel_size);
+  else
+    
+    % Try to compute the pixel size
+    opts = set_pixel_size(opts);
 
-  prev_max = max_thresh;
-  all_max = prev_max;
+    % If it worked, we can now compute the size in pixels
+    if (opts.pixel_size > 0)
+      spot_max_movement = (spot_max_movement / opts.pixel_size);
+    end
+  end
 
-  list = [];
   pts = [];
-  assign = [];
   npts = 0;
-  avg_mov = [0 0];
+  ndim = 0;
+
+  all_assign = [];
+  prev_max = NaN;
 
   for i=1:nframes
-    %if (i==76)
-    %  keyboard
-    %end
-    %max_thresh = (mymovie.(type).axes_length(1,i) / 6);
 
     prev_pts = pts;
     prev_npts = npts;
 
-    %pts = mymovie.(type).cortex(i).carth;
-    %invs = find_ruffles(pts, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
+    pts = spots{i};
+    [npts, tmp] = size(pts);
 
-    %npts = size(invs, 1);
-
-    %if (opts.verbosity == 3)
-    %  ell_pos = carth2elliptic(mymovie.(type).cortex(i).carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
-    %  plot3(ell_pos(:,1),ell_pos(:,2),i*ones(size(ell_pos,1),1));
-    %  hold on;
-      %scatter3(ell_pos(invs(:,2),1),ell_pos(invs(:,2),2),i*ones(size(invs,1),1),'r')
-    %end
-  
-    %pts = [pts(invs(:,2),:) pts(invs(:,1),:) pts(invs(:,3),:)];
-
-    if (is_struct)
-      pts = ruffles(i).carth;
-    else
-      pts = all_pts(all_pts(:,end) == i, 1:end-1);
+    if (ndim == 0)
+      ndim = tmp;
     end
-    npts = size(pts,1);
     
-    %if (opts.verbosity == 3)
-    %  scatter3(pts(:,1),pts(:,2),i*ones(npts,1),'r','LineWidth',2)
-    %end
-
     if (prev_npts > 0 & npts > 0)
 
       dist = Inf(npts + prev_npts);
       
-      mutual_dist = sqrt(bsxfun(@minus,prev_pts(:,1),pts(:,1).').^2 + bsxfun(@minus,prev_pts(:,2),pts(:,2).').^2);
-      mutual_dist(mutual_dist > max_thresh) = Inf;
-
-      if (i == 2)
-        prev_max = max_thresh;
-      end
+      mutual_dist = frame_weight(prev_pts, pts);
+      mutual_dist(mutual_dist > spot_max_movement) = Inf;
+      prev_max = spot_max_movement;
 
       ends = eye(max(npts,prev_npts))*prev_max;
       ends(ends==0) = Inf;
@@ -86,226 +75,158 @@ function ruffles = tracking(all_pts, opts)
       dist(prev_npts+1:end,1:npts) = ends(1:npts,1:npts);
       dist(prev_npts+1:end,npts+1:end) = trans_dist;
 
-      %figure;implot(dist);
-
       [assign, cost] = munkres(dist);
       assign_dist = dist(sub2ind(size(dist),[1:prev_npts+npts],assign));
+      assign_dist = assign_dist(:);
       good_indx = (assign(1:prev_npts) <= npts);
-      avg_mov = avg_mov + [sum(assign_dist(good_indx)) sum(good_indx)];
+      all_assign = [all_assign; (assign_dist(good_indx))];
 
-      if (prev_max == max_thresh)
-        prev_max = max(init_gap * assign_dist(assign_dist<prev_max));
+      [junk tmp] = sort(assign);
 
-        if (isempty(prev_max) | prev_max < min_thresh)
-          prev_max = max_thresh;
-        end
+      valids = (tmp <= prev_npts);
+      valids(npts+1:end) = false;
+      links{i} = [junk(valids).' tmp(valids).' (i-ones(sum(valids), 1))];
+    end
 
-        all_max = prev_max;
-      else
-        prev_max = max([prev_max, init_gap * assign_dist(assign_dist<prev_max)]);
-        all_max = max([all_max, assign_dist(assign_dist<prev_max)]);
+    if (isempty(links{i}))
+      links{i} = NaN(0, 3);
+    end
+  end
+
+  if (max_frames == 0)
+    return;
+  end
+  
+  avg_movement = mean(all_assign);
+
+  starts = zeros(0, ndim+2);
+  ends = zeros(0, ndim+2);
+  interm = zeros(0, ndim+2);
+
+  joining_weight = track_opts.joining_function;
+  splitting_weight = track_opts.splitting_function;
+  prev_starts = [];
+
+  for i=nframes:-1:2
+
+    indx_interm = links{i}(:,1);
+    indx_starts = [];
+
+    %if (~isempty(spots{i}))
+        
+      nstarts = size(spots{i},1);
+      indx_starts = setdiff([1:nstarts], indx_interm);
+      nstarts = length(indx_starts);
+
+      if (nstarts>0)
+        starts(end+1:end+nstarts,:) = [spots{i}(indx_starts,:) indx_starts(:) ones(nstarts,1)*i];
+      end
+    %end
+
+    %if (~isempty(spots{i-1}))                
+      nends = size(spots{i-1},1);
+      indx_ends = setdiff([1:nends], links{i}(:,2));
+      nends = length(indx_ends);
+      if (nends>0)
+        ends(end+1:end+nends,:) = [spots{i-1}(indx_ends,:) indx_ends(:) ones(nends,1)*i-1];
+      end
+    %end
+
+    if (~isempty(spots{i}))
+        
+      join_dist = frame_weight(spots{i-1}(indx_ends,:), spots{i}(indx_interm,:));
+
+      if (~isempty(prev_starts))
+        split_dist = frame_weight(spots{i+1}(prev_starts, :), spots{i}(indx_interm, :));
+        join_dist = [join_dist; split_dist];
+      end
+
+      indx_interm = indx_interm(any(join_dist < spot_max_movement, 1));
+      ninterm = length(indx_interm);
+
+      if (ninterm>0)
+        interm(end+1:end+ninterm,:) = [spots{i}(indx_interm,:) indx_interm(:) ones(ninterm,1)*i];
       end
     end
 
-    if (is_struct)
-      ruffles(i) = store_detection(ruffles(i), prev_npts, assign);
-    else
-      ruffles(i) = store_detection(pts, prev_npts, assign);
-    end
+    prev_starts = indx_starts;
   end
-
-  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GAP CLOSING
-  avg_mov = avg_mov(1) / avg_mov(2);
-
-  starts = zeros(0, 3);
-  ends = zeros(0, 4);
-  interm = zeros(0, 5);
-
-  for i=nframes:-1:2
-    indxs = ruffles(i).cluster(:,1);
-    new_starts = ruffles(i).carth(indxs == 0,:);
-    nstarts = size(new_starts, 1);
-    starts(end+1:end+nstarts,:) = [new_starts ones(nstarts,1)*i];
-
-    nends = length(ruffles(i-1).cluster(:,1));
-    indx_ends = setdiff([1:nends], indxs);
-    nends = length(indx_ends);
-    ends(end+1:end+nends,:) = [ruffles(i-1).carth(indx_ends,:) ones(nends,1)*i-1 ruffles(i-1).properties(indx_ends,:)];
-
-    new_interm = find_intersect(ruffles, ends(end-nends+1:end,:), all_max, i);
-    ninterm = size(new_interm, 1);
-    interm(end+1:end+ninterm,:) = new_interm;
-  end
-
+  
   nstarts = size(starts, 1);
   nends = size(ends, 1);
   ninterm = size(interm, 1);
 
-  dist = Inf(nstarts + nends + ninterm);
+  dist = Inf(nstarts + nends + 2*ninterm);
 
-  mutual_dist = sqrt(bsxfun(@minus,ends(:,1),starts(:,1).').^2 + bsxfun(@minus,ends(:,2),starts(:,2).').^2);
-  frame_indx = -bsxfun(@minus,ends(:,3),starts(:,3).');
+  closing_func = track_opts.gap_function;
 
-  mutual_dist = mutual_dist ./ frame_indx;
-  mutual_dist(frame_indx < 1 | frame_indx > window_size | mutual_dist > all_max) = Inf;
+  mutual_dist = closing_func(ends, starts);
 
-  alt_cost = prctile(mutual_dist(~isinf(mutual_dist)), 80);
+  frame_indx = -bsxfun(@minus,ends(:,end),starts(:,end).');
+
+  mutual_dist(frame_indx < 1 | frame_indx > max_frames | mutual_dist > spot_max_movement) = Inf;
+
+  alt_cost = prctile(mutual_dist(~isinf(mutual_dist)), 90);
   alt_dist = eye(max(nends, nstarts))*alt_cost;
   alt_dist(alt_dist==0) = Inf;
 
-  if (isempty(mutual_dist))
-    trans_dist = (mutual_dist.' < Inf);
-  else
-    trans_dist = (mutual_dist.' < Inf) * min(mutual_dist(:));
-  end
-  trans_dist(trans_dist == 0) = Inf;
+  [merge_dist, merge_weight, alt_weight] = joining_weight(ends, interm, spots, links);
+  frame_indx = -bsxfun(@minus, ends(:,end), interm(:,end).');
+  merge_weight = merge_dist .* merge_weight;
+  merge_weight(merge_dist > spot_max_movement | frame_indx ~= 1) = Inf;
+  alt_weight = avg_movement * alt_weight;
+  %alt_weight = repmat(alt_weight, [ceil(nends / ninterm) 1]);
 
-  merge_dist = sqrt(bsxfun(@minus,ends(:,1),interm(:,1).').^2 + bsxfun(@minus,ends(:,2),interm(:,2).').^2);
-  frame_indx = -bsxfun(@minus, ends(:,3), interm(:,3).');
-  merge_dist(merge_dist > all_max | frame_indx ~= 1) = Inf;
+  [split_dist, split_weight, alt_split_weight] = splitting_weight(interm, starts, spots, links);
+  frame_indx = -bsxfun(@minus, interm(:,end), starts(:,end).');
+  split_weight = split_dist .* split_weight;
+  split_weight(split_dist > spot_max_movement | frame_indx ~= 1) = Inf;
+  alt_split_weight = avg_movement * alt_split_weight;
+  %alt_split_weight = repmat(alt_split_weight, [1, ceil(nstarts / ninterm)]);
 
-  weight = repmat(interm(:,4).', nends, 1) ./ bsxfun(@plus,ends(:,4), interm(:,5).');
-  weight(weight < 1) = weight(weight < 1).^(-2);
-  merge_dist = merge_dist .* weight;
-
-  alt_weight = diag((avg_mov*ones(ninterm,1)) .* interm(:,4) ./ interm(:,5));
+  % Note that end-end merging and start-start splitting is not allowed by this
+  % algorithm, which might make sense...
 
   dist(1:nends,1:nstarts) = mutual_dist;
-  dist(1:nends,nstarts+1:nstarts+ninterm) = merge_dist;
-  dist(1:nends,nstarts+ninterm+1:end) = alt_dist(1:nends,1:nends);
-  dist(nends+1:nends+ninterm,nstarts+1:nstarts+ninterm) = alt_weight(1:ninterm,1:ninterm);
-  dist(nends+ninterm+1:end,1:nstarts) = alt_dist(1:nstarts,1:nstarts);
+  dist(1:nends,nstarts+1:nstarts+ninterm) = merge_weight;
+  dist(nends+1:nends+ninterm,1:nstarts) = split_weight;
+
+  dist(1:nends,nstarts+ninterm+1:end-ninterm) = alt_dist(1:nends,1:nends);
+  dist(nends+ninterm+1:end-ninterm,1:nstarts) = alt_dist(1:nstarts,1:nstarts);
+
+  dist(nends+1:nends+ninterm,end-ninterm+1:end) = alt_split_weight;
+  dist(end-ninterm+1:end,nstarts+1:nstarts+ninterm) = alt_weight;
+
+  trans_dist = (dist(1:nends+ninterm, 1:nstarts+ninterm).' < Inf) * min(mutual_dist(:));
+  trans_dist(trans_dist == 0) = Inf;
+
   dist(nends+ninterm+1:end,nstarts+ninterm+1:end) = trans_dist;
 
+  disp('Let''s go !')
+
+  figure;
+  imagesc(dist)
+
   [assign, cost] = munkres(dist);
+  
+  hold on;scatter(assign, [1:length(assign)])
 
-  for i=1:nends
-    if (assign(i) <= nstarts && assign(i) > 0)
-      ruffles = close_gap(ruffles, ends(i,:), starts(assign(i),:));
-
-      %if (opts.verbosity == 3)
-      %  indx = ends(i, 3);
-      %  ell_end = carth2elliptic(ends(i,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-      %  indx = starts(assign(i), 3);
-      %  ell_start = carth2elliptic(starts(assign(i),1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-      %  plot3([ell_end(1) ell_start(1)], [ell_end(2) ell_start(2)], [ends(i,3) starts(assign(i),3)], 'k');
-      %end
-    elseif (assign(i) < nstarts + ninterm && assign(i) > 0)
-      ruffles = close_gap(ruffles, ends(i,:), interm(assign(i)-nstarts,:));
-
-      %if (opts.verbosity == 3)
-      %  indx = ends(i, 3);
-      %  ell_end = carth2elliptic(ends(i,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-      %  indx = starts(assign(i), 3);
-      %  ell_interm = carth2elliptic(interm(assign(i)-nstarts,1:2), mymovie.(type).centers(:,indx),mymovie.(type).axes_length(:,indx),mymovie.(type).orientations(1,indx));
-      %  plot3([ell_end(1) ell_interm(1)], [ell_end(2) ell_interm(2)], [ends(i,3) interm(assign(i)-nstarts,3)], 'g');
-      %end
-    end
-  end
-
-  %mymovie.(type).ruffles = ruffles;
-
-  %if (opts.verbosity == 3)
-  %  view(0,0);
-  %end
-
-  return
-end
-
-function merges = find_intersect(ruffles, ends, thresh, frame)
-
-  merges = zeros(0, 4);
-
-  valids = (ruffles(frame).cluster(:,1) ~= 0);
-  indxs = find(valids);
-
-  interms = ruffles(frame).carth(valids,:);
-
-  if (isempty(interms))
-    return;
-  end
-
-  mutual_dist = sqrt(bsxfun(@minus,ends(:,1),interms(:,1).').^2 + bsxfun(@minus,ends(:,2),interms(:,2).').^2);
-
-  cands = indxs(any(mutual_dist < thresh,1));
-  ncands = length(cands);
-  prev_indx = ruffles(frame).cluster(cands,1);
-
-  merges = [ruffles(frame).carth(cands,:) ones(ncands,1)*frame ruffles(frame).properties(cands,:) ruffles(frame-1).properties(prev_indx,:)];
-
-  return;
-end
-
-function ruffles = close_gap(ruffles, first, last)
-
-  %keyboard
-
-  first_indx = first(3);
-  last_indx = last(3);
-
-  indx = find(all(ruffles(first_indx).carth(:,1) == first(1,1) & ruffles(first_indx).carth(:,2) == first(1,2), 2));
-  indx2 = find(all(ruffles(last_indx).carth(:,1) == last(1,1) & ruffles(last_indx).carth(:,2) == last(1,2), 2));
-
-  dist = last_indx - first_indx;
-
-  if (dist > 1)
-
-    dmov = diff([first(1,1:2); last(1,1:2)]);
-    interm_pos = first(ones(1,dist-1),1:2) +  ([1:dist-1] / dist).' * dmov;
-
-    for i=1:dist-1
-      frame_indx = i+first_indx;
-      ruffles(frame_indx).carth(end+1,:) = interm_pos(i,:);
-      ruffles(frame_indx).cluster(end+1,1) = indx;
-      %ruffles(frame_indx).bounds(end+1,:) = 0;
-      ruffles(frame_indx).properties(end+1,:) = 0;
-
-      indx = length(ruffles(frame_indx).cluster(:,1));
-    end
-
-    ruffles(last_indx).cluster(indx2,1) = indx;
-  else
-    if (ruffles(last_indx).cluster(indx2,1) == 0)
-      ruffles(last_indx).cluster(indx2,1) = indx;
+  for i=1:nends+ninterm
+    if (assign(i) <= nstarts)
+      target = starts(assign(i), :);
+    elseif (assign(i) < nstarts + ninterm)
+      target = interm(assign(i) - nstarts, :);
     else
-      ruffles(last_indx).cluster(indx2,2) = indx;
+      continue;
     end
+
+    if (i <= nends)
+      reference = [target(end-1) ends(i,end-1:end)];
+    else
+      reference = [target(end-1) interm(i-nends,end-1:end)];
+    end
+    links{target(end)} = [links{target(end)}; reference];
   end
-
-  return;
-end
-
-function ruffles = store_detection(pts, nprev, assign)
-
-  if (isstruct(pts))
-    ruffles = pts;
-    npts = size(ruffles.carth, 1);
-  else
-
-    npts = size(pts,1);
-
-    %ruffles = get_struct('ruffles', 1); 
-    %ruffles.carth = pts(:,1:2);
-    %ruffles.bounds = pts(:,3:end);
-
-    ruffles = get_struct('ruffles');
-    ruffles.carth = pts(:,1:2);
-    ruffles.properties = pts(:,3:end);
-  end
-
-  if (nprev > 0)
-    [junk tmp] = sort(assign);
-      
-    ruffles.cluster = [tmp(1:npts).' zeros(npts, 1)];
-    ruffles.cluster(ruffles.cluster > nprev,1) = 0;
-  else
-    ruffles.cluster = zeros(npts, 2);
-  end
-
-  %figure;
-  %hold on;
-  %patch(pts(:,[1:2:end]).', pts(:,[2:2:end]).','r')
-  %keyboard
 
   return
 end

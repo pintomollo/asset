@@ -128,9 +128,6 @@ function [mymovie,trackings] = ASSET(varargin)
     display(['Movie ''' mymovie.experiment ''' loaded']);
   end
 
-  % Compute the actual pixel size of the image
-  opts = set_pixel_size(opts);
-
   % Update the experiment name if we cannot overwrite (and if not done before)
   if (~opts.overwrite & is_original_file)
     mymovie.experiment = get_new_name([mymovie.experiment '(\d+)\.mat']);
@@ -138,6 +135,13 @@ function [mymovie,trackings] = ASSET(varargin)
     % We do not keep the extension
     mymovie.experiment = mymovie.experiment(1:end-4);
   end
+
+  % Filter the data channels if need be, still save in just in case it is modified
+  save(mymovie.experiment, 'mymovie', 'trackings','opts');
+  [mymovie, opts] = filter_channels(mymovie, opts);
+
+  % Compute the actual pixel size of the image
+  opts = set_pixel_size(opts);
 
   % Runs machine learning algorithms to optimze the segmentation parameters
   if (~strncmp(opts.do_ml, 'none', 4))

@@ -115,10 +115,9 @@ function fit_domains(fname, incremental, share_work)
       kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
     end
 
-    start
     for j = start:size(all_choices, 1)
 
-      t = all_choices(j, 1)
+      t = all_choices(j, 1);
       switch t
         case 0
           data.fit_parameters = [7 12];
@@ -142,7 +141,7 @@ function fit_domains(fname, incremental, share_work)
           data.boundary_sharpness = 35*ones(size(data.fit_parameters));
       end
 
-      u = all_choices(j, 2)
+      u = all_choices(j, 2);
       switch u
         case 0
           % No variability allowed !

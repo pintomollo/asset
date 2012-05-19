@@ -40,6 +40,7 @@ function mystruct = get_struct(type, nstruct)
                         'dp_method', 'double', ...          % Dynamic programming method used (see dynamic_programming.m)
                         'export_movie', false, ...          % Export the results of the analysis
                         'file_regexpr', '(.+[-_])?(.*?[-_]?)(\.[\w\.]+)', ... % The regular expression representing the files
+                        'filters', get_struct('channel_filter'), ...
                         'follow_periphery', true, ...       % Follow only the periphery of the trackings (no invaginations)
                         'force_circularity', true, ...      % Enforces that the last row of the DP conincides with the first one
                         'magnification', 63, ...            % Magnification of the objective of the microscope
@@ -91,6 +92,12 @@ function mystruct = get_struct(type, nstruct)
                         'type', 'dic', ...                  % Type of channel (dic, eggshell, cortex, data)
                         'timing', get_struct('timing'), ... % Timing of the cell cycle
                         'update', zeros(2, 0));
+
+    case 'channel_filter'
+      mystruct = struct('channel', 'data', ...
+                        'applied', false, ...
+                        'filter', '', ...
+                        'params', {{}});
 
     % Structure used to store the parameters of the correction function (see duplicate_segmentation.m)
     % The correction function is : F(i) = a + b*I(i+s) + c*R(I)

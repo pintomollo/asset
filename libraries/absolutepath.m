@@ -68,9 +68,10 @@ while  length(rel_path_cell) > 0
 end
 
 % Put cell array into string:
-for  i = 1 : length(abs_path_cell)
+for  i = 1 : length(abs_path_cell) - 1
    abs_path = [abs_path abs_path_cell{i} filesep];
 end
+abs_path = [abs_path abs_path_cell{end}];
 
 return
 

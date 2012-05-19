@@ -30,8 +30,7 @@ function img = imhotpixels(orig_img, varargin)
   % Get the pixels as a vector
   pixels = double(orig_img(:));
   % Compute their mean and standard deviation
-  mean_value = mean(pixels);
-  stddev = std(pixels);
+  [mean_value, stddev] = mymean(pixels);
 
   % Get the threshold value
   thresh = thresh * stddev;

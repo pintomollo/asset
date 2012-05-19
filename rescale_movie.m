@@ -118,22 +118,23 @@ function [mymovie] = rescale_movie(mymovie, opts)
         % Write the filtered data, we'll rescale them in a second pass as we do not
         % know the range yet
         %writer = store_data(writer, img, i);
-        done = false;
-        waiting_time = 0;
-        while (~done)
-          try
-            imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
-            done = true;
-          catch ME
-            if (waiting_time < 20)
-              nsecs = rand(1);
-              waiting_time = waiting_time + nsecs;
-              pause(nsecs);
-            else
-              rethrow(ME)
-            end
-          end
-        end
+        %done = false;
+        %waiting_time = 0;
+        %while (~done)
+        %  try
+        %    imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
+        %    done = true;
+        %  catch ME
+        %    if (waiting_time < 20)
+        %      nsecs = rand(1);
+        %      waiting_time = waiting_time + nsecs;
+        %      pause(nsecs);
+        %    else
+        %      rethrow(ME)
+        %    end
+        %  end
+        %end
+        save_data(tmp_fname, img);
 
         % Update the progress bar if needed
         if (opts.verbosity > 1)
@@ -172,22 +173,23 @@ function [mymovie] = rescale_movie(mymovie, opts)
         img = imnorm(img, mymovie.(field)(k).min, mymovie.(field)(k).max, '', 0, maxuint);
 
         % And save the final image
-        done = false;
-        waiting_time = 0;
-        while (~done)
-          try
-            imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
-            done = true;
-          catch ME
-            if (waiting_time < 20)
-              nsecs = rand(1);
-              waiting_time = waiting_time + nsecs;
-              pause(nsecs);
-            else
-              rethrow(ME)
-            end
-          end
-        end
+        %done = false;
+        %waiting_time = 0;
+        %while (~done)
+        %  try
+        %    imwrite(img, tmp_fname, 'TIFF', 'WriteMode', 'append');
+        %    done = true;
+        %  catch ME
+        %    if (waiting_time < 20)
+        %      nsecs = rand(1);
+        %      waiting_time = waiting_time + nsecs;
+        %      pause(nsecs);
+        %    else
+        %      rethrow(ME)
+        %    end
+        %  end
+        %end
+        save_data(tmp_fname, img);
         %store_data(writer, img, i);
 
         % Update the progress bar
