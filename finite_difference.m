@@ -22,6 +22,6 @@ function du = finite_difference(u, dx, deriv, accuracy, method)
           end
       end
   end
-
+  
   return;
 end

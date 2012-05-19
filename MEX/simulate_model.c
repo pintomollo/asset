@@ -13,30 +13,30 @@ static void finite_difference(double *x, double *dx, double h, int npop, int npt
 
   dnorm = 12*h;
   ddnorm = dnorm*h;
-
+  
   for (p=0; p<npop; p++) {
     xi = x + npts*p;
     dxi = dx + npts*p;
 
     /* Reflective boundary conditions */
-    x_2 = xi[2];
-    x_1 = xi[1];
+    x_2 = xi[1];
+    x_1 = xi[0];
     x0 = xi[0];
     x1 = xi[1];
     x2 = xi[2];
-
+    
     for (i=0; i<npts; i++) {
       if (order == 1) {
-        dx[i] = (x_2 - 8*x_1 + 8*x1 - x2) / dnorm;
+        dxi[i] = (x_2 - 8*x_1 + 8*x1 - x2) / dnorm;
       } else {
-        dx[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) / ddnorm;
+        dxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) / ddnorm;
       }
 
       x_2 = x_1;
       x_1 = x0;
       x0 = x1;
       x1 = x2;
-      x2 = xi[npts - abs((i+2) - npts)];
+      x2 = xi[npts - abs((i+3) - npts)];
     }
   }
 
@@ -69,7 +69,7 @@ static void bilinear_flow(double *flow, double *conc, double *current, double in
   indf = indf*npts;
   indc = indc*npts;
 
-  for (i=0; i++; i< npts) {
+  for (i=0; i<npts; i++) {
     value = (flow[i+indf]*yf + flow[i+indc]*yc);
     current[i] = value * conc[i];
     current[i + npts] = value * conc[i + npts];
@@ -112,7 +112,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     x0 = mxGetPr(prhs[0]);
     npts = mxGetM(prhs[0]);
     npops = mxGetN(prhs[0]);
-
+    
     params = mxGetPr(prhs[1]);
     nparams = mxGetM(prhs[1]);
     if (mxGetN(prhs[1]) != npops) {
@@ -123,7 +123,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     tmax = mxGetScalar(prhs[3]);
     dt = mxGetScalar(prhs[4]);
     output_rate = mxGetScalar(prhs[5]);
-
+    
     flow = mxGetPr(prhs[6]);
     nflow = mxGetN(prhs[6]);
     if (mxGetM(prhs[6]) != npts) {
@@ -133,7 +133,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     t_flow = mxGetScalar(prhs[7]);
 
     ntimes = ceil(tmax / output_rate) + 1;
-
+    
     if ((x = mxCalloc(npts*npops, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
@@ -156,7 +156,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     plhs[0] = mxCreateDoubleMatrix(npops*npts, ntimes, mxREAL);
     simulation = mxGetPr(plhs[0]);
 
-    for (i = 0; i++; i<npts*npops) {
+    for (i = 0; i<npts*npops; i++) {
       x[i] = x0[i];
       simulation[i] = x0[i];
     }
@@ -170,11 +170,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       tmp = x_prev;
       x_prev = x;
       x = tmp;
-
+      
       cyto[0] = params[6] - cyto[0] * (params[7] / params[8]);
       cyto[1] = params[6 + nparams] - cyto[1] * (params[7 + nparams] / params[8 + nparams]);
 
-      for (i = 0; i++; i<npts) {
+      for (i = 0; i<npts; i++) {
         x[i] = x_prev[i] + dt*(
                params[0]*ddx[i] + 
                params[1]*cyto[0] - 
@@ -193,7 +193,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       t += dt;
 
       if (MOD(t-dt, output_rate) >= MOD(t, output_rate)) {
-        memcpy(simulation, x, npops*npts*sizeof(double));
+        memcpy(simulation+count*(npops*npts), x, npops*npts*sizeof(double));
         count++;
       }
     }

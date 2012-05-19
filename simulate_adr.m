@@ -3,7 +3,7 @@ function [all_x] = simulate_adr(x0, opts, order, scheme)
   %keyboard
   if (nargin < 4)
     order = 2;
-    scheme = 2;
+    scheme = 1;
   end
 
   h = diff(opts.boundaries) / opts.nparticles;
@@ -15,8 +15,8 @@ function [all_x] = simulate_adr(x0, opts, order, scheme)
   output_rate = opts.output_rate;
 
   all_params = [opts.diffusion_params; ...
-                [[opts.reaction_params(1:3) 1 opts.reaction_params([4 11 12])].' ...
-                [opts.reaction_params(6:9) 1 opts.reaction_params([11 12])].']];
+                [[opts.reaction_params(1:3) 1 opts.reaction_params([4 5 11 12])].' ...
+                [opts.reaction_params(6:9) 1 opts.reaction_params([10 11 12])].']];
 
   flow = opts.advection_params;
 
@@ -25,7 +25,7 @@ function [all_x] = simulate_adr(x0, opts, order, scheme)
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
 
-  simulate_model(x0.', all_params, h, tmax, dt, output_rate, flow.', t_flow)
+  all_x = simulate_model(x0.', all_params, h, tmax, dt, output_rate, flow.', t_flow);
 
   return;
 
@@ -65,14 +65,14 @@ function [all_x] = simulate_adr(x0, opts, order, scheme)
     curr_flow = bilinear_mex(flow, index_flow, time_flow * t(i) / t_flow, bounds);
     curr_flow(isnan(curr_flow)) = 0;
 
-    dadvec = -finite_difference(bsxfun(@times, curr_flow, x), h, 1, order, 'central');
-    ddiff = bsxfun(@times, Ds, finite_difference(x, h, 2, order, 'central'));
-    dreac = nates(x, h, params);
+    dadvec = -finite_difference(bsxfun(@times, curr_flow, x), h, 1, order, 'central')
+    ddiff = bsxfun(@times, Ds, finite_difference(x, h, 2, order, 'central'))
+    dreac = nates(x, h, params)
 
     %x = x + dt*(dadvec + ddiff + dreac);
     deriv = (dadvec + ddiff + dreac);
     if (scheme == 1)
-      x = x + dt*deriv;
+      x = x + dt*deriv
     else
       tmp_x = x + dt*deriv;
 
@@ -94,6 +94,8 @@ function [all_x] = simulate_adr(x0, opts, order, scheme)
       %title(num2str(t(i)))
       %drawnow
     end
+    
+    break;
   end
 
   return;
