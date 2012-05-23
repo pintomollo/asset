@@ -35,7 +35,7 @@ function [chi2ple, psple] = model_identifiability(temp)
     [chi2ple{i}, psple{i}] = ple(ml_params(:), i, 20, @chi2score);
   end
 
-  save(['ple-' num2str(uuid) '.mat'], 'chi2ple', 'psple');
+  save(['ple-' num2str(uuid) '.mat'], 'chi2ple', 'psple', 'temp');
 
   return;
 
