@@ -84,7 +84,7 @@ function [p, dpjk] = init_step_direct(chi2, p, jk, dpjk, func, varargin)
   % increase of objective function due to step
   ptmp = p;
   ptmp(jk) = p(jk) + dpjk;
-  chi2_diff = func(ptmp, varargin{:}) - chi2 % evaluate the objective function
+  chi2_diff = func(ptmp, varargin{:}) - chi2; % evaluate the objective function
 
   count_max = 100;
   count = 0;
