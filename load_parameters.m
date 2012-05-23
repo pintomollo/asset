@@ -11,10 +11,10 @@ function opts = load_parameters(opts, fname)
 % Gonczy & Naef labs, EPFL
 % Simon Blanchoud
 % 10.12.2010
-  
+
   % In case there is only one argument, it might either be opts or fname
   if (nargin == 1)
-    
+
     % If it contains this field, then it's opts
     if (isfield(opts, 'config_file'))
       fname = opts.config_file;
@@ -85,7 +85,7 @@ function opts = load_parameters(opts, fname)
   % We loop throughout the file, line by line
   line = fgetl(fid);
   while ischar(line)
-  
+
     % We remove unsignificant white spaces
     line = strtrim(line);
 
@@ -100,7 +100,7 @@ function opts = load_parameters(opts, fname)
 
           % Extract the prefix
           prefix = line(2:end);
-        
+
           % And we need a trailing dot to correctly access subfields
           if (prefix(end) ~= '.')
             prefix = [prefix '.'];
@@ -113,7 +113,7 @@ function opts = load_parameters(opts, fname)
 
       % We avoid also comments which starts by '%'
       elseif (line(1) ~= '%')
-      
+
         % We extract the field name (only chars) and the corresponding value
         tokens = regexp(line,'^(\w+)\s+(.+)$','tokens');
 

@@ -68,7 +68,7 @@ function [mymovie,trackings] = ASSET(varargin)
   % We need manual trackings only if we measure the performances of ASSET
   % or if we want to perform machine learning
   if (opts.measure_performances || ~strncmp(opts.do_ml, 'none', 4))
-    
+
     % Import the trackings from the .shapes files
     [trackings, opts, updated] = import_trackings(trackings, opts);
 
@@ -89,7 +89,7 @@ function [mymovie,trackings] = ASSET(varargin)
 
         % We do not keep the extension
         tmp_name = tmp_name(1:end-4);
-        
+
         % Remember we already created a new file
         is_original_file = false;
       end
@@ -200,7 +200,7 @@ function [mymovie,trackings] = ASSET(varargin)
       keyboard;
     end
   end
-  
+
   % Measuring the performances of ASSET compared to manual tracking
   if (opts.measure_performances)
     [mymovie, trackings] = analyze_segmentation(mymovie, trackings, opts);
@@ -295,20 +295,20 @@ function [mymovie, trackings, opts] = parse_input(varargin)
   trackings = [];
   opts = [];
   real_mat = true;
-  
+
   % Check what we got as inputs
   if (nargin > 0)
 
     % The first argument should be mymovie, verify using 'experiment'
     if (isfield(varargin{1}, 'experiment'))
-      
+
       % Assign it and delete it from the list
       mymovie = varargin{1};
       varargin(1) = [];
 
     % Maybe the name of the MAT-file was provided
     elseif (ischar(varargin{1}))
-      
+
       files = regexpdir(pwd, varargin{1}, true);
 
       if (numel(files) == 0)

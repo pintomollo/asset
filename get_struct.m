@@ -127,7 +127,7 @@ function mystruct = get_struct(type, nstruct)
                         'temperatures', [], ...             % Temperatures found to compute the posterior probability
                         'thickness', 0, ...                 % Thickness of the eggshell in ER
                         'warped', []);                      % Normalized position
-    
+
     % Structure used to handle tracking files (see import_trackings.m)
     case 'file'
       mystruct = struct('fname','', ...                     % Path of the original .shapes file (see load_shapes.m)
@@ -154,6 +154,24 @@ function mystruct = get_struct(type, nstruct)
                         'ml_type', '', ...                  % Type of segmentation which is optimized (eggshell, cortex)
                         'params', [], ...                   % Current value of the optimized parameters
                         'score', Inf);                      % Score of the current iteration
+
+    case 'modeling'
+      mystruct = struct('nparticles', 200, ...
+                        'npopulations', 2, ...
+                        'dimensionality', 1, ...
+                        'x_step', 0.05, ...
+                        'interpolate_time', true, ...
+                        'output_rate', 10, ...
+                        'boundaries', [0 10], ...
+                        'is_circular', false, ...
+                        'reaction_params', [0.03 0.055], ...
+                        'diffusion_params', [2e-5 1e-5], ...
+                        'init_params', [2e-4 1e-4], ...
+                        'time_step', 0.5, ...
+                        'tmax', 100, ...
+                        'user_data', {{}}, ...
+                        'advection_params', [0.02 0.01]);
+
 
     % Global structure of a recording/analysis (see ASSET.m)
     case 'mymovie'
@@ -247,7 +265,7 @@ function mystruct = get_struct(type, nstruct)
       mystruct.correction = get_struct('conversion');       % Parameters to convert from DIC to fluorescence
 
       %%### DIC PARAMETERS ###%%
-      
+
       % Best values for the eggshell
       % This first section of parameters is common for all the functions
       mystruct.dic.eggshell_params.nhood   = 5;      % Neighborhood size
@@ -335,7 +353,7 @@ function mystruct = get_struct(type, nstruct)
                         'form', '', ...
                         'order', 0, ...
                         'pieces', 0);
-    
+
     % Structure containing the parameters used for splitting touching cells
     case 'splitting'
       mystruct = struct('angle_thresh', 0.23, ...
@@ -382,14 +400,14 @@ function mystruct = get_struct(type, nstruct)
     case 'trackings'
       % Get the substructure to store manual trackings
       tracking = get_struct('tracking');
-      
+
       % Get the structure to store the various channels of a movie
       mystruct = get_struct('mymovie');
 
       % Set the trackings to the used channels
       mystruct.dic = tracking;
       mystruct.markers = tracking;
-                        
+
     % The structure containing the information to convert into the absolute coordinate system
     case 'warper'
       ref = get_struct('reference');
