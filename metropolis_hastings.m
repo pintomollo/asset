@@ -1,4 +1,26 @@
-function metropolis_hastings
+function metropolis_hastings(param_set, temp)
+
+  if (nargin == 0)
+    param_set = 1;
+    temp = 100;
+  elseif (nargin == 1)
+    temp = 100;
+  end
+
+  switch param_set
+    case 2
+      fit_params = [4 5 10 11];
+    case 3
+      fit_params = [4 5 6 10 11];
+    case 4
+      fit_params = [2 4 5 6 8 10 11];
+    case 5
+      fit_params = [4 5 6 10 11 12];
+    case 6
+      fit_params = [1:12];
+    otherwise
+      fit_params = [4 10];
+  end
 
   opts = get_struct('modeling');
   opts = load_parameters(opts, 'goehring.txt');
@@ -24,12 +46,11 @@ function metropolis_hastings
   rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
 
-  init_noise = 0.2;
-  max_iter = 2000;
+  init_noise = 0.1;
+  max_iter = 10000;
   ndiscard = 0;
-  step_size = 0.1;
-  size_params = size(ml_params);
-  temp = (numel(orig)/2);
+  step_size = 0.01;
+  size_params = length(fit_params);
 
   uuid = now + cputime;
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
@@ -40,21 +61,23 @@ function metropolis_hastings
 
   display(['Working ID ' num2str(uuid)]);
 
-  %ml_params = ml_params + 0.1;
-  ml_params = exp(log(ml_params) + init_noise*randn(size_params));
-  best_score = likelihood(ml_params);
+  tmp_params = ml_params;
+  new_params = ml_params;
+
+  tmp_params(fit_params) = exp(log(ml_params(fit_params)) + init_noise*randn(1, size_params));
+  best_score = likelihood(tmp_params);
   fprintf(fid, '%e (0, 0) :', best_score);
-  fprintf(fid, ' %f', ml_params);
+  fprintf(fid, ' %f', tmp_params);
   fprintf(fid, '\n');
 
   for i=1:max_iter
-    new_params = exp(log(ml_params) + step_size*randn(size_params));
+    new_params(fit_params) = exp(log(tmp_params(fit_params)) + step_size*randn(1, size_params, 1));
     new_score = likelihood(new_params);
     ratio = exp(new_score - best_score);
     rand_val = rand(1);
 
     if (rand_val <= ratio)
-      ml_params = new_params;
+      tmp_params = new_params;
       best_score = new_score;
     else
       ndiscard = ndiscard + 1;
