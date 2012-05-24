@@ -22,16 +22,7 @@ function [dist, weight, alt_weight] = merging_distance(pts1, pts2, spots, links)
   alt_weight = pts2(:, 4) ./ prev_intense;
   alt_weight(alt_weight < 1) = alt_weight(alt_weight < 1).^(-2);
   alt_weight = diag(alt_weight);
-  %alt_weight = repmat(alt_weight.', ninterm, 1);
   alt_weight(alt_weight == 0) = Inf;
-
-  %if (ninterm < nends)
-  %  alt_weight = [alt_weight; Inf(nends-ninterm, ninterm)];
-  %elseif (ninterm > nends)
-  %  alt_weight = alt_weight(1:nends, :);
-  %end
-
-  %alt_weight(:) = 1;
 
   return;
 end

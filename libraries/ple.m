@@ -86,21 +86,25 @@ function [p, dpjk] = init_step_direct(chi2, p, jk, dpjk, func, varargin)
   ptmp(jk) = p(jk) + dpjk;
   chi2_diff = func(ptmp, varargin{:}) - chi2; % evaluate the objective function
 
+  step_min = chi2_diff / 1e4;
+  prev_step = 0;
   count_max = 100;
   count = 0;
 
   if(chi2_diff > chi2_threshold * chi2_relative_increase) % decrease dpjk
-    while(chi2_diff > chi2_threshold * chi2_relative_increase & count < count_max)
+    while(chi2_diff > chi2_threshold * chi2_relative_increase & count < count_max & abs(chi2_diff - prev_step) > step_min)
       dpjk = dpjk / 2; % halve step increment
       ptmp(jk) = p(jk) + dpjk;
+      prev_step = chi2_diff;
       chi2_diff = func(ptmp, varargin{:}) - chi2; % evaluate the objective function
 
       count = count + 1;
     end
   else % increase dpjk
-    while(chi2_diff < chi2_threshold * chi2_relative_increase & count < count_max)
+    while(chi2_diff < chi2_threshold * chi2_relative_increase & count < count_max & abs(chi2_diff - prev_step) > step_min)
       dpjk = dpjk * 2; % double step increment
       ptmp(jk) = p(jk) + dpjk;
+      prev_step = chi2_diff;
       chi2_diff = func(ptmp, varargin{:}) - chi2; % evaluate the objective function
 
       count = count + 1;
@@ -129,8 +133,8 @@ function [p, chi2] = fit_func(p, jk, func, varargin)
 
     new_p = p;
     new_p(fitted) = p_tmp;
-    val = func(p, varargin{:});
+    val = func(new_p, varargin{:});
 
     return;
-  end;
+  end
 end

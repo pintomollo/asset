@@ -146,6 +146,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     dt = mxGetScalar(prhs[4]);
     output_rate = mxGetScalar(prhs[5]);
 
+    if (dt == 0) {
+      mexErrMsgTxt("A time step has to be defined");
+    }
+
     if (max(params[1], params[1+npts])*dt*3 / pow(x_step, 2) >= 1) {
       dt = pow(x_step, 2) / (3*max(params[1], params[1+npts]));
     }
@@ -192,8 +196,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     while (t < tmax) {
 
-//      mexPrintf("%f\n", t);
-
+      fflush(NULL);
       saved = false;
       current_dt = dt;
 

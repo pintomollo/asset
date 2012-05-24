@@ -1,4 +1,4 @@
-function links = tracking(spots, track_opts, opts)
+function spots = tracking(spots, track_opts, opts)
 
   % Input checking
   if (nargin < 2)
@@ -24,11 +24,11 @@ function links = tracking(spots, track_opts, opts)
 
   % If the size of the pixels has been set, we can compute the actual spot size
   if (opts.pixel_size > 0)
-    
+
     % The maximal size of the spot in pixels
     spot_max_movement = (spot_max_movement / opts.pixel_size);
   else
-    
+
     % Try to compute the pixel size
     opts = set_pixel_size(opts);
 
@@ -42,6 +42,7 @@ function links = tracking(spots, track_opts, opts)
   npts = 0;
   ndim = 0;
 
+  all_pts = cell(nframes, 1);
   all_assign = [];
   prev_max = NaN;
 
@@ -50,19 +51,23 @@ function links = tracking(spots, track_opts, opts)
     prev_pts = pts;
     prev_npts = npts;
 
-    pts = spots{i};
+    pts = [spots(i).carth/opts.pixel_size spots(i).properties];
+    pts = pts(~any(isnan(pts), 2), :);
+    all_pts{i} = pts;
     [npts, tmp] = size(pts);
 
     if (ndim == 0)
       ndim = tmp;
     end
-    
+
     if (prev_npts > 0 & npts > 0)
 
       dist = Inf(npts + prev_npts);
-      
+
       mutual_dist = frame_weight(prev_pts, pts);
       mutual_dist(mutual_dist > spot_max_movement) = Inf;
+
+      %%%%%%%%% Not updated properly as the article states...
       prev_max = spot_max_movement;
 
       ends = eye(max(npts,prev_npts))*prev_max;
@@ -96,7 +101,7 @@ function links = tracking(spots, track_opts, opts)
   if (max_frames == 0)
     return;
   end
-  
+
   avg_movement = mean(all_assign);
 
   starts = zeros(0, ndim+2);
@@ -112,32 +117,27 @@ function links = tracking(spots, track_opts, opts)
     indx_interm = links{i}(:,1);
     indx_starts = [];
 
-    %if (~isempty(spots{i}))
-        
-      nstarts = size(spots{i},1);
-      indx_starts = setdiff([1:nstarts], indx_interm);
-      nstarts = length(indx_starts);
+    nstarts = size(all_pts{i},1);
+    indx_starts = setdiff([1:nstarts], indx_interm);
+    nstarts = length(indx_starts);
 
-      if (nstarts>0)
-        starts(end+1:end+nstarts,:) = [spots{i}(indx_starts,:) indx_starts(:) ones(nstarts,1)*i];
-      end
-    %end
+    if (nstarts>0)
+      starts(end+1:end+nstarts,:) = [all_pts{i}(indx_starts,:) indx_starts(:) ones(nstarts,1)*i];
+    end
 
-    %if (~isempty(spots{i-1}))                
-      nends = size(spots{i-1},1);
-      indx_ends = setdiff([1:nends], links{i}(:,2));
-      nends = length(indx_ends);
-      if (nends>0)
-        ends(end+1:end+nends,:) = [spots{i-1}(indx_ends,:) indx_ends(:) ones(nends,1)*i-1];
-      end
-    %end
+    nends = size(all_pts{i-1},1);
+    indx_ends = setdiff([1:nends], links{i}(:,2));
+    nends = length(indx_ends);
+    if (nends>0)
+      ends(end+1:end+nends,:) = [all_pts{i-1}(indx_ends,:) indx_ends(:) ones(nends,1)*i-1];
+    end
 
-    if (~isempty(spots{i}))
-        
-      join_dist = frame_weight(spots{i-1}(indx_ends,:), spots{i}(indx_interm,:));
+    if (~isempty(all_pts{i}))
+
+      join_dist = frame_weight(all_pts{i-1}(indx_ends,:), all_pts{i}(indx_interm,:));
 
       if (~isempty(prev_starts))
-        split_dist = frame_weight(spots{i+1}(prev_starts, :), spots{i}(indx_interm, :));
+        split_dist = frame_weight(all_pts{i+1}(prev_starts, :), all_pts{i}(indx_interm, :));
         join_dist = [join_dist; split_dist];
       end
 
@@ -145,13 +145,13 @@ function links = tracking(spots, track_opts, opts)
       ninterm = length(indx_interm);
 
       if (ninterm>0)
-        interm(end+1:end+ninterm,:) = [spots{i}(indx_interm,:) indx_interm(:) ones(ninterm,1)*i];
+        interm(end+1:end+ninterm,:) = [all_pts{i}(indx_interm,:) indx_interm(:) ones(ninterm,1)*i];
       end
     end
 
     prev_starts = indx_starts;
   end
-  
+
   nstarts = size(starts, 1);
   nends = size(ends, 1);
   ninterm = size(interm, 1);
@@ -170,19 +170,17 @@ function links = tracking(spots, track_opts, opts)
   alt_dist = eye(max(nends, nstarts))*alt_cost;
   alt_dist(alt_dist==0) = Inf;
 
-  [merge_dist, merge_weight, alt_weight] = joining_weight(ends, interm, spots, links);
+  [merge_dist, merge_weight, alt_weight] = joining_weight(ends, interm, all_pts, links);
   frame_indx = -bsxfun(@minus, ends(:,end), interm(:,end).');
   merge_weight = merge_dist .* merge_weight;
   merge_weight(merge_dist > spot_max_movement | frame_indx ~= 1) = Inf;
   alt_weight = avg_movement * alt_weight;
-  %alt_weight = repmat(alt_weight, [ceil(nends / ninterm) 1]);
 
-  [split_dist, split_weight, alt_split_weight] = splitting_weight(interm, starts, spots, links);
+  [split_dist, split_weight, alt_split_weight] = splitting_weight(interm, starts, all_pts, links);
   frame_indx = -bsxfun(@minus, interm(:,end), starts(:,end).');
   split_weight = split_dist .* split_weight;
   split_weight(split_dist > spot_max_movement | frame_indx ~= 1) = Inf;
   alt_split_weight = avg_movement * alt_split_weight;
-  %alt_split_weight = repmat(alt_split_weight, [1, ceil(nstarts / ninterm)]);
 
   % Note that end-end merging and start-start splitting is not allowed by this
   % algorithm, which might make sense...
@@ -202,14 +200,7 @@ function links = tracking(spots, track_opts, opts)
 
   dist(nends+ninterm+1:end,nstarts+ninterm+1:end) = trans_dist;
 
-  disp('Let''s go !')
-
-  figure;
-  imagesc(dist)
-
   [assign, cost] = munkres(dist);
-  
-  hold on;scatter(assign, [1:length(assign)])
 
   for i=1:nends+ninterm
     if (assign(i) <= nstarts)
@@ -226,6 +217,10 @@ function links = tracking(spots, track_opts, opts)
       reference = [target(end-1) interm(i-nends,end-1:end)];
     end
     links{target(end)} = [links{target(end)}; reference];
+  end
+
+  for i=1:nframes
+    spots(i).cluster = links{i};
   end
 
   return

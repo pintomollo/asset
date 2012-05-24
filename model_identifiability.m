@@ -1,7 +1,29 @@
-function [chi2ple, psple] = model_identifiability(temp)
+function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nsteps)
 
   if (nargin == 0)
+    param_set = 1;
     temp = 10;
+    nsteps = 20;
+  elseif (nargin == 1)
+    temp = 10;
+    nsteps = 20;
+  elseif (nargin == 2)
+    nsteps = 20;
+  end
+
+  switch param_set
+    case 2
+      fit_params = [4 5 10 11];
+    case 3
+      fit_params = [4 5 6 10 11];
+    case 4
+      fit_params = [2 4 5 6 8 10 11];
+    case 5
+      fit_params = [4 5 6 10 11 12];
+    case 6
+      fit_params = [1:12];
+    otherwise
+      fit_params = [4 10];
   end
 
   opts = get_struct('modeling');
@@ -30,41 +52,39 @@ function [chi2ple, psple] = model_identifiability(temp)
 
   uuid = now + cputime;
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
+  
+  nparams = numel(fit_params);
+  chi2ple = cell(nparams, 1);
+  psple = cell(nparams, 1);
+  errors = NaN(nparams, 2);
 
-  for i=1:numel(ml_params)
-    [chi2ple{i}, psple{i}] = ple(ml_params(:), i, 20, @chi2score);
+  for i=1:nparams
+    tmp_params = ml_params;
+    err_count = 0;
+    func_evals = 0;
+    [chi2ple{i}, psple{i}] = ple(ml_params(fit_params), i, nsteps, @chi2score);
+    errors(i, :) = [err_count func_evals];
   end
 
-  save(['ple-' num2str(uuid) '.mat'], 'chi2ple', 'psple', 'temp');
+  save(['ple-' num2str(uuid) '.mat'], 'chi2ple', 'psple', 'errors', 'temp', 'fit_params');
 
   return;
 
-  %function L = likelihood(params, stepping)
   function L = chi2score(params)
 
-    %if (nargin == 1)
-    %  stepping = 1;
-    %end
+    func_evals = func_evals + 1;
 
-    %[res, t] = simulate_model(x0, [params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step / stepping, opts.output_rate, flow, opts.user_data);
-    params = reshape(params, size(rescaling));
-    [res, t] = simulate_model(x0, [params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data);
+    tmp_params(fit_params) = params;
+    [res, t] = simulate_model(x0, [tmp_params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data);
     res = res((end/2)+1:end, :);
     if (length(t) ~= length(orig_t))
       res = interp1q(t.', res.', orig_t.').';
     end
 
     L = sum(((orig - res) / temp).^2);
+    err_count = err_count + any(isnan(L(:)));
     L(isnan(L)) = penalty;
     L = sum(L);
-    %if (isnan(L))
-    %  stepping = 2*stepping;
-    %  if (stepping > 8)
-    %    L = -Inf;
-    %  else
-    %    L = likelihood(params, stepping);
-    %  end
-    %end
 
     return;
   end
