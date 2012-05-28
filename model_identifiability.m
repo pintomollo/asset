@@ -11,6 +11,14 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
     nsteps = 20;
   end
 
+  test_distribution = false;
+  if (param_set < 0)
+    param_set = -param_set;
+    test_distribution = true;
+  end
+
+  nestim = 200;
+
   switch param_set
     case 2
       fit_params = [4 5 10 11];
@@ -53,20 +61,40 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   uuid = now + cputime;
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
   
-  nparams = numel(fit_params);
-  chi2ple = cell(nparams, 1);
-  psple = cell(nparams, 1);
-  errors = NaN(nparams, 2);
-
-  for i=1:nparams
-    tmp_params = ml_params;
+  if (test_distribution)
+    opt = optimset('Display','off', 'Algorithm', 'levenberg-marquardt', 'MaxFunEvals', 5000, 'MaxIter', 5000);
+    chi2diff = NaN(nestim, 1);
+    noiseless = orig;
     err_count = 0;
     func_evals = 0;
-    [chi2ple{i}, psple{i}] = ple(ml_params(fit_params), i, nsteps, @chi2score);
-    errors(i, :) = [err_count func_evals];
-  end
+    tmp_params = ml_params;
 
-  save(['ple-' num2str(uuid) '.mat'], 'chi2ple', 'psple', 'errors', 'temp', 'fit_params');
+    for i=1:nestim
+      orig = noiseless .* (1+0.2*randn(size(noiseless)));
+      noisy_params = ml_params(fit_params) .* (1+0.1*randn(size(fit_params)));
+
+      [best, chi2] = lsqnonlin(@chi2score, noisy_params, [], [], opt);
+      L = sum(((orig(:) - noiseless(:)) / temp).^2);
+      chi2diff(i) = L - chi2;
+    end
+  else
+
+    nparams = numel(fit_params);
+    chi2ple = cell(nparams, 1);
+    psple = cell(nparams, 1);
+    errors = NaN(nparams, 2);
+
+    for i=1:nparams
+      tmp_params = ml_params;
+      err_count = 0;
+      func_evals = 0;
+      [chi2ple{i}, psple{i}] = ple(ml_params(fit_params), i, nsteps, @chi2score);
+      errors(i, :) = [err_count func_evals];
+      fprintf(1, '.');
+    end
+
+    save(['ple-' num2str(uuid) '.mat'], 'chi2ple', 'psple', 'errors', 'temp', 'fit_params');
+  end
 
   return;
 
