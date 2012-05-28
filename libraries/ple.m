@@ -79,7 +79,7 @@ function [p, dpjk] = init_step_direct(chi2, p, jk, dpjk, func, varargin)
   alpha = 0.95;
 
   % <alpha> quantile of chi2-distribution with <df> degrees of freedom 
-  chi2_threshold = chi2cdf(alpha, df);
+  chi2_threshold = chi2inv(alpha, df);
 
   % increase of objective function due to step
   ptmp = p;
