@@ -76,7 +76,10 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
       [best, chi2] = lsqnonlin(@chi2score, noisy_params, [], [], opt);
       L = sum(((orig(:) - noiseless(:)) / temp).^2);
       chi2diff(i) = L - chi2;
+      fprintf(1, '.');
     end
+    
+    save(['ple-' num2str(uuid) '.mat'], 'chi2diff', 'func_evals', 'err_count', 'temp', 'fit_params');
   else
 
     nparams = numel(fit_params);
@@ -90,7 +93,6 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
       func_evals = 0;
       [chi2ple{i}, psple{i}] = ple(ml_params(fit_params), i, nsteps, @chi2score);
       errors(i, :) = [err_count func_evals];
-      fprintf(1, '.');
     end
 
     save(['ple-' num2str(uuid) '.mat'], 'chi2ple', 'psple', 'errors', 'temp', 'fit_params');
