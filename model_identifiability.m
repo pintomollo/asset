@@ -62,15 +62,18 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
   
   if (test_distribution)
-    opt = optimset('Display','off', 'Algorithm', 'levenberg-marquardt', 'MaxFunEvals', 5000, 'MaxIter', 5000);
+    %opt = optimset('Display','off', 'Algorithm', 'levenberg-marquardt', 'MaxFunEvals', 5000, 'MaxIter', 5000);
     chi2diff = NaN(nestim, 1);
     %noiseless = orig;
-    err_count = 0;
     func_evals = 0;
     tmp_params = ml_params;
+    err_count = 0;
+    errors = NaN(nestim, 1);
+    
     chi2 = chi2score(ml_params(fit_params));
 
     for i=1:nestim
+      err_count = 0;
       %orig = noiseless .* (1+0.2*randn(size(noiseless)));
       noisy_params = ml_params(fit_params) .* (1+0.1*randn(size(fit_params)));
 
@@ -78,10 +81,11 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
       %L = sum(((orig(:) - noiseless(:)) / temp).^2);
       L = chi2score(noisy_params);
       chi2diff(i) = L - chi2;
+      errors(i) = err_count;
       fprintf(1, '.');
     end
     
-    save(['chi2-' num2str(uuid) '.mat'], 'chi2diff', 'func_evals', 'err_count', 'temp', 'fit_params');
+    save(['chi2-' num2str(uuid) '.mat'], 'chi2diff', 'func_evals', 'errors', 'temp', 'fit_params');
   else
 
     nparams = numel(fit_params);

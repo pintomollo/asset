@@ -61,6 +61,8 @@ function opts = load_parameters(opts, fname)
 
     % Otherwise we ran out of options
     else
+      warning([Configuration file ''' fname ''' could not be found.'])
+
       return;
     end
   end
