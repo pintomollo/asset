@@ -81,7 +81,7 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
       fprintf(1, '.');
     end
     
-    save(['ple-' num2str(uuid) '.mat'], 'chi2diff', 'func_evals', 'err_count', 'temp', 'fit_params');
+    save(['chi2-' num2str(uuid) '.mat'], 'chi2diff', 'func_evals', 'err_count', 'temp', 'fit_params');
   else
 
     nparams = numel(fit_params);
