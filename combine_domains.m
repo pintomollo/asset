@@ -1,4 +1,4 @@
-function [res, pos] = combine_domains(mymovies, min_num)
+function [res, vars, pos] = combine_domains(mymovies, min_num)
   %close all;
   %fname = regexprep(mymovies, '\*', '');
 
@@ -91,6 +91,7 @@ function [res, pos] = combine_domains(mymovies, min_num)
   all_cytok = 0;
   tmp_res = [];
   res = [];
+  vars = [];
   count = [];
 
   for i=1:nmovies
@@ -102,7 +103,7 @@ function [res, pos] = combine_domains(mymovies, min_num)
     end
     opts = load_parameters(opts, 'domain_center.txt');
     mymovie.data.domain = dynamic_programming(domain, opts.quantification.params, @weight_symmetry, opts.quantification.weights, opts);
-    [domain, pos, indx] = align_domain(mymovie, opts);
+    [domain, ruffles, pos, indx] = align_domain(mymovie, opts);
     boundary = min(indx - 1, size(domain, 2) - indx);
     time = get_manual_timing(mymovie, opts);
     if (all(isnan(time)))
@@ -110,42 +111,57 @@ function [res, pos] = combine_domains(mymovies, min_num)
 
       continue;
     end
-    time = time(end);
-    domain = domain(:,[-boundary:boundary]+indx);
+
+    fraction = domain_expansion(domain, indx, time(end));
+    align_time = find(fraction >  0.85, 1, 'first');
+    maintenance = time(end) - align_time;
+    time = align_time;
+    %time = time(end);
+
+    %domain = domain(:,[-boundary:boundary]+indx);
+    domain = ruffles(:,[-boundary:boundary]+indx);
     indx = boundary + 1;
     valids = ~isnan(domain);
 
     if (i == 1)
       all_indx = indx;
-      all_cytok = time;
+      all_align = time;
+      all_maintenance = maintenance;
       tmp_res = domain;
       tmp_res(~valids) = 0;
+      vars = tmp_res.^2;
       res = tmp_res;
       count = double(valids);
     else
       if (boundary >= all_indx)
         tmp_res = padarray(tmp_res, [0 boundary - all_indx + 1], 0, 'both');
         count = padarray(count, [0 boundary - all_indx + 1], 0, 'both');
+        vars = padarray(vars, [0 boundary - all_indx + 1], 0, 'both');
         all_indx = boundary + 1;
       end
-      if (time > all_cytok)
-        tmp_res = padarray(tmp_res, [time - all_cytok 0], 0, 'pre');
-        count = padarray(count, [time - all_cytok 0], 0, 'pre');
-        all_cytok = time;
+      if (time > all_align)
+        tmp_res = padarray(tmp_res, [time - all_align 0], 0, 'pre');
+        count = padarray(count, [time - all_align 0], 0, 'pre');
+        vars = padarray(vars, [time - all_align 0], 0, 'pre');
+        all_align = time;
+      end
+      if (maintenance < all_maintenance)
+        all_maintenance = maintenance;
       end
       ends = size(domain, 1) - time;
-      all_ends = size(tmp_res, 1) - all_cytok;
+      all_ends = size(tmp_res, 1) - all_align;
 
       if (ends > all_ends)
         tmp_res = padarray(tmp_res, [ends - all_ends 0], 0, 'post');
         count = padarray(count, [ends - all_ends 0], 0, 'post');
+        vars = padarray(vars, [ends - all_ends 0], 0, 'post');
         all_ends = ends;
       end
 
       res = tmp_res ./ count;
 
       width = all_indx - boundary;
-      start = all_cytok - time + 1;
+      start = all_align - time + 1;
       ends = all_ends - ends;
 
       window = res([start:end-ends], [width:end-width+1]);
@@ -154,6 +170,7 @@ function [res, pos] = combine_domains(mymovies, min_num)
       domain(~valids) = 0;
 
       tmp_res([start:end-ends], [width:end-width+1]) = tmp_res([start:end-ends], [width:end-width+1]) + domain;
+      vars([start:end-ends], [width:end-width+1]) = vars([start:end-ends], [width:end-width+1]) + domain.^2;
       count([start:end-ends], [width:end-width+1]) = count([start:end-ends], [width:end-width+1]) + double(valids);
 
 
@@ -178,8 +195,10 @@ function [res, pos] = combine_domains(mymovies, min_num)
     %imagesc(res(:,:,i));
     %saveas(gca, [mymovies{i}(1:end-5) '-norm.png']);
   end
+  vars = vars ./ count;
   res = tmp_res ./ count;
   valids = any(isnan(res), 1);
+  vars = sqrt(vars - res.^2) ./ sqrt(count);
 
   first = all_indx - find(valids(1:all_indx), 1, 'last');
   last = find(valids(all_indx:end), 1, 'first') - 1;
@@ -187,7 +206,10 @@ function [res, pos] = combine_domains(mymovies, min_num)
 
   first = find(max(count, [], 2) >= min_num, 1, 'first');
 
-  res = imnorm(res([first:all_cytok],[-boundary:boundary]+all_indx));
+  res = (res([first:all_align+all_maintenance],[-boundary:boundary]+all_indx));
+  vars = (vars([first:all_align+all_maintenance],[-boundary:boundary]+all_indx));
+  %res = (res([first:all_align],[-boundary:boundary]+all_indx));
+  %vars = (vars([first:all_align],[-boundary:boundary]+all_indx));
   pos = [-boundary:boundary] * median(diff(pos));
 
   %[val1, errs] = mymean(res, 3);

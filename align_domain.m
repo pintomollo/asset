@@ -9,7 +9,7 @@ function [domain, pos, center_indx] = align_domain(mymovie, opts, path)
   end
 
   if (isstruct(mymovie))
-    [img, pos] = gather_quantification(mymovie, opts);
+    [img, ruffles, pos] = gather_quantification(mymovie, opts);
   else
     img = mymovie;
     pos = [1:size(img, 2)];

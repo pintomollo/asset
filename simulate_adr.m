@@ -14,24 +14,33 @@ function [all_x, all_m] = simulate_adr(x0, opts)
     x0 = [];
   end
 
+  %opts.nparticles = 1024;
+
   if (isempty(x0))
     x0 = opts.init_params;
     x0 = repmat(x0, [opts.nparticles, 1]);
   end
+  %x0 = bsxfun(@times, [1:opts.nparticles].'/opts.nparticles, x0);
 
   all_params = [opts.diffusion_params; ...
                 opts.reaction_params];
 
   flow = opts.advection_params;
+  
+  %opts.tmax = 30;
+  %opts.output_rate = 1;
+  %flow = [1:6].' * [1:0.5:4];
+  %flow = zeros(3, 10);
 
   if (size(flow, 1) ~= size(x0, 1))
     [X, Y] = meshgrid([1:size(flow, 1)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
 
-  [all_m, t] = simulate_model(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data);
+  [all_m, t] = simulate_model(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+  all_x = all_m;
 
-  %return;
+  return;
 
   order = 2;
   scheme = 2;

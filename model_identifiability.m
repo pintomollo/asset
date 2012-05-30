@@ -49,7 +49,7 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params(1:end-2, :)];
 
-  [orig, orig_t] = simulate_model(x0, [ml_params; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data);
+  [orig, orig_t] = simulate_model(x0, [ml_params; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
   orig = orig((end/2)+1:end, :);
 
   penalty = -((3*max(orig(:)))^2)*opts.nparticles/2;
@@ -64,17 +64,19 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   if (test_distribution)
     opt = optimset('Display','off', 'Algorithm', 'levenberg-marquardt', 'MaxFunEvals', 5000, 'MaxIter', 5000);
     chi2diff = NaN(nestim, 1);
-    noiseless = orig;
+    %noiseless = orig;
     err_count = 0;
     func_evals = 0;
     tmp_params = ml_params;
+    chi2 = chi2score(ml_params(fit_params));
 
     for i=1:nestim
-      orig = noiseless .* (1+0.2*randn(size(noiseless)));
+      %orig = noiseless .* (1+0.2*randn(size(noiseless)));
       noisy_params = ml_params(fit_params) .* (1+0.1*randn(size(fit_params)));
 
-      [best, chi2] = lsqnonlin(@chi2score, noisy_params, [], [], opt);
-      L = sum(((orig(:) - noiseless(:)) / temp).^2);
+      %[best, chi2] = lsqnonlin(@chi2score, noisy_params, [], [], opt);
+      %L = sum(((orig(:) - noiseless(:)) / temp).^2);
+      L = chi2score(noisy_params);
       chi2diff(i) = L - chi2;
       fprintf(1, '.');
     end
@@ -105,7 +107,7 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
     func_evals = func_evals + 1;
 
     tmp_params(fit_params) = params;
-    [res, t] = simulate_model(x0, [tmp_params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data);
+    [res, t] = simulate_model(x0, [tmp_params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
     res = res((end/2)+1:end, :);
     if (length(t) ~= length(orig_t))
       res = interp1q(t.', res.', orig_t.').';

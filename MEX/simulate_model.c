@@ -4,7 +4,7 @@
 #include "mex.h"
 
 #define MOD(x, y) ((x) - (y) * floor((double)(x) / (double)(y)))
-#define max(x, y) ((x) > (y) ? (x) : (y))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
 
 static double finite_difference(double *x, double *dx, double h, int npop, int npts, int order) {
 
@@ -34,9 +34,6 @@ static double finite_difference(double *x, double *dx, double h, int npop, int n
         dxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) / ddnorm;
       }
 
-      //if (p==1)
-      //  fprintf(fid, "%f %f\n", dx[i], dxi[i]);
-
       if (max_val < fabs(dxi[i])) {
         max_val = fabs(dxi[i]);
       }
@@ -53,7 +50,6 @@ static double finite_difference(double *x, double *dx, double h, int npop, int n
       }
     }
   }
-  //fprintf(fid, "........................\n");
 
   return;
 }
@@ -116,19 +112,50 @@ static void trapezoidal_integral(double *x, double h, double *ints, int npts, in
   return;
 }
 
+static void reactions(double *x, double *x_prev, double *dx, double *ddx, double *cyto, double *params, double dt, int npts, int npops, int nparams) {
+
+  double *xi, *xi_prev, *dxi, *ddxi, *paramsi;
+  int i, p, ntotal, incr;
+
+  ntotal = npts*npops;
+
+  for (p=0; p<npops; p++) {
+    incr = npts*p;
+    xi = x + incr;
+    xi_prev = x_prev + incr;
+    dxi = dx + incr;
+    ddxi = ddx + incr;
+    paramsi = params + nparams*p;
+
+    incr += npts;
+
+    cyto[p] = paramsi[5] - cyto[p] * (paramsi[6] / paramsi[7]);
+
+    for (i=0;i<npts;i++) {
+      xi[i] = xi_prev[i] + dt*(
+             paramsi[0]*ddxi[i] + 
+             paramsi[1]*cyto[p] - 
+             paramsi[2]*xi_prev[i] - 
+             paramsi[3]*xi_prev[i]*pow(x_prev[(int)MOD(i + incr, ntotal)], paramsi[4]) - 
+             dxi[i]);
+    }
+  }
+
+  return;
+}
+
 /* x0, dt, tmax, */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   double *time, *concentr, *flow, *current_flow, *x, *dx, *ddx, tmax, output_rate,
          dt, current_dt, t = 0, t_flow, x_step, *x0, *params, *cyto, *x_prev, *tmp,
          *simulation, *timing, clf_const;
-  int ntimes, count = 1, npts, npops, page_size = 500, nflow, nparams, i;
+  int ntimes, count = 1, npts, npops, page_size = 500, nflow, nparams, i, j, niter;
   bool saved = false;
   mwSize m, n;
-  FILE *fid;
 
-  if (nrhs != 8) {
-    mexErrMsgTxt("Simulation requires 8 input arguments !");
+  if (nrhs != 9) {
+    mexErrMsgTxt("Simulation requires 9 input arguments !");
   } else {
 
     x0 = mxGetPr(prhs[0]);
@@ -150,8 +177,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mexErrMsgTxt("A time step has to be defined");
     }
 
-    if (max(params[1], params[1+npts])*dt*3 / pow(x_step, 2) >= 1) {
-      dt = pow(x_step, 2) / (3*max(params[1], params[1+npts]));
+    if (MAX(params[0], params[0+npts])*dt*3 / pow(x_step, 2) >= 1) {
+      dt = pow(x_step, 2) / (3*MAX(params[0], params[0+nparams]));
     }
 
     flow = mxGetPr(prhs[6]);
@@ -162,6 +189,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     t_flow = mxGetScalar(prhs[7]);
     ntimes = ceil(tmax / output_rate) + 1;
+
+    niter = (int)(mxGetScalar(prhs[8]));
 
     if ((x = mxCalloc(npts*npops, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
@@ -192,11 +221,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     memcpy(x, x0, npops*npts*sizeof(double));
     timing[0] = 0;
 
-  //fid = fopen("data1.txt", "w");
-
-    while (t < tmax) {
-
-      fflush(NULL);
+    for (j = 0; j < niter; j++) {
       saved = false;
       current_dt = dt;
 
@@ -213,34 +238,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       x_prev = x;
       x = tmp;
 
-      cyto[0] = params[5] - cyto[0] * (params[6] / params[7]);
-      cyto[1] = params[5 + nparams] - cyto[1] * (params[6 + nparams] / params[7 + nparams]);
-
-      for (i = 0; i<npts; i++) {
-        x[i] = x_prev[i] + current_dt*(
-               params[0]*ddx[i] + 
-               params[1]*cyto[0] - 
-               params[2]*x_prev[i] - 
-               params[3]*x_prev[i]*pow(x_prev[i + npts], params[4]) - 
-               dx[i]);
-
-        x[i+npts] = x_prev[i+npts] + current_dt*(
-               params[0 + nparams]*ddx[i+npts] + 
-               params[1 + nparams]*cyto[1] - 
-               params[2 + nparams]*x_prev[i+npts] - 
-               params[3 + nparams]*pow(x_prev[i], params[4 + nparams])*x_prev[i + npts] - 
-               dx[i+npts]);
-
-/*        fprintf(fid, "%f %f\n", params[1]*cyto[0] - 
-               params[2]*x_prev[i] - 
-               params[3]*x_prev[i]*pow(x_prev[i + npts], params[4]),
-               params[1 + nparams]*cyto[1] - 
-               params[2 + nparams]*x_prev[i+npts] - 
-               params[3 + nparams]*pow(x_prev[i], params[4 + nparams])*x_prev[i + npts]);*/
-
-      }
- //     fprintf(fid, "||||||||||||||||||||||||\n");
-
+      reactions(x, x_prev, dx, ddx, cyto, params, current_dt, npts, npops, nparams);
       t += current_dt;
 
       if (MOD(t-current_dt, output_rate) >= MOD(t, output_rate)) {
@@ -260,12 +258,19 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
           }
         }
       }
+
+      if (t > tmax) {
+        break;
+      }
     }
     if (~saved) {
       memcpy(simulation+count*(npops*npts), x, npops*npts*sizeof(double));
       timing[count] = t;
     } else {
       count--;
+    }
+    if (j == niter) {
+      mexWarnMsgTxt("Simulation reached the iteration limit !");
     }
 
     plhs[0] = mxCreateDoubleMatrix(npops*npts, count, mxREAL);
@@ -283,8 +288,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mxFree(current_flow);
     mxFree(simulation);
     mxFree(timing);
-
-    //fclose(fid);
   }
 
   return;
