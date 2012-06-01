@@ -1,10 +1,14 @@
-function metropolis_hastings(param_set, temp)
+function metropolis_hastings(param_set, temp, max_iter)
 
   if (nargin == 0)
     param_set = 1;
     temp = 100;
+    max_iter = 10000;
   elseif (nargin == 1)
     temp = 100;
+    max_iter = 10000;
+  elseif (nargin == 2)
+    max_iter = 10000;
   end
 
   switch param_set
@@ -37,7 +41,7 @@ function metropolis_hastings(param_set, temp)
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params(1:end-2, :)];
 
-  [orig, orig_t] = simulate_model(x0, [ml_params; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data);
+  [orig, orig_t] = simulate_model(x0, [ml_params; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
   orig = orig((end/2)+1:end, :);
 
   penalty = -((3*max(orig(:)))^2)*opts.nparticles/2;
@@ -47,7 +51,6 @@ function metropolis_hastings(param_set, temp)
   ml_params = ml_params ./ rescaling;
 
   init_noise = 0.1;
-  max_iter = 10000;
   ndiscard = 0;
   step_size = 0.01;
   size_params = length(fit_params);
@@ -55,18 +58,19 @@ function metropolis_hastings(param_set, temp)
   uuid = now + cputime;
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
   fid = fopen(['mcmc-' num2str(uuid) '.txt'], 'w');
-  fprintf(fid, '0 (-1, 0) :');
+  fprintf(fid, '0 (-1, 0, 0) :');
   fprintf(fid, ' %f', ml_params);
   fprintf(fid, '\n');
 
   display(['Working ID ' num2str(uuid)]);
 
+  has_error = 0;
   tmp_params = ml_params;
   new_params = ml_params;
 
   tmp_params(fit_params) = exp(log(ml_params(fit_params)) + init_noise*randn(1, size_params));
   best_score = likelihood(tmp_params);
-  fprintf(fid, '%e (0, 0) :', best_score);
+  fprintf(fid, '%e (0, 0, 0) :', best_score);
   fprintf(fid, ' %f', tmp_params);
   fprintf(fid, '\n');
 
@@ -83,7 +87,7 @@ function metropolis_hastings(param_set, temp)
       ndiscard = ndiscard + 1;
     end
 
-    fprintf(fid, '%e (%d, %d) :', new_score, i, ndiscard);
+    fprintf(fid, '%e (%d, %d, %d) :', new_score, i, ndiscard, has_error);
     fprintf(fid, ' %f', new_params);
     fprintf(fid, '\n');
   end
@@ -100,23 +104,16 @@ function metropolis_hastings(param_set, temp)
     %end
 
     %[res, t] = simulate_model(x0, [params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step / stepping, opts.output_rate, flow, opts.user_data);
-    [res, t] = simulate_model(x0, [params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data);
+    [res, t] = simulate_model(x0, [params .* rescaling; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
     res = res((end/2)+1:end, :);
     if (length(t) ~= length(orig_t))
       res = interp1q(t.', res.', orig_t.').';
     end
 
     L = sum(-((orig - res).^2) / 2);
+    has_error = sum(isnan(L(:)));
     L(isnan(L)) = penalty;
     L = sum(L)/temp;
-    %if (isnan(L))
-    %  stepping = 2*stepping;
-    %  if (stepping > 8)
-    %    L = -Inf;
-    %  else
-    %    L = likelihood(params, stepping);
-    %  end
-    %end
 
     return;
   end
