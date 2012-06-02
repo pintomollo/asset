@@ -1,14 +1,19 @@
-function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nsteps)
+function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nsteps, noisy)
 
   if (nargin == 0)
     param_set = 1;
     temp = 10;
     nsteps = 20;
+    noisy = false;
   elseif (nargin == 1)
     temp = 10;
     nsteps = 20;
+    noisy = false;
   elseif (nargin == 2)
     nsteps = 20;
+    noisy = false;
+  elseif (nargin == 3)
+    noisy = false;
   end
 
   test_distribution = false;
@@ -51,6 +56,11 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
 
   [orig, orig_t] = simulate_model(x0, [ml_params; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
   orig = orig((end/2)+1:end, :);
+
+  if (noisy)
+    size_data = size(orig);
+    range_data = 0.15 * range(orig(:));
+  end
 
   penalty = -((3*max(orig(:)))^2)*opts.nparticles/2;
 
@@ -117,7 +127,11 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
       res = interp1q(t.', res.', orig_t.').';
     end
 
-    L = sum(((orig - res) / temp).^2);
+    if (noisy)
+      L = sum(((orig + randn(size_data)*range_data - res) / temp).^2);
+    else
+      L = sum(((orig - res) / temp).^2);
+    end
     err_count = err_count + any(isnan(L(:)));
     L(isnan(L)) = penalty;
     L = sum(L);
