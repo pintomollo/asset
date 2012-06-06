@@ -55,6 +55,8 @@ function metropolis_hastings(param_set, temp, max_iter)
   step_size = 0.01;
   size_params = length(fit_params);
 
+  temp_norm = 1/(temp^2);
+
   uuid = now + cputime;
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
   fid = fopen(['mcmc-' num2str(uuid) '.txt'], 'w');
@@ -112,8 +114,8 @@ function metropolis_hastings(param_set, temp, max_iter)
 
     L = sum(-((orig - res).^2) / 2);
     has_error = sum(isnan(L(:)));
-    L(isnan(L)) = penalty;
-    L = sum(L)/temp;
+    L(~isfinite(L)) = penalty;
+    L = sum(L) * temp_norm;
 
     return;
   end

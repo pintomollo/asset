@@ -147,7 +147,7 @@ function [p, chi2] = fit_func(p, jk, func, varargin)
 
   index = [1:length(p)];
   fitted = (index ~= jk);
-  [best, chi2] = lsqnonlin(@generic_func, p(fitted), [], [], opts);
+  [best, junk, chi2] = lsqnonlin(@generic_func, p(fitted), [], [], opts);
   p(fitted) = best;
 
   return;

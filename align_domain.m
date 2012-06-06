@@ -1,4 +1,4 @@
-function [domain, pos, center_indx] = align_domain(mymovie, opts, path)
+function [domain, ruffles, pos, center_indx] = align_domain(mymovie, opts, path)
 
   if (nargin == 3)
     tmp = path;

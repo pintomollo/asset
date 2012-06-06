@@ -20,9 +20,8 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   if (param_set < 0)
     param_set = -param_set;
     test_distribution = true;
+    noisy = true;
   end
-
-  nestim = 200;
 
   switch param_set
     case 2
@@ -60,37 +59,43 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   if (noisy)
     size_data = size(orig);
     range_data = 0.15 * range(orig(:));
+    temp = range_data;
   end
 
-  penalty = -((3*max(orig(:)))^2)*opts.nparticles/2;
+  penalty = ((3*max(orig(:)))^2)*opts.nparticles/2;
 
   rescaling = 10.^(floor(log10(ml_params)));
   rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
 
+  temp_norm = 1/(temp^2);
+
   uuid = now + cputime;
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
   
   if (test_distribution)
-    %opt = optimset('Display','off', 'Algorithm', 'levenberg-marquardt', 'MaxFunEvals', 5000, 'MaxIter', 5000);
-    chi2diff = NaN(nestim, 1);
-    %noiseless = orig;
+    noisy = false;
+
+    opt = optimset('Display','off', 'Algorithm', 'levenberg-marquardt', 'MaxFunEvals', 5000, 'MaxIter', 5000);
+    chi2diff = NaN(nsteps, 1);
+    noiseless = orig;
     func_evals = 0;
     tmp_params = ml_params;
     err_count = 0;
-    errors = NaN(nestim, 1);
+    errors = NaN(nsteps, 1);
     
-    chi2 = chi2score(ml_params(fit_params));
-
-    for i=1:nestim
+    for i=1:nsteps
       err_count = 0;
-      %orig = noiseless .* (1+0.2*randn(size(noiseless)));
+      orig = noiseless + range_data*randn(size_data);
+      chi2 = chi2score(ml_params(fit_params));
+
       noisy_params = ml_params(fit_params) .* (1+0.1*randn(size(fit_params)));
 
-      %[best, chi2] = lsqnonlin(@chi2score, noisy_params, [], [], opt);
+      [best, junk, Loptim] = lsqnonlin(@chi2score, ml_params(fit_params), [], [], opt);
+      %[best, junk, Loptim] = lsqnonlin(@chi2score, noisy_params, [], [], opt);
       %L = sum(((orig(:) - noiseless(:)) / temp).^2);
-      L = chi2score(noisy_params);
-      chi2diff(i) = L - chi2;
+      %L = chi2score(noisy_params);
+      chi2diff(i) = chi2 - Loptim;
       errors(i) = err_count;
       fprintf(1, '.');
     end
@@ -128,13 +133,13 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
     end
 
     if (noisy)
-      L = sum(((orig + randn(size_data)*range_data - res) / temp).^2);
+      L = sum((orig + randn(size_data)*range_data - res).^2);
     else
-      L = sum(((orig - res) / temp).^2);
+      L = sum((orig - res).^2);
     end
     err_count = err_count + any(isnan(L(:)));
-    L(isnan(L)) = penalty;
-    L = sum(L);
+    L(~isfinite(L)) = penalty;
+    L = sum(L) * temp_norm;
 
     return;
   end

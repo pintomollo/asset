@@ -88,6 +88,8 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
         else
           data{j, 1} = prev_indx;
         end
+      elseif (numel(files) > 1)
+        warning(['Too many files associated with pattern ' pattern]);
       else
         warning(['Cannot identify the file associated with pattern ' pattern]);
       end

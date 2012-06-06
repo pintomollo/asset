@@ -157,7 +157,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
   if (nargout == 3)
     tmp = theta;
     theta = ruffles;
-    ruffles = theta;
+    ruffles = tmp;
   end
 
   return;
