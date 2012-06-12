@@ -122,7 +122,7 @@ function [new_angles, path] = interp_elliptic(varargin)
   % If we did some re-sampling and had to re-align the vector, switch back to its
   % original alignment
   if (is_resampling && ~isempty(resample_indx))
-    resample_indx = resample_indx * (2^new_angle);
+    resample_indx = resample_indx * (2^resample);
 
     path = path([end-resample_indx+1:end 1:end-resample_indx], :);
     new_angles = new_angles([end-resample_indx+1:end 1:end-resample_indx], :);

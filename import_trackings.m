@@ -256,7 +256,7 @@ function trackings = check_trackings(trackings, max_frames, verbosity)
     % In case of missing frames at the end of the tracking, we would miss them and could have
     % indexing problems so we substitute them with empty cells
     if (nframes < max_frames)
-      trackings.shapes = [tmp_child(i).shapes cell([ngroups, max_frames - nframes])];
+      trackings.shapes = [trackings.shapes cell([ngroups, max_frames - nframes])];
       nframes = max_frames;
     end
     
