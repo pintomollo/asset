@@ -4,7 +4,7 @@ function [trackings] = mean_trackings(trackings, opts, hwait)
     if (nargin == 1)
       opts = get_struct('ASSET');
     end
-    if (opts.verbosity > 0)
+    if (opts.verbosity > 1)
       hwait = waitbar(0, 'Computing tracking means', 'Name', 'ASSET');
     else
       hwait = [];
@@ -15,6 +15,9 @@ function [trackings] = mean_trackings(trackings, opts, hwait)
     nsteps = get(hwait, 'UserData');
     nindx = nsteps(2);
     nsteps = nsteps(1);
+  else
+    nsteps = 1;
+    nindx = 0;
   end
 
   means = {[]};
@@ -46,14 +49,18 @@ function [trackings] = mean_trackings(trackings, opts, hwait)
       [m,n] = size(tmp_paths);
       means(1:m,1:n,i) = tmp_paths;
     else
-      set(hwait, 'UserData', [nsteps (nindx + (i-1)/nsteps)])
+      if (opts.verbosity > 1)
+        set(hwait, 'UserData', [nsteps (nindx + (i-1)/nsteps)])
+      end
       trackings.child(i) = mean_trackings(trackings.child(i), opts, hwait);
 
       [m,n] = size(trackings.child(i).average);
       means(1:m,1:n,i) = trackings.child(i).average;
     end
 
-    waitbar(nindx + (i / nsteps), hwait);
+    if (opts.verbosity > 1)
+      waitbar(nindx + (i / nsteps), hwait);
+    end
   end
 
   if (nchilds > 1)
@@ -62,7 +69,7 @@ function [trackings] = mean_trackings(trackings, opts, hwait)
     trackings.average = means;
   end
   
-  if (nargin < 3)
+  if (nargin < 3 & opts.verbosity > 1)
     close(hwait);
   end
 

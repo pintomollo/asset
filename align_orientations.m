@@ -14,65 +14,60 @@ function orients = align_orientations(orients, aim, dim)
     mystruct = [];
   end
 
-  if (nargin < 3)
-    if (ndims(orients) <= 2 && size(orients,2) > 1)
-      orients = orients.';
-    end
-
+  if (nargin == 1)
+    dim = 1;
+    aim = [];
+  elseif (nargin == 2)
     dim = 1;
   end
-  if (nargin < 2 | isempty(aim))
-    aim = NaN;
+
+  orient_size = size(orients);
+  if (dim == 1 & orient_size(dim) == 1)
+    dim = find(orient_size > 1, 1);
+
+    if (isempty(dim))
+      return;
+    end
+  elseif (dim > numel(orient_size) | orient_size(dim) == 1)
+    return;
   end
-  last_dim = ndims(orients) + 1;
-  if (last_dim == 3 && size(orients, 2) == 1)
-      last_dim = 2;
-  end
 
-  % Test
-  
-  [m, n, o, p, q] = size(orients);
-  orient_size = [m, n, o, p, q];
+  perm_dim = [1:length(orient_size)];
+  perm_dim(dim) = 1;
+  perm_dim(1) = dim;
 
-  rep_size = ones(1, last_dim);
-  rep_size(dim) = orient_size(dim);
-  rep_size(last_dim) = 3;
+  orients = permute(orients, perm_dim);
+  orients = reshape(orients, orient_size(dim), []);
+  valids = isfinite(orients);
+  orients(~valids) = 0;
 
-  if (isnan(aim))
-    avg = median(orients, dim);
+  if (isfinite(aim))
+    if (numel(aim) ~= 1)
+      aim = permute(aim, perm_dim);
+      aim = reshape(aim, orient_size(dim), []);
+      aim = [aim;, repmat(aim(1,:), orient_size(dim) - size(aim, 1), 1)];
+    end
+    aim = aim(valids, :);
   else
-    avg = aim;
+    sorts = sort(orients, 1);
+    aim = sorts(ceil(orient_size(dim)/2), :);
   end
-  orients = cat(last_dim, orients, (orients - pi), (orients + pi));
-  dist = abs(orients - repmat(avg, rep_size));
 
-  orient_size(last_dim) = 3;
+  orients = cat(3, orients, (orients - pi), (orients + pi));
+  dist = abs(bsxfun(@minus, orients, aim));
 
-  [junk, indx] = min(dist,[],last_dim);
-  str = 'indx = sub2ind(size(orients)';
-  for i=1:last_dim-1
-        tmp_size = orient_size;
-        tmp_size(i) = 1;
-        tmp_size(last_dim) = 1;
-      
-        vect_size = ones(1,last_dim);
-        vect_size(i) = orient_size(i);
-      
-        dim_indx = reshape(1:orient_size(i), vect_size);
-        dim_indx = repmat(dim_indx, tmp_size);
-        
-      str = [str ', [' num2str(dim_indx(:).') ']'];
-  end
-  
-  eval([str ', [' num2str(indx(:).') ']);']);
-  
-  orient_size(last_dim) = 1;
-  orients = reshape(orients(indx), orig_size);
+  sizes = size(dist);
 
-  if (~isempty(mystruct))
-    mystruct.orientations = orients;
-    orients = mystruct;
-  end
+  [junk, mins] = min(dist, [], 3);
+  i = repmat([1:sizes(1)].', 1, sizes(2));
+  j = repmat([1:sizes(2)], sizes(1), 1);
+  indexes = sub2ind(sizes, i, j, mins);
+
+  orients = orients(indexes);
+  orients(~valids) = NaN;
+
+  orients = reshape(orients, orient_size(perm_dim));
+  orients = ipermute(orients, perm_dim);
 
   return;
 end

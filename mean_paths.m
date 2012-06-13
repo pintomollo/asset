@@ -103,7 +103,12 @@ function [mean_path] = mean_paths(paths, varargin)
         switch type
           case 'radial'
             tmp_path = carth2elliptic(tmp_path, squeeze(center(t,f,1,:)), squeeze(axes_length(t,f,1,:)), orientation(t,f,1,1));
+
+            try
             pts = interp_elliptic(tmp_path, pts_pos);
+            catch
+              keyboard
+            end
             pts = pts(:,1:2);
           case 'linear'
             pts = interp1q(dist{t,f,i}, tmp_path, pts_pos);
@@ -114,7 +119,6 @@ function [mean_path] = mean_paths(paths, varargin)
       end
 
       if (isempty(all_pts))
-
         continue;
       else
         nall = size(all_pts, 3);

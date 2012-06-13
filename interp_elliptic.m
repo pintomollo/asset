@@ -35,7 +35,7 @@ function [new_angles, path] = interp_elliptic(varargin)
 
     % Re-aling the positions as the interpolation works only with monotonically
     % increasing positions
-    resample_indx = find(orig_angles(1:end-1) > orig_angles(2:end), 1);
+    resample_indx = find(orig_angles(1:end-1) - orig_angles(2:end) > 0.5*drange, 1);
     if (~isempty(resample_indx))
       orig_angles = orig_angles([resample_indx+1:end 1:resample_indx]);
       orig_values = orig_values([resample_indx+1:end 1:resample_indx], :);
@@ -44,27 +44,43 @@ function [new_angles, path] = interp_elliptic(varargin)
     % Prepare the temporary variables that we need to re-sample
     resample = new_angles;
     new_angles = orig_angles;
+    new_values = orig_values;
 
     % At each loop we'll increase the sampling by 2
     for i = 1:resample
 
       % Create the new vector
       tmp_new_angles = NaN(size(new_angles,1)*2, 1);
+      tmp_new_values = NaN(size(new_values,1)*2, size(new_values, 2));
 
       % Compute the very last element, to get periodicity
       first = new_angles(1);
       first = first + drange;
+      first_val = new_values(1,:);
 
       % Simply average the following positions to get the newer intermediater one
       mean_new_angles = mean([new_angles,[new_angles(2:end,:); first]], 2);
+      mean_new_values = mean(cat(3,new_values,[new_values(2:end,:); first_val]), 3);
 
       % Store them
       tmp_new_angles(1:2:end-1,:) = new_angles;
       tmp_new_angles(2:2:end,:) = mean_new_angles;
+      tmp_new_values(1:2:end-1,:) = new_values;
+      tmp_new_values(2:2:end,:) = mean_new_values;
 
       % Use this new position vector as the interpolation "target"
       new_angles = tmp_new_angles;
+      new_values = tmp_new_values;
     end
+    path = new_values;
+
+    % If we have only one output, combine both
+    if (nargout == 1)
+      new_angles = [new_angles path];
+      path = [];
+    end
+
+    return;
   end
 
   % Measure the average angle difference between neighboring points
@@ -97,7 +113,6 @@ function [new_angles, path] = interp_elliptic(varargin)
 
   if (length(indx) > 1)
     warning('Non-monotonic angular values, interpolation can produce incoherent values');
-    keyboard
   elseif (~isempty(indx))
     orig_angles = orig_angles([indx+1:end 1:indx]);
     orig_values = orig_values([indx+1:end 1:indx], :);
