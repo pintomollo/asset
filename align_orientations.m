@@ -69,5 +69,10 @@ function orients = align_orientations(orients, aim, dim)
   orients = reshape(orients, orient_size(perm_dim));
   orients = ipermute(orients, perm_dim);
 
+  if (~isempty(mystruct))
+    mystruct.orientations = orients;
+    orients = mystruct;
+  end
+
   return;
 end

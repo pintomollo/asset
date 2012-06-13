@@ -5,7 +5,11 @@ function mymovie = align_embryo(mymovie, opts)
     [nframes, imgsize] = size_data(mymovie.cortex);
   else
     type = 'dic';
+    try
     [nframes, imgsize] = size_data(mymovie.dic);
+    catch
+      beep;keyboard
+    end
   end
   
   mymovie = find_ruffles(mymovie, opts);

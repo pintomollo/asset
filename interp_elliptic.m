@@ -58,7 +58,7 @@ function [new_angles, path] = interp_elliptic(varargin)
       first = first + drange;
       first_val = new_values(1,:);
 
-      % Simply average the following positions to get the newer intermediater one
+      % Simply average the following values to get the newer intermediate ones
       mean_new_angles = mean([new_angles,[new_angles(2:end,:); first]], 2);
       mean_new_values = mean(cat(3,new_values,[new_values(2:end,:); first_val]), 3);
 
