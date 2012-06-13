@@ -19,7 +19,7 @@ function [mymovie, trackings] = analyze_segmentation(mymovie, trackings, opts)
     mymovie = tracing_error(trackings, mymovie, types{t}, opts);
 
     if (opts.auto_save)
-      save(mymovie.experiment, 'mymovie', 'trackings');
+      save(mymovie.experiment, 'mymovie', 'trackings', 'opts');
     end
   end
 

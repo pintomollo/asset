@@ -44,7 +44,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
   parameters = opts.segmentation_parameters.markers;
 
   img = [];
-  if (~isempty(mymovie.eggshell) & ( length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'eggshell', 8))))
+  if (~isempty(mymovie.eggshell) & ( length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3)))))
 
     update(1, nimg) = true;
 
@@ -130,7 +130,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
   end
 
   
-  if (~isempty(mymovie.cortex) & (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & strncmp(opts.ml_type, 'cortex', 6))))
+  if (~isempty(mymovie.cortex) & (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml,'none',4) & (strncmp(opts.ml_type, 'cortex', 6) | strncmp(opts.ml_type, 'all', 3)))))
 
     update(2, nimg) = true;
     img = imnorm(double(load_data(mymovie.cortex,nimg)));

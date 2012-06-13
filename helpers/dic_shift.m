@@ -11,7 +11,7 @@ function [best_coefs, shift, width] = dic_shift(mymovie, trackings)
 
   close all
 
-  [imgsize, nframes] = size_data(mymovie.dic);
+  [nframes,imgsize]  = size_data(mymovie.dic);
 
   centers = trackings.dic.reference.center;
   axes_length = trackings.dic.reference.axes_length;

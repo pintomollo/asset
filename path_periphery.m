@@ -20,7 +20,7 @@ function outside_paths = path_periphery(paths, varargin)
 % 17.05.2011
 
   % Parse the variable inputs and set the default values
-  [update, center, axes_length, orientation, opts] = parse_inputs(varargin{:});
+  [update, orig_center, orig_axes_length, orig_orientation, opts] = parse_inputs(varargin{:});
   was_cell = true;
 
   % We'll work only with cell matrix, so convert it in case
@@ -68,8 +68,10 @@ function outside_paths = path_periphery(paths, varargin)
         nbins = size(tmp_path, 1);
 
         % If we do not have the ellipse provided, estimate it
-        if (isempty(center))
+        if (isempty(orig_center))
           [center, axes_length, orientation] = fit_ellipse(tmp_path);
+        else
+          [center, axes_length, orientation] = deal(orig_center, orig_axes_length, orig_orientation);
         end
 
         % Create the elliptical positions at which we will resample the path

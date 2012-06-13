@@ -23,7 +23,7 @@ function mymovie = find_ruffles(mymovie, opts)
     opts.segmentation_parameters = set_image_size(opts.segmentation_parameters, imgsize);
   end
 
-  if (~opts.recompute && isfield(mymovie.(type), 'ruffles') && ~isempty(mymovie.(type).ruffles) && ~any(isnan(mymovie.(type).ruffles(1).carth)))
+  if (~opts.recompute && isfield(mymovie.(type), 'ruffles') && ~isempty(mymovie.(type).ruffles) && ~any(isnan(mymovie.(type).ruffles(1).carth(:))))
     return;
   end
 

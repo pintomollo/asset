@@ -8,7 +8,11 @@ function mymovie = tracing_error(trackings, mymovie, field, opts)
     segments = path_periphery(segments, update, opts);
   end
 
-  mymovie.(field).errors = path_error(trackings.(field).average, segments, mymovie.(field).update, trackings.(field).reference, opts);
+  if (isfield(mymovie.(field), 'errors') & ~isempty(mymovie.(field).errors))
+    mymovie.(field).errors = path_error(trackings.(field).average, segments, mymovie.(field).errors, mymovie.(field).update, trackings.(field).reference, opts);
+  else
+    mymovie.(field).errors = path_error(trackings.(field).average, segments, mymovie.(field).update, trackings.(field).reference, opts);
+  end
   mymovie.(field).update = false(size(mymovie.(field).update));
 
   return;

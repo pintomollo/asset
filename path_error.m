@@ -12,24 +12,27 @@ function errors = path_error(ref, paths, varargin)
   if (isempty(update))
     update = true(size(paths));
   end
-  if (isempty(orig_errors))
-    orig_errors = NaN(size(paths));
-  end
 
   theta = (2*pi) / nbins;
   bins = [0 0.5:nbins nbins] * theta;
   errors = NaN(ntypes, nframes, npaths, nbins);
+
+  if (isempty(orig_errors))
+    orig_errors = NaN(size(errors));
+  end
   
   for t=1:ntypes
+    %if (~opts.recompute)
     if (~any(update(t,:)) & ~opts.recompute)
-      errors(t,:,:,:) = orig_errors(t,:,:,:);
+      errors(t,:,:,:) = orig_errors(t,:,:,:)*2*pi;
 
       continue;
     end
 
     for f=1:nframes
+      %if (~opts.recompute)
       if (~update(t,f) & ~opts.recompute)
-        errors(t,f,:,:) = orig_errors(t,f,:,:);
+        errors(t,f,:,:) = orig_errors(t,f,:,:)*2*pi;
   
         continue;
       end
@@ -120,7 +123,7 @@ function [update, orig_errors, centers, axes_length, orientations, nbins, opts] 
         case 'bool'
           update = varargin{i};
         case 'num'
-          if (numel > 1)
+          if (numel(varargin{i}) > 1)
             orig_errors = varargin{i};
           else
             nbins = varargin{i};

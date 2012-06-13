@@ -159,11 +159,11 @@ modifier = event_data.Modifier;
 hfig = gcbf;
 handles = get(hfig,'UserData');
 if (isfield(handles.mymovie, 'dic'))
-  [junk, nframes] = size_data(handles.mymovie.dic);
+  [nframes] = size_data(handles.mymovie.dic);
 elseif (isfield(handles.mymovie, 'cortex'))
-  [junk, nframes] = size_data(handles.mymovie.cortex);
+  [nframes] = size_data(handles.mymovie.cortex);
 elseif (isfield(handles.mymovie, 'eggshell'))
-  [junk, nframes] = size_data(handles.mymovie.eggshell);
+  [nframes] = size_data(handles.mymovie.eggshell);
 end
 
 switch key
@@ -393,13 +393,13 @@ switch handles.type
 end
 
 if (~isempty(trackings))
-  ref_egg = fnplt(trackings.(handles.type).mean(1,handles.current))';
-  ref_cor = fnplt(trackings.(handles.type).mean(2,handles.current))';
+  ref_egg = trackings.(handles.type).average{1,handles.current};
+  ref_cor = trackings.(handles.type).average{2,handles.current};
 
-  tmp = mymovie.(handles.type).errors(1, handles.current, :, :);
-  err_egg = mymean(tmp(:));
-  tmp = mymovie.(handles.type).errors(2, handles.current, :, :);
-  err_cor = mymean(tmp(:));
+  %tmp = mymovie.(handles.type).errors(1, handles.current, :, :);
+  %err_egg = mymean(tmp(:));
+  %tmp = mymovie.(handles.type).errors(2, handles.current, :, :);
+  %err_cor = mymean(tmp(:));
 end
 
 values = extract_fields(mymovie, handles.current, handles.type, fields);

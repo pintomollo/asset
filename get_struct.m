@@ -392,6 +392,7 @@ function mystruct = get_struct(type, nstruct)
     % Structure containing the data from the manual trackings (see import_trackings.m)
     case 'tracking'
       mystruct = struct('child',[], ...                 % Children structures containing either groups of tracking or tracking files
+                        'average', [],  ...
                         'errors',[], ...                % Compute error to the average tracking
                         'expr','', ...                  % Regular expression used to find the children files for import
                         'name','', ...                  % Name of the manual trackings extracted from the filenames
