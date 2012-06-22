@@ -59,7 +59,7 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   if (noisy)
     size_data = size(orig);
     range_data = 0.15 * range(orig(:));
-    temp = range_data;
+    %temp = range_data;
   end
 
   penalty = ((3*max(orig(:)))^2)*opts.nparticles/2;

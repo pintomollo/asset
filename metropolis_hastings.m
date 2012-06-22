@@ -1,14 +1,24 @@
-function metropolis_hastings(param_set, temp, max_iter)
+function metropolis_hastings(param_set, temp, max_iter, add_noise)
 
   if (nargin == 0)
     param_set = 1;
     temp = 100;
     max_iter = 10000;
+    add_noise = false;
   elseif (nargin == 1)
     temp = 100;
     max_iter = 10000;
+    add_noise = false;
   elseif (nargin == 2)
     max_iter = 10000;
+    add_noise = false;
+  elseif (nargin == 3)
+    if (islogical(max_iter))
+      add_noise = max_iter;
+      max_iter = 10000;
+    else
+      add_noise = false;
+    end
   end
 
   switch param_set
@@ -43,6 +53,11 @@ function metropolis_hastings(param_set, temp, max_iter)
 
   [orig, orig_t] = simulate_model(x0, [ml_params; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
   orig = orig((end/2)+1:end, :);
+  
+  if (add_noise)
+    size_data = size(orig);
+    range_data = 0.15 * range(orig(:));
+  end
 
   penalty = -((3*max(orig(:)))^2)*opts.nparticles/2;
 
@@ -112,7 +127,11 @@ function metropolis_hastings(param_set, temp, max_iter)
       res = interp1q(t.', res.', orig_t.').';
     end
 
-    L = sum(-((orig - res).^2) / 2);
+    if (add_noise)
+      L = sum(-((orig + randn(size_data)*range_data - res).^2) / 2);
+    else
+      L = sum(-((orig - res).^2) / 2);
+    end
     has_error = sum(isnan(L(:)));
     L(~isfinite(L)) = penalty;
     L = sum(L) * temp_norm;
