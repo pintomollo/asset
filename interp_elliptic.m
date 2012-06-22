@@ -100,12 +100,21 @@ function [new_angles, path] = interp_elliptic(varargin)
   orig_angles(orig_angles > max_angle) = orig_angles(orig_angles > max_angle) - drange;
 
   % Remove the small backward values
-  smalls = true;
-  while (any(smalls))
+  smalls = [true false];
+  while (any(smalls) & any(~smalls))
     dorig = diff(orig_angles([1:end 1]));
     smalls = (dorig <= 0 & dorig > -drange/4);
     orig_angles = orig_angles(~smalls);
     orig_values = orig_values(~smalls);
+  end
+
+  if (isempty(orig_angles))
+    % If we have only one output, combine both
+    if (nargout == 1)
+      new_angles = [new_angles NaN(size(new_angles))];
+    end
+
+    return;
   end
 
   % Re-align the data such that they have increasing angular values

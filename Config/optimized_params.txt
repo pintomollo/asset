@@ -1,6 +1,9 @@
 %%%%%%%%%%%%%% DIC Parameters %%%%%%%%%%%%%%%%%%%%%
 
 %% Eggshell DIC : 6 parameters
+%%% CAUTION THESE VALUES ARE NOT TAKEN INTO ACCOUNT AS
+%%% THEY ARE OVERWRITTEN AFTERWARDS BY THE NEWLY OPTIMIZED
+%%% VALUES (for hyperbolic projection)
 
 #segmentation_parameters.dic.eggshell_params
 %score 1.8947e-4 GODLIKE

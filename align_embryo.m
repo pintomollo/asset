@@ -5,11 +5,7 @@ function mymovie = align_embryo(mymovie, opts)
     [nframes, imgsize] = size_data(mymovie.cortex);
   else
     type = 'dic';
-    try
     [nframes, imgsize] = size_data(mymovie.dic);
-    catch
-      beep;keyboard
-    end
   end
   
   mymovie = find_ruffles(mymovie, opts);
@@ -75,7 +71,9 @@ function mymovie = align_embryo(mymovie, opts)
   end
 
   if (sum(inverted) > 1)
-    disp(['A-P were inverted !']);
+    if (opts.verbosity > 0)
+      disp(['A-P were inverted !']);
+    end
     inverted = ~actu_invert;
   else
     inverted = actu_invert;

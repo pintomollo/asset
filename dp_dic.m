@@ -54,8 +54,9 @@ function mymovie = dp_dic(mymovie, nimg, opts)
   %keyboard
  %nimg
 
+  neighbors = mymovie.dic.neighbors;
   parameters = opts.segmentation_parameters.dic;
-      mymovie.dic.parameters = parameters;
+  mymovie.dic.parameters = parameters;
 
   img = [];
   global rescale_size;
@@ -70,10 +71,10 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     %title(num2str(nimg));
 
     if (opts.measure_performances)
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(mymovie.dic.neighbors(nimg), img, opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), estimation] = detect_ellipse(neighbors(nimg), img, opts);
     else
     %beep;keyboard
-      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(mymovie.dic.neighbors(nimg), opts);
+      [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(neighbors(nimg), opts);
     end
     if (isnan(orientations(1,nimg)))
       mymovie.dic.eggshell(nimg).warped = [];

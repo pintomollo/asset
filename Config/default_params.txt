@@ -1,1 +1,12 @@
 % Add here the default values of your parameters
+
+% Hyperbolic projection optimization for DIC segmentation
+#segmentation_parameters.dic.eggshell_params
+alpha 0.8094
+beta 0.1675
+gamma 0.9887
+
+#segmentation_parameters.dic.eggshell_weights
+alpha 0.3273
+beta 0.0152
+eta 0.3847
