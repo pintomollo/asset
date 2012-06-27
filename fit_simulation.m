@@ -53,9 +53,11 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
   opt.MaxFunEvals = 10000;
   opt.TolFun = 1e-5;
   opt.SaveFilename = '';
+  opt.SaveVariables = 'off';
   opt.EvalParallel = 'yes';
+  opt.LogPlot = 0;
 
-  for i=1:nfits
+  for f=1:nfits
     uuid = now + cputime;
     opt.LogFilenamePrefix = ['adr-fit-' num2str(uuid) '_'];
 
@@ -69,9 +71,9 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
     display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
     display(['IC (' num2str(p0) ') : GT (' num2str(ml_params(fit_params)) ')']);
     
-    [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0, 0.5, opt);
+    [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.5, opt);
 
-    display(['Best (' num2str(p) ')']);
+    display(['Best (' num2str(p.') ')']);
   end
 
   return;
@@ -97,9 +99,13 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
       res = res(:, end-100:end);
 
       if (scale_data)
+        try
         c = robustfit(res(:), orig(:));
 
         res = c(1) + c(2)*res;
+        catch
+          %Aaaa
+        end
       end
 
       tmp_err = sum((orig - res).^2);
@@ -109,7 +115,7 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
       bads = (tmp_params < 0);
 
       if (any(bads))
-        err_all(i) = err_all(i) + sum(exp(-10*tmp_params(bads)), 2);
+        err_all(i) = err_all(i) + sum(sum(exp(-10*tmp_params(bads)), 2), 1);
       end
     end
 
