@@ -43,7 +43,7 @@ function [ptsi, ptsj, imgsize, axes_length, safety, type] = parse_inputs(varargi
       case 'num'
         if (isempty(ptsi))
           ptsi = varargin{i};
-        elseif (all(size(ptsi) == size(varargin{i})))
+        elseif (isempty(ptsj) & all(size(ptsi) == size(varargin{i})))
           ptsj = varargin{i};
         elseif (isempty(imgsize) & numel(varargin{i})==2)
           imgsize = varargin{i};

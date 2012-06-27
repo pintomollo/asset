@@ -110,7 +110,7 @@ function [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(v
       case 'num'
         if (isempty(ptsx))
           ptsx = varargin{i};
-        elseif (all(size(ptsx) == size(varargin{i})))
+        elseif (isempty(ptsy) & all(size(ptsx) == size(varargin{i})))
           ptsy = varargin{i};
         elseif (isempty(center) & numel(varargin{i})==2)
           center = varargin{i};

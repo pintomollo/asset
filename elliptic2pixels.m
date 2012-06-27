@@ -43,7 +43,7 @@ function [theta, rads, imgsize, axes_length, safety, type] = parse_inputs(vararg
       case 'num'
         if (isempty(theta))
           theta = varargin{i};
-        elseif (all(size(theta) == size(varargin{i})))
+        elseif (isempty(rads) & all(size(theta) == size(varargin{i})))
           rads = varargin{i};
         elseif (isempty(imgsize) & numel(varargin{i})==2 )
           imgsize = varargin{i};

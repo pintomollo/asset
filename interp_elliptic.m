@@ -105,7 +105,7 @@ function [new_angles, path] = interp_elliptic(varargin)
     dorig = diff(orig_angles([1:end 1]));
     smalls = (dorig <= 0 & dorig > -drange/4);
     orig_angles = orig_angles(~smalls);
-    orig_values = orig_values(~smalls);
+    orig_values = orig_values(~smalls, :);
   end
 
   if (isempty(orig_angles))

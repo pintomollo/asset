@@ -46,8 +46,8 @@ function orients = align_orientations(orients, aim, dim)
       aim = permute(aim, perm_dim);
       aim = reshape(aim, orient_size(dim), []);
       aim = [aim;, repmat(aim(1,:), orient_size(dim) - size(aim, 1), 1)];
+      aim = aim(valids, :);
     end
-    aim = aim(valids, :);
   else
     sorts = sort(orients, 1);
     aim = sorts(ceil(orient_size(dim)/2), :);
