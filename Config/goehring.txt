@@ -2,12 +2,11 @@ nparticles 256
 npopulations 2
 dimensionality 1
 boundaries [0 67.3]
-x_step diff(opts.boundaries)/opts.nparticles
+x_step diff(opts.boundaries)/(opts.nparticles-1)
 advection_params padarray(-getfield(load('cortical_flow_wt.mat', 'flow3'), 'flow3'), [1 1], 'pre').';
-init_params [1.4 0]
+init_params true
+init_func @init_goehring
 reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.19 2; 1 2; 1.56 1; 0.174 0.174; 67.3 67.3]
-%reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.11 1; 1 2; 1.56 1; 0.174 0.174; 67.3 67.3]
-%reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.19 1; 1 2; 2.2062 1; 0.174 0.174; 67.3 67.3]
 diffusion_params [0.28 0.15]
 output_rate 10
 tmax 3500

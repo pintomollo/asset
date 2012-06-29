@@ -1,4 +1,4 @@
-function datas = cortical_flow(mymovie, opts)
+function [datas, flows] = cortical_flow(mymovie, opts)
 
   resolution = 0.5;
   thresh = 1/10;
@@ -16,8 +16,8 @@ function datas = cortical_flow(mymovie, opts)
     nimg = i;
 
     img = double(load_data(mymovie.dic, nimg));
-    cortex = insert_ruffles(mymovie.dic.cortex(nimg).carth, mymovie.dic.ruffles(nimg).paths);
-    %cortex = mymovie.dic.cortex(nimg).carth;
+    %cortex = insert_ruffles(mymovie.dic.cortex(nimg).carth, mymovie.dic.ruffles(nimg).paths);
+    cortex = mymovie.dic.cortex(nimg).carth;
 
     values = perpendicular_sampling(img, cortex, dpos, opts);
 
@@ -65,6 +65,7 @@ function datas = cortical_flow(mymovie, opts)
   full_indexes = [fliplr([0:-resolution:boundaries(1)]) resolution:resolution:boundaries(2)];
   npts = length(full_indexes);
   datas = NaN(nframes, npts, nstrip);
+  flows = datas;
 
   for i=1:nframes
     pts = tmp_pts{i,1}; % * opts.pixel_size;
@@ -72,6 +73,17 @@ function datas = cortical_flow(mymovie, opts)
     new_intens(full_indexes < dist(i,1) | full_indexes > dist(i,2),:) = NaN;
     %datas([1:nstrip] + (i-1)*nstrip, :) = new_intens.';
     datas(i, :, :) = reshape(new_intens, [1 npts, nstrip]);
+  end
+
+  params = get_struct('smoothness_parameters');
+  params.nhood = 5;
+  params.alpha = 1;
+  params.beta = 0.25;
+  params.gamma = 0.25;
+
+  func = @(x)(ones(size(x)));
+  for i=1:nstrip
+    [junk, flows(:,:,i)] = dynamic_programming(datas(:,:,i), params, func, [], opts, true);
   end
 
   return;

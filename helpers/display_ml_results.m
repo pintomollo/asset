@@ -27,7 +27,10 @@ function p = display_ml_results(fname, file_pattern)
       j = 0;
       for j=1:length(p(i).evolution)
         pts = p(i).evolution{j};
-        pts = [[NaN p(i).initial_condition(j, :)]; pts];
+
+        if (~isempty(p(i).initial_condition))
+          pts = [[NaN p(i).initial_condition(j, :)]; pts];
+        end
         [npts, ngraphs] = size(pts);
         colors = jet(ngraphs);
 
@@ -45,7 +48,7 @@ function p = display_ml_results(fname, file_pattern)
         %  plot(x, pts(:,k), 'Color', colors(k,:));
         %end
 
-        if (~isempty(p(i).config{j}))
+        if (~isempty(p(i).config) & ~isempty(p(i).config{j}))
           confs = [confs; [p(i).config{j}{2,2} p(i).config{j}{6,2} j]];
         end
       end

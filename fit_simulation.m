@@ -1,4 +1,4 @@
-function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
+function uuids = fit_simulation(param_set, init_noise, noise_data, nfits, opts)
 
   if (nargin < 5)
     opts = get_struct('modeling');
@@ -22,8 +22,8 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
       fit_params = [4 10];
   end
 
-  uuid = now + cputime;
-  RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
+  RandStream.setDefaultStream(RandStream('mt19937ar','Seed', now + cputime));
+  uuids = NaN(nfits, 1);
 
   x0 = opts.init_params;
   x0 = repmat(x0, [opts.nparticles, 1]);
@@ -38,8 +38,8 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
                 opts.reaction_params(1:end-2, :)];
 
   [noiseless, orig_t] = simulate_model(x0, [ml_params; opts.reaction_params(end-1:end, :)], opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
-  %noiseless = noiseless((end/2)+1:end, :);
-  noiseless = noiseless((end/2)+1:end, end-100:end);
+  noiseless = noiseless((end/2)+1:end, :);
+  %noiseless = noiseless((end/2)+1:end, end-100:end);
   penalty = ((3*max(noiseless(:)))^2)*opts.nparticles/2;
 
   size_data = size(noiseless);
@@ -58,8 +58,8 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
   opt.LogPlot = 0;
 
   for f=1:nfits
-    uuid = now + cputime;
-    opt.LogFilenamePrefix = ['adr-fit-' num2str(uuid) '_'];
+    uuids(f) = now + cputime;
+    opt.LogFilenamePrefix = ['adr-fit-' num2str(uuids(f)) '_'];
 
     tmp_params = ml_params;
     orig = noiseless + range_data*randn(size_data);
@@ -96,7 +96,7 @@ function fit_simulation(param_set, init_noise, noise_data, nfits, opts)
       if (length(t) ~= length(orig_t))
         res = interp1q(t.', res.', orig_t.').';
       end
-      res = res(:, end-100:end);
+      %res = res(:, end-100:end);
 
       if (scale_data)
         try

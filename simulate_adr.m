@@ -17,8 +17,12 @@ function [all_x, all_m] = simulate_adr(x0, opts)
   %opts.nparticles = 1024;
 
   if (isempty(x0))
-    x0 = opts.init_params;
-    x0 = repmat(x0, [opts.nparticles, 1]);
+    if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
+      x0 = opts.init_func(opts);
+    else
+      x0 = opts.init_params;
+      x0 = repmat(x0, [opts.nparticles, 1]);
+    end
   end
   %x0 = bsxfun(@times, [1:opts.nparticles].'/opts.nparticles, x0);
 
