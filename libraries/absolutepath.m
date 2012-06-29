@@ -27,6 +27,10 @@ if ((ispc & rel_path(2) == ':') | (~ispc & rel_path(1) == filesep))
   abs_path = rel_path;
 
   return;
+elseif (ispc & any(rel_path == '/'))
+  rel_path(rel_path == '/') = filesep;
+elseif (~ispc & any(rel_path == '\'))
+  rel_path(rel_path == '\') = filesep;
 end
 
 % 2nd parameter is optional:

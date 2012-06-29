@@ -15,7 +15,7 @@ function [mymovie, opts] = filter_channels(mymovie, opts)
   for i=1:nfilters
     filter = opts.filters(i);
 
-    if (filter.applied)
+    if (filter.applied | isempty(filter.filter))
       continue;
     else
       opts.filters(i).applied = true;
