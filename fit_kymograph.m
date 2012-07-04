@@ -43,14 +43,16 @@ function uuids = fit_kymograph(fitting, opts)
       error('Data is missing for the fitting !');
     end
 
-    embryo_size = 2*range(fitting.x_pos);
+    embryo_size = range(fitting.x_pos);
     opts.reaction_params(end, :) = embryo_size;
-    opts.boundaries = [0 embryo_size/2];
+    opts.boundaries = [0 embryo_size];
     opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
   end
 
+  restart = false;
   if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
     x0 = opts.init_func(opts);
+    restart = true;
   else
     x0 = opts.init_params;
     x0 = repmat(x0, [opts.nparticles, 1]);
@@ -73,7 +75,7 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   if (~fitting.fit_full)
-    nmaintenance = min(size(fitting.ground_truth, 2), 100) - 1;
+    nmaintenance = min(size(fitting.ground_truth, 2), 50) - 1;
     fitting.ground_truth = fitting.ground_truth(:, end-nmaintenance:end);
     fitting.t_pos = fitting.t_pos(end-nmaintenance:end);
     fitting.aligning_type = 'end';
@@ -81,8 +83,9 @@ function uuids = fit_kymograph(fitting, opts)
 
   linear_truth = fitting.ground_truth(:);
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
-  penalty = ((3*max(linear_truth))^2)*opts.nparticles/2;
+  penalty = ((3*median(linear_truth))^2)*opts.nparticles/2;
   ndata = length(fitting.x_pos);
+  size_data = size(fitting.ground_truth);
 
   rescaling = 10.^(floor(log10(ml_params)));
   rescaling(ml_params == 0) = 1;
@@ -98,7 +101,6 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (strncmp(fitting.type, 'simulation', 5))
     noiseless = fitting.ground_truth;
-    size_data = size(noiseless);
     range_data = fitting.data_noise * range(linear_truth);
   end
 
@@ -138,52 +140,84 @@ function uuids = fit_kymograph(fitting, opts)
 
     for i = 1:nevals
       tmp_params(fit_params) = p_all(:, i);
+
+      if (restart)
+        opts.reaction_params = tmp_params(2:end, :);
+        x0 = opts.init_func(opts);
+      end
+
       [res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
       res = res((end/2)+1:end, :);
-      if (length(t) ~= length(fitting.t_pos))
-        res = interp1q(t.', res.', fitting.t_pos.').';
-      end
       if (opts.nparticles ~= ndata)
         res = interp1q(simul_pos, res, fitting.x_pos.');
       end
 
-      %if (~fitting.fit_full)
-      %  res = res(:, end-100:end);
-      %end
       res = [res; res];
 
       switch fitting.aligning_type
         case 'best'
-          %cc = normxcorr2(ground_truth, s); 
-          %[max_cc, imax] = max(cc(:,size(ground_truth, 2)));
-          %corr_offset = [(imax-size(ground_truth,1))];
+          if (length(t) < size_data(2))
+            cc = normxcorr2(res, fitting.ground_truth); 
+
+            [max_cc, imax] = max(cc(size_data(1), floor(size(res, 2)/2)+1:end));
+            corr_offset = [(imax-floor(size_data(2)/2))];
+          elseif (all(isfinite(res)))
+            cc = normxcorr2(fitting.ground_truth, res); 
+
+            [max_cc, imax] = max(cc(size_data(1), floor(size_data(2)/2)+1:end));
+            corr_offset = -[(imax-floor(size(res, 2)/2))];
+          else
+            corr_offset = 0;
+          end
         case 'end'
-          %corr_offset = size(s, 1) - size(ground_truth, 1) + 1;
+          corr_offset = size_data(2) - size(res, 2) + 1;
       end
 
-      if (fitting.scale_data)
-        try
-        c = robustfit(res(:), linear_truth);
+      gindxs = [0:size(res, 2)-1];
+      goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(2));
 
-        res = c(1) + c(2)*res;
-        catch
-          %Aaaa
+      if (sum(goods) < 10)
+        err_all(i) = Inf;
+      else
+        tmp = NaN(size_data);
+        tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
+
+        res = tmp;
+
+        if (fitting.scale_data)
+          try
+          c = robustfit(res(:), linear_truth);
+
+          if (c(2) <= 0)
+            err_all(i) = Inf;
+            continue;
+          end
+
+          res = c(1) + c(2)*res;
+          catch
+            %Aaaa
+          end
         end
-      end
 
-      tmp_err = sum((fitting.ground_truth - res).^2);
-      tmp_err(~isfinite(tmp_err)) = penalty;
-      err_all(i) = sum(tmp_err);
+        tmp_err = sum((fitting.ground_truth - res).^2);
+        tmp_err(~isfinite(tmp_err)) = penalty;
+        err_all(i) = sum(tmp_err);
 
-      bads = (tmp_params < 0);
+        bads = (tmp_params < 0);
 
-      if (any(bads))
-        err_all(i) = err_all(i) + sum(sum(exp(-10*tmp_params(bads)), 2), 1);
+        if (any(bads))
+          err_all(i) = err_all(i) + sum(sum(exp(-10*tmp_params(bads)), 2), 1);
+        end
       end
     end
 
     if (flip)
       err_all = err_all.';
+    end
+
+    if (all(isinf(err_all)))
+      % ML crashes when all values are non-numerical
+      err_all(1) = 1e5;
     end
 
     return;
