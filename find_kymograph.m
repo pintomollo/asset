@@ -1,6 +1,6 @@
 function find_kymograph(varargin)
 
-  [mymovies, fitting, opts] = parse_input(varargin{:});
+  [mymovies, uuid, fitting, opts] = parse_input(varargin{:});
 
   for i=1:length(mymovies)
     mymovie = mymovies{i};
@@ -21,6 +21,10 @@ function find_kymograph(varargin)
       end
 
       try
+        fid = fopen('fitting_adr.txt', 'a');
+        fprintf(fid, '%f %s %d\n', uuid, kymo.mymovie.experiment, fitting.parameter_set);
+        fclose(fid);
+
         domain = imnorm(gather_quantification(kymo.mymovie, kymo.opts));
         kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
         kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
@@ -49,7 +53,13 @@ function find_kymograph(varargin)
           fitting.t_pos = fitting.t_pos(:, times(2):end);
         end
 
-        fit_kymograph(fitting, opts);
+        uuids = fit_kymograph(fitting, opts);
+
+        fid = fopen('fitting_adr.txt', 'a');
+        for u = 1:length(uuids)
+          fprintf(fid, '%f %s OK\n', uuids(u), kymo.mymovie.experiment);
+        end
+        fclose(fid);
 
       catch ME
         print_all(ME);
@@ -61,9 +71,10 @@ function find_kymograph(varargin)
   return;
 end
 
-function [mymovies, fitting, opts] = parse_input(varargin)
+function [mymovies, uuid, fitting, opts] = parse_input(varargin)
 
   mymovies = '';
+  uuid = 1;
   fitting = get_struct('fitting');
   opts = get_struct('modeling');
   opts = load_parameters(opts, 'goehring.txt');
@@ -79,7 +90,9 @@ function [mymovies, fitting, opts] = parse_input(varargin)
     % Now we check that the parameters were provided in pairs
     npairs = length(varargin) / 2;
     if (npairs ~= floor(npairs))
-      error 'Properties pairs must come in PAIRS.';
+      uuid = str2double(varargin(1));
+      varargin(1) = [];
+      npairs = floor(npairs);
     end
 
     % Loop over the pairs of parameters
