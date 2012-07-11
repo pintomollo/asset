@@ -22,7 +22,7 @@ function find_kymograph(varargin)
 
       try
         fid = fopen('fitting_adr.txt', 'a');
-        fprintf(fid, '%f %s %d\n', uuid, kymo.mymovie.experiment, fitting.parameter_set);
+        fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo.mymovie.experiment, fitting.parameter_set);
         fclose(fid);
 
         domain = imnorm(gather_quantification(kymo.mymovie, kymo.opts));
