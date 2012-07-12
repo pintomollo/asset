@@ -1,5 +1,6 @@
 function display_3d_egg(mymovie, opts, save_frames)
 
+  init_frame = 1;
   if (nargin == 1)
     opts = get_struct('ASSET');
     save_frames = false;
@@ -10,6 +11,9 @@ function display_3d_egg(mymovie, opts, save_frames)
     else
       save_frames = false;
     end
+  elseif (isnumeric(save_frames))
+    init_frame = save_frames;
+    save_frames = false;
   end
 
   if (ischar(mymovie))
@@ -33,7 +37,7 @@ function display_3d_egg(mymovie, opts, save_frames)
   end
   
   [nframes, imgsize] = size_data(mymovie.dic);
-  for i=1:nframes
+  for i=init_frame:nframes
     nimg = mymovie.metadata.frame_index(1,i);
     nplane = mymovie.metadata.plane_index(1,i);
 

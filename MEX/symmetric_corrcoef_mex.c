@@ -1,12 +1,17 @@
 #include <math.h>
 #include "mex.h"
 
-static double correl(double *x, int pos, int l) {
+#ifndef MIN
+#define MIN(a,b) ((a) > (b) ? (b) : (a))
+#endif
 
-  int i, n;
+static double correl(double *x, int pos, int n, int l) {
+
+  int i, n_max;
   double mx, my, sx, sy, sxy, xv, yv;
 
-  n = ceil((double)l/2.0);
+  n_max = ceil((double)l/2.0);
+  n = MIN(n, n_max);
 
   /* Calculate the mean of the two series x[], y[] */
   mx = 0;
@@ -36,7 +41,8 @@ static double correl(double *x, int pos, int l) {
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
   int h, w, i, j, *start, *length;
-  double *img, *corr_img, nan_val = mxGetNaN();
+  double *img, *lengths, *corr_img, nan_val = mxGetNaN(), window_size;
+  bool *edges, multi_scales = false;
 
   if (nrhs < 1) {
     mexErrMsgTxt("No input argument !");
@@ -45,6 +51,23 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     img = mxGetPr(prhs[0]);
     h = mxGetM(prhs[0]);
     w = mxGetN(prhs[0]);
+
+    if (nrhs == 2) {
+      if (mxIsLogical(prhs[1])) {
+        mexErrMsgTxt("Not implemented yet !");
+      } else {
+        if (mxGetNumberOfElements(prhs[1]) == 1) {
+          window_size = mxGetScalar(prhs[1]);
+        } else if (mxGetNumberOfElements(prhs[1]) == 0) {
+          window_size = ceil((double)w/2.0);
+        } else {
+          lengths = mxGetPr(prhs[1]);
+          multi_scales = true;
+        }
+      }
+    } else {
+      window_size = ceil((double)w/2.0);
+    }
 
     plhs[0] = mxCreateDoubleMatrix(h, w, mxREAL);
     corr_img = mxGetPr(plhs[0]);
@@ -76,7 +99,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         }
       }
       for (j = 0; j < length[i]; j++) {
-        corr_img[(i*h) + j + start[i]] = correl(img + (i*h) + start[i], j, length[i]);
+        //corr_img[(i*h) + j + start[i]] = correl(img + (i*h) + start[i], j, length[i]);
+        if (multi_scales) {
+          corr_img[(i*h) + j + start[i]] = correl(img + (i*h) + start[i], j, (int)lengths[(i*h) + j + start[i]], length[i]);
+        } else {
+          corr_img[(i*h) + j + start[i]] = correl(img + (i*h) + start[i], j, window_size, length[i]);
+        }
       }
     }
 

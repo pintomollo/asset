@@ -15,18 +15,18 @@ function clean_tmp(do_it_really)
     if (~exist('mymovie', 'var'))
       continue;
     end
-    is_empty = recursive_empty(mymovie);
+    %is_empty = recursive_empty(mymovie);
 
-    if (is_empty)
-      disp(['Deleting ' ls_dir(i).name]);
-
-      if (do_it_really)
-        delete(ls_dir(i).name);
-      end
-    else
+    %if (is_empty)
+    %  disp(['Deleting ' ls_dir(i).name]);
+%
+%      if (do_it_really)
+%        delete(ls_dir(i).name);
+%      end
+%    else
       tmp_tmp = recursive_tmp(mymovie);
       used_tmp = [used_tmp; tmp_tmp];
-    end
+%    end
 
     clearvars -except 'ls_dir' 'used_tmp' 'do_it_really';
   end

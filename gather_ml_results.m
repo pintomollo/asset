@@ -1,12 +1,12 @@
 function results = gather_ml_results(fname, file_pattern, keep_evolution)
 
   if (nargin == 1)
-    file_pattern = '.*%d.*_evol\\.dat';
+    file_pattern = '.*%.4f?_evol\\.dat';
     keep_evolution = false;
   elseif (nargin == 2)
     if (islogical(file_pattern))
       keep_evolution = file_pattern;
-      file_pattern = '.*%d.*_evol\\.dat';
+      file_pattern = '.*%.4f?_evol\\.dat';
     else
       keep_evolution = false;
     end
@@ -37,8 +37,19 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
 
   line = fgetl(fid);
   while (ischar(line))
-    tmp = regexp(line, '^([\d\.]+) (\S+)( \d\s+\d\s+\d\s+\d)?$', 'tokens');
+    tmp = regexp(line, '^([\d\.]+) (\S+) OK$', 'tokens');
     line = fgetl(fid);
+    if (~isempty(tmp) & ~isempty(tmp{1}))
+      done = ismember(results(:,1), tmp{1}{2});
+      
+      if (~any(done))
+        results(end+1, 1) = tmp{1}(2);
+        results(end, 2) = {tmp{1}{1}};
+      else
+        results(done, 2) = {[results{done, 2}; tmp{1}(1)]};
+      end
+    end
+    %{
     if (isempty(tmp{1}{3}))
       done = ismember(process, tmp{1}{1});
       if (sum(done) == 1)
@@ -60,6 +71,7 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
       data = [data; tmp{1}{2}];
       params = [params; tmp{1}{3}];
     end
+    %}
   end
   fclose(fid);
 
@@ -95,7 +107,7 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
       end
     end
 
-    data{j+1, 1} = prev_file;
+    %data{j+1, 1} = prev_file;
     results{i, 2} = data;
   end
 

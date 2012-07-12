@@ -15,6 +15,10 @@ function metadata = parse_metadata(fname, base_dir, opts)
   if (isstruct(fname))
     mymovie = fname;
     fname = mymovie.experiment;
+
+    if (isfield(mymovie, 'dic') & ~isempty(mymovie.dic))
+      nframes = size_data(mymovie.dic);
+    end
   end
 
   if (~exist(fname, 'file'))
@@ -202,6 +206,15 @@ function metadata = parse_metadata(fname, base_dir, opts)
           group(i, j) = group(i, j-1);
         end
       end
+    end
+
+    if (~isempty(mymovie))
+      pos(:, end+1:nframes) = NaN;
+      frame(:, end+1:nframes) = NaN;
+      plane(:, end+1:nframes) = NaN;
+      time(:, end+1:nframes) = NaN;
+      exposure(:, end+1:nframes) = NaN;
+      group(:, end+1:nframes) = NaN;
     end
 
     metadata.z_position = pos;

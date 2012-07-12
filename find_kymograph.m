@@ -63,6 +63,11 @@ function find_kymograph(varargin)
 
       catch ME
         print_all(ME);
+
+        fid = fopen('fitting_adr.txt', 'a');
+        fprintf(fid, '-1 %s NO\n', kymo.mymovie.experiment);
+        fclose(fid);
+
         continue;
       end
     end

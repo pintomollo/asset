@@ -87,6 +87,8 @@ function uuids = fit_kymograph(fitting, opts)
   ndata = length(fitting.x_pos);
   size_data = size(fitting.ground_truth);
 
+  full_error = penalty * size_data(2) * 10;
+
   rescaling = 10.^(floor(log10(ml_params)));
   rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
@@ -217,7 +219,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (all(isinf(err_all)))
       % ML crashes when all values are non-numerical
-      err_all(1) = 1e5;
+      err_all(1) = full_error;
     end
 
     return;
