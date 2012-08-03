@@ -37,7 +37,7 @@ function [center, axes_length, orientation] = fit_ellipse(X,Y)
   end
 
   XY = unique([X Y], 'rows');
-  if (size(XY, 1) < 4)
+  if (size(XY, 1) < 10)
 
     return;
   else

@@ -16,6 +16,10 @@ function fraction = domain_expansion(domain, center, cytok)
   last = find(valids(center:end), 1, 'first') - 1;
   boundary = min(first, last)-1;
 
+  if (boundary <= 10)
+    error('Detected width of the domain is too small for analysis');
+  end
+
   domain = domain(:,[0:boundary]+center) + domain(:,[0:-1:-boundary]+center);
   domain = imadjust(imnorm(domain(1:cytok, :)));
   %intens = cumsum(domain, 2);
@@ -35,6 +39,8 @@ function fraction = domain_expansion(domain, center, cytok)
   params.alpha = 0.6;
   params.beta = 0.15;
   params.gamma = 0.25;
+  params.prohibit = 'horiz';
+  params.spawn_percentile = 0.75;
 
   path = dynamic_programming(domain, params, @weight_expansion, weights, opts);
 

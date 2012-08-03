@@ -11,6 +11,11 @@ function weight = weight_symmetry(img, params)
   delta = params.delta;
 
   depth = params.filt;
+
+  if (isempty(depth))
+    error('Missing invagination data for domain centration');
+  end
+
   ruffles = depth;
   outside = ~isfinite(ruffles);
   ruffles(outside) = 0;
@@ -56,6 +61,8 @@ function weight = weight_symmetry(img, params)
   %weight = bsxfun(@times, weight, factors.');
 
   weight(isnan(weight)) = Inf;
+
+  figure;imagesc(weight)
 
   return;
 end

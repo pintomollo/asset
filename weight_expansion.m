@@ -7,7 +7,7 @@ function weight = weight_expansion(img, params)
   intens = imnorm(abs(imnorm(img) - thresh));
 
   pos = cumsum(1-imnorm(img), 2);
-  pos = 1 - bsxfun(@rdivide, pos, pos(:, end));
+  pos = bsxfun(@rdivide, pos, pos(:, end));
 
   weight = alpha*intens + (1-alpha)*pos;
 

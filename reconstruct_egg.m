@@ -26,7 +26,7 @@ function mymovie = reconstruct_egg(mymovie, opts)
   sharpness = zeros(nframes, 1);
   all_edges = cell(nframes, 1);
 
-  if (true)
+  if (false)
   for i=1:nframes
     tmp_pts = mymovie.dic.eggshell(i).carth;
     if (~isempty(tmp_pts))
@@ -59,37 +59,50 @@ function mymovie = reconstruct_egg(mymovie, opts)
     mymovie.metadata.frame_index = [1:nframes];
   end
 
+  valids = true(1, nframes);
+
   for i=1:length(pts)
     if (~isempty(pts{i}))
       if (~isempty(real_z))
         pts{i} = [pts{i} ones(size(pts{i}, 1), 1)*real_z(1, i) ones(size(all_edges{i}))*i all_edges{i}];
       else
-        pts{i} = [pts{i} zeros(size(pts{i}, 1), 1) ones(size(all_edges{i}))*i all_edges{i}];
+        pts{i} = [pts{i} NaN(size(pts{i}, 1), 1) ones(size(all_edges{i}))*i all_edges{i}];
       end
+    else
+      valids(i) = false;
     end
   end
 
   frames = mymovie.metadata.frame_index(1,:);
-  time_points = unique(frames);
+  [time_points, junk, indexes] = unique(frames);
   ntimes = length(time_points);
   centers = NaN(3, ntimes);
   axes_length = NaN(3, ntimes);
   orient = NaN(1, ntimes);
-  all_pts = cell(ntimes, 1);
+  all_pts = cell(nframes, 1);
+
+  %figure;hold on;
 
   for i=1:ntimes
-    currents = (frames == time_points(i));
+    currents = (frames == time_points(i) & valids);
+    centers(1:2, i) = mean(mymovie.dic.centers(:, currents) * opts.pixel_size, 2);
+    axes_length(1:2, i) = mean(mymovie.dic.axes_length(:, currents) * opts.pixel_size, 2);
+    orient(1, i) = mean(align_orientations(mymovie.dic.orientations(1, currents)), 2);
 
     if (sum(currents) > 3)
-      [centers(:, i), axes_length(:, i), orient(1, i), all_pts{i, 1}] = fit_absolute_ellipse(pts(currents));
-    else
-      centers(1:2, i) = mean(mymovie.dic.centers(:, currents) * opts.pixel_size, 2);
-      axes_length(1:2, i) = mean(mymovie.dic.axes_length(:, currents) * opts.pixel_size, 2);
-      orient(1, i) = mean(mymovie.dic.orientations(1, currents), 2);
-      all_pts{i} = cat(1, pts{currents});
-      centers(3,i) = mymean(all_pts{i}(:,3));
+      [centers(3, i), axes_length(:, i), all_pts(currents)] = fit_absolute_ellipse(pts(currents), centers(1:2, i), axes_length(1:2, i), orient(1, i));
+
+      i
+    elseif (sum(currents) > 0)
+      all_pts(currents) = pts(currents);
+      %all_pts{i} = cat(1, pts{currents});
+      %centers(3,i) = mymean(all_pts{i}(:,3));
     end
   end
+
+  centers = centers(:, indexes);
+  axes_length = axes_length(:, indexes);
+  orient = orient(:, indexes);
 
   if (any(~isnan(axes_length(3, :))))
     axes_length = mymean(axes_length, 2);
@@ -102,22 +115,28 @@ function mymovie = reconstruct_egg(mymovie, opts)
   end
 
   orient = align_orientations(orient);
-  centers(3,isnan(centers(3,:))) = 0;
+  %centers(3,isnan(centers(3,:))) = 0;
   [axes_length, relative_z] = fit_relative_ellipse(all_pts, centers, axes_length, orient);
 
-  centers = centers(:, frames);
-  orient = orient(1, frames);
-  relative_z = relative_position(pts, relative_z, centers, axes_length, orient);
+  centers = centers(:, indexes);
+  orient = orient(1, indexes);
+  [relative_z, centers, orient] = relative_position(pts, relative_z, centers, axes_length, orient);
+
+  figure;
+  plot_3d_ellipse(pts,  relative_z);
+  plot_3d_ellipse([mean(centers(1:2,:), 2); 0], axes_length, mean(orient));
 
   mymovie.metadata.center_3d = centers;
   mymovie.metadata.axes_length_3d = axes_length;
   mymovie.metadata.orientation_3d = orient;
   mymovie.metadata.relative_z = relative_z;
   
+  axes_length
+
   return;
 end
 
-function [relative_z] = relative_position(pts, z, centers, axes_length, orient)
+function [relative_z, centers, orient] = relative_position(pts, z, centers, axes_length, orient)
 
   nframes = length(pts);
   relative_z = NaN(1, nframes);
@@ -130,16 +149,44 @@ function [relative_z] = relative_position(pts, z, centers, axes_length, orient)
       z_pos = axes_length(3)*sqrt(1 - dist.^2);
 
       if (imag(z_pos))
-        hold off;
-        plot(pts{i}(:,1), pts{i}(:,2))
-        hold on;
-        draw_ellipse(centers(1:2, i), axes_length(1:2), orient(i));
 
-        keyboard
+        sharpness = imnorm(pts{i}(:,5));
+        val_thresh = graythresh(sharpness);
+
+        goods = (sharpness >= val_thresh);
+        goods = filter_goods(goods, 15);
+
+        [centers(1:2, i), tmp_a, orient(i)] = fit_ellipse(pts{i}(goods, 1:2));
+        ell_coords = carth2elliptic(pts{i}(goods, 1:2), centers(1:2, i), axes_length(1:2), orient(i), 'radial');
+        dist = mymean(ell_coords(:,2));
+        z_pos = axes_length(3)*sqrt(1 - dist.^2);
+
+        if (~imag(z_pos))
+          relative_z(i) = z_pos;
+        end
+
+        %dds = differentiator(ell_coords);
+        %index = find(dds(:,1) < -pi, 1);
+
+        %if (~isempty(index))
+        %  ell_coords = ell_coords([index+1:end 1:index], :);
+        %  dds = dds([index+1:end 1:index], :);
+        %  sharpness = sharpness([index+1:end 1:index], :);
+        %  goods = goods([index+1:end 1:index], :);
+        %end
+
+        %breaks = (abs(dds(:,2)) > 3*std(dds(:,2)));
+        %[pos, len, val] = boolean_domains(breaks);
+
+        %better = false(size(goods));
+        %for j=1:length(pos)
+        %  if (~val(j) & mean(sharpness(pos(j):pos(j)+len(j)-1)) >= val_thresh)
+        %    better(pos(j):pos(j)+len(j)-1) = true;
+        %  end
+        %end
       else
         relative_z(i) = z_pos;
       end
-      %relative_z(i) = real(z_pos);  
     else
       relative_z(i) = z(i);
     end
@@ -151,63 +198,26 @@ end
 function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, centers, axes_length, orient)
 
   all_coords = NaN(0, size(pts{1}, 2)+1);
-  max_iter = 500;
 
   neggs = length(pts);
   for i=1:neggs
-    all_coords = [all_coords; [realign(pts{i}(:,1:2), [0;0], centers(1:2, i), orient(i)) pts{i}(:,3)-centers(3,i) pts{i}(:,4:5) ones(size(pts{i}(:,4)))*i]];
+    all_coords = [all_coords; [realign(pts{i}(:,1:2), [0;0], centers(1:2, i), orient(i)) pts{i}(:,3) - centers(3,i) pts{i}(:,4:5) ones(size(pts{i}(:,4)))*i]];
   end
-
-  indxs = unique(all_coords(:,6));
-  tmp_z = NaN(1, neggs);
-  npts = size(all_coords, 1);
-
-  %%% TRY FULL FIT USING SHARPNESS AS WEIGHT FOR ERROR & PLANE ELIMINATION,
-  %%% CAN PENALIZE FOR TOO FEW AND SUCH
-
-  [axes_length, relative_z] = fit_full(all_coords, axes_length);
-
-  return;
-
-  for i=1:max_iter
-    prev = indxs;
-
-    [a, z, errs(1, i), p, indxs] = filter_frames(all_coords, axes_length, indxs);
-    errs(1,i) = errs(1,i) + (1 - size(p,1)/npts);
-
-    if ((i>1 & errs(i) > errs(i-1)) | (i>2 & (errs(i-2) - errs(i-1) > errs(i - 1) - errs(i))))
-      break;
-    else
-      axes_length = a;
-      relative_z = tmp_z;
-      
-      relative_z(indxs) = z;
-    end
-
-    if (isempty(indxs) | numel(indxs) == numel(prev))
-      break;
-    end
-
-    all_coords = p;
-  end
- 
-  return;
-end
-
-function [fit_axes, rel_z] = fit_full(all_coords, axes_length)
-
-  %keyboard
 
   pts = all_coords(:,1:3);
   npts = size(pts, 1);
-  frames = unique(all_coords(:,6));
+  [frames, pindex] = unique(all_coords(:,6));
+  z_pos = all_coords(pindex, 3);
   nframes = length(frames);
   indexes = all_coords(:,6);
   sharpness = imnorm(all_coords(:,5));
-  %[indxs, i, j] = unique(all_coords(:, [4 6]), 'rows');
-  %[tmp, k, l] = unique(indxs(:,2));
-  %neggs = size(indxs, 1);
-  %errs = ones(neggs, 1);
+  thresh = graythresh(sharpness);
+
+  unknowns = isnan(z_pos);
+
+  w = 4;
+  sharpness(sharpness < thresh) = sharpness(sharpness < thresh).^w;
+  sharpness(sharpness >= thresh) = sharpness(sharpness >= thresh).^(1/w);
 
   all_errs = ones(nframes, 1);
   dist = NaN(nframes, 1);
@@ -220,16 +230,9 @@ function [fit_axes, rel_z] = fit_full(all_coords, axes_length)
   end
 
   z_coefs = get_struct('z-correlation');
-  w = 1;
 
-  %figure;hold on;
+  optims = optimset('Display', 'off', 'Algorithm', 'levenberg-marquardt', 'TolFun', 1e-6, 'TolX', 1e-4);
 
-  %optims = optimset('Display', 'off');
-  lbound = [0;0;0];
-  ubound = [Inf(3,1)];
-  optims = optimset('Display', 'off', 'Algorithm', 'levenberg-marquardt', 'TolFun', 1e-10, 'TolX', 1e-10);
-
-  %bests = lsqcurvefit(@fit_z, p0, all_coords, zeros(neggs, 1), [], [], optims);
   p0 = sqrt(axes_length(1:2)*1.125);
   bests = lsqnonlin(@fit_z, p0, [], [], optims);
 
@@ -239,18 +242,14 @@ function [fit_axes, rel_z] = fit_full(all_coords, axes_length)
   end
 
   bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
+  axes_length = bests(1:3);
 
-  fit_axes = bests(1:3);
-
-  [errs, rel_z] = fit_z(sqrt(fit_axes));
+  [errs, relative_z] = fit_z(sqrt(axes_length));
   errs = errs(:);
-
-  keyboard
 
   return;
 
-  %function [z_err, z_pos] = fit_z(ax, pts)  
-  function [z_err, z_pos] = fit_z(ax)  
+  function [z_err, tmp_z] = fit_z(ax)  
 
     ax = ax.^2;
 
@@ -262,7 +261,7 @@ function [fit_axes, rel_z] = fit_full(all_coords, axes_length)
     ax(3) = z_pred;
 
     z_err = all_errs;
-    z_pos = dist;
+    tmp_z = dist;
     z_std = dist;
 
     if (ax(3) < 0)
@@ -271,22 +270,31 @@ function [fit_axes, rel_z] = fit_full(all_coords, axes_length)
       return;
     end
 
+    z_target = sqrt(1 - (z_pos / ax(3)).^2);
     ell_coords = carth2elliptic(pts(:, 1:2), [0;0], ax(1:2), 0, 'radial');
-    for i=1:nframes
-      z_dist = sum(ell_coords(currents(:,i), 2) .* weights(currents(:,i)) .* sign(pts(currents(:,i), 3) + 1e-10));
-
-      if (z_dist > 1)
-        z_err(i) = mean(sharpness(currents(:,i)));
+    for j=1:nframes
+      if (unknowns(j))
+        z_dist = sum(ell_coords(currents(:,j), 2) .* weights(currents(:,j)));
       else
-        z_err(i) = sum(abs(ell_coords(currents(:, i), 2) - z_dist) .* weights(currents(:,i)));
-        z_std(i) = sqrt(sum(((ell_coords(currents(:,i), 2) - z_dist).^2) .* weights(currents(:,i))));
-        z_pos(i) = ax(3)*sqrt(1 - z_dist^2) .* sign(z_dist);
+        z_dist = abs(sum(ell_coords(currents(:,j), 2) .* weights(currents(:,j))) - z_target(j));
       end
 
-      %z_coef = sqrt(1 - (z_pos^2) / (ax(3)^2));
+      if (~isfinite(z_dist) | z_dist > 1)
+        z_err(j) = mean(sharpness(currents(:,j)));
+      else
+        if (unknowns(j))
+          z_err(j) = sum(abs(ell_coords(currents(:, j), 2) - z_dist) .* weights(currents(:,j)));
+          z_std(j) = sqrt(sum(((ell_coords(currents(:,j), 2) - z_dist).^2) .* weights(currents(:,j))));
+          tmp_z(j) = ax(3)*sqrt(1 - z_dist^2) .* sign(z_dist);
+        else
+          z_err(j) = z_dist;
+          z_std(j) = sqrt(sum((ell_coords(currents(:,j), 2) - z_target(j)).^2 .* weights(currents(:,j))) - z_dist^2);
+          tmp_z(j) = z_pos(j);
+        end
+      end
     end
 
-    if (all(isnan(z_pos)))
+    if (all(isnan(tmp_z)))
       z_err = 10;
 
       return;
@@ -295,293 +303,139 @@ function [fit_axes, rel_z] = fit_full(all_coords, axes_length)
     bads = (z_err > mean(z_err) + mymean(z_std));
 
     if (any(bads))
-      z_pos(bads) = NaN;
+      tmp_z(bads) = NaN;
 
       all_bads = ismember(indexes, frames(bads));
 
       z_err(bads) = z_err(bads) .* mymean(sharpness(all_bads), 1, indexes(all_bads));
     end
 
-    %[mean(z_err), 2*(sum(isnan(z_pos))/nframes), mymean(abs(z_pos))/ax(3)]
-    z_err = mean(z_err) + 2*(sum(isnan(z_pos))/nframes) + mymean(abs(z_pos))/ax(3);
+    if (any(unknowns))
+      z_err = mean(z_err) + 2*(sum(isnan(tmp_z))/nframes) + mymean(abs(tmp_z(unknowns)))/ax(3);
+    else
+      z_err = mean(z_err) + (sum(isnan(tmp_z))/nframes);
+    end
     
     return;
   end
 end
 
+function [z_center, axes_length, pts] = fit_absolute_ellipse(pts, center, axes_length, orient)
 
-function [fit_axes, rel_z, err, all_coords, indxs] = filter_frames(all_coords, axes_length, indxs)
+  z_center = NaN;
+  all_coords = NaN(0, size(pts{1}, 2));
 
-  neggs = length(indxs);
-
-  all_coords(:,5) = imnorm(all_coords(:,5));
-  val_thresh = graythresh(all_coords(:,5));
-
-  goods = (all_coords(:,5) >= val_thresh);
-  goods = filter_goods(goods, 15);
-
+  neggs = length(pts);
   for i=1:neggs
-    current = (all_coords(:,6) == indxs(i));
-    if ((sum(goods(current)) / sum(current)) < 0.25)
-      goods(current) = false;
-      indxs(i) = NaN;
-    end
+    all_coords = [all_coords; pts{i}];
   end
+  all_coords = [realign(all_coords(:,1:2), [0;0], center, orient) all_coords(:,3:end)];
 
-  if (~any(goods))
-    fit_axes = NaN(3,1);
-    err = Inf;
-    rel_z = [];
-    all_coords = [];
-    indxs = [];
+  %myplot(all_coords(:,1:2));
 
-    return;
+  npts = size(all_coords, 1);
+  [planes, pindex] = unique(all_coords(:,4));
+  z_pos = all_coords(pindex, 3);
+  nplanes = length(planes);
+  indexes = all_coords(:,4);
+  sharpness = imnorm(all_coords(:,5));
+  thresh = graythresh(sharpness);
+
+  ell_coords = carth2elliptic(all_coords(:, 1:2), [0;0], axes_length, 0, 'radial');
+  ell_coords(:,1) = ell_coords(:,1) - pi;
+  [c, a, o] = fit_ellipse(all_coords(:, 3), ell_coords(:, 2) .* sign(ell_coords(:, 1)));
+  z_center = c(1);
+
+  w = 4;
+  sharpness(sharpness < thresh) = sharpness(sharpness < thresh).^w;
+  sharpness(sharpness >= thresh) = sharpness(sharpness >= thresh).^(1/w);
+
+  all_errs = ones(nplanes, 1);
+  dist = NaN(nplanes, 1);
+
+  weights = NaN(size(sharpness));
+  currents = false(npts, nplanes);
+  for i=1:nplanes
+    currents(:,i) = (indexes == planes(i));
+    weights(currents(:,i)) = sharpness(currents(:,i)) / sum(sharpness(currents(:,i)));
   end
-
-  indxs = indxs(isfinite(indxs));
-  current = ismember(all_coords(:,6), indxs);
-
-  all_coords = all_coords(current, :);
-  goods = goods(current);
-
-  [a, z, e] = estimate_z(all_coords(goods,:), axes_length);
-  [m, s] = mymean(e);
-  valids = (e < m + 2*s) & (~imag(z));
-
-  if (~any(valids) | all(valids))
-    fit_axes = a;
-    err = mymean(e);
-    rel_z = z;
-    %all_coords = all_coords(goods, :);
-    indxs = unique(all_coords(:, 6));
-
-    return;
-  end
-
-  full_indxs = unique(all_coords(goods, [4 6]), 'rows');
-
-  current = ismember(all_coords(:,6), full_indxs(valids, 2));
-  all_coords = all_coords(current,:);
-  goods = goods(current);
-
-  [fit_axes, rel_z, e] = estimate_z(all_coords(goods, :), a);
-  err = mymean(e);
-  indxs = unique(all_coords(:, 6));
-
-  return;
-end
-
-function [fit_axes, rel_z, errs] = estimate_z(all_coords, axes_length)
-
-  %keyboard
-
-  [indxs, i, j] = unique(all_coords(:, [4 6]), 'rows');
-  [tmp, k, l] = unique(indxs(:,2));
-  neggs = size(indxs, 1);
-  errs = ones(neggs, 1);
 
   z_coefs = get_struct('z-correlation');
 
-  %figure;hold on;
+  optims = optimset('Display', 'off', 'Algorithm', 'levenberg-marquardt', 'TolFun', 1e-6, 'TolX', 1e-4);
 
-  p0 = axes_length(1:2);
-  %optims = optimset('Display', 'off');
-  lbound = [0;0;0];
-  ubound = [Inf(3,1)];
-  optims = optimset('Display', 'off', 'Algorithm', 'levenberg-marquardt', 'TolFun', 1e-10, 'TolX', 1e-10);
+  p0 = [sqrt(axes_length(1:2)*1.125); z_center];
+  bests = lsqnonlin(@fit_a, p0, [], [], optims);
 
-  bests = lsqcurvefit(@fit_z, p0, all_coords, zeros(neggs, 1), [], [], optims);
-  %bests = lsqnonlin(@fit_z, p0, [], [], optims);
+  z_center = bests(3);
+
+  bests = bests.^2;
+  if (bests(1) < bests(2))
+    [bests(1), bests(2)] = deal(bests(2), bests(1));
+  end
+
   bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
+  axes_length = bests(1:3);
 
-  fit_axes = bests(1:3);
-
-  [errs, rel_z] = fit_z(fit_axes);
-  errs = errs(:);
+  %for i=1:neggs
+  %  pts{i}(:,3) = pts{i}(:,3) - z_center;
+  %end
 
   return;
 
-  function [z_err, z_pos] = fit_z(ax, pts)  
-  %function [z_err, z_pos] = fit_z(ax)  
+  function [z_err] = fit_a(ax)  
+
+    c_z = z_pos - ax(3);
+    ax = ax.^2;
+
+    if (ax(1) < ax(2))
+      [ax(1), ax(2)] = deal(ax(2), ax(1));
+    end
 
     z_pred = z_coefs.bkg + z_coefs.long_axis * ax(1) + z_coefs.short_axis * ax(2);
     ax(3) = z_pred;
 
-    z_err = errs;
-    %ell_coords = carth2elliptic(pts(:, 1:2), [0;0], ax(1:2), 0, 'radial');
-    %dist = mymean(ell_coords(:,2) .* sign(pts(:,3) + 1e-10), 1, pts(:,6));
-    ell_coords = carth2elliptic(all_coords(:, 1:2), [0;0], ax(1:2), 0, 'radial');
-    dist = mymean(ell_coords(:,2) .* sign(all_coords(:,3) + 1e-10), 1, all_coords(:,6));
-    dist = dist(l);
-    z_pos = ax(3)*sqrt(1 - dist.^2) .* sign(dist);
-    imag_z = (imag(z_pos) ~= 0);
-    
-    %tmp_pts = [pts(:,1:2) pts(:,3) - z_pos(j) all_coords(:,4)];
-    tmp_pts = [all_coords(:,1:2) all_coords(:,3) - z_pos(j) all_coords(:,4)];
-    tmp_pts = tmp_pts(~imag_z(j),:);
+    z_err = all_errs;
+    z_std = dist;
 
-    err = ellipse_distance_mex(tmp_pts, [0;0;0], ax, 0);
-    
-    z_err(imag_z) = dist(imag_z) ;
-    z_err(~imag_z) = err + abs(z_pos(~imag_z)) / ax(3);
-    %z_err(~imag_z) = (1 - dist(~imag_z));% + abs(z_pos(~imag_z)) / ax(3);
-    %z_err(~imag_z) = err + abs(z_pos(~imag_z)) / ax(3);
-    %z_err(imag_z) = dist(imag_z);
-    %z_err(~imag_z) = err + abs(z_pos(~imag_z)) / ax(3);
-    z_err = z_err + sum(abs(ax(ax < lbound))); % + sum(abs(ax - axes_length) ./ axes_length);
-    
-    %ratio = ax(2) / ax(1);
-    %if (ratio > 1)
-    %  z_err = z_err + ratio;
-    %end
-
-    z_pos(imag_z) = NaN;
-
-    %z_pred = z_coefs.bkg + z_coefs.long_axis * ax(1) + z_coefs.short_axis * ax(2);
-
-    %z_err = z_err + abs(z_pos) / ax(3) + abs(1 - (ax(3) / z_pred));
-
-    %plot(z_err)
-    
-    return;
-  end
-end
-
-
-function [center, axes_length, orient, all_coords] = fit_absolute_ellipse(pts)
-
-  nframes = length(pts);
-  max_iter = 500;
-
-  all_coords = zeros(0,5);
-  for i=1:nframes
-    if (~isempty(pts{i}))
-      all_coords = [all_coords; pts{i}];
-    end
-  end
-  indxs = unique(all_coords(:,4));
-
-  for i=1:max_iter
-    prev = indxs;
-
-    [c,a,o, errs(1, i), p, indxs] = filter_planes(all_coords, indxs);
-    errs
-
-    if ((i>1 & errs(i) > errs(i-1)) | (i>2 & (errs(i-2) - errs(i-1) > errs(i - 1) - errs(i))))
-      break;
-    elseif (isinf(errs(1)))
-      center = c;
-      axes_length = a;
-      orient = o;
-
-      break;
-    else
-      center = c;
-      axes_length = a;
-      orient = o;
-    end
-
-    if (isempty(indxs) | numel(indxs) == numel(prev))
-      break;
-    end
-
-    all_coords = p;
-  end
- 
-  return;
-end
-
-function [fit_center, fit_axes, orient, err, all_coords, indxs] = filter_planes(all_coords, indxs)
-
-  neggs = length(indxs);
-
-  all_coords(:,5) = imnorm(all_coords(:,5));
-  val_thresh = graythresh(all_coords(:,5));
-
-  goods = (all_coords(:,5) >= val_thresh);
-  goods = filter_goods(goods, 15);
-
-  for i=1:neggs
-    current = (all_coords(:,4) == indxs(i));
-    if ((sum(goods(current)) / sum(current)) < 0.25)
-      goods(current) = false;
-      indxs(i) = NaN;
-    end
-  end
-
-  indxs = indxs(isfinite(indxs));
-  current = ismember(all_coords(:,4), indxs);
-
-  tmp = all_coords;
-
-  all_coords = all_coords(current, :);
-  goods = goods(current);
-
-  [c,a,o,e] = estimate_axes(all_coords, goods);
-  [m,s] = mymean(e);
-
-  if (isnan(m))
-    all_coords = tmp;
-    indxs = unique(all_coords(:, 4));
-    goods = true(size(all_coords, 1), 1);
-
-    [c,a,o,e] = estimate_axes(all_coords, goods);
-    [m,s] = mymean(e);
-
-    if (isnan(m))
-      [fit_center, fit_axes, orient] = deal(c,a,o);
-      err = Inf;
+    if (ax(3) < 0)
+      z_err = 10;
 
       return;
     end
-  end
-  valids = (e < m + 2*s);
 
+    z_target = sqrt(1 - (c_z / ax(3)).^2);
+    if (all(~isfinite(z_target)))
+      z_err = 10;
 
-  current = ismember(all_coords(:,4), indxs(valids));
-  all_coords = all_coords(current,:);
-  goods = goods(current);
+      return;
+    end
 
-  [fit_center,fit_axes,orient,e] = estimate_axes(all_coords, goods);
-  err = mymean(e);
-  indxs = unique(all_coords(:, 4));
+    ell_coords = carth2elliptic(all_coords(:, 1:2), [0;0], ax(1:2), 0, 'radial');
+    for j=1:nplanes
+      z_dist = abs(sum(ell_coords(currents(:,j), 2) .* weights(currents(:,j))) - z_target(j));
 
-  return;
-end
+      if (~isfinite(z_dist) | z_dist > 1)
+        z_err(j) = mean(sharpness(currents(:,j)));
+        z_target(j) = NaN;
+      else
+        z_err(j) = z_dist;
+        z_std(j) = sqrt(sum((ell_coords(currents(:,j), 2) - z_target(j)).^2 .* weights(currents(:,j))) - z_dist^2);
+      end
+    end
 
-function [fit_center, fit_axes, orient, errs] = estimate_axes(all_coords, goods)
+    bads = (z_err > mean(z_err) + mymean(z_std));
 
-  neggs = length(unique(all_coords(goods, 4)));
+    if (any(bads))
+      z_target(bads) = NaN;
 
-  [c, a, orient] = fit_ellipse(all_coords(goods, 1:2));
-  ell_coords = carth2elliptic(all_coords(:, 1:2), c, a, orient, 'radial');
+      all_bads = ismember(indexes, planes(bads));
 
-  ell_coords(:,1) = ell_coords(:,1) - pi;
-  [c2,a2,o2] = fit_ellipse(all_coords(:, 3), ell_coords(:, 2) .* sign(ell_coords(:, 1)));
+      z_err(bads) = z_err(bads) .* mymean(sharpness(all_bads), 1, indexes(all_bads));
+    end
 
-  fit_axes = [a; a2(1)];
-  fit_center = [c; c2(1)];
-
-  p0 = [fit_center; fit_axes; orient];
-  optims = optimset('Display', 'off', 'Algorithm', 'levenberg-marquardt');
-  lbound = [0;0;-Inf;0;0;0;-2*pi];
-  ubound = [Inf(6,1);2*pi];
-  bests = lsqcurvefit(@fit_3d_ellipse, p0, all_coords(goods,:), zeros(neggs, 1), [], [], optims);
-
-  fit_center = bests(1:3);
-  fit_axes = bests(4:6);
-  orient = bests(7);
-
-  errs = ellipse_distance_mex(all_coords(goods,:), fit_center, fit_axes, orient);
-  errs = errs(:);
-
-  return;
-
-  function iter_err = fit_3d_ellipse(p, pts)
+    z_err = mean(z_err) + (sum(isnan(z_target))/nplanes);
     
-    iter_err = ellipse_distance_mex(pts, p(1:3), p(4:6), p(7));
-    iter_err = iter_err + sum(abs(p(p < lbound))) + sum(p(p > ubound));
-
     return;
   end
 end

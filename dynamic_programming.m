@@ -36,6 +36,8 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   end
 
   nstart = 0;
+  is_circular = strncmp(params.prohibit, 'none', 4);
+  spawn = params.spawn_percentile;
 
   if (isempty(weight_params))
     wimg = weight(img);
@@ -57,9 +59,9 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
 
   prev_line = img(1,:);
   if (do_probs)
-    [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params);
+    [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params, is_circular, spawn);
   else
-    [dist(1,:), map(1,:)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params);
+    [dist(1,:), map(1,:)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params, is_circular, spawn);
   end
 
   for j=2:nsteps
@@ -69,12 +71,12 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
 
     if (do_probs)
       if (j==2)
-        [dist(j,:), map(j,:), emission(j,:,:), transitions(1,2:end-1)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params);
+        [dist(j,:), map(j,:), emission(j,:,:), transitions(1,2:end-1)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn);
       else
-        [dist(j,:), map(j,:), emission(j,:,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params);
+        [dist(j,:), map(j,:), emission(j,:,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn);
       end
     else
-      [dist(j,:), map(j,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params);
+      [dist(j,:), map(j,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn);
     end
 
     if (all(isinf(dist(j,:))))
@@ -86,7 +88,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   end
 
   if (do_probs)
-    [junk, junk, junk, transitions(1,end)] = dp_score_mex([], prev_line, wimg(indxs(end),:), init, [], params);
+    [junk, junk, junk, transitions(1,end)] = dp_score_mex([], prev_line, wimg(indxs(end),:), init, [], params, is_circular, spawn);
   end
 
   tmp = zeros(nsteps, 1);
@@ -100,6 +102,10 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
 
   for j=1:nsteps-1
     tmp(end-j,1) = map(end-j+1,tmp(end-j+1,1));
+
+    if (tmp(end-j, 1) == 0)
+      break;
+    end
   end
 
   switch opts.dp_method
