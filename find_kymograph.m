@@ -21,12 +21,14 @@ function find_kymograph(varargin)
       end
 
       try
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' sum2str(fitting.parameter_set) '.txt'], 'a');
+        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo.mymovie.experiment, fitting.parameter_set);
         fclose(fid);
 
-        domain = imnorm(gather_quantification(kymo.mymovie, kymo.opts));
+        [domain, ruffles, pos] = gather_quantification(kymo.mymovie, kymo.opts);
+        domain = imnorm(domain);
         kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
+        kymo.opts.quantification.weights.filt = ruffles;
         kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
 
         [ground_truth, junk, pos, indx] = align_domain(kymo.mymovie, kymo.opts);
@@ -55,7 +57,7 @@ function find_kymograph(varargin)
 
         uuids = fit_kymograph(fitting, opts);
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' sum2str(fitting.parameter_set) '.txt'], 'a');
+        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         for u = 1:length(uuids)
           fprintf(fid, '%s %s OK\n', uuids{u}, kymo.mymovie.experiment);
         end
@@ -64,7 +66,7 @@ function find_kymograph(varargin)
       catch ME
         print_all(ME);
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' sum2str(fitting.parameter_set) '.txt'], 'a');
+        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         fprintf(fid, '-1 %s NO\n', kymo.mymovie.experiment);
         fclose(fid);
 

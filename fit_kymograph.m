@@ -161,13 +161,18 @@ function uuids = fit_kymograph(fitting, opts)
           if (length(t) < size_data(2))
             cc = normxcorr2(res, fitting.ground_truth); 
 
-            [max_cc, imax] = max(cc(size_data(1), floor(size(res, 2)/2)+1:end));
-            corr_offset = [(imax-floor(size_data(2)/2))];
+            %[max_cc, imax] = max(cc(size_data(1), floor(size(res, 2)/2)+1:end));
+            %corr_offset = [(imax-floor(size_data(2)/2))];
+            
+            [max_cc, imax] = max(cc(size(res, 1), :));
+            corr_offset = -(imax-size(res, 2));
           elseif (all(isfinite(res)))
             cc = normxcorr2(fitting.ground_truth, res); 
 
-            [max_cc, imax] = max(cc(size_data(1), floor(size_data(2)/2)+1:end));
-            corr_offset = -[(imax-floor(size(res, 2)/2))];
+            %[max_cc, imax] = max(cc(size_data(1), floor(size_data(2)/2)+1:end));
+            %corr_offset = -[(imax-floor(size(res, 2)/2))];
+            [max_cc, imax] = max(cc(size_data(1), :));
+            corr_offset = -(imax-size_data(2));
           else
             corr_offset = 0;
           end
