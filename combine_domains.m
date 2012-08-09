@@ -1,9 +1,12 @@
-function [res, vars, pos] = combine_domains(mymovies, min_num)
+function [res, vars, pos] = combine_domains(mymovies, min_num, thresh)
   %close all;
   %fname = regexprep(mymovies, '\*', '');
 
   if (nargin == 1)
     min_num = 2;
+    thresh = 0.85;
+  else if (nargin < 3)
+    thresh = 0.85;
   end
 
   if (ischar(mymovies))
@@ -97,11 +100,13 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
   for i=1:nmovies
     load(mymovies{i});
     try
-      domain = imnorm(gather_quantification(mymovie, opts));
+      [domain, ruffles, junk] = gather_quantification(mymovie, opts);
+      domain = imnorm(domain);
     catch ME
       continue;
     end
     opts = load_parameters(opts, 'domain_center.txt');
+    opts.quantification.weights.filt = ruffles;
     mymovie.data.domain = dynamic_programming(domain, opts.quantification.params, @weight_symmetry, opts.quantification.weights, opts);
     [domain, ruffles, pos, indx] = align_domain(mymovie, opts);
     %[domain, pos, indx] = align_domain(mymovie, opts);
@@ -113,23 +118,30 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
       continue;
     end
 
-
     fraction = domain_expansion(domain, indx, time(end));
-    align_time = find(fraction >  0.85, 1, 'first');
-    maintenance = time(end) - align_time;
+    align_time = find(fraction >  thresh, 1, 'first');
+    if (isempty(align_time))
+      maintenance = time(end);
+    else
+      maintenance = time(end) - align_time;
+    end
     time = align_time;
     %time = time(end);
-    
+
+    %figure;imagesc(domain);
+    %hold on;plot([1 size(domain, 2)], [align_time align_time], 'k');
+    %title(mymovie.experiment);
+
     center = mymovie.data.domain(1:time+maintenance);
     center = center - center(end);
     %pos = pos(1:time+maintenance) - pos(end);
     fraction = fraction(1:time+maintenance);
 
-    domain = domain(:,[-boundary:boundary]+indx);
+    domain = domain(1:time+maintenance,[-boundary:boundary]+indx);
     %domain = ruffles(:,[-boundary:boundary]+indx);
     indx = boundary + 1;
     valids = ~isnan(domain);
-    valids = valids(1:time+maintenance, :);
+    %valids = valids(1:time+maintenance, :);
 
     if (i == 1)
       all_indx = indx;
@@ -140,6 +152,7 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
       vars = tmp_res.^2;
       res = tmp_res;
       count = double(valids);
+      all_valids = valids;
 
 %      figure;
 %      subplot(1,2,1)
@@ -154,12 +167,14 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
         tmp_res = padarray(tmp_res, [0 boundary - all_indx + 1], 0, 'both');
         count = padarray(count, [0 boundary - all_indx + 1], 0, 'both');
         vars = padarray(vars, [0 boundary - all_indx + 1], 0, 'both');
+        all_valids = padarray(all_valids, [0 boundary - all_indx + 1], 0, 'both');
         all_indx = boundary + 1;
       end
       if (time > all_align)
         tmp_res = padarray(tmp_res, [time - all_align 0], 0, 'pre');
         count = padarray(count, [time - all_align 0], 0, 'pre');
         vars = padarray(vars, [time - all_align 0], 0, 'pre');
+        all_valids = padarray(all_valids, [time - all_align 0], 0, 'pre');
         all_align = time;
       end
       %if (maintenance < all_maintenance)
@@ -172,6 +187,7 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
         tmp_res = padarray(tmp_res, [maintenance - all_maintenance 0], 0, 'post');
         count = padarray(count, [maintenance - all_maintenance 0], 0, 'post');
         vars = padarray(vars, [maintenance - all_maintenance 0], 0, 'post');
+        all_valids = padarray(all_valids, [maintenance - all_maintenance 0], 0, 'post');
         all_maintenance = maintenance;
       end
 
@@ -181,6 +197,8 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
       start = all_align - time + 1;
       ends = all_maintenance - maintenance;
 
+      valids = all_valids([start:end-ends], [width:end-width+1]) & valids(1:time+maintenance, :);
+
       window = res([start:end-ends], [width:end-width+1]);
       c = robustfit(domain(valids), window(valids));
       domain = c(1) + c(2)*domain;
@@ -189,6 +207,7 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
       tmp_res([start:end-ends], [width:end-width+1]) = tmp_res([start:end-ends], [width:end-width+1]) + domain(1:time+maintenance, :);
       vars([start:end-ends], [width:end-width+1]) = vars([start:end-ends], [width:end-width+1]) + domain(1:time+maintenance, :).^2;
       count([start:end-ends], [width:end-width+1]) = count([start:end-ends], [width:end-width+1]) + double(valids);
+      all_valids([start:end-ends], [width:end-width+1]) = valids(1:time+maintenance, :);
 
 
 %      subplot(2,1,1)
@@ -220,19 +239,33 @@ function [res, vars, pos] = combine_domains(mymovies, min_num)
   end
   vars = vars ./ count;
   res = tmp_res ./ count;
-  valids = any(isnan(res), 1);
-  vars = sqrt(vars - res.^2) ./ sqrt(count);
+  
+  all_valids = all_valids & count >= min_num;
 
-  first = all_indx - find(valids(1:all_indx), 1, 'last');
-  last = find(valids(all_indx:end), 1, 'first') - 1;
+  valids = any(all_valids, 2);
+  first_frame = find(valids, 1, 'first');
+  last_frame = find(valids, 1, 'last');
+
+  valids = any(all_valids, 1);
+  
+  %vars = sqrt(vars - res.^2) ./ sqrt(count);
+  vars = sqrt(vars - res.^2);
+
+  first = all_indx - find(valids(1:all_indx), 1, 'first');
+  last = find(valids(all_indx:end), 1, 'last') - 1;
   boundary = min(first, last);
 
-  first = find(max(count, [], 2) >= min_num, 1, 'first');
+  %first = find(max(count, [], 2) >= min_num, 1, 'first');
 
-  res = (res([first:all_align+all_maintenance],[-boundary:boundary]+all_indx));
-  vars = (vars([first:all_align+all_maintenance],[-boundary:boundary]+all_indx));
+  res(~all_valids) = NaN;
+  vars(~all_valids) = NaN;
+
+  res = (res([first_frame:last_frame],[-boundary:boundary]+all_indx));
+  vars = (vars([first_frame:last_frame],[-boundary:boundary]+all_indx));
   %res = (res([first:all_align],[-boundary:boundary]+all_indx));
   %vars = (vars([first:all_align],[-boundary:boundary]+all_indx));
+
+
   pos = [-boundary:boundary] * median(diff(pos));
 
   %[val1, errs] = mymean(res, 3);

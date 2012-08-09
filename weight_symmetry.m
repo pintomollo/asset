@@ -62,7 +62,7 @@ function weight = weight_symmetry(img, params)
 
   weight(isnan(weight)) = Inf;
 
-  figure;imagesc(weight)
+  %figure;imagesc(weight)
 
   return;
 end

@@ -31,21 +31,28 @@ function fraction = domain_expansion(domain, center, cytok)
   opts.force_circularity = false;
   opts.dp_method = 'normal';
 
-  weights.alpha = 0.75;
-  weights.beta = 0.5;
+  weights.alpha = 0.55;
+  weights.beta = 0.35;
+  weights.gamma = 0.75;
 
   params.init = 1;
-  params.nhood = 7;
-  params.alpha = 0.6;
-  params.beta = 0.15;
-  params.gamma = 0.25;
+  %params.nhood = 9;
+  params.nhood = 21;
+  params.alpha = 0.65;
+  params.beta = 0.75;
+  params.gamma = 0.15;
   params.prohibit = 'horiz';
-  params.spawn_percentile = 0.75;
+  %params.spawn_percentile = [0.995 0.002];
+  %params.spawn_percentile = [0 0.055];
+  params.spawn_percentile = 0.1;
 
   path = dynamic_programming(domain, params, @weight_expansion, weights, opts);
 
-  figure;imagesc(domain);
-  hold on;plot(path, [1:size(domain, 1)], 'k')
+  %figure;imagesc(domain);
+  %axis([1 size(domain, 2) 1 size(domain, 1)]);
+  %hold on;plot(path, [1:size(domain, 1)], 'k')
+
+  %keyboard
 
   thresh = 1.1*graythresh(domain([end-5:end], :));
   valids = (domain >= thresh);

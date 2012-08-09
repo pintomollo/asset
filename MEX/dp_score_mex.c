@@ -46,10 +46,10 @@ static double percentile(int s, double *r, int num)
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-  double *values, *candidates, *datas, *prev_dist, *prev_dir; 
+  double *values, *candidates, *datas, *prev_dist, *prev_dir, *spawn = NULL;
   double *bests, *emission, *trans;
   double alpha, beta, gamma, inv_alpha, inv_beta, inv_gamma, smooth, norm, twonorm;
-  double real_dir, tmp_dir, res, min_dist, myInf, tmp_val, spawn = 1;
+  double real_dir, tmp_dir, res, min_dist, myInf, tmp_val;
   int nhood, npts, half, i, p, *indxs, index, min_indx, nvalids, spawn_index;
   bool no_values, transitions_done = false, is_circular = false, does_spawn = false;
 
@@ -72,16 +72,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (mxIsLogical(prhs[6])) {
       is_circular = mxGetLogicals(prhs[6])[0];
     } else {
-      spawn = mxGetScalar(prhs[6]);
+      spawn = mxGetPr(prhs[6]);
+      does_spawn = true;
     }
   } else if (nrhs == 8) {
     if (mxIsLogical(prhs[6])) {
       is_circular = mxGetLogicals(prhs[6])[0];
-      spawn = mxGetScalar(prhs[7]);
+      spawn = mxGetPr(prhs[7]);
     } else {
-      spawn = mxGetScalar(prhs[6]);
+      spawn = mxGetPr(prhs[6]);
       is_circular = mxGetLogicals(prhs[7])[0];
     }
+    does_spawn = true;
   }
 
   inv_alpha = 1 - alpha;
@@ -120,7 +122,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
   }
 
-  if (spawn < 1 && spawn > 0) {
+
+  /*if (spawn > 0) {
+    does_spawn = true;
+  }*/
+  /*if (spawn < 1 && spawn > 0) {
     does_spawn = true;
     nvalids = npts;
     for (p = 0; p < npts; p++) {
@@ -136,7 +142,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
 
     spawn = percentile(spawn_index, prev_dist, npts);
-  }
+  }*/
 
   for (p = 0; p < npts; p++) {
     if (mxIsNaN(candidates[p]) || mxIsNaN(datas[p])) {
@@ -146,7 +152,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else {
 
       if (does_spawn) {
-        min_dist = inv_alpha*datas[p] + spawn;
+        min_dist = inv_alpha*datas[p] + spawn[p];
         min_indx = 0;
       } else {
         min_dist = myInf;

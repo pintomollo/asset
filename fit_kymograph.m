@@ -36,7 +36,7 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   RandStream.setDefaultStream(RandStream('mt19937ar','Seed', now + cputime));
-  uuids = NaN(fitting.nfits, 1);
+  uuids = cell(fitting.nfits, 1);
 
   if (strncmp(fitting.type, 'data', 4))
     if (isempty(fitting.ground_truth))
@@ -107,8 +107,8 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   for f = 1:fitting.nfits
-    uuids(f) = now + cputime;
-    opt.LogFilenamePrefix = ['adr-kymo-' num2str(uuids(f)) '_'];
+    uuids{f} = num2str(now + cputime);
+    opt.LogFilenamePrefix = ['adr-kymo-' uuids{f} '_'];
 
     tmp_params = ml_params;
 

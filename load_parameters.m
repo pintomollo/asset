@@ -131,6 +131,7 @@ function opts = load_parameters(opts, fname)
     % Process the next line
     line = fgetl(fid);
   end
+  fclose(fid);
 
   return;
 end

@@ -354,7 +354,7 @@ function mystruct = get_struct(type, nstruct)
                         'init', [], ...                 % Initial position for DP (see dynamic_programming.m)
                         'nhood', 0, ...                 % Neighborhood explored during dynamic programming (nhood pixels on each side)
                         'prohibit', 'none', ...         % Prohibiting particular moves
-                        'spawn_percentile', -1, ...     % Score used when spawning a new path (as percentile of the previous step)
+                        'spawn_percentile', [], ...     % Score used when spawning a new path (as percentile of the previous step)
                         'alpha', 0, ...                 % Weights of the different smoothness terms
                         'beta', 0, ...                  %  "
                         'gamma', 0, ...                 %  "

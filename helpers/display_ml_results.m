@@ -1,6 +1,6 @@
 function p = display_ml_results(fname, file_pattern)
 
-  close all;
+  %close all;
   if (isstruct(fname))
     p = fname;
   else
@@ -15,11 +15,33 @@ function p = display_ml_results(fname, file_pattern)
   end
 
   if (iscell(p))
+    all_pts = [];
+    avg_pts = [];
     for i=1:size(p,1)
       data = p{i, 2};
-      for j=1:size
+      pts = [];
+      for j=1:size(data, 1)
+        s = data{j,1}(end);
+        if (isstruct(s))
+          pts = [pts; [s.params s.score]];
+        end
       end
+
+      all_pts = [all_pts; [pts ones(size(pts, 1), 1)*i]];
+      avg_pts = [avg_pts; mymean(pts, 1)];
     end
+
+    subplot(1,2,1)
+    hold off
+    scatter(all_pts(:,1), all_pts(:,2), 'b');
+    hold on
+    scatter(avg_pts(:,1), avg_pts(:,2), 'r');
+    subplot(1,2,2)
+    scatter(all_pts(:,1), all_pts(:,3), 'b');
+    hold on
+    scatter(avg_pts(:,1), avg_pts(:,3), 'r');
+
+    keyboard
   else
     for i=1:length(p)
       confs = NaN(0, 3);

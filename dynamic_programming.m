@@ -26,7 +26,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   nsteps = length(indxs);
 
   init = params.init; 
-  path = zeros(h,1);
+  path = NaN(h,1);
 
   dist = zeros(nsteps, w);
   map = zeros(nsteps, w);
@@ -45,6 +45,17 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     wimg = weight(img, weight_params);
   end
 
+  if (all(spawn >= 0 & spawn <= 1))
+    spawn = prctile(wimg(:), 100*spawn) * (1 - params.alpha);
+
+    if (numel(spawn) == 1)
+      spawn = [spawn 0];
+    end
+  else
+    spawn = Inf(1, 2);
+  end
+  spawn_gap = spawn(1);
+
   if (isempty(init))
     init = zeros(1,w);
   elseif (length(init) == 1)
@@ -57,14 +68,18 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     nstart = sum(~isinf(init));
   end
 
+  spawn = spawn(2) + init;
+
   prev_line = img(1,:);
   if (do_probs)
-    [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params, is_circular, spawn);
+    [dist(1,:), map(1,:), emission(1,:,:), transitions(1,1)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params, is_circular);
   else
-    [dist(1,:), map(1,:)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params, is_circular, spawn);
+    [dist(1,:), map(1,:)] = dp_score_mex([], prev_line, wimg(1,:), init, [], params, is_circular);
   end
 
   for j=2:nsteps
+    spawn = spawn + spawn_gap;
+
     indx = indxs(j);
 
     line = img(indx,:);
@@ -88,10 +103,10 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   end
 
   if (do_probs)
-    [junk, junk, junk, transitions(1,end)] = dp_score_mex([], prev_line, wimg(indxs(end),:), init, [], params, is_circular, spawn);
+    [junk, junk, junk, transitions(1,end)] = dp_score_mex([], prev_line, wimg(indxs(end),:), init, [], params, is_circular);
   end
 
-  tmp = zeros(nsteps, 1);
+  tmp = NaN(nsteps, 1);
 
   if (isfield(params, 'final') & ~isempty(params.final))
     subdist = dist(end, params.final);
@@ -101,11 +116,11 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   end
 
   for j=1:nsteps-1
-    tmp(end-j,1) = map(end-j+1,tmp(end-j+1,1));
-
-    if (tmp(end-j, 1) == 0)
+    if (map(end-j+1, tmp(end-j+1,1)) == 0)
       break;
     end
+
+    tmp(end-j,1) = map(end-j+1,tmp(end-j+1,1));
   end
 
   switch opts.dp_method

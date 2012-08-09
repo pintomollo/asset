@@ -15,9 +15,13 @@ function [times, names] = get_manual_timing(mymovie, opts)
     end
   end
 
-  fid = fopen('timings.txt');
-  values = textscan(fid, '%s %u %f %u');
-  fclose(fid);
+  try
+    fid = fopen('timings.txt');
+    values = textscan(fid, '%s %u %f %u');
+    fclose(fid);
+  catch ME
+    beep;keyboard
+  end
 
   names = values{1};
   times = cat(2, values{2:end});

@@ -8,17 +8,16 @@ gamma 0
 delta 0
 
 #quantification.params
-nhood 11
-alpha 0.25
+nhood 21
+%alpha 0.25
+alpha 0.45
 beta 0.985
 gamma 0.15
 delta 0
-spawn_percentile 0
+spawn_percentile 0.2
 
 #quantification.weights
 alpha 0.45
 beta 0.25
-gamma 0.8
+gamma 0.75
 delta 0.4
-%gamma 0.85
-%delta 0.3
