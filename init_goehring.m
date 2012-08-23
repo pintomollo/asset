@@ -1,6 +1,7 @@
-function init_val = init_goehring(opts)
+function [init_val, correct] = init_goehring(opts)
 
   p = opts.reaction_params;
+  correct = true;
 
   %figure;hold on;
 
@@ -16,7 +17,13 @@ function init_val = init_goehring(opts)
   if (opts.init_params)
 
     pts = find_fixed_points(@uniform, [0 6], p);
-    init_val = repmat(pts(1,:), opts.nparticles, 1);
+
+    if (numel(pts) < 2)
+      init_val = repmat([1.51 0.1], opts.nparticles, 1); % Values produced by the original parameters
+      correct = false;
+    else
+      init_val = repmat(pts(1,:), opts.nparticles, 1);
+    end
 
     %plot(pos, init_val(:,1), 'c');
     %plot(pos, init_val(:,2), 'm');
@@ -25,6 +32,11 @@ function init_val = init_goehring(opts)
 
     pts = find_fixed_points(@maintenance, [0 6], p);
     vals = max(pts);
+
+    if (numel(vals) ~= 2)
+      vals = [1.8 4]; % Values produced by the original parameters
+      correct = false;
+    end
     init_val = bsxfun(@times, vals, (erf(bsxfun(@times, [-2/9.8 2/7.7], full_pos)) + 1) / 2);
     %vals * (erf(a*(L-u)) + 1)/2;
 
@@ -32,7 +44,6 @@ function init_val = init_goehring(opts)
     %plot(pos, init_val(:,2), 'r');
 
   end
-
 
   return;
 end

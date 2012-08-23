@@ -88,6 +88,7 @@ function uuids = fit_kymograph(fitting, opts)
   size_data = size(fitting.ground_truth);
 
   full_error = penalty * size_data(2) * 10;
+  log_error = -log(penalty);
 
   rescaling = 10.^(floor(log10(ml_params)));
   rescaling(ml_params == 0) = 1;
@@ -141,11 +142,12 @@ function uuids = fit_kymograph(fitting, opts)
     err_all = NaN(1, nevals);
 
     for i = 1:nevals
+      correct = true;
       tmp_params(fit_params) = p_all(:, i);
 
       if (restart)
         opts.reaction_params = tmp_params(2:end, :);
-        x0 = opts.init_func(opts);
+        [x0, correct] = opts.init_func(opts);
       end
 
       [res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
@@ -210,10 +212,12 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err);
 
+        err_all(i) = err_all(i) + penalty*correct;
+
         bads = (tmp_params < 0);
 
         if (any(bads))
-          err_all(i) = err_all(i) + sum(sum(exp(-10*tmp_params(bads)), 2), 1);
+          err_all(i) = err_all(i) + sum(sum(exp(log_error*tmp_params(bads)), 2), 1);
         end
       end
     end

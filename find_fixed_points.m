@@ -24,7 +24,7 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
 
   % We need a valid range to work with
   if (numel(range) < 2 | range(2) <= range(1))
-    disp('A valid interval needs to be provided !');
+    warning('A valid interval needs to be provided !');
 
     return;
   end
@@ -42,6 +42,12 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
   % Now let's estimate the position of the fixed points (FP) !
   % We check where the difference between the two isoclines change (help sign)
   sign_iso = sign(cross(Fiso, pts, function_params));
+
+  if (any(~isfinite(sign_iso(:))) | any(imag(sign_iso(:))))
+    warning('The isocline have to be both real and finite !');
+
+    return;
+  end
 
   % When the sign change, there must be a FP in between (help diff)
   cross_pos = abs(diff(sign_iso)); 

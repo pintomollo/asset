@@ -2,7 +2,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
 
   npts = 500;
 
-  nframes = size_data(mymovie.data);  
+  nframes = size_data(mymovie.data);
   theta = [-0.5:1/npts:0.5].';
   theta = theta(1:end-1);
 

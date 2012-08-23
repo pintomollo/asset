@@ -31,17 +31,19 @@ function p = display_ml_results(fname, file_pattern)
       avg_pts = [avg_pts; mymean(pts, 1)];
     end
 
-    subplot(1,2,1)
-    hold off
+    %subplot(1,2,1)
+    %hold off
+    figure;
     scatter(all_pts(:,1), all_pts(:,2), 'b');
     hold on
     scatter(avg_pts(:,1), avg_pts(:,2), 'r');
-    subplot(1,2,2)
+    %subplot(1,2,2)
+    figure;
     scatter(all_pts(:,1), all_pts(:,3), 'b');
     hold on
     scatter(avg_pts(:,1), avg_pts(:,3), 'r');
 
-    keyboard
+    %keyboard
   else
     for i=1:length(p)
       confs = NaN(0, 3);

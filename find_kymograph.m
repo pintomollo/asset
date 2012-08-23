@@ -51,8 +51,14 @@ function find_kymograph(varargin)
         fitting.type = 'data';
 
         if (~fitting.fit_full)
-          fitting.ground_truth = fitting.ground_truth(:, times(2):end);
-          fitting.t_pos = fitting.t_pos(:, times(2):end);
+          if (isnan(times(2)))
+            time = round((times(end) - times(1)) * 0.75);
+            fitting.ground_truth = fitting.ground_truth(:, end-time:end);
+            fitting.t_pos = fitting.t_pos(:, end-time:end);
+          else
+            fitting.ground_truth = fitting.ground_truth(:, times(2):end);
+            fitting.t_pos = fitting.t_pos(:, times(2):end);
+          end
         end
 
         uuids = fit_kymograph(fitting, opts);

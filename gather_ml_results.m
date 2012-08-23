@@ -89,10 +89,21 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
 
     for j=1:size(data, 1)
       num_proc = str2double(data{j, 1});
+
       pattern = sprintf(file_pattern, num_proc);
       files = regexpdir(path, pattern, true);
+      first_res = numel(files);
 
-      if (numel(files) == 1)
+      tmp_res = first_res;
+      precision = 4;
+      while(tmp_res ~= 1 & precision > 0)
+        precision = precision - 1;
+        tmp_pattern = sprintf(regexprep(file_pattern, '%\.\d', ['%.' num2str(precision)]), num_proc);
+        files = regexpdir(path, tmp_pattern, true);
+        tmp_res = numel(files);
+      end
+
+      if (tmp_res == 1)
         if (isempty(prev_file) | ~strcmp(prev_file, files))
           data{j, 1} = parse_ml_results(files{1}, Inf, keep_evolution, 'none');
           prev_file = files;
@@ -100,7 +111,7 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
         else
           data{j, 1} = prev_indx;
         end
-      elseif (numel(files) > 1)
+      elseif (first_res > 1)
         warning(['Too many files associated with pattern ' pattern]);
       else
         warning(['Cannot identify the file associated with pattern ' pattern]);
