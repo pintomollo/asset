@@ -3,10 +3,10 @@ function [res, vars, pos] = combine_domains(mymovies, min_num, thresh)
   %fname = regexprep(mymovies, '\*', '');
 
   if (nargin == 1)
-    min_num = 2;
-    thresh = 0.85;
-  else if (nargin < 3)
-    thresh = 0.85;
+    min_num = 3;
+    thresh = 0.775;
+  elseif (nargin < 3)
+    thresh = 0.775;
   end
 
   if (ischar(mymovies))

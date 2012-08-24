@@ -22,10 +22,37 @@ function [domain, ruffles, pos, center_indx] = align_domain(mymovie, opts, path)
   path = round(path(:,1));
 
   if (any(isnan(path(:))))
+    
+    slope = diff(path);
+    x0 = find(~isnan(slope), 1, 'first');
+    s0 = slope(x0);
+
+    if (s0 == 0)
+      path(1:x0-1) = path(x0);
+    else
+      plateau = find(slope == 0, 1, 'first');
+
+      fact = 0.5;
+      if (isempty(plateau))
+        plateau = h;
+      end
+
+      C = path(plateau);
+      A = fact*2*(path(x0) - C);
+      B = s0 * 4 / A;
+
+      sig = A./(1 + exp(-B*([1:x0-1] - x0))) + C + A*((1-fact)/(fact*2));
+      path(1:x0-1) = round(sig);
+    end
+
+    %figure;plot(path, 1:h, 'b');
+    %figure;imagesc(img);
+    %hold on;plot(path, 1:h, 'r')
+
     last = find(~isnan(path), 1, 'last');
     path(last+1:end) = path(last);
-    first = find(~isnan(path), 1, 'first');
-    path(1:first-1) = path(first);
+    %first = find(~isnan(path), 1, 'first');
+    %path(1:first-1) = path(first);
   end
 
   center_indx = ceil(w/2);
