@@ -81,11 +81,17 @@ function uuids = fit_kymograph(fitting, opts)
     fitting.aligning_type = 'end';
   end
 
+  size_data = size(fitting.ground_truth);
+
+  if (strncmp(fitting.aligning_type, 'domain', 6))
+    f = domain_expansion((fitting.ground_truth(1:end/2, :) + fitting.ground_truth((end/2)+1:end, :)).', size_data(1)/2, size_data(2));
+    frac_indx = find(f > fitting.fraction, 1, 'first');
+  end
+
   linear_truth = fitting.ground_truth(:);
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
-  penalty = ((3*median(linear_truth))^2)*opts.nparticles/2;
+  penalty = ((median(linear_truth))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
-  size_data = size(fitting.ground_truth);
 
   full_error = penalty * size_data(2) * 10;
   log_error = -log(penalty);
@@ -114,6 +120,13 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_params = ml_params;
 
     p0 = ml_params(fit_params);
+
+    if (fitting.fit_flow)
+      p0 = [p0 1];
+    else
+      flow_scale = 1;
+    end
+
     p0 = p0 .* (1+fitting.init_noise*randn(size(p0)));
     nparams = length(p0);
 
@@ -143,14 +156,20 @@ function uuids = fit_kymograph(fitting, opts)
 
     for i = 1:nevals
       correct = true;
-      tmp_params(fit_params) = p_all(:, i);
+
+      if (fitting.fit_flow)
+        flow_scale = p_all(end, i);
+        tmp_params(fit_params) = p_all(1:end-1, i);
+      else
+        tmp_params(fit_params) = p_all(:, i);
+      end
 
       if (restart)
         opts.reaction_params = tmp_params(2:end, :);
         [x0, correct] = opts.init_func(opts);
       end
 
-      [res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+      [res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
       res = res((end/2)+1:end, :);
       if (opts.nparticles ~= ndata)
         res = interp1q(simul_pos, res, fitting.x_pos.');
@@ -178,6 +197,17 @@ function uuids = fit_kymograph(fitting, opts)
           else
             corr_offset = 0;
           end
+        case 'domain'
+          try
+          f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2));
+          catch
+            size(res)
+            err_all(i) = Inf;
+            continue;
+          end
+          findx = find(f > fitting.fraction, 1, 'first');
+
+          corr_offset = frac_indx - findx + 1;
         case 'end'
           corr_offset = size_data(2) - size(res, 2) + 1;
       end
@@ -188,12 +218,24 @@ function uuids = fit_kymograph(fitting, opts)
       if (sum(goods) < 10)
         err_all(i) = Inf;
       else
-        tmp = NaN(size_data);
+        tmp = ones(size_data)*res(1, 2);
         tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
 
         res = tmp;
 
         if (fitting.scale_data)
+          gres = ~isnan(res(:));
+          c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
+          
+          if (c(2) <= 0)
+            err_all(i) = Inf;
+            continue;
+          end
+
+          res = c(1) + c(2)*res;
+          
+          %{
+          %% Stop doing the full robust fit, too slow and not so useful...
           try
           c = robustfit(res(:), linear_truth);
 
@@ -206,13 +248,16 @@ function uuids = fit_kymograph(fitting, opts)
           catch
             %Aaaa
           end
+          %}
         end
-
+        
         tmp_err = sum((fitting.ground_truth - res).^2);
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err);
 
         err_all(i) = err_all(i) + penalty*correct;
+        
+        %imagesc([res; fitting.ground_truth]);title([num2str(err_all(i)) ' (' num2str(log10(err_all(i))) ')']);drawnow
 
         bads = (tmp_params < 0);
 

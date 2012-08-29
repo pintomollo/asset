@@ -42,6 +42,9 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
         [nframes imgsize ] = size_data(mymovie.cortex);
       end
 
+    case 'data'
+      [nframes, imgsize] = size_data(mymovie.data);
+
     % Somehow the input parameters do not make sense
     otherwise
       error 'None of the expected field are present in ''mymovie''';
@@ -53,6 +56,10 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
      (((strncmp(opts.segmentation_type, 'dic', 3) | strncmp(opts.segmentation_type, 'all', 3)) && ...
        (isfield(mymovie.dic, 'eggshell') && isfield(mymovie.dic, 'cortex')) && ...
        (length(mymovie.dic.eggshell) == nframes && length(mymovie.dic.cortex) == nframes)) ...
+     || ...
+     (strncmp(opts.segmentation_type, 'data', 3) && ...
+       (isfield(mymovie.data, 'eggshell') && isfield(mymovie.data, 'cortex')) && ...
+       (length(mymovie.data.eggshell) == nframes && length(mymovie.data.cortex) == nframes)) ...
      || ...
      ((strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3)) && ...
        (isfield(mymovie.markers, 'eggshell') && isfield(mymovie.markers, 'cortex')) && ... 
@@ -101,6 +108,12 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
       updated = updated || any(mymovie.dic.update(:, nframe));
     end
 
+    if (strncmp(opts.segmentation_type, 'data', 3))
+      mymovie = dp_data(mymovie, nframe, opts);
+
+      updated = updated || any(mymovie.data.update(:, nframe));
+    end
+
     if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
       if (opts.recompute |~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
         mymovie = dp_dic(mymovie, nframe, opts);
@@ -130,6 +143,9 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   end
   if (strncmp(opts.segmentation_type, 'dic', 3) | strncmp(opts.segmentation_type, 'all', 3))
     mymovie.dic = align_orientations(mymovie.dic);
+  end
+  if (strncmp(opts.segmentation_type, 'data', 7))
+    mymovie.data = align_orientations(mymovie.data);
   end
   if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
     mymovie.markers = align_orientations(mymovie.markers);

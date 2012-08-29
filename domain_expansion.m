@@ -13,14 +13,29 @@ function fraction = domain_expansion(domain, center, cytok)
   tol = 3;
 
   first = center - find(valids(1:center), 1, 'last');
+  if (isempty(first))
+    first = center-1;
+  end
   last = find(valids(center:end), 1, 'first') - 1;
+  if (isempty(last))
+    last = length(valids)-center;
+  end
   boundary = min(first, last)-1;
 
   if (boundary <= 10)
-    error('Detected width of the domain is too small for analysis');
+    if (max(first, last) > 10)
+      if (first > last)
+        domain = domain(:,[0:-1:-first]+center);
+      else
+        domain = domain(:,[0:last]+center);
+      end
+    else
+      error('Detected width of the domain is too small for analysis');
+    end
+  else
+    domain = domain(:,[0:boundary]+center) + domain(:,[0:-1:-boundary]+center);
   end
 
-  domain = domain(:,[0:boundary]+center) + domain(:,[0:-1:-boundary]+center);
   domain = imadjust(imnorm(domain(1:cytok, :)));
   %intens = cumsum(domain, 2);
   %intens = bsxfun(@rdivide, intens, intens(:, end));

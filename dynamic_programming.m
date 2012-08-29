@@ -45,7 +45,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     wimg = weight(img, weight_params);
   end
 
-  if (all(spawn >= 0 & spawn <= 1))
+  if (~isempty(spawn) && all(spawn >= 0 & spawn <= 1))
     spawn = prctile(wimg(:), 100*spawn) * (1 - params.alpha);
 
     if (numel(spawn) == 1)

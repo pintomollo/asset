@@ -28,6 +28,8 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
           return;
         end
         [nframes, imgsize] = size_data(mymovie.eggshell);
+      case 'data'
+        [nframes, imgsize] = size_data(mymovie.data);
       otherwise
         error 'None of the expected field are present in ''mymovie''';
     end
@@ -69,8 +71,17 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
           img = gaussian_mex(img, size250);
           img = median_mex(img, size200, 3);
 
+          thresh = graythresh(img);          
+          if (thresh == 0)
+            warning('Might need to normalize the image to detect the embryos');
+          end
+          img = (img > thresh*(max(img(:))));
+        case 'data'
+          img = imnorm(double(load_data(mymovie.data, nimg)));
+          img = gaussian_mex(img, size250);
+          img = median_mex(img, size200, 3);
           thresh = graythresh(img);
-          img = (img > thresh*(max(img(:))) );
+          img = (img > thresh*0.5*(max(img(:))) );
         otherwise
           error 'Not implemented yet'
       end
@@ -122,17 +133,17 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
       ellipses = fit_segments(tmp_estim, indxs(concaves), borders, opts.split_parameters.max_ratio, opts.split_parameters.max_distance, opts.split_parameters.max_score, opts.split_parameters.max_overlap);
 
       %if (opts.verbosity == 3)
-        %figure
-        %imshow(img);
-        %hold on
-        %scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
-        %scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
-        %scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
+      %  figure
+      %  imshow(img);
+      %  hold on
+      %  scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
+      %  scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
+      %  scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
 
-        %hold on;
-        %for j = 1:size(ellipses, 1)
-        %  draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
-        %end
+      %  hold on;
+      %  for j = 1:size(ellipses, 1)
+      %    draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
+      %  end
       %end
 
       if (i == 1)
@@ -272,13 +283,20 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
 
     for i=1:nframes
       ellipse = all_ellipses{i};
-      [neighbors.centers, neighbors.axes_length, neighbors.orientations] = deal(ellipse(:, 1:2).', ellipse(:, 3:4).', ellipse(:, 5).');
+      
+      if (isempty(ellipse))
+        neighbors.centers = NaN(2,1);
+        neighbors.axes_length = NaN(2,1);
+        neighbors.orientations = NaN;
+      else
+        [neighbors.centers, neighbors.axes_length, neighbors.orientations] = deal(ellipse(:, 1:2).', ellipse(:, 3:4).', ellipse(:, 5).');
 
-      dist = [bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])).^2 ellipse(:, [1 2]).^2];
-      dist = min(dist, [], 2);
-      [junk, indx] = max(dist);
-      neighbors.index = indx;
-
+        dist = [bsxfun(@minus, ellipse(:, [1 2]), imgsize([2 1])).^2 ellipse(:, [1 2]).^2];
+        dist = min(dist, [], 2);
+        [junk, indx] = max(dist);
+        neighbors.index = indx;
+      end
+      
       if (isempty(mymovie.(type).neighbors))
         mymovie.(type).neighbors = neighbors;
       else

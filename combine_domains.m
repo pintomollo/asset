@@ -143,7 +143,7 @@ function [res, vars, pos] = combine_domains(mymovies, min_num, thresh)
     valids = ~isnan(domain);
     %valids = valids(1:time+maintenance, :);
 
-    if (i == 1)
+    if (isempty(tmp_res))
       all_indx = indx;
       all_align = time;
       all_maintenance = maintenance;

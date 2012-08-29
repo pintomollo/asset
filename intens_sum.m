@@ -22,8 +22,8 @@ function weight = intens_sum(img, params)
   weight = 1 - (weight ./ repmat(weight(:,end),1,npts));
 
   %figure;implot(weight-beta)
-  %figure;implot(abs(weight-beta))
-  %figure;implot(1-img)
+  figure;imagesc(abs(weight-beta))
+  figure;imagesc(1-img)
 
   %weight = (1 - img) * alpha + (1 - alpha) * weight;
   weight = (1 - img) * alpha + (1 - alpha) * abs(weight - beta);

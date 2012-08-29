@@ -301,7 +301,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   double *time, *concentr, *flow, *current_flow, *x, *dx, *ddx, tmax, output_rate,
          dt, current_dt, t = 0, t_flow, x_step, *x0, *params, *cyto, *x_prev, *tmp,
-         *simulation, *curr_sim, *timing, clf_const, inv_x_step, time_count = 0, diff;
+         *simulation, *curr_sim, *timing, clf_const, inv_x_step, time_count = 0, diff,
+         flow_thresh = 0.005;
   int ntimes, count = 1, npts, npops, page_size = 500, nflow, nparams, i, j, niter, ntotal, ndata;
   bool saved = false;
   mwSize m, n;
@@ -390,9 +391,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       finite_difference(x, ddx, current_flow, x_step, npops, npts, 2);
       trapezoidal_integral(x, x_step, cyto, npts, npops);
 
-      if (clf_const*dt * inv_x_step >= 1) {
-        current_dt = x_step / clf_const;
+      if (clf_const*dt * inv_x_step >= flow_thresh) {
+        current_dt = flow_thresh * x_step / clf_const;
       }
+
+      //fprintf(fid, "%f %f %f %f\n", clf_const*dt * inv_x_step, dt, current_dt, clf_const* current_dt * inv_x_step);
 
       tmp = x_prev;
       x_prev = x;

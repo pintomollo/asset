@@ -140,12 +140,14 @@ function mystruct = get_struct(type, nstruct)
                         'data_noise', 0.2, ...
                         'nfits', 3, ...
                         'fit_full', true, ...
+                        'fit_flow', false, ...
                         'parameter_set', 2, ...
                         'scale_data', true, ...
                         'ground_truth', [], ...
                         'x_pos', [], ...
                         't_pos', [], ...
-                        'aligning_type', 'best');
+                        'fraction', 0.775, ...
+                        'aligning_type', 'domain');
 
     % Structure used to handle the metadata provided by the microscope
     case 'metadata'
@@ -276,6 +278,7 @@ function mystruct = get_struct(type, nstruct)
 
       % Set the segmentation to the used channels
       mystruct.dic = segment;                               % Parameters to segment DIC images
+      mystruct.data = segment;                              % Parameters to segment data images
       mystruct.markers = segment;                           % Parameters to segment fluorescent images
       mystruct.correction = get_struct('conversion');       % Parameters to convert from DIC to fluorescence
 
@@ -308,6 +311,46 @@ function mystruct = get_struct(type, nstruct)
 
       mystruct.dic.scoring_func = {@weight_egg, ... % Scoring functions used to
                                    @weight_cortex}; % segment DIC images
+
+      %%### DATA PARAMETERS ###%%
+
+      % Best values for the eggshell
+      % Same as for the DIC eggshell
+      mystruct.data.eggshell_params.nhood   = 5;
+      mystruct.data.eggshell_params.alpha   = 0.9243;
+      mystruct.data.eggshell_params.beta    = 0.1458;
+      mystruct.data.eggshell_params.gamma   = 0.8584;
+
+      % The actual value of this parameter depends on the pixel size which is not 
+      % yet known, consequently it will be computed by "set_pixel_size". 
+      % For more information on defining parameters proportional
+      % to the size of the pixels: help set_pixel_size.
+      mystruct.data.eggshell_weights.filt   = ...    % local "Edge-detection" filter
+          ['filt = ones(1,2*ceil(1.5 / pixel_size) + 1);' ...
+          'filt(1,1:floor(length(filt) / 2)) = -1;' ...
+          'filt / sum(abs(filt));'];
+      mystruct.data.eggshell_weights.alpha  = 0.375;% Prop. of intensity VS filter
+
+      % Best values for the cortex
+      % Same as for the DIC eggshell
+      mystruct.data.cortex_params.nhood  = 9;
+      mystruct.data.cortex_params.alpha  = 0.3336;
+      mystruct.data.cortex_params.beta   = 0.2941;
+      mystruct.data.cortex_params.gamma  = 0.6278;
+
+      mystruct.data.cortex_weights.alpha = 0.5228;   % Prop. of intensity VS outside
+      %mystruct.data.cortex_weights.beta  = 1e-8;     % Threshold for outside
+      mystruct.data.cortex_weights.beta  = 1e-2;     % Threshold for outside
+
+      mystruct.data.scoring_func = {@intens_filt,... % Segmentation functions
+                                    @intens_sum};
+
+      % General filters used in the segmentation which should be proportional to the 
+      % size of the images. For more information on defining parameters proportional
+      % to the size of the pixels: help set_pixel_size.
+      mystruct.data.shrink = 'strel(''disk'', ceil(2 / pixel_size), 0);';
+      mystruct.data.noise  = struct('gaussian', '0.15 / pixel_size;', ...
+                                         'median', 'ceil(0.5 / pixel_size) * ones(1,2);');
 
       %%### MARKERS PARAMETERS ###%%
 
