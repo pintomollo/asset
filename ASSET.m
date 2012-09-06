@@ -324,6 +324,9 @@ function [mymovie, trackings, opts] = parse_input(varargin)
         return;
       elseif (numel(files) == 1)
         varargin{1} = files{1};
+      elseif (~exist(varargin{1}, 'file'))
+        warning(['No file could be identified with the pattern: ' varargin{1}]);
+        return;
       end
 
       %% We allow several files to be analyzed consecutively by using

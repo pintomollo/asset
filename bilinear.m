@@ -20,11 +20,11 @@ function vals = bilinear(img, x, y, circular)
     circular = [circular circular];
   end
 
-  if (exist('bilinear_mex', 'file') == 3)
+  %if (exist('bilinear_mex', 'file') == 3)
     vals = bilinear_mex(img, x, y, circular);
 
     return;
-  end
+  %end
 
   vals = NaN(size(x));
 

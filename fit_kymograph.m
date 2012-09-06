@@ -79,12 +79,14 @@ function uuids = fit_kymograph(fitting, opts)
     fitting.ground_truth = fitting.ground_truth(:, end-nmaintenance:end);
     fitting.t_pos = fitting.t_pos(end-nmaintenance:end);
     fitting.aligning_type = 'end';
+    fitting.fit_flow = false;
   end
 
   size_data = size(fitting.ground_truth);
 
   if (strncmp(fitting.aligning_type, 'domain', 6))
-    f = domain_expansion((fitting.ground_truth(1:end/2, :) + fitting.ground_truth((end/2)+1:end, :)).', size_data(1)/2, size_data(2));
+    opts_expansion = load_parameters(opts, 'domain_expansion.txt');
+    f = domain_expansion((fitting.ground_truth(1:end/2, :) + fitting.ground_truth((end/2)+1:end, :)).', size_data(1)/2, size_data(2), opts_expansion);
     frac_indx = find(f > fitting.fraction, 1, 'first');
   end
 
@@ -134,7 +136,11 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.ground_truth = noiseless + range_data*randn(size_data);
     end
 
-    display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
+    if (fitting.fit_flow)
+      display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) ' & flow):']);
+    else
+      display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
+    end
     
     [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.5, opt);
 
@@ -198,16 +204,18 @@ function uuids = fit_kymograph(fitting, opts)
             corr_offset = 0;
           end
         case 'domain'
-          try
-          f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2));
-          catch
-            size(res)
+          f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+
+          if (isnan(f(end)))
             err_all(i) = Inf;
             continue;
           end
           findx = find(f > fitting.fraction, 1, 'first');
-
           corr_offset = frac_indx - findx + 1;
+          
+          if (isempty(corr_offset))
+            corr_offset = NaN;
+          end
         case 'end'
           corr_offset = size_data(2) - size(res, 2) + 1;
       end

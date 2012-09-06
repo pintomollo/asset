@@ -1,4 +1,4 @@
-function fraction = domain_expansion(domain, center, cytok)
+function fraction = domain_expansion(domain, center, cytok, opts)
 
 %  figure;imagesc(domain);
 
@@ -30,15 +30,19 @@ function fraction = domain_expansion(domain, center, cytok)
         domain = domain(:,[0:last]+center);
       end
     else
-      error('Detected width of the domain is too small for analysis');
+      warning('Detected width of the domain is too small for analysis');
+
+      return;
     end
   else
     domain = domain(:,[0:boundary]+center) + domain(:,[0:-1:-boundary]+center);
   end
 
+  domain = imnorm(domain(1:cytok, :));
+  path = dynamic_programming(domain, opts.segmentation_parameters.domain_expansion.cortex_params, opts.segmentation_parameters.domain_expansion.scoring_func, opts.segmentation_parameters.domain_expansion.cortex_weights, opts);
+
+  %{
   domain = imadjust(imnorm(domain(1:cytok, :)));
-  %intens = cumsum(domain, 2);
-  %intens = bsxfun(@rdivide, intens, intens(:, end));
 
   params = get_struct('smoothness_parameters');
   weights = get_struct('data_parameters');
@@ -51,17 +55,15 @@ function fraction = domain_expansion(domain, center, cytok)
   weights.gamma = 0.75;
 
   params.init = 1;
-  %params.nhood = 9;
   params.nhood = 21;
   params.alpha = 0.65;
   params.beta = 0.75;
   params.gamma = 0.15;
   params.prohibit = 'horiz';
-  %params.spawn_percentile = [0.995 0.002];
-  %params.spawn_percentile = [0 0.055];
   params.spawn_percentile = 0.1;
 
   path = dynamic_programming(domain, params, @weight_expansion, weights, opts);
+  %}
 
   %figure;imagesc(domain);
   %axis([1 size(domain, 2) 1 size(domain, 1)]);
@@ -76,6 +78,10 @@ function fraction = domain_expansion(domain, center, cytok)
 %  figure;imagesc(valids);
 
   init_pos = max(indxs((mean(valids([end-5:end], :)) > 0.5)));
+  
+  if (isempty(init_pos))
+    return;
+  end
   min_pos = init_pos;
 
   for i = cytok:-1:1

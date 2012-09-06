@@ -16,8 +16,28 @@ function metadata = parse_metadata(fname, base_dir, opts)
     mymovie = fname;
     fname = mymovie.experiment;
 
-    if (isfield(mymovie, 'dic') & ~isempty(mymovie.dic))
-      nframes = size_data(mymovie.dic);
+    % Get the size of the problem, using the correct channel
+    switch (opts.segmentation_type)
+
+      % The default channel which we should always have
+      case {'dic', 'all'}
+        [nframes imgsize ] = size_data(mymovie.dic);
+
+      % The marker segmentation is a bit more problematic as there might be no channel
+      % for the eggshell
+      case 'markers'
+        if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
+          [nframes imgsize ] = size_data(mymovie.eggshell);
+        else
+          [nframes imgsize ] = size_data(mymovie.cortex);
+        end
+
+      case 'data'
+        [nframes, imgsize] = size_data(mymovie.data);
+
+      % Somehow the input parameters do not make sense
+      otherwise
+        error 'None of the expected field are present in ''mymovie''';
     end
   end
 

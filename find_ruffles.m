@@ -7,7 +7,14 @@ function mymovie = find_ruffles(mymovie, opts)
 
   type = opts.segmentation_type;
   switch (type)
-    case {'dic', 'all'}
+    case 'all'
+      [nframes imgsize ] = size_data(mymovie.dic);
+      if (isfield(mymovie, 'markers' & ~isempty(mymovie.markers)))
+        type = 'markers';
+      else
+        type = 'dic';
+      end
+    case 'dic'
       [nframes imgsize ] = size_data(mymovie.dic);
     case 'markers'
       if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
@@ -15,6 +22,8 @@ function mymovie = find_ruffles(mymovie, opts)
       else
         [nframes imgsize ] = size_data(mymovie.cortex);
       end
+    case 'data'
+      [nframes imgsize ] = size_data(mymovie.data);
     otherwise
       error 'None of the expected field are present in ''mymovie''';
   end

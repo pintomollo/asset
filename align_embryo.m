@@ -1,11 +1,26 @@
 function mymovie = align_embryo(mymovie, opts)
 
-  if (strncmp(opts.segmentation_type, 'markers', 7) & isfield(mymovie, 'markers') & ~isempty(mymovie.markers))
-    type = 'markers';
-    [nframes, imgsize] = size_data(mymovie.cortex);
-  else
-    type = 'dic';
-    [nframes, imgsize] = size_data(mymovie.dic);
+  type = opts.segmentation_type;
+  switch (type)
+    case 'all'
+      [nframes imgsize ] = size_data(mymovie.dic);
+      if (isfield(mymovie, 'markers' & ~isempty(mymovie.markers)))
+        type = 'markers';
+      else
+        type = 'dic';
+      end
+    case 'dic'
+      [nframes imgsize ] = size_data(mymovie.dic);
+    case 'markers'
+      if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
+        [nframes imgsize ] = size_data(mymovie.eggshell);
+      else
+        [nframes imgsize ] = size_data(mymovie.cortex);
+      end
+    case 'data'
+      [nframes imgsize ] = size_data(mymovie.data);
+    otherwise
+      error 'None of the expected field are present in ''mymovie''';
   end
   
   mymovie = find_ruffles(mymovie, opts);

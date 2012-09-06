@@ -2,6 +2,7 @@ function weight = intens_sum(img, params)
 
   alpha = params.alpha;
   beta = params.beta;
+  gamma = params.gamma;
   egg = params.path;
 
   npts = size(img,2);
@@ -22,16 +23,20 @@ function weight = intens_sum(img, params)
   weight = 1 - (weight ./ repmat(weight(:,end),1,npts));
 
   %figure;implot(weight-beta)
-  figure;imagesc(abs(weight-beta))
-  figure;imagesc(1-img)
+  %figure;imagesc(abs(weight-beta))
+  %figure;imagesc(1-img)
+
+  %keyboard
 
   %weight = (1 - img) * alpha + (1 - alpha) * weight;
-  weight = (1 - img) * alpha + (1 - alpha) * abs(weight - beta);
+  weight = abs(img - gamma) * alpha + (1 - alpha) * abs(weight - beta);
   weight(outside) = Inf;
   weight(isnan(weight)) = Inf;
   weight(isnan(img)) = Inf;
 
-  %figure;implot(weight)
+  %weight = weight.^0.1;
+
+  %figure;imagesc(weight)
 
   return;
 end

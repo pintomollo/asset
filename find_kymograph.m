@@ -21,7 +21,7 @@ function find_kymograph(varargin)
       end
 
       try
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo.mymovie.experiment, fitting.parameter_set);
         fclose(fid);
 
@@ -63,7 +63,7 @@ function find_kymograph(varargin)
 
         uuids = fit_kymograph(fitting, opts);
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         for u = 1:length(uuids)
           fprintf(fid, '%s %s OK\n', uuids{u}, kymo.mymovie.experiment);
         end
@@ -72,7 +72,7 @@ function find_kymograph(varargin)
       catch ME
         print_all(ME);
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         fprintf(fid, '-1 %s NO\n', kymo.mymovie.experiment);
         fclose(fid);
 

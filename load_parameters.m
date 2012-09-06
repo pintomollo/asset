@@ -58,7 +58,6 @@ function opts = load_parameters(opts, fname)
     elseif (exist(['celegans-analysis' filesep 'Config' filesep fname '.txt'], 'file'))
       fname = ['celegans-analysis' filesep 'Config' filesep fname '.txt'];
 
-
     % Otherwise we ran out of options
     else
       warning(['Configuration file ''' fname ''' could not be found.'])
