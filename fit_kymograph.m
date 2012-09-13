@@ -103,7 +103,7 @@ function uuids = fit_kymograph(fitting, opts)
   ml_params = ml_params ./ rescaling;
 
   opt = cmaes('defaults');
-  opt.MaxFunEvals = 10000;
+  opt.MaxFunEvals = fitting.max_iter;
   opt.TolFun = 1e-5;
   opt.SaveFilename = '';
   opt.SaveVariables = 'off';
@@ -171,7 +171,7 @@ function uuids = fit_kymograph(fitting, opts)
       end
 
       if (restart)
-        opts.reaction_params = tmp_params(2:end, :);
+        opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
         [x0, correct] = opts.init_func(opts);
       end
 
@@ -263,7 +263,7 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err);
 
-        err_all(i) = err_all(i) + penalty*correct;
+        err_all(i) = err_all(i) + penalty*(~correct);
         
         %imagesc([res; fitting.ground_truth]);title([num2str(err_all(i)) ' (' num2str(log10(err_all(i))) ')']);drawnow
 

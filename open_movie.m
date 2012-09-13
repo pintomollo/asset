@@ -14,7 +14,7 @@ function [mymovie] = open_movie(mymovie, opts)
   %                       2. mymovie contains a null DIC field
   %                       3. either the eggshell or the cortex field is empty
   if(~isstruct(mymovie) | length(mymovie) == 0 | ...
-    (isempty(mymovie.dic) & isempty(mymovie.eggshell & isempty(mymovie.cortex))))
+    (isempty(mymovie.dic) & isempty(mymovie.eggshell) & isempty(mymovie.cortex) & isempty(mymovie.data)))
 
     % Initialization
     curdir = '';

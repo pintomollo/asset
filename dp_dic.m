@@ -77,13 +77,19 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(neighbors(nimg), opts);
     end
     if (isnan(orientations(1,nimg)))
-      mymovie.dic.eggshell(nimg).warped = [];
+      eggshell(nimg) = get_struct('eggshell');
+      cortex(nimg) = get_struct('cortex');
+      ruffles(nimg) = get_struct('ruffles');
 
-      mymovie.dic.eggshell(nimg) = get_struct('eggshell');
       mymovie.dic.centers = centers;
       mymovie.dic.axes_length = axes_length;
       mymovie.dic.orientations = orientations;
-      mymovie.dic.cortex(nimg) = get_struct('cortex');
+      mymovie.dic.cortex = cortex;
+      mymovie.dic.eggshell = eggshell;
+      mymovie.dic.parameters = parameters;
+      mymovie.dic.update = update;
+      mymovie.dic.ruffles = ruffles;
+
       %mymovie.dic.neighbors(nimg) = get_struct('reference');
 
       warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
@@ -119,14 +125,18 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     [egg_path, egg_shift] = detect_eggshell(polar_img, outer_egg, axes_length(:,nimg), parameters.safety, parameters.eggshell_weights.eta);
     %keyboard
     if (~(egg_shift > 0))
-      mymovie.dic.eggshell(nimg).warped = [];
+      eggshell(nimg) = get_struct('eggshell');
+      cortex(nimg) = get_struct('cortex');
+      ruffles(nimg) = get_struct('ruffles');
 
-      mymovie.dic.eggshell(nimg) = get_struct('eggshell');
-      mymovie.dic.centers(:, nimg) = NaN;
-      mymovie.dic.axes_length(:, nimg) = NaN;
-      mymovie.dic.orientations(1, nimg) = NaN;
-      %mymovie.dic.neighbors(nimg) = neighbors;
-      mymovie.dic.cortex(nimg) = get_struct('cortex');
+      mymovie.dic.centers = centers;
+      mymovie.dic.axes_length = axes_length;
+      mymovie.dic.orientations = orientations;
+      mymovie.dic.cortex = cortex;
+      mymovie.dic.eggshell = eggshell;
+      mymovie.dic.parameters = parameters;
+      mymovie.dic.update = update;
+      mymovie.dic.ruffles = ruffles;
 
       warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
       return;

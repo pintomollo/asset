@@ -1,63 +1,72 @@
-function print_all(variable, spacer)
+function print_all(varargin)
 
-  if (nargin == 1)
-    spacer = '';
+  fid = 1;
+  spacer = '';
+  variable = [];
+  prefix = '';
+
+  for i=1:length(varargin)
+    if (isnumeric(varargin{i}) & ~isempty(fopen(varargin{i})))
+      fid = varargin{i};
+    elseif (isempty(variable))
+      variable = varargin{i};
+    else
+      spacer = varargin{i};
+    end
   end
 
+  if (isempty(spacer))
+    if (fid > 2)
+      spacer = '\t';
+    else
+      spacer = ': ';
+    end
+  end
+
+  myprint(fid, variable, spacer, prefix);
+
+  return;
+end
+
+function myprint(fid, variable, spacer, prefix)
+
+  orig_prefix = prefix;
+
   if (isempty(variable))
-    fprintf([spacer '[]\n']);
+    fprintf(fid, [prefix spacer '[]\n']);
   else
     switch get_type(variable)
       case 'cell'
-        print_cell(variable, spacer);
+        for i=1:numel(variable)
+          myprint(fid, variable{i}, spacer, [prefix '{' num2str(i) '}']);
+        end
       case {'struct', 'errmsg'}
-        print_structure(variable, spacer)
+        fields = fieldnames(variable);
+        for i=1:numel(struct)
+          if (numel(struct) > 1)
+            prefix = [orig_prefix '(' num2str(i) ')'];
+          end
+          for j=1:length(fields)
+            name = fields{j};
+            values = variable(i).(name);
+
+            if (isempty(prefix))
+              myprint(fid, values, spacer, name);
+            else
+              myprint(fid, values, spacer, [prefix '.' name]);
+            end
+          end
+        end
       case 'num'
-        fprintf([spacer '%f\n'], variable);
+        fprintf(fid, [prefix spacer '%f\n'], variable);
       case 'bool'
-        fprintf([spacer '%d\n'], variable);
+        fprintf(fid, [prefix spacer '%d\n'], variable);
       case 'char'
-        fprintf([spacer '%s\n'], variable);
+        fprintf(fid, [prefix spacer '%s\n'], variable);
       otherwise
-        fprintf([spacer '%s\n'], class(variable));
+        fprintf(fid, [prefix spacer '%s\n'], class(variable));
     end
   end
   
-  return;
-end
-
-function print_structure(struct, spacer)
-
-  spacer_unit = '    ';
-
-  fields = fieldnames(struct);
-  for i=1:numel(struct)
-    if (numel(struct) > 1)
-      fprintf([spacer '----%d----\n'], i);
-    end
-    for j=1:length(fields)
-      name = fields{j};
-      values = struct(i).(name);
-
-      fprintf([spacer '%s:\n'], name);
-      print_all(values, [spacer spacer_unit]);
-    end
-  end
-
-  return;
-end
-
-function print_cell(variable, spacer)
-
-  spacer_unit = '    ';
-
-  if (numel(variable) == 1)
-    print_all(variable{1}, spacer);
-  else
-    for i=1:numel(variable)
-      print_all(variable{i}, [spacer spacer_unit]);
-    end
-  end
-
   return;
 end

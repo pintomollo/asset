@@ -67,6 +67,23 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     else
       [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(neighbors(nimg), opts);
     end
+    if (isnan(orientations(1,nimg)))
+      eggshell(nimg) = get_struct('eggshell');
+      cortex(nimg) = get_struct('cortex');
+      ruffles(nimg) = get_struct('ruffles');
+
+      mymovie.markers.centers = centers;
+      mymovie.markers.axes_length = axes_length;
+      mymovie.markers.orientations = orientations;
+      mymovie.markers.cortex = cortex;
+      mymovie.markers.eggshell = eggshell;
+      mymovie.markers.parameters = parameters;
+      mymovie.markers.update = update;
+      mymovie.markers.ruffles = ruffles;
+
+      warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
+      return;
+    end
 
     if (opts.verbosity == 3)
       old_center = centers(:,nimg);

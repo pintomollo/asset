@@ -1,6 +1,12 @@
 function [elliptic_img] = elliptic_coordinate(img, varargin)
 
   [center, axes_length, orient, safety, ellsize, circular, type] = parse_inputs(varargin{:});
+  if (any(~isfinite(ellsize)))
+    warning('Non-finite projection size !!');
+    elliptic_img = [];
+
+    return;
+  end
 
   done = false;
   while (~done)

@@ -24,7 +24,7 @@ function weight = intens_sum(img, params)
 
   %figure;implot(weight-beta)
   %figure;imagesc(abs(weight-beta))
-  %figure;imagesc(1-img)
+  %figure;imagesc(abs(img - gamma))
 
   %keyboard
 

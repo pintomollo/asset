@@ -158,12 +158,14 @@ modifier = event_data.Modifier;
 
 hfig = gcbf;
 handles = get(hfig,'UserData');
-if (isfield(handles.mymovie, 'dic'))
+if (isfield(handles.mymovie, 'dic') & ~isempty(handles.mymovie.dic))
   [nframes] = size_data(handles.mymovie.dic);
-elseif (isfield(handles.mymovie, 'cortex'))
+elseif (isfield(handles.mymovie, 'cortex') & ~isempty(handles.mymovie.cortex))
   [nframes] = size_data(handles.mymovie.cortex);
-elseif (isfield(handles.mymovie, 'eggshell'))
+elseif (isfield(handles.mymovie, 'eggshell') & ~isempty(handles.mymovie.eggshell))
   [nframes] = size_data(handles.mymovie.eggshell);
+elseif (isfield(handles.mymovie, 'data') & ~isempty(handles.mymovie.data))
+  [nframes] = size_data(handles.mymovie.data);
 end
 
 switch key
@@ -291,6 +293,20 @@ mymovie = handles.mymovie;
 trackings = handles.trackings;
 
 name = num2str(handles.current);
+
+if (isempty(mymovie.(handles.type)))
+  if (~isempty(mymovie.dic))
+    handles.type = 'dic';
+  elseif (~isempty(mymovie.markers))
+    handles.type = 'markers';
+  elseif (~isempty(mymovie.data))
+    handles.type = 'data';
+  end
+  %ismember(get(handles.uitype, 'String'), handles.type)
+  set(handles.uitype, 'Value', find(ismember(cellstr(get(handles.uitype, 'String')), handles.type)));
+  %keyboard
+  %set(handles.uitype, 'Value', handles.type);
+end
 
 if (isfield(mymovie, 'metadata'))
   %name = [name ':' num2str(mymovie.metadata.z_pos(handles.current)) ':' num2str(mymovie.metadata.z_rel(handles.current))];

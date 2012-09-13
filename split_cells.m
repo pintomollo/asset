@@ -52,11 +52,12 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
   all_estim = cell(nframes, 1);
 
   max_nellipses = 0;
+  ndata = 0;
 
   for n = 1:nframes
     %nimg = randi(nframes, 1);
     nimg = n;
-    %nimg = 23
+    %nimg = 852
 
     if (isstruct(mymovie))
       
@@ -81,7 +82,9 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
           img = gaussian_mex(img, size250);
           img = median_mex(img, size200, 3);
           thresh = graythresh(img);
-          img = (img > thresh*0.5*(max(img(:))) );
+
+          %img = (img > thresh*0.5*(max(img(:))) );
+          img = (img > thresh*(max(img(:))) );
         otherwise
           error 'Not implemented yet'
       end
@@ -155,6 +158,9 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
       end
     end
 
+    if (ndata == 0)
+      ndata = size(all_ellipses{nimg}, 2);
+    end
     nellipses = size(all_ellipses{nimg}, 1);
     if (nellipses > max_nellipses)
       max_nellipses = nellipses;
@@ -172,15 +178,19 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
   elseif (max_nellipses > 1)
     display('There seems to be several cells in the images, double checking if everything is fine !');
 
-    [n, m] = size(all_ellipses{1});
-    real_ell = NaN(n, m, nframes);
-    real_ell(:,:,1) = all_ellipses{1};
-
     dist_thresh = (opts.split_parameters.max_distance / 3)^2;
+    start_index = nframes;
+    for i=1:nframes
+      if (~isempty(all_ellipses{i}))
+        real_ell = NaN(size(all_ellipses{i},1), ndata, nframes);
+        real_ell(:,:,1) = all_ellipses{i};
+        start_index = i;
 
-    %figure;hold on;
+        break;
+      end
+    end
 
-    for i=2:nframes
+    for i=start_index+1:nframes
       tmp_ell = all_ellipses{i};
       for k=1:size(tmp_ell, 1)
         found = false;
@@ -203,7 +213,7 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
     goods = sum(~isnan(real_ell),3);
     goods = (goods(:,1) > nframes/3);
 
-    avg_ell = NaN(0,m);
+    avg_ell = NaN(0,ndata);
 
     for i=1:size(real_ell, 1)
       if (goods(i))
@@ -225,6 +235,11 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
     for nimg = 1:nframes
       
       estim = all_estim{nimg};
+      
+      if (isempty(estim))
+        continue;
+      end
+          
       [pac, indxs] = impac(estim);
       concaves = compute_concavity(pac, opts.split_parameters.angle_thresh);
 

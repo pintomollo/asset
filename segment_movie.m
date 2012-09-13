@@ -68,8 +68,6 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     return;
   end
 
-  mymovie = split_cells(mymovie, opts);
-
   % Progress bar
   if (opts.verbosity > 0)
     hwait = waitbar(0,'Segmenting Frames','Name','ASSET');

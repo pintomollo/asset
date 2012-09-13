@@ -77,6 +77,7 @@ function display_mcmc_results(fname, merge, varying)
 
   best = data(1,varying);
   data = data(2:end, varying);
+  header = header(2:end, :);
   ndims = size(data, 2);
 
   nbins = 32;
@@ -148,8 +149,8 @@ function display_mcmc_results(fname, merge, varying)
       %imagesc(exp(score_map));
       plot(path(:, n), path(:, m), 'w');
       scatter(centers(:, 1), centers(:, 2), 'xk');
-      scatter(best(1, n), best(1, m), 'oy', 'filled');
       scatter(data([1 gaps_index+1], n), data([1 gaps_index+1], m), '^g');
+      scatter(best(1, n), best(1, m), 'oy', 'filled');
       %axis equal;
       axis([x([1 end]); y([1 end])].');
       mtit(num2str(ndims));

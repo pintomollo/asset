@@ -51,6 +51,25 @@ function mymovie = dp_data(mymovie, nimg, opts)
 
     update(2, nimg) = true;
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(neighbors(nimg), opts);
+
+    if (isnan(orientations(1,nimg)))
+      eggshell(nimg) = get_struct('eggshell');
+      cortex(nimg) = get_struct('cortex');
+      ruffles(nimg) = get_struct('ruffles');
+
+      mymovie.data.centers = centers;
+      mymovie.data.axes_length = axes_length;
+      mymovie.data.orientations = orientations;
+      mymovie.data.cortex = cortex;
+      mymovie.data.eggshell = eggshell;
+      mymovie.data.parameters = parameters;
+      mymovie.data.update = update;
+      mymovie.data.ruffles = ruffles;
+
+      warning(['No embryo detected in frame ' num2str(nimg) ', skipping.']);
+      return;
+    end
+
     img = imnorm(double(load_data(mymovie.data, nimg)));
     img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
       %img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
@@ -114,9 +133,18 @@ function mymovie = dp_data(mymovie, nimg, opts)
       parameters.cortex_params.beta = 0.85;
       parameters.cortex_params.gamma = 0.1;
 
-      parameters.cortex_weights.alpha = 0.55;
-      parameters.cortex_weights.beta = 0.05;
-      parameters.cortex_weights.gamma = 0.45;
+      parameters.cortex_weights.alpha = 0.45;
+      parameters.cortex_weights.beta = 0.01;
+      parameters.cortex_weights.gamma = 0.15;
+
+      %%%%%% Time-Lapse values
+      %parameters.cortex_params.nhood = 11;
+      %parameters.cortex_params.alpha = 0.4;
+      %parameters.cortex_params.beta = 0.85;
+      %parameters.cortex_params.gamma = 0.1;
+      %parameters.cortex_weights.alpha = 0.55;
+      %parameters.cortex_weights.beta = 0.05;
+      %parameters.cortex_weights.gamma = 0.45;
 
       %print_all(parameters)
       %figure;imagesc(log(parameters.scoring_func{2}(polar_img, parameters.cortex_weights)));
@@ -164,7 +192,6 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie.data.axes_length = axes_length;
     mymovie.data.orientations = orientations;
     mymovie.data.cortex = cortex;
-    mymovie.data.ruffles(nimg) = get_struct('ruffles');
   end
 
   if (length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
@@ -191,7 +218,6 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie.data.orientations = orientations;
     mymovie.data.eggshell = eggshell;
   end
-
 
   mymovie.data.parameters = parameters;
   mymovie.data.update = update;
