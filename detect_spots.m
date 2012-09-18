@@ -102,21 +102,41 @@ function spots = detect_spots(imgs, opts)
     % Performs the actual spot detection "a trous" algorithm [1]
     atrous = imatrou(img, noise_thresh, spot_max_size);
 
+    %keyboard
+
     % Keeps only the detections that are above the noise_threshold
     thresh = mean(atrous(:)) + noise_thresh * std(atrous(:));
+
+    bw = imfill(atrous > thresh, 'holes');
+    bw = bwmorph(bw, 'shrink', Inf);
+
     % And get the list of candidates
-    [cand_x, cand_y] = find(atrous > thresh);
+    [cand_x, cand_y] = find(bw);
     nspots = length(cand_x);
 
     % Prepare the parameters for the optimization
-    opts = optimset('Display','off', 'Algorithm', 'levenberg-marquardt');
-    
+    opt = optimset('Display','off', 'Algorithm', 'levenberg-marquardt');
+    %{
+    opt = cmaes('defaults');
+    opt.MaxFunEvals = 200;
+    opt.TolFun = 1e-5;
+    opt.SaveFilename = '';
+    opt.SaveVariables = 'off';
+    opt.EvalParallel = 'no';
+    opt.LogPlot = 0;
+    opt.DispModulo = Inf;
+    %}
+
     % Initialize the intermediate variables used to store the detections
-    results = NaN(nspots, 6, nspots);
-    init_conds = NaN(nspots, 6);
+    %results = NaN(nspots, 6, nspots);
+
+    %% Use the last one as an index for mymean
+    results = NaN(nspots, 6 + 1);
+    init_conds = NaN(nspots, 4);
 
     % We then loop over every candidate spot to refine our search
     for j = 1:nspots
+
       % Get a first estimate of the position and size of the detected spot
       [gauss_params] = estimate_spot(img, [cand_x(j), cand_y(j)], spot_max_size, noise_thresh);
 
@@ -141,8 +161,25 @@ function spots = detect_spots(imgs, opts)
       % If no such "close" initial condition exists, we optimize our new candidate
       if (isempty(indx))
 
+        %rescaling = ones(size(gauss_params));
+        %rescaling = 10.^(floor(log10(gauss_params)));
+        %rescaling(gauss_params == 0) = 1;
+
+        %wsize = ceil(3*gauss_params(3));
+        %window = get_window(img, round(gauss_params(1:2)), wsize);
+
         % We use MATLAB non-linear solver with the gaussian-fitting error function
-        [best] = lsqnonlin(@fit_gaussian, gauss_params, [], [], opts);
+        [bps] = lsqnonlin(@fit_gaussian, log(gauss_params), [], [], opt);
+        [err, best] = fit_gaussian(bps);
+        %keyboard
+
+        %gauss_params = best;
+        %wsize = ceil(2*gauss_params(3));
+        %window = get_window(img, round(gauss_params(1:2)), wsize);
+        %[best] = lsqnonlin(@fit_gaussian, gauss_params, [], [], opt);
+        %[best] = cmaes(@fit_gaussian, gauss_params(:), 0.5, opt);
+        %best = best(1:2) .* rescaling(1:2);
+        %keyboard
         
         % If the final fit has no amplitude (4th parameter), this is not a valid spot
         if (best(4) == 0)
@@ -152,35 +189,35 @@ function spots = detect_spots(imgs, opts)
         end
 
         % Otherwise check whether there is a "close" optimized solution
-        dists = hypot(results(1:j-1, 1, 1) - best(1), results(1:j-1, 2, 1) - best(2));
+        dists = hypot(results(1:j-1, 1) - best(1), results(1:j-1, 2) - best(2));
 
         % We merge overlapping spots
-        indx = find(dists <= (results(1:j-1, 3, 1) + best(3)), 1);
+        indx = find(dists <= (results(1:j-1, 3) + best(3)), 1);
 
       % Otherwise we simply copy the optimized result from the table
       else
-        sub_indx = init_conds(indx, end);
-        indx = init_conds(indx, end-1);
-        best = results(indx, 1:end-1, sub_indx);
+        %sub_indx = init_conds(indx, end);
+        indx = init_conds(indx, end);
+        best = results(indx, 1:end-2);
       end
 
       % If we have not found a "close" optimized soliton, we store ours as a new one
       if (isempty(indx))
         % Store it in the current row in the first place
         % Adding at the end the "a trous" detection score
-        results(j,:,1) = [best atrous(cand_x(j), cand_y(j))];
+        results(j,:) = [best atrous(cand_x(j), cand_y(j)) j];
 
         % Store the reference indexes used for reusing the solution
-        init_conds(j, end-1:end) = [j 1];
+        init_conds(j, end) = j;
 
       % Otherwise we simply add it in the same row, in the next available place
       else
         % Find the next available free place
-        sub_indx = find(isnan(results(indx,1,:)),1);
+        %sub_indx = find(isnan(results(indx,1,:)),1);
 
         % Store the parameters and the indexes
-        results(indx,:,sub_indx) = [best atrous(cand_x(j), cand_y(j))];
-        init_conds(j, end-1:end) = [indx sub_indx];
+        results(indx,:) = [best atrous(cand_x(j), cand_y(j)) indx];
+        init_conds(j, :) = NaN;
       end
     end
 
@@ -221,35 +258,94 @@ function spots = detect_spots(imgs, opts)
 
   % The error function used to fit the gaussian spot estimation, I used a nested function to
   % avoid having to pass the whole image as a parameter.
-  function err = fit_gaussian(params)
+  function [err, params] = fit_gaussian(params)
   % The function returns the error between the current estimation of the spot and the actual
   % image as a simple sum of absolute difference. 
 
+    params = exp(params);
+
     % Retrieve the current value of the parameters
     tmp_pos = params(1:2);
+    %tmp_sigma = gauss_params(3);
     tmp_sigma = params(3);
-    tmp_ampl = params(4);
-    tmp_bkg = params(5);
+    %tmp_ampl = params(4);
+    %tmp_bkg = params(5);
+    %tmp_pos = params(1:2) .* rescaling(1:2);
+    %tmp_sigma = gauss_params(3) * rescaling(3) / 2;
+    %tmp_sigma = params(3) * rescaling(3);
+    %tmp_ampl = params(4) * rescaling(4);
+    %tmp_bkg = params(5) * rescaling(5);
 
     % Get the closest pixel as the center of the mask is on the central pixel (help GaussMask2D)
     pix_pos = round(tmp_pos);
+    %pix_pos = round(gauss_params(1:2));
 
     % Get the size of the window around the candidate spot (less noise and more flat so that it's 
     % easier to fit au gaussian)
-    wsize = ceil(1.5*tmp_sigma);
+    wsize = ceil(2.5*tmp_sigma);
 
     % Extract a window of size wsize x wsize around pix_pos in the full image
     window = get_window(img, pix_pos, wsize);
 
     % Compute the gaussian spot as estimated using the provided parameters
-    gauss = GaussMask2D(tmp_sigma, size(window), pix_pos - tmp_pos);
+    gauss = GaussMask2D(tmp_sigma, size(window), tmp_pos - pix_pos);
+
+    frac = 0.8;
+    strength = gauss / (2*pi*tmp_sigma^2);
+    strength = frac*(strength) + (1-frac)/numel(gauss);
+
+    frac = 1.5;
+    goods = (gauss > exp(-frac));
+
+    if (sum(goods) > 10)
+      c = [ones(sum(goods(:)), 1), gauss(goods)] \ window(goods);
+    else
+      c = [ones(numel(gauss), 1), gauss(:)] \ window(:);
+    end
+
+    if (any(c < 0))
+
+      err = Inf;
+      params = [params 0 0];
+
+      return;
+      %c(c < 0) = 0;
+    end
+
     % The spot need to be rescaled properly
-    gauss = gauss*tmp_ampl + tmp_bkg;
+    %gauss = gauss*tmp_ampl + tmp_bkg;
+    gauss = gauss*c(2) + c(1);
 
     % Compute the absolute difference between the two. An addition penality term is added as
     % the 'levenberg-marquardt' optimization algorithm does not handle boundaries on the parameters
     % while negative values do not make any sense in our problem.
-    err = sum(sum(abs(gauss - window))) + exp(-10*sum(params(params < 0))) - 1;
+    %err = sum(sum(abs(gauss - window))) + exp(-10*sum(params(params < 0))) - 1;
+    %smallers = (window < gauss);
+    %err = (1.25*sum(gauss(smallers) - window(smallers)) + sum(window(~smallers) - gauss(~smallers)) + exp(-10*sum(params(params < 0))) - 1) / numel(window);
+    %err = (sum(sum(abs(gauss - window))) + exp(-10*sum(params(params < 0))) - 1) / numel(window);
+    err = sum((abs(gauss(:) - window(:)) .* strength(:))) + exp(-10*sum(params(params < 0))) - 1;
+    params = [params c([2 1]).'];
+
+    %figure;
+    a = tmp_pos-pix_pos+wsize+1-tmp_sigma/2;
+    subplot(1,2,2)
+    hold off;
+    %imagesc(strength)
+    imagesc(img)
+    %imagesc(gauss);
+    hold on;
+    rectangle('Position', [tmp_pos([2 1])-tmp_sigma/2 tmp_sigma tmp_sigma], 'Curvature', [1 1], 'EdgeColor', 'k');
+    subplot(1,2,1);
+    hold off;
+    imagesc(window)
+    %imagesc(gauss - window)
+    hold on;
+    rectangle('Position', [a([2 1]) tmp_sigma tmp_sigma], 'Curvature', [1 1], 'EdgeColor', 'k');
+    title(num2str(err))
+    drawnow
+    pause(0.1)
+
+    %keyboard
 
     return;
   end
@@ -260,6 +356,34 @@ function [gauss_params] = estimate_spot(img, estim_pos, wsize, noise_thresh)
 
   % Extract a window around the candidate spot
   spots = get_window(img, estim_pos, wsize);
+
+  mask = GaussMask2D(wsize/2, size(spots)); 
+  spots = spots .* mask;
+
+  pos = -wsize:wsize;
+  x = sum(spots, 1);
+  y = sum(spots, 2).';
+
+  x = x - min(x);
+  y = y - min(y);
+
+  x = x / max(x);
+  y = y / max(y);
+
+  [junk, center_x] = max(x);
+  [junk, center_y] = max(y);
+
+  sigma_x = (sum(x > exp(-0.5)*max(x)) - 1) / 2;
+  sigma_y = (sum(y > exp(-0.5)*max(y)) - 1) / 2;
+
+  sigma = (sigma_x + sigma_y)/2;
+
+  center_x = center_x + estim_pos(2) - (wsize+1);
+  center_y = center_y + estim_pos(1) - (wsize+1);
+
+  gauss_params = [center_y center_x sigma];
+
+  return;
 
   % Segment the image using the standard deviation and the provided threshold
   bw = (spots > mymean(spots(:)) + noise_thresh*mad(spots(:)));
@@ -338,6 +462,6 @@ function window = get_window(img, pos, wsize)
 
   % Assign the pixels from the image to the window. All the outside ones will be NaN
   window(indx(okx), indx(oky)) = img(indxx(okx), indxy(oky));
-  
+
   return;
 end
