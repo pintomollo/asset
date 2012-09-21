@@ -159,7 +159,7 @@ function spots = detect_spots(imgs, opts)
       indx = find(dists < dist_thresh, 1); 
 
       % If no such "close" initial condition exists, we optimize our new candidate
-      if (isempty(indx))
+      if (isempty(indx) | isnan(init_conds(indx, end)))
 
         %rescaling = ones(size(gauss_params));
         %rescaling = 10.^(floor(log10(gauss_params)));
@@ -168,8 +168,11 @@ function spots = detect_spots(imgs, opts)
         %wsize = ceil(3*gauss_params(3));
         %window = get_window(img, round(gauss_params(1:2)), wsize);
 
+        params_range = [gauss_params([3 3]) * 2 spot_max_size]/pi;
+        init_params = [gauss_params(1:2) spot_max_size/2];
+
         % We use MATLAB non-linear solver with the gaussian-fitting error function
-        [bps] = lsqnonlin(@fit_gaussian, log(gauss_params), [], [], opt);
+        [bps] = lsqnonlin(@fit_gaussian, [0 0 tan((gauss_params(3) - init_params(3)) / params_range(3))], [], [], opt);
         [err, best] = fit_gaussian(bps);
         %keyboard
 
@@ -184,7 +187,8 @@ function spots = detect_spots(imgs, opts)
         % If the final fit has no amplitude (4th parameter), this is not a valid spot
         if (best(4) == 0)
           % Reset the initial conditions not to misslead other candidates, and skip 
-          init_conds(j, :) = NaN;
+          %init_conds(j, :) = NaN;
+          display('kept')
           continue;
         end
 
@@ -210,22 +214,29 @@ function spots = detect_spots(imgs, opts)
         % Store the reference indexes used for reusing the solution
         init_conds(j, end) = j;
 
+        %%%%%%%%% CHECK IF REMOVING NOW IS BETTER !!!!!!!!
+
+
+        %%%%%img = img - GaussMask2D(best(3), size(img), best(1:2), 0, 1)*best(4);
+
       % Otherwise we simply add it in the same row, in the next available place
       else
         % Find the next available free place
         %sub_indx = find(isnan(results(indx,1,:)),1);
 
         % Store the parameters and the indexes
-        results(indx,:) = [best atrous(cand_x(j), cand_y(j)) indx];
-        init_conds(j, :) = NaN;
+        results(j,:) = [best atrous(cand_x(j), cand_y(j)) indx];
+        %init_conds(j, :) = NaN;
+        init_conds(j, end) = indx;
       end
     end
 
     % Average the different optimization results, this is why we copy the optimized results
     % from close initial conditions, so that each dot "weights" accordingly in the final position
     
-    temp_res = mymean(results(:, 1:end-1, :), 3);
-    results = cat(2, temp_res, mysum(results(:, 6, :), 3));
+    results = mymean(results(:, 1:end-1), 1, results(:, end));
+    %temp_res = mymean(results(:, 1:end-1, :), 3);
+    %results = cat(2, temp_res, mysum(results(:, 6, :), 3));
     
     % Remove NaN solutions
     if (~isempty(results))
@@ -254,6 +265,8 @@ function spots = detect_spots(imgs, opts)
     end
   end
 
+  %%% CAN TRY TO WORK RECURSIVELY BY DELETING THE DETECTED ONES...
+
   return;
 
   % The error function used to fit the gaussian spot estimation, I used a nested function to
@@ -262,12 +275,15 @@ function spots = detect_spots(imgs, opts)
   % The function returns the error between the current estimation of the spot and the actual
   % image as a simple sum of absolute difference. 
 
-    params = exp(params);
+    params = atan(params) .* params_range + init_params;
 
     % Retrieve the current value of the parameters
+    %params(1:2) = atan(params(1:2)) * pos_range + init_pos;
+    %params(3) = exp(params(3));
+
     tmp_pos = params(1:2);
-    %tmp_sigma = gauss_params(3);
     tmp_sigma = params(3);
+    %tmp_sigma = gauss_params(3);
     %tmp_ampl = params(4);
     %tmp_bkg = params(5);
     %tmp_pos = params(1:2) .* rescaling(1:2);
@@ -303,14 +319,14 @@ function spots = detect_spots(imgs, opts)
       c = [ones(numel(gauss), 1), gauss(:)] \ window(:);
     end
 
-    if (any(c < 0))
+    %if (any(c < 0))
 
-      err = Inf;
-      params = [params 0 0];
+    %  err = Inf;
+    %  params = [params 0 0];
 
-      return;
-      %c(c < 0) = 0;
-    end
+    %  return;
+    %end
+    c(c < 0) = 0;
 
     % The spot need to be rescaled properly
     %gauss = gauss*tmp_ampl + tmp_bkg;
@@ -323,9 +339,10 @@ function spots = detect_spots(imgs, opts)
     %smallers = (window < gauss);
     %err = (1.25*sum(gauss(smallers) - window(smallers)) + sum(window(~smallers) - gauss(~smallers)) + exp(-10*sum(params(params < 0))) - 1) / numel(window);
     %err = (sum(sum(abs(gauss - window))) + exp(-10*sum(params(params < 0))) - 1) / numel(window);
-    err = sum((abs(gauss(:) - window(:)) .* strength(:))) + exp(-10*sum(params(params < 0))) - 1;
+    err = sum((abs(gauss(:) - window(:)) .* strength(:))); % + exp(-10*sum(params(params < 0))) - 1;
     params = [params c([2 1]).'];
 
+    if (false)
     %figure;
     a = tmp_pos-pix_pos+wsize+1-tmp_sigma/2;
     subplot(1,2,2)
@@ -344,6 +361,7 @@ function spots = detect_spots(imgs, opts)
     title(num2str(err))
     drawnow
     pause(0.1)
+    end
 
     %keyboard
 

@@ -19,7 +19,8 @@ function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
     if (length(groups) == 1)
       vals = all_vals;
     else
-      vals = all_vals(indexes == g);
+      'Not safe anymore, need to permute dimensions'
+      vals = all_vals(indexes == g, :);
     end
 
     nans = isnan(vals);

@@ -33,15 +33,28 @@ function p = display_ml_results(fname, file_pattern)
 
     %subplot(1,2,1)
     %hold off
-    figure;
-    scatter(all_pts(:,1), all_pts(:,2), 'b');
-    hold on
-    scatter(avg_pts(:,1), avg_pts(:,2), 'r');
+
+    for p=1:size(all_pts, 2)-3
+      for q=p+1:size(all_pts, 2)-2
+        figure;
+        scatter(all_pts(:,p), all_pts(:,q), 'b');
+        hold on
+        scatter(avg_pts(:,p), avg_pts(:,q), 'r');
+
+        xlabel(num2str(p))
+        ylabel(num2str(q))
+      end
+    end
+
+    %figure;
+    %scatter(all_pts(:,1), all_pts(:,2), 'b');
+    %hold on
+    %scatter(avg_pts(:,1), avg_pts(:,2), 'r');
     %subplot(1,2,2)
-    figure;
-    scatter(all_pts(:,1), all_pts(:,3), 'b');
-    hold on
-    scatter(avg_pts(:,1), avg_pts(:,3), 'r');
+    %figure;
+    %scatter(all_pts(:,1), all_pts(:,3), 'b');
+    %hold on
+    %scatter(avg_pts(:,1), avg_pts(:,3), 'r');
 
     %keyboard
   else
