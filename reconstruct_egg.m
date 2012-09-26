@@ -16,17 +16,19 @@ function mymovie = reconstruct_egg(mymovie, opts)
     return;
   end
 
+  if ((isfield(mymovie, 'metadata') & isfield(mymovie.metadata, 'relative_z') & ~isempty(mymovie.metadata.relative_z)) & ~opts.recompute)
+    return;
+  end
+
   [nframes, imgsize] = size_data(mymovie.dic);
   mymovie = parse_metadata(mymovie, opts);
   real_z = mymovie.metadata.z_position;
 
   pts = cell(nframes, 1);
   all_coords = zeros(0,3);
-  %goods = true(nframes, 1);
   sharpness = zeros(nframes, 1);
   all_edges = cell(nframes, 1);
 
-  if (false)
   for i=1:nframes
     tmp_pts = mymovie.dic.eggshell(i).carth;
     if (~isempty(tmp_pts))
@@ -43,13 +45,7 @@ function mymovie = reconstruct_egg(mymovie, opts)
       pts{i} = tmp_pts;
 
       all_edges{i} = edges;
-    %else
-    %  goods(i) = false;
     end
-  end
-  save('z_fit.mat', 'sharpness', 'all_edges', 'pts');
-  else
-    load ('z_fit.mat')
   end
 
   if (isempty(mymovie.metadata.plane_index))
@@ -81,8 +77,6 @@ function mymovie = reconstruct_egg(mymovie, opts)
   orient = NaN(1, ntimes);
   all_pts = cell(nframes, 1);
 
-  %figure;hold on;
-
   for i=1:ntimes
     currents = (frames == time_points(i) & valids);
     centers(1:2, i) = mean(mymovie.dic.centers(:, currents) * opts.pixel_size, 2);
@@ -92,11 +86,8 @@ function mymovie = reconstruct_egg(mymovie, opts)
     if (sum(currents) > 3)
       [centers(3, i), axes_length(:, i), all_pts(currents)] = fit_absolute_ellipse(pts(currents), centers(1:2, i), axes_length(1:2, i), orient(1, i));
 
-      i
     elseif (sum(currents) > 0)
       all_pts(currents) = pts(currents);
-      %all_pts{i} = cat(1, pts{currents});
-      %centers(3,i) = mymean(all_pts{i}(:,3));
     end
   end
 
@@ -115,23 +106,16 @@ function mymovie = reconstruct_egg(mymovie, opts)
   end
 
   orient = align_orientations(orient);
-  %centers(3,isnan(centers(3,:))) = 0;
   [axes_length, relative_z] = fit_relative_ellipse(all_pts, centers, axes_length, orient);
 
   centers = centers(:, indexes);
   orient = orient(1, indexes);
   [relative_z, centers, orient] = relative_position(pts, relative_z, centers, axes_length, orient);
 
-  figure;
-  plot_3d_ellipse(pts,  relative_z);
-  plot_3d_ellipse([mean(centers(1:2,:), 2); 0], axes_length, mean(orient));
-
   mymovie.metadata.center_3d = centers;
   mymovie.metadata.axes_length_3d = axes_length;
   mymovie.metadata.orientation_3d = orient;
   mymovie.metadata.relative_z = relative_z;
-  
-  axes_length
 
   return;
 end
@@ -164,26 +148,6 @@ function [relative_z, centers, orient] = relative_position(pts, z, centers, axes
         if (~imag(z_pos))
           relative_z(i) = z_pos;
         end
-
-        %dds = differentiator(ell_coords);
-        %index = find(dds(:,1) < -pi, 1);
-
-        %if (~isempty(index))
-        %  ell_coords = ell_coords([index+1:end 1:index], :);
-        %  dds = dds([index+1:end 1:index], :);
-        %  sharpness = sharpness([index+1:end 1:index], :);
-        %  goods = goods([index+1:end 1:index], :);
-        %end
-
-        %breaks = (abs(dds(:,2)) > 3*std(dds(:,2)));
-        %[pos, len, val] = boolean_domains(breaks);
-
-        %better = false(size(goods));
-        %for j=1:length(pos)
-        %  if (~val(j) & mean(sharpness(pos(j):pos(j)+len(j)-1)) >= val_thresh)
-        %    better(pos(j):pos(j)+len(j)-1) = true;
-        %  end
-        %end
       else
         relative_z(i) = z_pos;
       end
@@ -331,8 +295,6 @@ function [z_center, axes_length, pts] = fit_absolute_ellipse(pts, center, axes_l
   end
   all_coords = [realign(all_coords(:,1:2), [0;0], center, orient) all_coords(:,3:end)];
 
-  %myplot(all_coords(:,1:2));
-
   npts = size(all_coords, 1);
   [planes, pindex] = unique(all_coords(:,4));
   z_pos = all_coords(pindex, 3);
@@ -376,10 +338,6 @@ function [z_center, axes_length, pts] = fit_absolute_ellipse(pts, center, axes_l
 
   bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
   axes_length = bests(1:3);
-
-  %for i=1:neggs
-  %  pts{i}(:,3) = pts{i}(:,3) - z_center;
-  %end
 
   return;
 
@@ -471,6 +429,7 @@ function goods = filter_goods(goods, thresh)
   return;
 end
 
+%{
 function plot_3d_ellipse(pts, axes, orient)
   
   hold on;
@@ -514,3 +473,4 @@ function plot_3d_ellipse(pts, axes, orient)
 
   return;
 end
+%}

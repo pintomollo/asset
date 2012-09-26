@@ -62,6 +62,7 @@ function [shapes, groups] = load_shapes(fname)
 
   % Initiallize some parameters
   groups = [];
+  shapes = {};
   frame_shift = 0;
 
   % Open the file, line by line
@@ -129,7 +130,7 @@ function [shapes, groups] = load_shapes(fname)
         end
 
         % We look for the definition of the segmentation type
-        type = regexp(line,'type=(\w+)ROI','tokens');
+        type = regexp(line,'type=(\w+)','tokens');
         if (~isempty(type))
           % When we found it, we can look for the points
           group_indx = 0;

@@ -27,10 +27,16 @@ function [nframes, ssize] = size_data(fname)
 %    end
 %  else
     %Substitute imfinfos to handle natively missing files
-    if(isstruct(fname) & isfield(fname, 'fname'))
-      fid = fopen(fname.fname, 'r');
+    if (isempty(fname))
+      error('MATLAB:imfinfo:fileOpen', 'No file name was provided.');
+    elseif(isstruct(fname) & isfield(fname, 'fname'))
+      if (isempty(fname.fname))
+        error('MATLAB:imfinfo:fileOpen', 'No file name was provided.');
+      else
+        fid = fopen(fname.fname, 'r');
+      end
     else
-      fid = fopen(fname, 'r');
+      [fid, m] = fopen(fname, 'r');
     end
 
     if (fid == -1)

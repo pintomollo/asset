@@ -1,4 +1,4 @@
-function metadata = parse_metadata(fname, base_dir, opts)
+function [metadata, opts] = parse_metadata(fname, base_dir, opts)
 
   if (nargin < 3)
     if (isstruct(base_dir))
@@ -92,150 +92,226 @@ function metadata = parse_metadata(fname, base_dir, opts)
     exposure = nans;
     time = nans;
     groups = {};
+    pixel_size = 0;
+    binning = 0;
+    magnification = 0;
 
     count = 1;
     state = 'init';
     block_level = 0;
     obj_level = 0;
 
-    % Loop until we have read the whole file
-    while ischar(line)
-      if (any(line == '{'))
-        block_level = block_level + 1;
-      end
-      if (any(line == '}'))
-        block_level = block_level - 1;
-      end
+    if (any(line == '{'))
+      % uManager metadata file
 
-      switch state
-        case 'init'
-          if (any(line == '{'))
-            tokens = regexp(line, '^\s*"(.+)": {$','tokens');
-            if (isempty(tokens))
-              state = 'init';
-            elseif (strncmp(tokens{1}, 'FrameKey', 8))
-              state = 'read';
-              obj_level = block_level;
-            else
-              state = 'ignore';
-              obj_level = block_level;
-            end
-          end
-        case 'ignore'
-          if (block_level < obj_level)
-            state = 'init';
-          end
-        case 'read'
-          if (block_level < obj_level)
-            count = count + 1;
-            if (count > vector_size)
-              vector_size = vector_size + size_increment;
-              pos = [pos nans];
-              frame = [frame nans];
-              plane = [plane nans];
-              group = [group nans];
-              exposure = [exposure nans];
-              time = [time nans];
-            end
+      % Loop until we have read the whole file
+      while ischar(line)
+        if (any(line == '{'))
+          block_level = block_level + 1;
+        end
+        if (any(line == '}'))
+          block_level = block_level - 1;
+        end
 
-            state = 'init';
-          else
-            tokens = regexp(line, '^\s*"(.+)": "?(.*?)"?,?$','tokens');
-            if (~isempty(tokens))
-              tokens = tokens{1};
-            end
-            
-            if (numel(tokens) == 2)
-              switch tokens{1}
-                case 'Z-um'
-                  pos(count) = str2double(tokens{2});
-                case 'Frame'
-                  frame(count) = str2double(tokens{2}) + 1;
-                case 'Slice'
-                  plane(count) = str2double(tokens{2}) + 1;
-                case 'Channel'
-                  is_group = ismember(groups, tokens{2});
-                  if (isempty(is_group)|~any(is_group))
-                    groups{end+1} = tokens{2};
-                    is_group = [is_group true];
-                  end
-                  group(count) = find(is_group);
-                case 'Exposure-ms'
-                  exposure(count) = str2double(tokens{2});
-                case 'ElapsedTime-ms'
-                  time(count) = str2double(tokens{2});
-                case {'Time', 'FileName'}
-                  % Ignoring
-                otherwise
-                  disp(['Parsing incomplete ...']);
+        switch state
+          case 'init'
+            if (any(line == '{'))
+              tokens = regexp(line, '^\s*"(.+)": {$','tokens');
+              if (isempty(tokens))
+                state = 'init';
+              elseif (strncmp(tokens{1}, 'FrameKey', 8))
+                state = 'read';
+                obj_level = block_level;
+              else
+                state = 'ignore';
+                obj_level = block_level;
               end
             end
-          end
-        otherwise
-          disp(['Unkown parsing state ("' state '"), skipping...']);
-          state = 'init'; 
+          case 'ignore'
+            if (~isempty(strfind(line, 'PixelSize')))
+              tokens = regexp(line, '^\s*"(.+)": "?(.*?)"?,?$','tokens');
+              pixel_size = str2double(tokens{1}{2});
+            end
+            if (block_level < obj_level)
+              state = 'init';
+            end
+          case 'read'
+            if (block_level < obj_level)
+              count = count + 1;
+              if (count > vector_size)
+                vector_size = vector_size + size_increment;
+                pos = [pos nans];
+                frame = [frame nans];
+                plane = [plane nans];
+                group = [group nans];
+                exposure = [exposure nans];
+                time = [time nans];
+              end
+
+              state = 'init';
+            else
+              tokens = regexp(line, '^\s*"(.+)": "?(.*?)"?,?$','tokens');
+              if (~isempty(tokens))
+                tokens = tokens{1};
+              end
+              
+              if (numel(tokens) == 2)
+                switch tokens{1}
+                  case 'Z-um'
+                    pos(count) = str2double(tokens{2});
+                  case 'Frame'
+                    frame(count) = str2double(tokens{2}) + 1;
+                  case 'Slice'
+                    plane(count) = str2double(tokens{2}) + 1;
+                  case 'Channel'
+                    is_group = ismember(groups, tokens{2});
+                    if (isempty(is_group)|~any(is_group))
+                      groups{end+1} = tokens{2};
+                      is_group = [is_group true];
+                    end
+                    group(count) = find(is_group);
+                  case 'Exposure-ms'
+                    exposure(count) = str2double(tokens{2});
+                  case 'ElapsedTime-ms'
+                    time(count) = str2double(tokens{2});
+                  case {'Time', 'FileName'}
+                    % Ignoring
+                  otherwise
+                    disp(['Parsing incomplete ...']);
+                end
+              end
+            end
+          otherwise
+            disp(['Unkown parsing state ("' state '"), skipping...']);
+            state = 'init'; 
+        end
+      
+        % Read a new line
+        line = fgetl(fid);
       end
-    
-      % Read a new line
-      line = fgetl(fid);
+
+      goods = (~isnan(frame) & ~isnan(plane));
+      frame = frame(goods);
+      plane = plane(goods);
+      pos = pos(goods);
+      time = time(goods);
+      exposure = exposure(goods);
+      group = group(goods);
+
+      frames = unique(frame);
+      planes = unique(plane);
+      channels = unique(group);
+      sizes = [length(channels), length(frames), length(planes)];
+
+      order = sub2ind(sizes(2:3), frame, plane);
+      sizes = [sizes(1) prod(sizes(2:3))];
+      order = sub2ind(sizes, group, order);
+
+      tmp = NaN(sizes);
+      tmp(order) = pos;
+      pos = tmp;
+      tmp(order) = frame;
+      frame = tmp;
+      tmp(order) = plane;
+      plane = tmp;
+      tmp(order) = time;
+      time = tmp;
+      tmp(order) = exposure;
+      exposure = tmp;
+      tmp(order) = group;
+      group = tmp;
+
+      [iindx, jindx] = find(isnan(pos));
+
+      for i = iindx
+        for j = jindx
+          if (j > 1)
+            pos(i, j) = pos(i, j-1);
+            frame(i, j) = frame(i, j-1) + 1;
+            plane(i, j) = plane(i, j-1);
+            time(i, j) = time(i, j-1);
+            exposure(i, j) = exposure(i, j-1);
+            group(i, j) = group(i, j-1);
+          end
+        end
+      end
+
+      if (~isempty(mymovie))
+        pos(:, end+1:nframes) = NaN;
+        frame(:, end+1:nframes) = NaN;
+        plane(:, end+1:nframes) = NaN;
+        time(:, end+1:nframes) = NaN;
+        exposure(:, end+1:nframes) = NaN;
+        group(:, end+1:nframes) = NaN;
+      end
+
+    elseif (any(line == '<'))
+      % Spinning Disk metadata file
+
+      % Loop until we have read the whole file
+      while ischar(line)
+
+        if (~isempty(strfind(line, '</')))
+          if (sum(line == '<') == 1)
+            block_level = block_level - 1;
+          end
+        elseif (isempty(strfind(line, '/>')))
+          block_level = block_level + 1;
+        end
+
+        switch state
+          case 'init'
+            if (~any(line == '/'))
+              tokens = regexp(line, '^\s*<(.+)>$','tokens');
+              if (isempty(tokens))
+                state = 'init';
+              elseif (strncmp(tokens{1}, 'CameraSetting', 13)) | (strncmp(tokens{1}, 'SpatialCalibration', 18))
+                state = 'read';
+                obj_level = block_level;
+              end
+            end
+          case 'read'
+            if (block_level < obj_level)
+
+              state = 'init';
+            else
+              tokens = regexp(line, '^\s*<(.+)>(.*?)</\1>$','tokens');
+              if (~isempty(tokens))
+                tokens = tokens{1};
+              end
+              
+              if (numel(tokens) == 2)
+                switch tokens{1}
+                  case 'ObjectiveMagn'
+                    magnification = str2double(tokens{2});
+                  case 'XBasePixelSize'
+                    pixel_size(1) = str2double(tokens{2});
+                  case 'YBasePixelSize'
+                    pixel_size(2) = str2double(tokens{2});
+                  case 'Binning'
+                    binning = str2double(tokens{2});
+                  case 'ExposureTime'
+                    exposure = str2double(tokens{2});
+                  otherwise
+                    %disp(['Parsing incomplete ...']);
+                end
+              end
+            end
+          otherwise
+            disp(['Unkown parsing state ("' state '"), skipping...']);
+            state = 'init'; 
+        end
+      
+        % Read a new line
+        line = fgetl(fid);
+      end
+    else
+      warning('Unknown metadata file type, ignoring it.');
+
+      return;
     end
 
     fclose(fid);
-
-    goods = (~isnan(frame) & ~isnan(plane));
-    frame = frame(goods);
-    plane = plane(goods);
-    pos = pos(goods);
-    time = time(goods);
-    exposure = exposure(goods);
-    group = group(goods);
-
-    frames = unique(frame);
-    planes = unique(plane);
-    channels = unique(group);
-    sizes = [length(channels), length(frames), length(planes)];
-
-    order = sub2ind(sizes(2:3), frame, plane);
-    sizes = [sizes(1) prod(sizes(2:3))];
-    order = sub2ind(sizes, group, order);
-
-    tmp = NaN(sizes);
-    tmp(order) = pos;
-    pos = tmp;
-    tmp(order) = frame;
-    frame = tmp;
-    tmp(order) = plane;
-    plane = tmp;
-    tmp(order) = time;
-    time = tmp;
-    tmp(order) = exposure;
-    exposure = tmp;
-    tmp(order) = group;
-    group = tmp;
-
-    [iindx, jindx] = find(isnan(pos));
-
-    for i = iindx
-      for j = jindx
-        if (j > 1)
-          pos(i, j) = pos(i, j-1);
-          frame(i, j) = frame(i, j-1) + 1;
-          plane(i, j) = plane(i, j-1);
-          time(i, j) = time(i, j-1);
-          exposure(i, j) = exposure(i, j-1);
-          group(i, j) = group(i, j-1);
-        end
-      end
-    end
-
-    if (~isempty(mymovie))
-      pos(:, end+1:nframes) = NaN;
-      frame(:, end+1:nframes) = NaN;
-      plane(:, end+1:nframes) = NaN;
-      time(:, end+1:nframes) = NaN;
-      exposure(:, end+1:nframes) = NaN;
-      group(:, end+1:nframes) = NaN;
-    end
 
     metadata.z_position = pos;
     metadata.frame_index = frame;
@@ -244,6 +320,16 @@ function metadata = parse_metadata(fname, base_dir, opts)
     metadata.exposure_time = exposure;
     metadata.channel_index = group;
     metadata.channels = groups;
+
+    if (binning ~= 0 & magnification ~= 0 & pixel_size ~= 0)
+      pixel_size = mean(pixel_size),
+
+      opts.pixel_size = pixel_size;
+      opts.magnification = magnification;
+      opts.binning = binning;
+
+      opts.ccd_pixel_size = pixel_size * magnification / binning;
+    end
   end
 
   if (~isempty(mymovie))

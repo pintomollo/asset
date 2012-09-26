@@ -121,8 +121,12 @@ function opts = load_parameters(opts, fname)
         % If we found the two elements, we can assign the value to the field
         if (length(tokens{1}) == 2)
 
-          % We use the eval function to interpret the values as in MATLAB 
-          eval(['opts.' prefix '(tokens{1}{1}) = ' tokens{1}{2} ';']);
+          try
+            % We use the eval function to interpret the values as in MATLAB 
+            eval(['opts.' prefix '(tokens{1}{1}) = ' tokens{1}{2} ';']);
+          catch
+            break;
+          end
         end
       end
     end

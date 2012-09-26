@@ -122,10 +122,9 @@ function [res, vars, pos, time] = combine_domains(mymovies, min_num, thresh)
     fraction = domain_expansion(domain, indx, time(end), opts);
     align_time = find(fraction >  thresh, 1, 'first');
     if (isempty(align_time))
-      maintenance = time(end);
-    else
-      maintenance = time(end) - align_time;
+      align_time = time(end);
     end
+    maintenance = time(end) - align_time;
     time = align_time;
     %time = time(end);
 

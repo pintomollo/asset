@@ -42,8 +42,8 @@ function myprint(fid, variable, spacer, prefix)
         end
       case {'struct', 'errmsg'}
         fields = fieldnames(variable);
-        for i=1:numel(struct)
-          if (numel(struct) > 1)
+        for i=1:numel(variable)
+          if (numel(variable) > 1)
             prefix = [orig_prefix '(' num2str(i) ')'];
           end
           for j=1:length(fields)
@@ -58,13 +58,25 @@ function myprint(fid, variable, spacer, prefix)
           end
         end
       case 'num'
-        fprintf(fid, [prefix spacer '%f\n'], variable);
+        if (numel(variable) == 1)
+          fprintf(fid, [prefix spacer '%f\n'], variable);
+        else
+          fprintf(fid, [prefix spacer '[']);
+          fprintf(fid, '%f ', variable);
+          fprintf(fid, ']\n');
+        end
       case 'bool'
-        fprintf(fid, [prefix spacer '%d\n'], variable);
+        if (numel(variable) == 1)
+          fprintf(fid, [prefix spacer '%d\n'], variable);
+        else
+          fprintf(fid, [prefix spacer '[']);
+          fprintf(fid, '%d ', variable);
+          fprintf(fid, ']\n');
+        end
       case 'char'
-        fprintf(fid, [prefix spacer '%s\n'], variable);
+        fprintf(fid, [prefix spacer '''%s''\n'], variable);
       otherwise
-        fprintf(fid, [prefix spacer '%s\n'], class(variable));
+        fprintf(fid, [prefix spacer '''%s''\n'], class(variable));
     end
   end
   
