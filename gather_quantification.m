@@ -1,5 +1,7 @@
 function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
 
+  opts = merge_structures(opts, get_struct('ASSET'));
+
   thresh = opts.quantification.pole_threshold;
   type = opts.quantification.kymograph_type;
   resolution = opts.quantification.resolution;
