@@ -79,11 +79,7 @@ function [domain, ruffles, pos, center_indx] = align_domain(mymovie, opts, path)
     nfirst = max(path(i) - nleft + 1, left);
     nlast = min(path(i) + nright, right);
 
-    try
     domain(i, center_indx - nleft + 1 : center_indx + nright) = [img(i, nlast+1:right) img(i, nfirst:nlast), img(i, left:nfirst-1)];
-    catch
-      keyboard
-    end
   end
 
   resolution = median(diff(pos));

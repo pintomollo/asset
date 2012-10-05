@@ -1,5 +1,8 @@
 function weight = weight_expansion(img, params)
 
+  bads = isnan(img);
+  img(bads) = 0;
+
   alpha = params.alpha;
   beta = 2*params.beta;
   gamma = params.gamma;
@@ -15,6 +18,7 @@ function weight = weight_expansion(img, params)
   slope = imnorm(min(slopex, -slopey));
 
   weight = alpha*(gamma*intens + (1-gamma)*pos) + (1-alpha)*slope;
+  weight(bads) = Inf;
   %figure;imagesc(weight)
 
   %keyboard

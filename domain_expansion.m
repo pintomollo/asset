@@ -1,6 +1,21 @@
-function fraction = domain_expansion(domain, center, cytok, opts)
+function fraction = domain_expansion(domain, center, cytok, opts, domain_half)
+
+  if (nargin == 5)
+    [domain, domain_half, center, cytok, opts] = deal(domain, center, cytok, opts, domain_half);
+
+    goods = ~isnan(domain);
+    goods_half = ~isnan(domain_half);
+
+    domain(~goods) = 0;
+    domain_half(~goods_half) = 0;
+
+    domain = (domain + domain_half) ./ (goods + goods_half);
+  end
 
 %  figure;imagesc(domain);
+  bads = isnan(domain);
+  domain(bads) = 0;
+
 
   [nframes, npos] = size(domain);
   domain = imfilter(domain, fspecial('average', [5, 3]), 'replicate');
@@ -41,6 +56,8 @@ function fraction = domain_expansion(domain, center, cytok, opts)
   domain = imnorm(domain(1:cytok, :));
   path = dynamic_programming(domain, opts.segmentation_parameters.domain_expansion.cortex_params, opts.segmentation_parameters.domain_expansion.scoring_func, opts.segmentation_parameters.domain_expansion.cortex_weights, opts);
 
+  fraction = path / max(path(end-5:end));
+
   %{
   domain = imadjust(imnorm(domain(1:cytok, :)));
 
@@ -71,6 +88,7 @@ function fraction = domain_expansion(domain, center, cytok, opts)
 
   %keyboard
 
+  %{
   thresh = 1.1*graythresh(domain([end-5:end], :));
   valids = (domain >= thresh);
   indxs = [1:npos];
@@ -107,6 +125,7 @@ function fraction = domain_expansion(domain, center, cytok, opts)
 %  plot(fraction, 1:nframes, 'k');
 
   fraction = fraction / init_pos;
+  %}
 
   return;
 end

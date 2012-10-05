@@ -70,7 +70,7 @@ function mymovie = reconstruct_egg(mymovie, opts)
   end
 
   frames = mymovie.metadata.frame_index(1,:);
-  [time_points, junk, indexes] = unique(frames);
+  [time_points, junk, indexes] = unique(frames(~isnan(frames)));
   ntimes = length(time_points);
   centers = NaN(3, ntimes);
   axes_length = NaN(3, ntimes);
@@ -111,6 +111,14 @@ function mymovie = reconstruct_egg(mymovie, opts)
   centers = centers(:, indexes);
   orient = orient(1, indexes);
   [relative_z, centers, orient] = relative_position(pts, relative_z, centers, axes_length, orient);
+
+  if (abs(orient - mean(mymovie.dic.orientations)) > pi)
+    orient = orient + pi;
+
+    if (orient > 2*pi)
+      orient = orient - 2*pi;
+    end
+  end
 
   mymovie.metadata.center_3d = centers;
   mymovie.metadata.axes_length_3d = axes_length;

@@ -45,6 +45,9 @@ function weight = weight_symmetry(img, params)
   min_dist = ceil(size(img, 2) / 40);
   dist(dist < min_dist) = min_dist;
 
+  bads = isnan(img);
+  img(bads) = 0;
+
   corrs = symmetric_corrcoef_mex(img.', dist.').';
   invags = symmetric_corrcoef_mex(depth.', dist.').';
 
@@ -60,7 +63,7 @@ function weight = weight_symmetry(img, params)
   %factors = gamma*imnorm(imfs(end, :)) + (1-gamma);
   %weight = bsxfun(@times, weight, factors.');
 
-  weight(isnan(weight)) = Inf;
+  weight(isnan(weight) | bads) = Inf;
 
   %figure;imagesc(weight)
 

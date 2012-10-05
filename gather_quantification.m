@@ -34,7 +34,6 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
   tmp_pts = cell(nframes, 2 + compute_ruffles);
 
   for i=1:nframes
-    
     warper = mymovie.data.warpers(i);
 
     if (isfield(mymovie.data.quantification, 'carth') & ~isempty(mymovie.data.quantification(i).carth))

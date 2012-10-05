@@ -22,13 +22,20 @@ function [mu, sigma, is_pos] = folded_distribution(values, probs, dim)
 
   probs = permute(probs, perm_dim);
   probs = reshape(probs, sizes(dim), []);
+  probs(~isfinite(probs)) = 0;
 
   total = sum(probs);
   probs(:, total == 0) = 1;
   probs = bsxfun(@rdivide, probs, sum(probs));
 
-  m1 = sum(bsxfun(@times, values, probs));
-  m2 = sum(bsxfun(@times, values.^2, probs));
+  m1 = bsxfun(@times, values, probs);
+  m2 = bsxfun(@times, values.^2, probs);
+
+  m1(~isfinite(m1)) = 0;
+  m2(~isfinite(m2)) = 0;
+
+  m1 = sum(m1);
+  m2 = sum(m2);
 
   a = (pi - 2) / 2;
   b = m1*(2-pi);

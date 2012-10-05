@@ -86,13 +86,14 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (strncmp(fitting.aligning_type, 'domain', 6))
     opts_expansion = load_parameters(opts, 'domain_expansion.txt');
-    f = domain_expansion((fitting.ground_truth(1:end/2, :) + fitting.ground_truth((end/2)+1:end, :)).', size_data(1)/2, size_data(2), opts_expansion);
+    f = domain_expansion(fitting.ground_truth(1:end/2, :).', fitting.ground_truth((end/2)+1:end, :).', size_data(1)/2, size_data(2), opts_expansion);
     frac_indx = find(f > fitting.fraction, 1, 'first');
   end
 
   linear_truth = fitting.ground_truth(:);
+  linear_goods = ~isnan(linear_truth);
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
-  penalty = ((median(linear_truth))^2)*opts.nparticles;
+  penalty = ((median(linear_truth(linear_goods)))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
 
   full_error = penalty * size_data(2) * 10;
@@ -129,7 +130,7 @@ function uuids = fit_kymograph(fitting, opts)
       flow_scale = 1;
     end
 
-    p0 = p0 .* (1+fitting.init_noise*randn(size(p0)));
+    p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     nparams = length(p0);
 
     if (strncmp(fitting.type, 'simulation', 5))
@@ -232,7 +233,7 @@ function uuids = fit_kymograph(fitting, opts)
         res = tmp;
 
         if (fitting.scale_data)
-          gres = ~isnan(res(:));
+          gres = ~isnan(res(:)) & linear_goods;
           c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
           
           if (c(2) <= 0)
@@ -259,11 +260,17 @@ function uuids = fit_kymograph(fitting, opts)
           %}
         end
         
-        tmp_err = sum((fitting.ground_truth - res).^2);
+        tmp_err = (fitting.ground_truth - res).^2;
+        tmp_err(isnan(fitting.ground_truth)) = 0;
+        tmp_err = sum(tmp_err, 1);
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err);
 
         err_all(i) = err_all(i) + penalty*(~correct);
+
+        if (isnan(err_all(i)))
+          beep;beep;keyboard
+        end
         
         %imagesc([res; fitting.ground_truth]);title([num2str(err_all(i)) ' (' num2str(log10(err_all(i))) ')']);drawnow
 

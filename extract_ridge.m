@@ -115,10 +115,16 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
         half = round(len(i)/2);
 
         if (ttest2(curr_vals, left_vals, 0.05, 'right'))
-          values([pos(i):pos(i)+half-1]) = median(left_vals) + std(left_vals)*randn(1, half);
+          %values([pos(i):pos(i)+half-1]) = poissrnd(median(left_vals), 1, half);
+          %values([pos(i):pos(i)+half-1]) = median(left_vals) + std(left_vals)*randn(1, half)/2;
+          values([pos(i):pos(i)+half-1]) = NaN;
         else
-          values(pos(i)+len(i) - [1:half]) = median(right_vals) + std(right_vals)*randn(1, half);
+          %values(pos(i)+len(i) - [1:half]) = poissrnd(median(right_vals), 1, half);
+          %values(pos(i)+len(i) - [1:half]) = median(right_vals) + std(right_vals)*randn(1, half)/2;
+          values(pos(i)+len(i) - [1:half]) = NaN;
         end
+
+        %values(values < 0) = 0;
       end
     end
   end

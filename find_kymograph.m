@@ -27,20 +27,21 @@ function find_kymograph(varargin)
 
         [domain, ruffles, pos] = gather_quantification(kymo.mymovie, kymo.opts);
         domain = imnorm(domain);
+
         kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
         kymo.opts.quantification.weights.filt = ruffles;
         kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
 
         [ground_truth, junk, pos, indx] = align_domain(kymo.mymovie, kymo.opts);
-        valids = any(isnan(ground_truth), 1);
+        %valids = any(isnan(ground_truth), 1);
 
-        first = indx - find(valids(1:indx), 1, 'last') - 1;
-        last = find(valids(indx:end), 1, 'first') - 2;
-        boundary = min(first, last);
-
+        %first = indx - find(valids(1:indx), 1, 'last') - 1;
+        %last = find(valids(indx:end), 1, 'first') - 2;
+        %boundary = min(first, last);
+        [ground_truth, boundary] = crop_domain(ground_truth, indx);
         times = get_manual_timing(kymo.mymovie, kymo.opts);
 
-        ground_truth = ground_truth(:,[-boundary:boundary]+indx);
+        %ground_truth = ground_truth(:,[-boundary:boundary]+indx);
         ground_truth = ground_truth(1:times(end), :);
         g = [ground_truth(:,1:boundary+1), fliplr(ground_truth(:,boundary+1:end))].';
         p = pos(indx:indx+boundary);

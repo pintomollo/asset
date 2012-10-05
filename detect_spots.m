@@ -32,6 +32,8 @@ function spots = detect_spots(imgs, opts)
 % Simon Blanchoud
 % 10.12.2010
 
+  global myspots;
+
   % Input checking
   if (nargin < 2)
     opts = get_struct('ASSET');
@@ -102,10 +104,8 @@ function spots = detect_spots(imgs, opts)
     % Performs the actual spot detection "a trous" algorithm [1]
     atrous = imatrou(img, noise_thresh, spot_max_size);
 
-    %keyboard
-
     % Keeps only the detections that are above the noise_threshold
-    thresh = mean(atrous(:)) + noise_thresh * std(atrous(:));
+    thresh = median(atrous(:)) + noise_thresh * std(atrous(:));
 
     bw = imfill(atrous > thresh, 'holes');
     bw = bwmorph(bw, 'shrink', Inf);
@@ -126,6 +126,11 @@ function spots = detect_spots(imgs, opts)
     opt.LogPlot = 0;
     opt.DispModulo = Inf;
     %}
+
+    if (opts.spot_tracking.recursive)
+      orig_img = img;
+      size_img = size(img);
+    end
 
     % Initialize the intermediate variables used to store the detections
     %results = NaN(nspots, 6, nspots);
@@ -168,11 +173,18 @@ function spots = detect_spots(imgs, opts)
         %wsize = ceil(3*gauss_params(3));
         %window = get_window(img, round(gauss_params(1:2)), wsize);
 
-        params_range = [gauss_params([3 3]) * 2 spot_max_size]/pi;
-        init_params = [gauss_params(1:2) spot_max_size/2];
+        params_range = 6*gauss_params([3 3 3])/(2*pi);
+        init_params = [gauss_params(1:2) gauss_params(3)];
 
+        [junk, myindx] = min(hypot(myspots(:, 1) - gauss_params(1), myspots(:, 2) - gauss_params(2)));
+
+        %params_range = [gauss_params([3 3]) * 2 spot_max_size]/pi;
+        %init_params = [gauss_params(1:2) spot_max_size/2];
+
+        first = true;
         % We use MATLAB non-linear solver with the gaussian-fitting error function
-        [bps] = lsqnonlin(@fit_gaussian, [0 0 tan((gauss_params(3) - init_params(3)) / params_range(3))], [], [], opt);
+        %[bps] = lsqnonlin(@fit_gaussian, [0 0 tan((gauss_params(3) - init_params(3)) / params_range(3))], [], [], opt);
+        [bps] = lsqnonlin(@fit_gaussian, [0 0 0], [], [], opt);
         [err, best] = fit_gaussian(bps);
         %keyboard
 
@@ -187,16 +199,17 @@ function spots = detect_spots(imgs, opts)
         % If the final fit has no amplitude (4th parameter), this is not a valid spot
         if (best(4) == 0)
           % Reset the initial conditions not to misslead other candidates, and skip 
-          %init_conds(j, :) = NaN;
-          display('kept')
-          continue;
+          init_conds(j, :) = NaN;
+          %display('kept')
+          %continue;
         end
 
         % Otherwise check whether there is a "close" optimized solution
         dists = hypot(results(1:j-1, 1) - best(1), results(1:j-1, 2) - best(2));
 
         % We merge overlapping spots
-        indx = find(dists <= (results(1:j-1, 3) + best(3)), 1);
+        %%%indx = find(dists <= (results(1:j-1, 3) + best(3)), 1);
+        indx = [];
 
       % Otherwise we simply copy the optimized result from the table
       else
@@ -217,10 +230,16 @@ function spots = detect_spots(imgs, opts)
         %%%%%%%%% CHECK IF REMOVING NOW IS BETTER !!!!!!!!
 
 
-        %%%%%img = img - GaussMask2D(best(3), size(img), best(1:2), 0, 1)*best(4);
+        if (opts.spot_tracking.recursive & best(4) > 0)
+          img = img - GaussMask2D(best(3), size_img, best(1:2), 0, 1)*best(4);
+
+          imagesc(img)
+          drawnow
+        end
 
       % Otherwise we simply add it in the same row, in the next available place
       else
+        display('found')
         % Find the next available free place
         %sub_indx = find(isnan(results(indx,1,:)),1);
 
@@ -238,9 +257,18 @@ function spots = detect_spots(imgs, opts)
     %temp_res = mymean(results(:, 1:end-1, :), 3);
     %results = cat(2, temp_res, mysum(results(:, 6, :), 3));
     
+    if (opts.spot_tracking.recursive)
+
+      opts.spot_tracking.recursive = false;
+      new_spots = detect_spots(img, opts);
+      results = [results; new_spots];
+
+      keyboard
+    end
+
     % Remove NaN solutions
     if (~isempty(results))
-      spot = results(~isnan(results(:, 1)), :);
+      spot = results(~any(isnan(results), 2), :);
 
       % If there is at least one spot, we sort them according to their "a trous" score
       if (~isempty(spot))
@@ -265,7 +293,6 @@ function spots = detect_spots(imgs, opts)
     end
   end
 
-  %%% CAN TRY TO WORK RECURSIVELY BY DELETING THE DETECTED ONES...
 
   return;
 
@@ -283,6 +310,13 @@ function spots = detect_spots(imgs, opts)
 
     tmp_pos = params(1:2);
     tmp_sigma = params(3);
+
+    if (tmp_sigma <= 0.5)
+      err = Inf;
+
+      return;
+    end
+
     %tmp_sigma = gauss_params(3);
     %tmp_ampl = params(4);
     %tmp_bkg = params(5);
@@ -298,7 +332,7 @@ function spots = detect_spots(imgs, opts)
 
     % Get the size of the window around the candidate spot (less noise and more flat so that it's 
     % easier to fit au gaussian)
-    wsize = ceil(2.5*tmp_sigma);
+    wsize = ceil(1.5*tmp_sigma);
 
     % Extract a window of size wsize x wsize around pix_pos in the full image
     window = get_window(img, pix_pos, wsize);
@@ -306,12 +340,15 @@ function spots = detect_spots(imgs, opts)
     % Compute the gaussian spot as estimated using the provided parameters
     gauss = GaussMask2D(tmp_sigma, size(window), tmp_pos - pix_pos);
 
-    frac = 0.8;
+    frac = 0.98;
     strength = gauss / (2*pi*tmp_sigma^2);
     strength = frac*(strength) + (1-frac)/numel(gauss);
 
-    frac = 1.5;
+    frac = 0.5;
     goods = (gauss > exp(-frac));
+
+    %scatter(gauss(:), window(:))
+    %keyboard
 
     if (sum(goods) > 10)
       c = [ones(sum(goods(:)), 1), gauss(goods)] \ window(goods);
@@ -340,6 +377,10 @@ function spots = detect_spots(imgs, opts)
     %err = (1.25*sum(gauss(smallers) - window(smallers)) + sum(window(~smallers) - gauss(~smallers)) + exp(-10*sum(params(params < 0))) - 1) / numel(window);
     %err = (sum(sum(abs(gauss - window))) + exp(-10*sum(params(params < 0))) - 1) / numel(window);
     err = sum((abs(gauss(:) - window(:)) .* strength(:))); % + exp(-10*sum(params(params < 0))) - 1;
+    err = mymean(abs(gauss(:) - window(:))); % .* strength(:))); % + exp(-10*sum(params(params < 0))) - 1;
+
+    %smallers = (window < gauss);
+    %err = (20*sum((gauss(smallers) - window(smallers)) .* strength(smallers)) + sum((window(~smallers) - gauss(~smallers)) .* strength(~smallers))); % + exp(-10*sum(params(params < 0))) - 1) / numel(window);
     params = [params c([2 1]).'];
 
     if (false)
@@ -348,17 +389,32 @@ function spots = detect_spots(imgs, opts)
     subplot(1,2,2)
     hold off;
     %imagesc(strength)
-    imagesc(img)
-    %imagesc(gauss);
+    %imagesc(img)
+    imagesc(gauss);
     hold on;
     rectangle('Position', [tmp_pos([2 1])-tmp_sigma/2 tmp_sigma tmp_sigma], 'Curvature', [1 1], 'EdgeColor', 'k');
     subplot(1,2,1);
+    hold off;
+    %imagesc(window)
+    imagesc(gauss - window)
+    hold on;
+    rectangle('Position', [a([2 1]) tmp_sigma tmp_sigma], 'Curvature', [1 1], 'EdgeColor', 'k');
+    title(num2str(err))
+    drawnow
+    pause(0.1 + 0.5*first)
+    first = false;
+    end
+
+    if (false)
+    a = tmp_pos-pix_pos+wsize+1-tmp_sigma/2;
+    b = myspots(myindx, 1:2)-pix_pos+wsize+1-myspots(myindx, 3)/2;
     hold off;
     imagesc(window)
     %imagesc(gauss - window)
     hold on;
     rectangle('Position', [a([2 1]) tmp_sigma tmp_sigma], 'Curvature', [1 1], 'EdgeColor', 'k');
-    title(num2str(err))
+    rectangle('Position', [b([2 1]) myspots(myindx, [3 3])], 'Curvature', [1 1], 'EdgeColor', 'w');
+    title(num2str(abs(myspots(myindx, 1:3) - params(1:3)) ./ params_range));
     drawnow
     pause(0.1)
     end
@@ -378,6 +434,30 @@ function [gauss_params] = estimate_spot(img, estim_pos, wsize, noise_thresh)
   mask = GaussMask2D(wsize/2, size(spots)); 
   spots = spots .* mask;
 
+  indx = [-wsize:wsize];
+  [X,Y] = meshgrid(indx.', indx);
+  rads = hypot(X(:), Y(:));
+  signs = sign(X(:));
+  signs(signs == 0) = 1;
+
+  x = rads .* signs;
+  y = spots(:);
+
+  y = y - min(y);
+  %y = y / sum(y);
+
+  %sigma1 = sqrt(sum(y .* (x.^2)))
+
+  y = y / max(y);
+  sigma = mymean(real(sqrt(-x.^2 ./ (2*log(y)))));
+
+  center_x = wsize+1;
+  center_y = wsize+1;
+
+  if (false)
+  keyboard
+  test = elliptic_coordinate(spots, [wsize; wsize]/2, [wsize; wsize], 0);
+
   pos = -wsize:wsize;
   x = sum(spots, 1);
   y = sum(spots, 2).';
@@ -395,6 +475,17 @@ function [gauss_params] = estimate_spot(img, estim_pos, wsize, noise_thresh)
   sigma_y = (sum(y > exp(-0.5)*max(y)) - 1) / 2;
 
   sigma = (sigma_x + sigma_y)/2;
+  end
+
+  if (false)
+    hold off;
+    imagesc(spots)
+    hold on
+    rectangle('Position', [([center_x center_y])-sigma/2 sigma sigma], 'Curvature', [1 1], 'EdgeColor', 'k');
+    rectangle('Position', [([center_x center_y])-sigma1/2 sigma1 sigma1], 'Curvature', [1 1], 'EdgeColor', 'r');
+    drawnow
+    pause(1)
+  end
 
   center_x = center_x + estim_pos(2) - (wsize+1);
   center_y = center_y + estim_pos(1) - (wsize+1);
@@ -465,7 +556,7 @@ function window = get_window(img, pos, wsize)
   [h,w] = size(img);
 
   % Initialize the window
-  window = zeros(2*wsize + 1);
+  window = NaN(2*wsize + 1);
 
   % Create an index vector to compute which pixels lie outside the image 
   indx = [1:2*wsize+1];

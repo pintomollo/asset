@@ -237,9 +237,14 @@ function [metadata, opts] = parse_metadata(fname, base_dir, opts)
       end
 
       if (~isempty(mymovie))
+        if (all(plane(:) == 1))
+          frame(:, end+1:nframes) = repmat([size(frame, 2)+1:nframes], size(frame, 1), 1);
+          plane(:, end+1:nframes) = 1;
+        else
+          frame(:, end+1:nframes) = NaN;
+          plane(:, end+1:nframes) = NaN;
+        end
         pos(:, end+1:nframes) = NaN;
-        frame(:, end+1:nframes) = NaN;
-        plane(:, end+1:nframes) = NaN;
         time(:, end+1:nframes) = NaN;
         exposure(:, end+1:nframes) = NaN;
         group(:, end+1:nframes) = NaN;
