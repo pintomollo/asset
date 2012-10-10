@@ -21,6 +21,8 @@ function find_kymograph(varargin)
       end
 
       try
+        kymo.opts.recompute = false;
+          
         fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo.mymovie.experiment, fitting.parameter_set);
         fclose(fid);

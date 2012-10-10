@@ -19,7 +19,7 @@ function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
     if (isempty(dim))
       return;
     end
-  elseif (dim > numel(vals_size) | vals_size(dim) == 1)
+  elseif (dim > numel(vals_size) | vals_size(dim) <= 1)
     return;
   end
 
