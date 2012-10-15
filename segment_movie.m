@@ -139,15 +139,6 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
       waitbar(i/max_frames,hwait);
     end
   end
-  if (strncmp(opts.segmentation_type, 'dic', 3) | strncmp(opts.segmentation_type, 'all', 3))
-    mymovie.dic = align_orientations(mymovie.dic);
-  end
-  if (strncmp(opts.segmentation_type, 'data', 7))
-    mymovie.data = align_orientations(mymovie.data);
-  end
-  if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
-    mymovie.markers = align_orientations(mymovie.markers);
-  end
 
   mymovie = align_embryo(mymovie, opts);
 

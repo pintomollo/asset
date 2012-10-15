@@ -73,14 +73,14 @@ function dy = differentiator(varargin)
 
   y = padarray(y, nrepeat, boundary, 'both');
   x = padarray(x, nrepeat, 'symmetric', 'both');
-  x(1:nrepeat, :) = bsxfun(@minus, x(center, :), x(1:nrepeat, :));
-  x(end-nrepeat+1:end, :) = bsxfun(@minus, 2*x(end-nrepeat, :), x(end-nrepeat+1:end, :));
+  x(1:nrepeat, :) = bsxfun(@minus, 2*x(nrepeat + 1, :), x(1:nrepeat, :)) - 1;
+  x(end-nrepeat+1:end, :) = bsxfun(@minus, 2*x(end-nrepeat, :), x(end-nrepeat+1:end, :)) + 1;
 
   if (~isempty(y))
     accum = zeros(size(y) - [2*nrepeat 0]);
 
     for k=1:nrepeat
-      accum = accum + coefs(k)* bsxfun(@rdivide, y(index+k, :) - y(index-k, :), x(index+k, :) - x(index - k, :));
+      accum = accum + 2*k*coefs(k)* bsxfun(@rdivide, y(index+k, :) - y(index-k, :), x(index+k, :) - x(index - k, :));
     end
   else
     accum = [];

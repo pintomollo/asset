@@ -1,28 +1,24 @@
 function mymovie = align_embryo(mymovie, opts)
 
-  type = opts.segmentation_type;
-  switch (type)
-    case 'all'
-      [nframes imgsize ] = size_data(mymovie.dic);
-      if (isfield(mymovie, 'markers' & ~isempty(mymovie.markers)))
-        type = 'markers';
-      else
-        type = 'dic';
-      end
-    case 'dic'
-      [nframes imgsize ] = size_data(mymovie.dic);
-    case 'markers'
-      if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
-        [nframes imgsize ] = size_data(mymovie.eggshell);
-      else
-        [nframes imgsize ] = size_data(mymovie.cortex);
-      end
-    case 'data'
-      [nframes imgsize ] = size_data(mymovie.data);
-    otherwise
-      error 'None of the expected field are present in ''mymovie''';
+  if (isfield(mymovie, 'markers') & ~isempty(mymovie.markers) & isfield(mymovie.markers, 'orientations') & ~isempty(mymovie.markers.orientations))
+    type = 'markers';
+    if (isfield(mymovie, 'eggshell') & ~isempty(mymovie.eggshell))
+      [nframes imgsize] = size_data(mymovie.eggshell);
+    else
+      [nframes imgsize] = size_data(mymovie.cortex);
+    end
+  elseif (isfield(mymovie, 'dic') & ~isempty(mymovie.dic) & isfield(mymovie.dic, 'orientations') & ~isempty(mymovie.dic.orientations))
+    type = 'dic';
+    [nframes, imgsize] = size_data(mymovie.(type));
+  elseif (isfield(mymovie, 'data') & ~isempty(mymovie.data) & isfield(mymovie.data, 'orientations') & ~isempty(mymovie.data.orientations))
+    type = 'data';
+    [nframes, imgsize] = size_data(mymovie.(type));
+  else
+    error 'None of the expected field are present in ''mymovie''';
   end
-  
+  opts.segmentation_type = type;
+
+  mymovie.(type) = align_orientations(mymovie.(type));
   mymovie = find_ruffles(mymovie, opts);
 
   if (isfield(mymovie.(type), 'inverted'))
@@ -85,11 +81,17 @@ function mymovie = align_embryo(mymovie, opts)
     end
   end
 
+  orient = mymean(mymovie.(type).orientations);
   if (sum(inverted) > 1)
     if (opts.verbosity > 0)
       disp(['A-P were inverted !']);
     end
     inverted = ~actu_invert;
+
+    orient = orient + pi;
+    orient = orient - 2*pi*(orient > 2*pi);
+
+    mymovie.(type) = align_orientations(mymovie.(type), orient);
   else
     inverted = actu_invert;
   end
@@ -97,14 +99,22 @@ function mymovie = align_embryo(mymovie, opts)
   fields = fieldnames(mymovie);
   for f = 1:length(fields)
     if (~isempty(mymovie.(fields{f})) && isfield(mymovie.(fields{f}), 'orientations') && ~isempty(mymovie.(fields{f}).orientations))
-      if ((~isfield(mymovie.(fields{f}), 'inverted') & inverted) | (isfield(mymovie.(fields{f}), 'inverted') & mymovie.(fields{f}).inverted ~= inverted))
-        tmp_orient = mymovie.(fields{f}).orientations;
-        tmp_orient = tmp_orient + pi;
-        tmp_orient = tmp_orient - 2*pi*(tmp_orient > 2*pi);
-        mymovie.(fields{f}).orientations = tmp_orient;
-        mymovie.(fields{f}).inverted = inverted;
-      end
+
+      mymovie.(fields{f}) = align_orientations(mymovie.(fields{f}), orient);
+      mymovie.(fields{f}).inverted = inverted;
+
+      %if ((~isfield(mymovie.(fields{f}), 'inverted') & inverted) | (isfield(mymovie.(fields{f}), 'inverted') & mymovie.(fields{f}).inverted ~= inverted))
+      %  tmp_orient = mymovie.(fields{f}).orientations;
+      %  tmp_orient = tmp_orient + pi;
+      %  tmp_orient = tmp_orient - 2*pi*(tmp_orient > 2*pi);
+      %  mymovie.(fields{f}).orientations = tmp_orient;
+      %  mymovie.(fields{f}).inverted = inverted;
+      %end
     end
+  end
+
+  if (isfield(mymovie, 'metadata') & ~isempty(mymovie.metadata) & isfield(mymovie.metadata, 'orientation_3d') & ~isempty(mymovie.metadata.orientation_3d))
+    mymovie.metadata.orientation_3d = align_orientations(mymovie.metadata.orientation_3d, orient);
   end
 
 

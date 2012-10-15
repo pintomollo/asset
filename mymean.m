@@ -4,22 +4,33 @@ function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
   all_svals = [];
   groups = [];
 
-  if (nargin == 2)
-    indexes = ones(size(all_vals, dim), 1);
-  elseif (nargin == 1)
-    dim = 1;
-    indexes = ones(size(all_vals, 1), 1);
-  end
-
   vals_size = size(all_vals);
 
-  if (dim == 1 & vals_size(dim) == 1)
+  if (nargin == 2)
+    if (dim > numel(vals_size))
+      return;
+    else
+      indexes = ones(vals_size(dim), 1);
+    end
+  elseif (nargin == 1)
     dim = find(vals_size > 1, 1);
-
     if (isempty(dim))
+      dim = 1;
+    end
+    indexes = ones(vals_size(dim), 1);
+  elseif (nargin == 3)
+    if (dim > numel(vals_size))
       return;
     end
-  elseif (dim > numel(vals_size) | vals_size(dim) <= 1)
+  end
+
+  if (vals_size(dim) == 1)
+    all_mvals = all_vals;
+    all_svals = zeros(size(all_vals));
+
+    return;
+  elseif (vals_size(dim) == 0)
+
     return;
   end
 
