@@ -4,6 +4,14 @@ function [positions, lengths, values] = boolean_domains(tests, is_circular)
     is_circular = false;
   end
 
+  if (isempty(tests))
+    positions = NaN;
+    lengths = NaN;
+    values = NaN;
+    
+    return;
+  end
+  
   tests = tests(:);
   positions = find([1; diff(tests)]);
   lengths = diff([positions; length(tests)+1]);

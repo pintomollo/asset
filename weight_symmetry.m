@@ -30,15 +30,20 @@ function weight = weight_symmetry(img, params)
   for i=1:size(ruffles, 1)
     edges = ~outside(i,:);
     shift = find(edges, 1, 'first');
-    [pos, len, val] = boolean_domains(maxs(i, edges), true);
-    pos = pos(~val) + shift;
-    pos(1) = 1;
-    len = len(~val);
+    
+    if (isempty(shift))
+      dist(i, :) = 1;
+    else
+      [pos, len, val] = boolean_domains(maxs(i, edges), true);
+      pos = pos(~val) + shift;
+      pos(1) = 1;
+      len = len(~val);
 
-    for j = 1:length(pos)-1
-      dist(i, pos(j):pos(j+1)-1) = len(j);
+      for j = 1:length(pos)-1
+        dist(i, pos(j):pos(j+1)-1) = len(j);
+      end
+      dist(i, pos(end):end) = len(end);
     end
-    dist(i, pos(end):end) = len(end);
   end
   dist = round(dist * 0.625);
 
