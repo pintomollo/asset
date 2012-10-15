@@ -73,7 +73,8 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
       tmp_pos = pts(index, :);
 
     % If the next point is exactly at the fixed point, we'll handle this later
-    elseif (sign_iso(index+1) == 0)
+    % If we do not cross 0, skip this
+    elseif (sign_iso(index+1) == 0 | sign_iso(index) == sign_iso(index+1))
       continue;
     else
       % Finally, we use fzero (help fzero) to precisely find the position of the FP.
