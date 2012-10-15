@@ -17,7 +17,7 @@ delta 0
 spawn_percentile 0.2
 
 #quantification.weights
-alpha 0.45
-beta 0.25
-gamma 0.75
-delta 0.4
+alpha 0.65
+beta 0.5
+gamma 0.55
+delta 0.35

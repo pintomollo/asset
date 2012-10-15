@@ -97,6 +97,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     if (all(isinf(dist(j,:))))
       dist(j,:) = dist(j-1,:);
       map(j,:) = [1:w];
+      line = prev_line;
     end
 
     prev_line = line;

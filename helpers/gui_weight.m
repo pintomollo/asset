@@ -36,6 +36,7 @@ else
 end
   
   kymo = load(fname{1});
+  kymo.opts.recompute = false;
   [domain, ruffles, theta] = gather_quantification(kymo.mymovie, kymo.opts);
   domain = imnorm(domain);
   kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
@@ -122,6 +123,7 @@ indx = get(hObject,'Value');
 if (indx ~= curr_indx)
   strings = get(hObject,'String');
   kymo = load(strings{indx});
+  kymo.opts.recompute = false;
   [domain, ruffles, theta] = gather_quantification(kymo.mymovie, kymo.opts);
   domain = imnorm(domain);
   weights.filt = ruffles;
