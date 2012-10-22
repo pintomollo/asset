@@ -8,7 +8,7 @@
 static double correl(double *x, int pos, int n, int l) {
 
   int i, n_max;
-  double mx, my, sx, sy, sxy, xv, yv;
+  double mx, my, sx, sy, sxy, xv, yv, corr;
 
   n_max = ceil((double)l/2.0);
   n = MIN(n, n_max);
@@ -35,7 +35,13 @@ static double correl(double *x, int pos, int n, int l) {
     sxy += xv * yv;
   }
 
-  return -(sxy / sqrt(sx*sy));
+  if (sxy == 0) {
+    corr = 0;
+  } else {
+    corr = -(sxy / sqrt(sx*sy));
+  }
+
+  return corr;
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])

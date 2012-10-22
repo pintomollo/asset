@@ -1,7 +1,7 @@
 function mymovie = cortical_signal(mymovie, opts)
 
   type = opts.segmentation_type;
-  if (strncmp(type, 'markers', 7))
+  if (strncmp(type, 'markers', 7) | strncmp(type, 'all', 3))
     [nframes imgsize] = size_data(mymovie.cortex);
   else
     [nframes imgsize] = size_data(mymovie.(type));

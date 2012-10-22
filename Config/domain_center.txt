@@ -1,5 +1,5 @@
-force_circularity false
-dp_method 'normal'
+#quantification
+scoring_func @weight_symmetry
 
 #quantification.init_params
 alpha 0
@@ -8,16 +8,25 @@ gamma 0
 delta 0
 
 #quantification.params
+force_circularity false
+dp_method 'normal'
 nhood 21
-%alpha 0.25
-alpha 0.45
-beta 0.985
-gamma 0.15
+%alpha 0.55
+%beta 0.985
+%gamma 0.06
+%spawn_percentile 0.04
+alpha 0.65
+beta 0.885
+gamma 0.06
 delta 0
-spawn_percentile 0.2
+spawn_percentile 0.03
 
 #quantification.weights
+%alpha 0.7
+%beta 0.65
+%gamma 0.55
+%delta 0.65
 alpha 0.65
-beta 0.5
-gamma 0.55
-delta 0.35
+beta 0.55
+gamma 0.5
+delta 0.6

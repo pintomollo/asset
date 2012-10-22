@@ -1,6 +1,10 @@
-function [domain, ruffles, pos, center_indx] = align_domain(mymovie, opts, path)
+function [domain, ruffles, path, center_indx] = align_domain(mymovie, opts, path, ruffles)
 
-  if (nargin == 3)
+  if (nargin == 4)
+    tmp = ruffles;
+    ruffles = opts;
+    opts = tmp;
+  elseif (nargin == 3)
     tmp = path;
     path = opts;
     opts = tmp;
@@ -54,6 +58,8 @@ function [domain, ruffles, pos, center_indx] = align_domain(mymovie, opts, path)
     %first = find(~isnan(path), 1, 'first');
     %path(1:first-1) = path(first);
   end
+  path(path > w) = path(path > w) - w;
+  path(path < 1) = path(path < 1) + w;
 
   center_indx = ceil(w/2);
   domain = NaN(h, w);

@@ -8,7 +8,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
 
     for i = 1:nframes
       nimg = i;
-      %nimg = 93 + i
+      %nimg = 120 + i
 
       cortex = mymovie.data.quantification(nimg).carth;
 
@@ -114,11 +114,21 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
         curr_vals = values([pos(i):pos(i)+len(i)-1]);
         half = round(len(i)/2);
 
-        if (ttest2(curr_vals, left_vals, 0.05, 'right'))
+        [lh, lp] = (ttest2(curr_vals, left_vals, 0.05, 'right'));
+        [rh, rp] = (ttest2(curr_vals, right_vals, 0.05, 'right'));
+
+        if (lh & rh)
+          %if (lp > rp)
+          if (ttest2(left_vals, right_vals, 0.05, 'right'));
+            values(pos(i)+len(i) - [1:half]) = NaN;
+          else
+            values([pos(i):pos(i)+half-1]) = NaN;
+          end
+        elseif (lh)
           %values([pos(i):pos(i)+half-1]) = poissrnd(median(left_vals), 1, half);
           %values([pos(i):pos(i)+half-1]) = median(left_vals) + std(left_vals)*randn(1, half)/2;
           values([pos(i):pos(i)+half-1]) = NaN;
-        else
+        elseif (rh)
           %values(pos(i)+len(i) - [1:half]) = poissrnd(median(right_vals), 1, half);
           %values(pos(i)+len(i) - [1:half]) = median(right_vals) + std(right_vals)*randn(1, half)/2;
           values(pos(i)+len(i) - [1:half]) = NaN;

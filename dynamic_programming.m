@@ -10,12 +10,19 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     retrieve_maps = false;
   end
 
+  if (~isfield(params, 'dp_method'))
+    params.dp_method = opts.dp_method;
+  end
+  if (~isfield(params, 'force_circularity'))
+    params.force_circularity = opts.force_circularity;
+  end
+
   [h,w] = size(img);
 
   nhood = params.nhood;
   half = floor(nhood/2);
 
-  switch opts.dp_method
+  switch params.dp_method
     case 'backward'
       indxs = [1:h h-1:-1:1];
     case 'double'
@@ -45,17 +52,6 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     wimg = weight(img, weight_params);
   end
 
-  if (~isempty(spawn) && all(spawn >= 0 & spawn <= 1))
-    spawn = prctile(wimg(:), 100*spawn) * (1 - params.alpha);
-
-    if (numel(spawn) == 1)
-      spawn = [spawn 0];
-    end
-  else
-    spawn = Inf(1, 2);
-  end
-  spawn_gap = spawn(1);
-
   if (isempty(init))
     init = zeros(1,w);
   elseif (length(init) == 1)
@@ -68,7 +64,15 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     nstart = sum(~isinf(init));
   end
 
-  spawn = spawn(2) + init;
+  if (~isempty(spawn))
+    %switch params.spawn_type
+    %  case 'full'
+        spawn_gap = prctile(wimg(isfinite(wimg)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+    %end
+  else
+    spawn_gap = Inf;
+  end
+  spawn_dist = init;
 
   prev_line = img(1,:);
   if (do_probs)
@@ -78,20 +82,27 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   end
 
   for j=2:nsteps
-    spawn = spawn + spawn_gap;
 
     indx = indxs(j);
-
     line = img(indx,:);
+    
+    %switch params.spawn_type
+    %  case 'current'
+    %    spawn_gap = prctile(wimg(indx, isfinite(wimg(indx, :))), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+    %  case 'previous'
+    %    tmp = wimg(1:indx, :);
+    %    spawn_gap = prctile(tmp(isfinite(tmp)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+    %end
+    spawn_dist = spawn_dist + spawn_gap;
 
     if (do_probs)
       if (j==2)
-        [dist(j,:), map(j,:), emission(j,:,:), transitions(1,2:end-1)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn);
+        [dist(j,:), map(j,:), emission(j,:,:), transitions(1,2:end-1)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn_dist);
       else
-        [dist(j,:), map(j,:), emission(j,:,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn);
+        [dist(j,:), map(j,:), emission(j,:,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn_dist);
       end
     else
-      [dist(j,:), map(j,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn);
+      [dist(j,:), map(j,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn_dist);
     end
 
     if (all(isinf(dist(j,:))))
@@ -124,7 +135,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     tmp(end-j,1) = map(end-j+1,tmp(end-j+1,1));
   end
 
-  switch opts.dp_method
+  switch params.dp_method
     case 'backward'
       path = tmp(end:-1:h,1);
       if (do_probs)
@@ -141,7 +152,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
       path = tmp;
   end
 
-  if (opts.force_circularity && abs(path(1,1)-path(end,1))>(nhood/2))
+  if (params.force_circularity && abs(path(1,1)-path(end,1))>(nhood/2))
     
     check = [-half:half];
 
@@ -187,7 +198,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   end
 
   if (retrieve_maps)
-    switch opts.dp_method
+    switch params.dp_method
       case 'backward'
         emission = map(end:-1:h,:);
         transitions = dist(end:-1:h,:);

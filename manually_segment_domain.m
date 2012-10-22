@@ -278,6 +278,7 @@ case double('Z')
   end
 
 case 32 % Space, confirm and next
+
       store_path(hfig);
 
       handles.previous = handles.current;
@@ -285,7 +286,6 @@ case 32 % Space, confirm and next
       if (handles.current > length(handles.domains))
         handles.current = 1;
       end
-
 case 27 % ESC, exit
 
   FexitFcn(hfig, []);
@@ -338,11 +338,13 @@ function mouseClick(hobj, event_data)
   name = [name(1:indx(1)-2) '_.mat'];
 
   tmp = load(name);
+  tmp.opts.recompute = false;
   %img1 = imnorm(double(load_data(tmp.mymovie.dic, frame)));
   img2 = imnorm(double(load_data(tmp.mymovie.data, frame)));
 
   opts = get_struct('ASSET');
-  [junk, pos] = gather_quantification(tmp.mymovie, opts);
+  tmp.mymovie = align_embryo(tmp.mymovie, tmp.opts);
+  [junk, pos] = gather_quantification(tmp.mymovie, tmp.opts);
 
   %pts = insert_ruffles(tmp.mymovie.markers.cortex(frame).carth, tmp.mymovie.markers.ruffles(frame).paths);
   pts = tmp.mymovie.data.quantification(frame).carth;
@@ -408,6 +410,7 @@ handles = get(hFig, 'UserData');
 if (handles.previous ~= handles.current)
   tmp = load(handles.domains{handles.current});
   handles.previous = handles.current;
+  tmp.opts.recompute = false;
 
   if (~isfield(tmp, 'domain'))
     if (isfield(tmp, 'img'))
@@ -420,7 +423,11 @@ if (handles.previous ~= handles.current)
       if (strncmp(name(end-2:end), 'mat', 3))
         name = name(1:end-4);
       end
-      name = [name 'DP.mat'];
+      if (strncmp(name(end-1:end), 'DP', 2))
+        name = [name '.mat'];
+      else
+        name = [name 'DP.mat'];
+      end
 
       if (exist(name) == 2)
         tmptmp = load(name);
@@ -507,7 +514,18 @@ function store_path(hFig)
     switch btn
       case 'Ignore'
         path = NaN(1,2);
-        save(handles.domains{handles.current}, 'domain', 'path');
+
+        name = (handles.domains{handles.current});
+        if (strncmp(name(end-2:end), 'mat', 3))
+          name = name(1:end-4);
+        end
+        if (strncmp(name(end-1:end), 'DP', 2))
+          name = [name '.mat'];
+        else
+          name = [name 'DP.mat'];
+        end
+
+        save(name, 'domain', 'path');
       case 'Cancel'
         return;
     end
@@ -579,7 +597,17 @@ function store_path(hFig)
     
     %figure;scatter(path(:, 1), path(:, 2))
 
-    save(handles.domains{handles.current}, 'domain', 'path');
+    name = (handles.domains{handles.current});
+    if (strncmp(name(end-2:end), 'mat', 3))
+      name = name(1:end-4);
+    end
+    if (strncmp(name(end-1:end), 'DP', 2))
+      name = [name '.mat'];
+    else
+      name = [name 'DP.mat'];
+    end
+
+    save(name, 'domain', 'path');
   end
 
 

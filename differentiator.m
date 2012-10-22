@@ -136,10 +136,10 @@ function coefs = get_coefs(method, nneigh, super)
         otherwise
           if (super)
             coefs = [296 503 532 294 -300]/5148;
+            warning(['The differentiator super-' method ' with N=' num2str(nneigh) ' is not implemented, using N=11 instead']);
           else
-            coefs = [1 2 3 4 5]/110;
+            coefs = 12*[1:((nneigh-1)/2)]/(nneigh^3 - nneigh);
           end
-          warning(['The differentiator ' method ' with N=' num2str(nneigh) ' is not implemented, using N=11 instead']);
       end
     case 'noise'
       switch nneigh

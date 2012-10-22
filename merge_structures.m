@@ -86,7 +86,7 @@ function [mystruct, is_same] = merge_structures(varargin)
 
   % Assign an empty value to all of them so we get the full structure
   for field = destination_fields(missing_fields)'
-    mystruct = setfield(complement, field{1}, []);
+    mystruct = setfield(mystruct, field{1}, []);
   end
 
   % Check whether there are some keywords fields

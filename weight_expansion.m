@@ -1,5 +1,9 @@
 function weight = weight_expansion(img, params)
 
+  minmax = prctile(img(isfinite(img)), [0.1 99.9]);
+  img = imnorm(img, minmax(1), minmax(2));
+  %img = imnorm(img);
+
   bads = isnan(img);
   img(bads) = 0;
 
@@ -7,20 +11,26 @@ function weight = weight_expansion(img, params)
   beta = 2*params.beta;
   gamma = params.gamma;
 
-  thresh = beta*graythresh(img([end-5:end], :));
-  intens = imnorm(abs(imnorm(img) - thresh));
+  pos = cumsum(img, 2);
+  pos = imnorm(bsxfun(@minus, pos(:, end), pos));
+  thresh = graythresh(pos([end-5:end], :));
+  inners = any(pos(end-5:end, :) > thresh, 1);
 
-  pos = cumsum(1-imnorm(img), 2);
-  pos = bsxfun(@rdivide, pos, pos(:, end));
+  thresh = graythresh(img([end-5:end], :));
+  intens = imnorm(abs(img - beta*thresh));
 
-  slopex = differentiator(img, 2);
-  slopey = differentiator(img, 1);
+  %pos = cumsum(1-imnorm(img), 2);
+  %pos = bsxfun(@rdivide, pos, pos(:, end));
+
+  slopex = differentiator(img, 2, 19);
+  slopey = differentiator(img, 1, 19);
   slope = imnorm(min(slopex, -slopey));
 
   weight = alpha*(gamma*intens + (1-gamma)*pos) + (1-alpha)*slope;
   weight(bads) = Inf;
-  %figure;imagesc(weight)
+  weight(end, inners) = Inf;
 
+  %figure;imagesc(weight)
   %keyboard
 
   return;

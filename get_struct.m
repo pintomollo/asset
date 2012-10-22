@@ -386,6 +386,7 @@ function mystruct = get_struct(type, nstruct)
 
       mystruct.markers.cortex_weights.alpha = 0.5228;   % Prop. of intensity VS outside
       mystruct.markers.cortex_weights.beta  = 1e-8;     % Threshold for outside
+      mystruct.markers.cortex_weights.gamma = 1;        % Intensity target value
 
       mystruct.markers.scoring_func = {@intens_filt,... % Segmentation functions
                                        @intens_sum};

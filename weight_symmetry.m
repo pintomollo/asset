@@ -1,6 +1,8 @@
 function weight = weight_symmetry(img, params)
   
-  img = imnorm(img);
+  minmax = prctile(img(isfinite(img)), [0.1 99.9]);
+  img = imnorm(img, minmax(1), minmax(2));
+  %img = imnorm(img);
 
   alpha = params.alpha;
   beta = 20 * params.beta;

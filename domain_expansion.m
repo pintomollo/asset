@@ -1,4 +1,4 @@
-function fraction = domain_expansion(domain, center, cytok, opts, domain_half)
+function [fraction, max_width] = domain_expansion(domain, center, cytok, opts, domain_half)
 
   if (nargin == 5)
     [domain, domain_half, center, cytok, opts] = deal(domain, center, cytok, opts, domain_half);
@@ -56,7 +56,14 @@ function fraction = domain_expansion(domain, center, cytok, opts, domain_half)
   domain = imnorm(domain(1:cytok, :));
   path = dynamic_programming(domain, opts.segmentation_parameters.domain_expansion.cortex_params, opts.segmentation_parameters.domain_expansion.scoring_func, opts.segmentation_parameters.domain_expansion.cortex_weights, opts);
 
-  fraction = path / max(path(end-5:end));
+    %figure;
+    %hold off;
+    %imagesc(domain);
+    %hold on;
+    %plot(path, 1:length(path), 'k');
+
+  max_width = max(path(end-5:end));
+  fraction = path / max_width;
 
   %{
   domain = imadjust(imnorm(domain(1:cytok, :)));
