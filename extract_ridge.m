@@ -8,7 +8,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
 
     for i = 1:nframes
       nimg = i;
-      %nimg = 120 + i
+      %nimg = 14 + i
 
       cortex = mymovie.data.quantification(nimg).carth;
 
@@ -21,6 +21,23 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
       rescale = isnan(mymovie.data.quantification(nimg).bkg(:,1));
 
       mymovie.data.quantification(nimg).cortex = extract_ridge(mymovie.data.quantification(nimg).front, cortex, dperp, rescale, opts);
+
+      %pts = mymovie.data.quantification(nimg).front;
+
+      %img = load_data(mymovie.data, nimg);
+      %figure;imagesc(img);
+      %size_img = size(img);
+      %data = zeros(size_img);
+
+      %centers = bsxfun(@times, pts(:,1), dperp) + cortex;
+
+      %for j=1:size(pts, 1)
+      %  j
+      %  data = max(data, GaussMask2D(pts(j,2), size_img, centers(j,[2 1]), 0, 1)*pts(j,3));
+      %end
+
+      %figure;imagesc(data);
+      %keyboard
     end
 
     values = mymovie;
@@ -39,7 +56,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
 
   centers = bsxfun(@times, params(:,1), dperp) + pos;
 
-  gaussian_var = 2*(opts.quantification.window_params / opts.pixel_size);
+  gaussian_var = 2*(opts.quantification.window_params / opts.pixel_size)^2;
   mdist = median(sqrt(sum(diff(centers).^2, 2)));
   window_size = ceil(safety * gaussian_var / mdist);
 
@@ -58,12 +75,17 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
     window = centers(indexes+i, :);
     window_params = params(indexes+i, :);
     dist = exp(-(sum(bsxfun(@minus, window, pos(i,:)).^2, 2)) ./ gaussian_var);
+    signal = exp(-(sum(bsxfun(@minus, window, pos(i,:)).^2, 2)) ./ (2*(window_params(:,2).^2))) .* window_params(:,3);
+    
+    % Maximum value
+    %values(i) = max(signal);
+
+    % Gaussian average
+    values(i) = sum(signal .* dist / sum(dist));
 
     %%% MOLLINATION !!
-
     % Integral
-    %values(i) = sum((window_params(:, 3) .* window_params(:,2) .* factor) .* (dist / sum(dist))) / ;
-    values(i) = sum((window_params(:, 3) .* window_params(:,2)) .* (dist / sum(dist))) / mvar;
+    %values(i) = sum((window_params(:, 3) .* window_params(:,2)) .* (dist / sum(dist))) / mvar;
     % Amplitude
     %values(i) = sum(window_params(:, 3) .* (dist / sum(dist)));
   end
