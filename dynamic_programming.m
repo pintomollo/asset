@@ -64,7 +64,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     nstart = sum(~isinf(init));
   end
 
-  if (~isempty(spawn))
+  if (~isempty(spawn) & isfinite(spawn) & spawn <= 1 & spawn >= 0)
     %switch params.spawn_type
     %  case 'full'
         spawn_gap = prctile(wimg(isfinite(wimg)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
