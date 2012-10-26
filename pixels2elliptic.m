@@ -38,26 +38,29 @@ function [ptsi, ptsj, imgsize, axes_length, safety, type] = parse_inputs(varargi
   type = 'hyperbolic';
 
   for i=1:length(varargin)
-    var_type = get_type(varargin{i});
-    switch var_type
-      case 'num'
-        if (isempty(ptsi))
-          ptsi = varargin{i};
-        elseif (isempty(ptsj) & all(size(ptsi) == size(varargin{i})))
-          ptsj = varargin{i};
-        elseif (isempty(imgsize) & numel(varargin{i})==2)
-          imgsize = varargin{i};
-        elseif (numel(varargin{i}) == 1)
-          safety = varargin{i};
-        else
-          axes_length = varargin{i};
-        end
-      case 'char'
-        type = varargin{i};
-      case 'none'
-        if (isempty(ptsi))
-          ptsi = NaN(1,2);
-        end
+    %var_type = get_type(varargin{i});
+    if (isempty(varargin{i}))
+      if (isempty(ptsi))
+        ptsi = NaN(1,2);
+      end
+    else
+      var_type = class(varargin{i});
+      switch var_type
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
+          if (isempty(ptsi))
+            ptsi = varargin{i};
+          elseif (isempty(ptsj) & all(size(ptsi) == size(varargin{i})))
+            ptsj = varargin{i};
+          elseif (isempty(imgsize) & numel(varargin{i})==2)
+            imgsize = varargin{i};
+          elseif (numel(varargin{i}) == 1)
+            safety = varargin{i};
+          else
+            axes_length = varargin{i};
+          end
+        case 'char'
+          type = varargin{i};
+      end
     end
   end
 

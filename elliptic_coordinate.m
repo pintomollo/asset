@@ -8,32 +8,55 @@ function [elliptic_img] = elliptic_coordinate(img, varargin)
     return;
   end
 
-  done = false;
-  while (~done)
-    try
-      elliptic_img = zeros(ellsize);
-      done = true;
-    catch ME
-      warning(['The resolution of the elliptical projection is reduced as it contains more elements than the maximum available memory (' num2str(prod(ellsize)) ')']);
-      ellsize = ceil(ellsize / 10);
-      ellsize(ellsize < 1) = 1;
-    end
+  max_elems = 1e8;
+  nelems = prod(ellsize);
+
+  if (nelems > max_elems)
+
+    factor = sqrt(max_elems / nelems);
+    ellsize = floor(ellsize * factor);
+
+    warning(['The resolution of the elliptical projection is reduced by a factor ' num2str(factor) ' as it contains more elements than the maximum available memory (1e8)']);
   end
+
+  %done = false;
+  %while (~done)
+  %  try
+  %    elliptic_img = zeros(ellsize);
+  %    done = true;
+  %  catch ME
+  %    warning(['The resolution of the elliptical projection is reduced as it contains more elements than the maximum available memory (' num2str(prod(ellsize)) ')']);
+  %    ellsize = ceil(ellsize / 10);
+  %    ellsize(ellsize < 1) = 1;
+  %  end
+  %end
 
   if (isempty(axes_length) | any(axes_length == 0))
     return;
   end
 
-  row = [0:ellsize(2)-1].';
-  col = ones(size(row));
+  row = [0:ellsize(2)-1];
+  col = [1:ellsize(1)].';
 
-  for i=1:ellsize(1)
+  [I,J] = meshgrid(row, col);
+
+  [x, y] = pixels2elliptic(J(:), I(:), ellsize, axes_length, safety, type);
+  [x, y] = elliptic2carth(x, y, center, axes_length, orient, type);
+
+  elliptic_img = bilinear(img,x,y);
+  elliptic_img = reshape(elliptic_img, ellsize);
+
+  %row = [0:ellsize(2)-1].';
+  %col = ones(size(row));
+
+  %for i=1:ellsize(1)
     
-    [x, y] = pixels2elliptic(col * i, row, ellsize, axes_length, safety, type);
-    [x, y] = elliptic2carth(x, y, center, axes_length, orient, type);
+  %  [x, y] = pixels2elliptic(col * i, row, ellsize, axes_length, safety, type);
+  %  [x, y] = elliptic2carth(x, y, center, axes_length, orient, type);
 
-    elliptic_img(i,:) = bilinear(img,x,y);
-  end
+  %  elliptic_img(i,:) = bilinear(img,x,y);
+  %end
+
 
   return;
 end
@@ -49,9 +72,10 @@ function [center, axes_length, orient, safety, ellsize, circular, type] = parse_
   type = 'hyperbolic';
 
   for i=1:length(varargin)
-    var_type = get_type(varargin{i});
+    %var_type = get_type(varargin{i});
+    var_type = class(varargin{i});
     switch var_type
-      case 'num'
+      case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
         if (isempty(center))
           center = varargin{i};
         elseif (isempty(axes_length))
@@ -65,7 +89,7 @@ function [center, axes_length, orient, safety, ellsize, circular, type] = parse_
         end
       case 'char'
         type = varargin{i};
-      case 'bool'
+      case 'logical'
         circular = varargin{i};
     end
   end

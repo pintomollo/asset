@@ -16,6 +16,9 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   if (~isfield(params, 'force_circularity'))
     params.force_circularity = opts.force_circularity;
   end
+  if (~isfield(params, 'spawn_type'))
+    params.spawn_type = 'full';
+  end
 
   [h,w] = size(img);
 
@@ -65,10 +68,13 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   end
 
   if (~isempty(spawn) & isfinite(spawn) & spawn <= 1 & spawn >= 0)
-    %switch params.spawn_type
-    %  case 'full'
+    switch params.spawn_type
+      case 'full'
         spawn_gap = prctile(wimg(isfinite(wimg)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
-    %end
+      case 'end'
+        tmp_img = wimg(end-10:end, :);
+        spawn_gap = prctile(tmp_img(isfinite(tmp_img)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+    end
   else
     spawn_gap = Inf;
   end

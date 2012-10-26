@@ -105,28 +105,31 @@ function [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(v
   type = 'hyperbolic';
 
   for i=1:length(varargin)
-    var_type = get_type(varargin{i});
-    switch var_type
-      case 'num'
-        if (isempty(ptsx))
-          ptsx = varargin{i};
-        elseif (isempty(ptsy) & all(size(ptsx) == size(varargin{i})))
-          ptsy = varargin{i};
-        elseif (isempty(center) & numel(varargin{i})==2)
-          center = varargin{i};
-        elseif (isempty(axes_length) & numel(varargin{i})==2)
-          axes_length = varargin{i};
-        elseif (isempty(orient) & numel(varargin{i})==1)
-          orient = varargin{i};
-        end
-      case 'char'
-        type = varargin{i};
-      case 'bool'
-        align = varargin{i};
-      case 'none'
-        if (isempty(ptsx))
-          ptsx = NaN(1,2);
-        end
+    %var_type = get_type(varargin{i});
+    if (isempty(varargin{i}))
+      if (isempty(pts))
+        ptsx = NaN(1,2);
+      end
+    else
+      var_type = class(varargin{i});
+      switch var_type
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
+          if (isempty(ptsx))
+            ptsx = varargin{i};
+          elseif (isempty(ptsy) & all(size(ptsx) == size(varargin{i})))
+            ptsy = varargin{i};
+          elseif (isempty(center) & numel(varargin{i})==2)
+            center = varargin{i};
+          elseif (isempty(axes_length) & numel(varargin{i})==2)
+            axes_length = varargin{i};
+          elseif (isempty(orient) & numel(varargin{i})==1)
+            orient = varargin{i};
+          end
+        case 'char'
+          type = varargin{i};
+        case 'logical'
+          align = varargin{i};
+      end
     end
   end
 

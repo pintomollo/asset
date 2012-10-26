@@ -151,11 +151,11 @@ function [update, center, axes_length, orientation, opts] = parse_inputs(varargi
     for i = 1:length(varargin)
 
       % Get the type of the current input and assign it accordingly
-      type = get_type(varargin{i});
+      type = class(varargin{i});
       switch type
 
         % A boolean is for the update matrix
-        case 'bool'
+        case 'logical'
           update = varargin{i};
 
         % A structure is the option
@@ -164,7 +164,7 @@ function [update, center, axes_length, orientation, opts] = parse_inputs(varargi
 
         % For numerical values, we assume they are provided in the correct order:
         % center, axes_length and orientation
-        case 'num'
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
           if (isempty(center))
             center = varargin{i};
           elseif (isempty(axes_length))

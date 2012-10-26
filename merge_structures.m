@@ -37,7 +37,7 @@ function [mystruct, is_same] = merge_structures(varargin)
   % Extract the input variables from the varargin
   for i = 1:length(varargin)
     % Get the type of input parameter
-    type = get_type(varargin{i});
+    type = class(varargin{i});
 
     % Sort it accordingly
     switch type
@@ -53,7 +53,7 @@ function [mystruct, is_same] = merge_structures(varargin)
         end
 
       % If it's a boolean, it's the recursive is_same parameter
-      case 'bool'
+      case 'logical'
         is_same = is_same & varargin{i};
 
       % If it's a cell array, it's the keywords
@@ -114,8 +114,8 @@ function [mystruct, is_same] = merge_structures(varargin)
         for k=1:length(sort_keys)
 
           % Get the type of the current keyword in both structures
-          destination_type = get_type(mystruct(j).(sort_keys{k}));
-          complement_type = get_type(complement(i).(sort_keys{k}));
+          destination_type = class(mystruct(j).(sort_keys{k}));
+          complement_type = class(complement(i).(sort_keys{k}));
 
           % Need to check that at least one field is not empty
           if (empty_keys & ~isempty(mystruct(j).(sort_keys{k})))

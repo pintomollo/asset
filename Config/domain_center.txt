@@ -11,22 +11,23 @@ delta 0
 force_circularity false
 dp_method 'normal'
 nhood 21
-%alpha 0.55
-%beta 0.985
-%gamma 0.06
-%spawn_percentile 0.04
+%alpha 0.45
+%beta 0.85
+%gamma 0.08
+%spawn_percentile 0.1
 alpha 0.65
 beta 0.885
 gamma 0.06
 delta 0
 spawn_percentile 0.03
+spawn_type 'end'
 
 #quantification.weights
-%alpha 0.7
-%beta 0.65
-%gamma 0.55
-%delta 0.65
+%alpha 0.75
+%beta 0.8
+%gamma 0.15
+%delta 0.4
 alpha 0.65
-beta 0.55
+beta 0.52
 gamma 0.5
 delta 0.6

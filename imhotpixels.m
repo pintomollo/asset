@@ -84,7 +84,7 @@ function [thresh, method, params, filter] = parse_input(varargin)
   for i = 1:length(varargin)
 
     % Assign them according to their type
-    switch (get_type(varargin{i}))
+    switch (class(varargin{i}))
 
       % Must be the method type
       case 'char'
@@ -95,7 +95,7 @@ function [thresh, method, params, filter] = parse_input(varargin)
         params = varargin{i};
 
       % Several possibilities
-      case 'num'
+      case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
 
         % That many values is the cutom filter
         if (numel(varargin{i}) > 2)

@@ -105,6 +105,8 @@ function mymovie = reconstruct_egg(mymovie, opts)
     axes_length = [mid_plane(1:2,1); z_size];
   end
 
+  display('aaahhh')
+
   orient = align_orientations(orient);
   [axes_length, relative_z] = fit_relative_ellipse(all_pts, centers, axes_length, orient);
 

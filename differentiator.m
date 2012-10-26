@@ -187,33 +187,36 @@ function [x, y, dim, nneigh, method, super, boundary] = parse_input(varargin)
   super = false;
 
   for i = 1:length(varargin)
-    var_type = get_type(varargin{i});
-    switch var_type
-      case 'none'
-        dim = 1;
-      case 'num'
-        if (numel(varargin{i}) == 1)
-          if (dim == 0)
-            dim = varargin{i};
-          else
-            nneigh = varargin{i};
+    %var_type = get_type(varargin{i});
+    if (isempty(varargin{i}))
+      dim = 1;
+    else
+      var_type = class(varargin{i});
+      switch var_type
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
+          if (numel(varargin{i}) == 1)
+            if (dim == 0)
+              dim = varargin{i};
+            else
+              nneigh = varargin{i};
+            end
+          elseif (isempty(x))
+            x = varargin{i};
+          elseif (isempty(y))
+            y = varargin{i};
           end
-        elseif (isempty(x))
-          x = varargin{i};
-        elseif (isempty(y))
-          y = varargin{i};
-        end
-      case 'bool'
-        super = varargin{i};
-      case 'char'
-        switch varargin{i}
-          case {'symmetric', 'replicate', 'circular'}
-            boundary = varargin{i};
-          case 'super'
-            super = true;
-          otherwise
-            method = varargin{i};
-        end
+        case 'logical'
+          super = varargin{i};
+        case 'char'
+          switch varargin{i}
+            case {'symmetric', 'replicate', 'circular'}
+              boundary = varargin{i};
+            case 'super'
+              super = true;
+            otherwise
+              method = varargin{i};
+          end
+      end
     end
   end
 

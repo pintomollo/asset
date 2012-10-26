@@ -118,11 +118,11 @@ function [update, orig_errors, centers, axes_length, orientations, nbins, opts] 
 
   if (nargin > 0)
     for i=1:length(varargin)
-      type = get_type(varargin{i});
+      type = class(varargin{i});
       switch type
-        case 'bool'
+        case 'logical'
           update = varargin{i};
-        case 'num'
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
           if (numel(varargin{i}) > 1)
             orig_errors = varargin{i};
           else

@@ -329,34 +329,6 @@ function [mymovie, trackings, opts] = parse_input(varargin)
         return;
       end
 
-      %% We allow several files to be analyzed consecutively by using
-      %% the regular expression metacharacter '*'
-      %if (~isempty(findstr(varargin{1}, '*')))
-
-
-      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      % 2. Use simple dir & regexp to allow [1-3] or \b and stuff in name
-      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-      %  % List all the MAT-files corresponding to the pattern
-      %  datas = dir(varargin{1});
-
-      %  % Chech whether the file is in a subdirectory
-      %  indx = strfind(varargin{1}, filesep);
-      %  dirpath = '';
-      %  if (~isempty(indx))
-      %    dirpath = varargin{1}(1:indx(end));
-      %  end
-
-      %  % Run them one after the other one
-      %  for i=1:length(datas)
-      %    ASSET([dirpath datas(i).name], varargin{2:end});
-      %  end
-
-      %  % Do not forget to stop here !
-      %  return;
-      %end
-
       % Now we'll try to load the corresponding MAT-file.
       % So for now on, we suppose that it's really a MAT-file
       % but that we have not loaded it yet.
@@ -467,12 +439,14 @@ function [mymovie, trackings, opts] = parse_input(varargin)
     if (isfield(opts, varargin{2*i - 1}))
       opts.(varargin{2*i - 1}) = varargin{2*i};
 
-    % Otherwise we notify its inexistence
+    % Otherwise we might be accessing a subfield
     else
+      % Find the dots indicating a subfield
       tokens = regexp(varargin{2*i - 1}, '\.', 'split');
       tmp_struct = opts;
       is_valid = true;
 
+      % Check if the whole structure exists
       for c = 1:length(tokens)
         if (~isfield(tmp_struct, tokens{c}))
           is_valid = false;
@@ -482,6 +456,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
         end
       end
 
+      % Assign the value
       if (is_valid)
         try
           eval(['opts.' varargin{2*i - 1} ' = varargin{2*i};']);
@@ -490,6 +465,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
         end
       end
 
+      % Otherwise we notify its inexistence
       if (~is_valid)
         warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
       end

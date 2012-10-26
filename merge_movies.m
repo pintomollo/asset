@@ -34,7 +34,8 @@ function [mystruct, new_nframes] = merge_recursive(mystruct, twin_struct, nframe
       else
         issingle = (prod(size(twin_struct.(field))) == 1);
           
-        switch (get_type(twin_struct.(field)))
+        %switch (get_type(twin_struct.(field)))
+        switch (class(twin_struct.(field)))
           case 'struct'
             switch field
               case {'child', 'files'}
@@ -68,12 +69,14 @@ function [mystruct, new_nframes] = merge_recursive(mystruct, twin_struct, nframe
               case {'expr', 'name', 'experiment'}
                 mystruct.(field) = common_substring(mystruct.(field), twin_struct.(field), 'MERGE');
             end
-          case 'num'
+          case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
             if (~issingle && ~strncmp(field, 'color', 5))
               mystruct.(field) = mycat(mystruct.(field), twin_struct.(field));
             end
-          case 'java'
-            mystruct.(field) = combine_metadata(mystruct.(field), twin_struct.(field));
+          otherwise
+            if (isjava(twin_struct.(field)))
+              mystruct.(field) = combine_metadata(mystruct.(field), twin_struct.(field));
+            end
         end
       end
     end
@@ -188,7 +191,8 @@ function old_struct = duplicate(old_struct, frame_shift)
 
     if (~isempty(old_struct.(field)))
       [m,n,o,p] = size(old_struct.(field));
-      switch (get_type(old_struct.(field)))
+      %switch (get_type(old_struct.(field)))
+      switch (class(old_struct.(field)))
         case 'struct'
           switch field
             case {'mean', 'paths'}
@@ -202,7 +206,7 @@ function old_struct = duplicate(old_struct, frame_shift)
                 old_struct.(field)(j) = duplicate(old_struct.(field)(j), frame_shift);
               end
           end
-        case 'num'
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
           buffer = NaN([m frame_shift o p]);
           old_struct.(field) = mycat(buffer, old_struct.(field));
         case 'char'
@@ -237,8 +241,9 @@ function merge = mycat(array1, array2)
   nbuff = c - o;
 
   if (nbuff ~= 0)
-    switch get_type(array1)
-      case 'num'
+    %switch get_type(array1)
+    switch class(array1)
+      case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
         buffer = NaN;
       case 'struct'
         buffer = array1(1,1,1);

@@ -123,11 +123,11 @@ function [handles, polar, args] = parse_inputs(varargin)
 
   if (nargin > 0)
     for i=1:length(varargin)
-      type = get_type(varargin{i});
+      type = class(varargin{i});
       switch(type)
-        case 'bool'
+        case 'logical'
           polar = varargin{i};
-        case 'num'
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
           if (all(ishandle(varargin{i})))
             handles = varargin{i};
           end

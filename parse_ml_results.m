@@ -338,13 +338,13 @@ function [nbests, keep_evolution, sort_method] = parse_input(varargin)
 
   % Check what we got as inputs
   for i=1:length(varargin)
-    var_type = get_type(varargin{i});
+    var_type = class(varargin{i});
     switch var_type
-      case 'num'
+      case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
         nbests = varargin{i};
       case 'char'
         sort_method = varargin{i};
-      case 'bool'
+      case 'logical'
         keep_evolution = varargin{i};
     end
   end

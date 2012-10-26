@@ -1,7 +1,6 @@
 function [mymovie, opts] = filter_channels(mymovie, opts)
 
-  %%%%%%%%%%%%%%%%% NEED TO HANDLE 'all' CHANNELS !!
-
+  all_channels = {};
 
   nfilters = length(opts.filters);
   filters = cell(nfilters, 1);
@@ -42,19 +41,17 @@ function [mymovie, opts] = filter_channels(mymovie, opts)
         else
           channels{i} = filter.channel;
         end
+      else
+        try
+          h = fspecial(filter.filter, filter.params{:});
+        catch ME
+          warning(['Filter ' filter.filter ' is unknown, ignoring it']);
 
-        continue;
+          continue;
+        end
+        filters{i} = h;
+        channels{i} = filter.channel;
       end
-
-      try
-        h = fspecial(filter.filter, filter.params{:});
-      catch
-        warning(['Filter ' filter.filter ' is unknown, ignoring it']);
-
-        continue;
-      end
-      filters{i} = h;
-      channels{i} = filter.channel;
     elseif (isa(filter.filter, 'function_handle'))
       filters{i} = filter.filter;
       params{i} = filter.params;
@@ -67,7 +64,26 @@ function [mymovie, opts] = filter_channels(mymovie, opts)
 
       new_movie.experiment = [new_movie.experiment 'custom_filter_'];
     else
-      warning(['Do not know what to with a filter of type ' get_type(filter.filter)]);
+      warning(['Do not know what to with a filter of type ' class(filter.filter)]);
+    end
+
+    if (strncmp(channels{i}, 'all', 3))
+      if (isempty(all_channels))
+        all_channels = get_channels(mymovie);
+      end
+
+      for j=1:length(all_channels)
+        if (j==1)
+          indx = i;
+        else
+          indx = length(filters) + 1;
+        end
+
+        channels(indx) = all_channels(j);
+        filters(indx) = filters(i);
+        params(indx) = params(i);
+        boundaries(indx) = boundaries(i);
+      end
     end
   end
 

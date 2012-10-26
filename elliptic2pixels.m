@@ -38,29 +38,32 @@ function [theta, rads, imgsize, axes_length, safety, type] = parse_inputs(vararg
   type = 'hyperbolic';
 
   for i=1:length(varargin)
-    var_type = get_type(varargin{i});
-    switch var_type
-      case 'num'
-        if (isempty(theta))
-          theta = varargin{i};
-        elseif (isempty(rads) & all(size(theta) == size(varargin{i})))
-          rads = varargin{i};
-        elseif (isempty(imgsize) & numel(varargin{i})==2 )
-          imgsize = varargin{i};
-        elseif (numel(varargin{i}) == 1)
-          safety = varargin{i};
-        else
-          axes_length = varargin{i};
-        end
-      case 'char'
-        type = varargin{i};
-      case 'none'
-        if (isempty(theta))
-          theta = NaN(1,2);
-        else
-          theta = NaN;
-          rads = NaN;
-        end
+    %var_type = get_type(varargin{i});
+    if (isempty(varargin{i}))
+      if (isempty(theta))
+        theta = NaN(1,2);
+      else
+        theta = NaN;
+        rads = NaN;
+      end
+    else
+      var_type = class(varargin{i});
+      switch var_type
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
+          if (isempty(theta))
+            theta = varargin{i};
+          elseif (isempty(rads) & all(size(theta) == size(varargin{i})))
+            rads = varargin{i};
+          elseif (isempty(imgsize) & numel(varargin{i})==2 )
+            imgsize = varargin{i};
+          elseif (numel(varargin{i}) == 1)
+            safety = varargin{i};
+          else
+            axes_length = varargin{i};
+          end
+        case 'char'
+          type = varargin{i};
+      end
     end
   end
 

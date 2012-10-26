@@ -170,9 +170,10 @@ function [outside, mytype] = parse_input(varargin)
 
   if (nargin > 0)
     for i=1:length(varargin)
-      type = get_type(varargin{i});
+      %type = get_type(varargin{i});
+      type = class(varargin{i});
       switch type
-        case 'bool'
+        case 'logical'
           outside = varargin{i};
         case 'char'
           mytype = varargin{i};
