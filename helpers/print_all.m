@@ -35,12 +35,12 @@ function myprint(fid, variable, spacer, prefix)
   if (isempty(variable))
     fprintf(fid, [prefix spacer '[]\n']);
   else
-    switch get_type(variable)
+    switch class(variable)
       case 'cell'
         for i=1:numel(variable)
           myprint(fid, variable{i}, spacer, [prefix '{' num2str(i) '}']);
         end
-      case {'struct', 'errmsg'}
+      case {'struct', 'MException'}
         fields = fieldnames(variable);
         for i=1:numel(variable)
           if (numel(variable) > 1)
@@ -57,7 +57,7 @@ function myprint(fid, variable, spacer, prefix)
             end
           end
         end
-      case 'num'
+      case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
         if (numel(variable) == 1)
           fprintf(fid, [prefix spacer '%f\n'], variable);
         else
@@ -65,7 +65,7 @@ function myprint(fid, variable, spacer, prefix)
           fprintf(fid, '%f ', variable);
           fprintf(fid, ']\n');
         end
-      case 'bool'
+      case 'logical'
         if (numel(variable) == 1)
           fprintf(fid, [prefix spacer '%d\n'], variable);
         else

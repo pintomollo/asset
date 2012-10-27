@@ -343,7 +343,7 @@ function [h, mymovie, fields, indx, opts, fname, args, dv_inversion] = parse_inp
 
   if (nargin > 0)
     for i=1:length(varargin)
-      type = get_type(varargin{i});
+      type = class(varargin{i});
       switch type
         case 'char'
           if (findstr(varargin{i}, '.'))
@@ -353,7 +353,7 @@ function [h, mymovie, fields, indx, opts, fname, args, dv_inversion] = parse_inp
           end
         case 'cell'
           fields = varargin{i};
-        case 'num'
+        case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
           if (all(ishandle(varargin{i})))
             h = varargin{i};
           else

@@ -105,14 +105,14 @@ function mymovie = reconstruct_egg(mymovie, opts)
     axes_length = [mid_plane(1:2,1); z_size];
   end
 
-  display('aaahhh')
-
   orient = align_orientations(orient);
   [axes_length, relative_z] = fit_relative_ellipse(all_pts, centers, axes_length, orient);
 
   centers = centers(:, indexes);
   orient = orient(1, indexes);
   [relative_z, centers, orient] = relative_position(pts, relative_z, centers, axes_length, orient);
+
+  mymovie = align_embryo(mymovie, opts);
 
   if (abs(orient - mean(mymovie.dic.orientations)) > pi)
     orient = orient + pi;

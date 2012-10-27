@@ -4,20 +4,17 @@ function [field_values] = extract_fields(mystruct, nframe, type, fields, crop)
   crop_factor = 0;
   if (nargin < 5)
     crop = false;
+  elseif (isnumeric(crop))
+    if (numel(crop) > 1)
+      crop_size = crop;
+      crop = true;
+    else
+      crop_factor = crop;
+      crop = true;
+    end
   else
-    switch get_type(crop)
-      case 'num'
-        if (numel(crop) > 1)
-          crop_size = crop;
-          crop = true;
-        else
-          crop_factor = crop;
-          crop = true;
-        end
-      otherwise
-        if (crop)
-          crop_factor = 2.2;
-        end
+    if (crop)
+      crop_factor = 2.2;
     end
   end
   if (nargin < 4 | isempty(fields))

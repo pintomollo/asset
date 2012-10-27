@@ -1,6 +1,6 @@
 function mystruct = func2mex(mystruct)
 
-  switch get_type(mystruct)
+  switch class(mystruct)
     case 'handle'
       fname = func2str(mystruct);
       if (exist([fname '_mex'], 'file') == 3)
