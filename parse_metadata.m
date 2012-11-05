@@ -120,8 +120,16 @@ function [metadata, opts] = parse_metadata(fname, base_dir, opts)
               if (isempty(tokens))
                 state = 'init';
               elseif (strncmp(tokens{1}, 'FrameKey', 8))
-                state = 'read';
-                obj_level = block_level;
+                tmp_tokens = regexp(tokens{1}, 'FrameKey-(\d+)-\d+-\d+','tokens');
+                if (~isempty(tmp_tokens) & str2double(tmp_tokens{1}{1}) >= nframes)
+                  warning(['Metadata describes a plane (' tmp_tokens{1}{1}{1} ') that is out of the range of the actual recordings (' num2str(nframes-1) '), ignoring this infromation.']);
+
+                  state = 'ignore';
+                  obj_level = block_level;
+                else
+                  state = 'read';
+                  obj_level = block_level;
+                end
               else
                 state = 'ignore';
                 obj_level = block_level;
@@ -327,7 +335,7 @@ function [metadata, opts] = parse_metadata(fname, base_dir, opts)
     metadata.channels = groups;
 
     if (binning ~= 0 & magnification ~= 0 & pixel_size ~= 0)
-      pixel_size = mean(pixel_size),
+      pixel_size = mean(pixel_size);
 
       opts.pixel_size = pixel_size;
       opts.magnification = magnification;

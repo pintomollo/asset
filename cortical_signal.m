@@ -63,7 +63,6 @@ function mymovie = cortical_signal(mymovie, opts)
   bin_step = 1;
 
   for i=1:nframes
-    display(num2str(i/nframes))
     bounds = [-Inf bin_step 0 0 -Inf 0 0; ...
                Inf Inf Inf Inf Inf Inf Inf];
 

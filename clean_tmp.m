@@ -117,6 +117,10 @@ function tmps = recursive_tmp(mystruct)
     [tmp tokens] = regexp(mystruct.fname,'tmpmat(\d+)\.*','match','tokens');
     if (length(tokens)~=0)
       used_tmp = [used_tmp; str2double(char(tokens{1}))];
+
+      if (~exist(mystruct.fname, 'file'))
+        diaply(['Missing ' mystruct.fname]);
+      end
     end
 
     fields = fields(~indx);

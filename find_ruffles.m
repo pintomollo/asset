@@ -169,6 +169,7 @@ function mymovie = find_ruffles(mymovie, opts)
 
     ruffles(i).carth = pts(:,1:2);
     ruffles(i).bounds = pts(:,3:end);
+    ruffles(i).properties = dist(indxs(:,2));
   end
 
   mymovie.(type).ruffles = ruffles;

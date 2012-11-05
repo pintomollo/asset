@@ -173,6 +173,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     img = imnorm(img);
 
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+
     polar_size = size(polar_img);
 
     egg_path = carth2elliptic(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));

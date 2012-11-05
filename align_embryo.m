@@ -27,7 +27,7 @@ function mymovie = align_embryo(mymovie, opts)
     actu_invert = false;
   end
 
-  nbins = 16;
+  nbins = 32;
 
   pts = zeros(0, 3);
 
@@ -42,43 +42,100 @@ function mymovie = align_embryo(mymovie, opts)
     %  keyboard
     %end
     ell = carth2elliptic(carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
-    ell = [ell i*ones(size(ell, 1), 1)];
+
+    if (isempty(ell))
+      continue;
+    end
+    ell = [ell(:,1) mymovie.(type).ruffles(i).properties i*ones(size(ell, 1), 1)];
     pts = [pts; ell];
+  end
+
+  if (isempty(pts))
+    warning('Orientation of the embryo cannot be determined due to the lack of ruffles.')
+
+    return;
   end
 
   bins = [0:2*pi/nbins:2*pi + 1e-5];
   [counts, indx] = histc(pts(:,1), bins);
 
+  depths = mymean(pts(:,2), 1, indx);
+
   myhist = counts(1:nbins/2) + counts(end-1:-1:end-nbins/2);
+  mydepth = depths(1:nbins/2) + depths(end-1:-1:end-nbins/2);
 
   inverted = false(3,1);
-  inverted(1) = (sum(myhist(1:nbins/8)) > sum(myhist(end-(nbins/8)+1:end)));
 
-  [junk, cytok_pos] = max(myhist(nbins/8+1:end-(nbins/8)));
+  %% Couting invaginations on both sides
+  inverted(1) = (sum(myhist(1:nbins/8)) > sum(myhist(end-(nbins/8)+1:end)));
+  %inverted(1) = (sum(mydepth(1:nbins/8)) > sum(mydepth(end-(nbins/8)+1:end)));
+
+  %% Checking where the deepest ones are located
+  %[junk, cytok_pos] = max(myhist(nbins/8+1:end-(nbins/8)));
+  [junk, cytok_pos] = max(mydepth(nbins/8+1:end-(nbins/8)));
   inverted(2) = (cytok_pos > nbins/8);
 
   if (inverted(1) ~= inverted(2))
     angl_thresh = 0.2;
+    times = get_manual_timing(mymovie, opts);
+    tests = NaN(nframes, 1);
+    max_depth = 0;
 
     for i=nframes:-1:1
     
       ell_pos = pts(pts(:,3)==i, 1:2);
+      npos = size(ell_pos, 1);
 
-      if (isempty(ell_pos))
+      if (npos == 0)
         continue;
       end
 
       dists = abs(ell_pos(:,1) - pi/2 - pi*(ell_pos(:,1) > pi));
-      max_indx = find(dists == min(dists) & dists < angl_thresh, 1);
-      if (isempty(max_indx))
-          continue;
-      end
-      
-      angl = ell_pos(max_indx, 1); 
+      %[dists, dindxs] = sort(dists);
+      [depths, pindxs] = sort(ell_pos(:,2), 1, 'descend');
+      %[junk, pindxs] = sort(pindxs);
+      %inv_pindxs = pindxs(dindxs);
 
-      inverted(3) = ((angl < pi & angl > pi/2) | (angl > pi & angl < 3*pi/2));
-      break;
+      %if (inv_pindxs(1) > 2)
+      %  continue;
+      %end
+
+      %curr_depth = depths(inv_pindxs(1));
+      curr_depth = depths(1);
+      if (curr_depth > max_depth)
+        max_depth = curr_depth;
+      end
+
+      angl = ell_pos(pindxs(1), 1);
+      if (numel(dists) > 1)
+        %if (inv_pindxs(1) == 1)
+          if (depths(2) > depths(1)/2)
+            angl = ((2*pi - ell_pos(pindxs(2), 1)) + angl) / 2;
+          end
+        %else
+        %  if (depths(1) > depths(2)/2)
+        %    angl = ((2*pi - ell_pos(pindxs(1), 1)) + angl) / 2;
+        %  end
+        %end
+      end
+      tests(i) = ((angl < pi & angl > pi/2) | (angl > pi & angl < 3*pi/2));
+
+%      max_indx = find(dists == min(dists) & dists < angl_thresh, 2)
+%      if (isempty(max_indx))
+%          continue;
+%      end
+      
+%      angl = ell_pos(max_indx, 1); 
+%      [angl ell_pos(max_indx, 2)]
+
+%      inverted(3) = ((angl < pi & angl > pi/2) | (angl > pi & angl < 3*pi/2));
+%      break;
+      if (curr_depth < max_depth/2 | i < times(end))
+      %if (i < times(end))
+        break
+      end
     end
+    inverted(3) = (mymean(tests)+(1e-6*(tests(end)-0.5)) > 0.5);
   end
 
   orient = mymean(mymovie.(type).orientations);

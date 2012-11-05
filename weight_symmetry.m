@@ -71,7 +71,7 @@ function weight = weight_symmetry(img, params)
   %weight = bsxfun(@times, weight, factors.');
 
   weight(isnan(weight) | bads) = Inf;
-  weight(all(isinf(weight), 2), :) = mymean(weight(:));
+  %weight(all(isinf(weight), 2), :) = mymean(weight(:));
 
   %figure;imagesc(weight)
 

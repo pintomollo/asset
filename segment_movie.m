@@ -95,7 +95,6 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   frames = frames(1:max_frames);
   dic_opts = opts;
   dic_opts.segmentation_type = 'dic';
-  %keyboard
 
   for i = 1:max_frames
     nframe = frames(i);

@@ -1,7 +1,7 @@
 function lidke_fit(img)
 
   nspots = 200;
-  noise_thresh = 0;
+  noise_thresh = 2;
   sigma = 4;
   spot_max_size = 3*sigma;
   nmax = 5;
@@ -9,7 +9,7 @@ function lidke_fit(img)
   niter = 20;
   iter_thresh = 1e-10;
 
-  params = [500 10 sigma];
+  params = [500000 1000 sigma];
 
 
   if (true)
@@ -20,19 +20,64 @@ function lidke_fit(img)
       myspots = [myspots (((rand(nspots, 1)-0.5)/2)+1)*params(3)];
 
       for i=1:nspots
-        img = img  + GaussMask2D(myspots(i, 3), size_img, myspots(i, [2 1]), 2, 1) * params(1);
+        img = img  + GaussMask2D(myspots(i, 3), size_img, myspots(i, [2 1]), 2, 1) * params(1)*(rand(1) + 0.5);
       end
-      img = img + params(2);
+
+      gnoise = 100;
+      pnoise = 0.2;
+      mnoise = 0.01;
+      bkg = params(2);
+
+      orig_img = img;
+      myrange = 2*max(orig_img(:));
+      if (pnoise == 0)
+        pimg = orig_img;
+      else
+        %pimg = pnoise*double(imnoise(uint16(orig_img / pnoise), 'poisson'));
+        pimg = pnoise*double(poissrnd((orig_img / pnoise)));
+      end
+      %gimg = myrange*imnoise(orig_img/myrange, 'gaussian', 0, gnoise/myrange);
+      gimg = randn(size(img))*gnoise + bkg;
+      mimg = myrange*imnoise(orig_img/myrange, 'speckle', mnoise);
+
+      %img = pimg+gimg+mimg - orig_img;
+      img = gimg;
+
+      %img = img + params(2);
       %img = img + poissrnd(1, size(img));
       %img = img + randn(size(img))*3;
     end
 
     img2 = imfilter(img, fspecial('gaussian', 7, 0.6), 'symmetric');
-    atrous = imatrou(img2, noise_thresh, spot_max_size);
-    thresh = mean(atrous(:)) + noise_thresh * std(atrous(:));
-    bw = imfill(atrous > thresh, 'holes');
-    bw = bwmorph(bw, 'shrink', Inf);
-    [cand_y, cand_x] = find(bw);
+    atrous = imatrou(img2, spot_max_size);
+    params = estimate_noise(img);
+
+    %thresh = mean(atrous(:)) + noise_thresh * std(atrous(:));
+    %bw = imfill(atrous > thresh, 'holes');
+
+    %[imAvg imStd] = localAvgStd2D(img2, 9);
+    %mask = zeros(size_img);
+    %mask((img2 >= imAvg+noise_thresh*imStd) & (img2.*atrous >= mean(img2(:)))) = 1;
+
+    %bw = bwmorph(mask, 'shrink', Inf);
+    %[cand_y, cand_x] = find(bw);
+
+    figure;imagesc(img2);
+    hold on;
+    %scatter(cand_x, cand_y, 'y')
+
+    [atAvg, atStd] = localAvgStd2D(atrous, 2*spot_max_size + 1);
+    thresh = atAvg + noise_thresh * atStd;
+    bw = locmax2d(img2 .* (atrous > thresh), spot_max_size([1 1])/2);
+    %bw = imfill(atrous > thresh, 'holes');
+    %bw = bwmorph(bw, 'shrink', Inf);
+    [cand_y, cand_x] = find(bw > params(1) + noise_thresh*params(2));
+    scatter(cand_x, cand_y, 'r')
+
+    keyboard
+
+    %cand_y = cand_y(1:20);
+    %cand_x = cand_x(1:20);
   else
     img = zeros(600, 400);
     size_img = size(img);
@@ -51,9 +96,9 @@ function lidke_fit(img)
   end
 
   nspots = length(cand_x);
+  new_spots = NaN(0, 5);
+  params = estimate_noise(img);
 
-  new_spots = NaN(0, 3);
-  
   %figure;
 
   for i=1:nspots
@@ -63,66 +108,106 @@ function lidke_fit(img)
     pos = fit_multi(window, params, spot_max_size, nmax, niter, false);
 
     if (~isempty(pos))
-      new_spots = [new_spots; bsxfun(@plus, [cs 0], pos)];
+      pos(:, 1:2) = bsxfun(@plus, cs, pos(:, 1:2));
+      new_spots = [new_spots; pos];
+
+      %new_spots = [new_spots; bsxfun(@plus, [cs 0 0], pos)];
     else
-      window = get_window(img, cs, spot_max_size/2);
-      pos = fit_multi(window, params, spot_max_size/2, nmax, niter, false);
+      new_size = ceil(spot_max_size/2);
+
+      window = get_window(img, cs, new_size);
+      pos = fit_multi(window, params, spot_max_size, nmax, niter, false);
 
       if (~isempty(pos))
-        new_spots = [new_spots; bsxfun(@plus, [cs 0], pos)];
+        pos(:, 1:2) = bsxfun(@plus, cs, pos(:, 1:2));
+        new_spots = [new_spots; pos];
+
+        %new_spots = [new_spots; bsxfun(@plus, [cs 0 0], pos)];
       end
     end
   end
 
   %Fuse spots
   dist = sqrt(bsxfun(@minus, new_spots(:,1), new_spots(:,1).').^2 + bsxfun(@minus, new_spots(:,2), new_spots(:,2).').^2);
-  rads = params(3)/2;
+
+  %rads = params(3)/2;
+  rads = new_spots(:, 3)/2;
+  rads = bsxfun(@plus, rads, rads.') / 2;
 
   fused = dist < rads;
-  fused_spots = NaN(0,3);
+  fused_spots = NaN(0,5);
+  best_spots = NaN(0,5);
   for i=1:size(new_spots, 1)
     groups = fused(:,i);
 
     if (any(groups))
+      tmp_pts = new_spots(groups, :);
+      [max_val, max_indx] = min(tmp_pts(:, end));
+      best_spots = [best_spots; tmp_pts(max_indx, :)];
+
       fused_spots = [fused_spots; mymean(new_spots(groups, :), 1)];
       fused(:, groups) = false;
     end
   end
 
   figure;imagesc(img);hold on;
-  scatter(myspots(:,1), myspots(:,2), 'w')
+  if (nargin == 0)
+    scatter(myspots(:,1), myspots(:,2), 'w')
+  end
   scatter(cand_x, cand_y, 'y')
   scatter(new_spots(:,1), new_spots(:,2), 'r');
-  scatter(fused_spots(:,1), fused_spots(:,2), 'k');
+  scatter(fused_spots(:,1), fused_spots(:,2), 'g');
+  scatter(best_spots(:,1), best_spots(:,2), 'k');
+
+  beep;keyboard
 
   return;
 end
 
 function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
 
+  init_sigma = spot_max_size/3;
   p_thresh = 0.5;
   iter_thresh = 1e-6;
-  pos = [0, 0, params(3)];
+  pos = [0, 0, init_sigma];
   size_window = size(window);
-  max_like = -Inf;
-  bests = [];
+  nwindow = (size_window(1) - 1)/2;
+  %max_like = -Inf;
+  bests = NaN(0, 4);
   prev_pos = NaN(0,3);
-  dist_thresh = spot_max_size*1.33;
-  inner_thresh = spot_max_size*0.67;
+  dist_thresh = nwindow*1.33;
+  inner_thresh = nwindow*0.67;
+
+  likelihood = NaN(1, nmax+1);
 
   %% Constraining the solutions
   maxvals = [2 2 0.75]*spot_max_size;
   minvals = [-2 -2 0.01]*spot_max_size;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  uk = params(1);
+  if (uk == 0)
+    likelihood(1) = 0;
+  else
+    L0 = window .* (log(uk) - log(window) + 1) - uk;
+    L0(window <= 0) = -uk;
+    valids = isfinite(L0);
+    likelihood(1) = sum(L0(valids));
+  end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
   for i=1:nmax
     if (show_it)
       hold off;imagesc(window);hold on;
       %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'y');
-      draw_points([pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1 pos(:,3)], 'y');
+      draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'y');
     end
 
     for j=1:niter
-      [params, steps, likelihood] = step(window, params, pos, spot_max_size);
+      [intens, steps, likelihood(i+1)] = step(window, params, pos, nwindow);
       if (all(abs(steps(:)) < iter_thresh))
         break;
       else
@@ -135,7 +220,7 @@ function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
 
         if (show_it)
           %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'c');
-          draw_points([pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1 pos(:,3)], 'c');
+          draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'c');
           %pause(0.5)
         end
       end
@@ -143,29 +228,35 @@ function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
 
     bads = any((pos(:,1:2) < -dist_thresh) | (pos(:,1:2) > dist_thresh), 2);
 
-    if (likelihood > max_like & likelihood > p_thresh)
-      bests = pos(~bads, :);
-      max_like = likelihood;
+    p_better = chi2cdf(-2*(likelihood(i) - likelihood(i+1)), 4);
+
+    if (p_better > 0.95)
+    %if (likelihood(i+1) > max_like & likelihood(i+1) > p_thresh)
+      bests = [pos(~bads, :) intens(~bads)];
+      bests = [bests ones(size(bests, 1), 1)*likelihood(i+1)];
+      %max_like = likelihood(i+1);
 
       if (show_it)
-        draw_points([pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1 pos(:,3)], 'k');
+        draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'k');
         %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'k');
-        title([num2str(likelihood) ' (' num2str(i) ') !!'])
+        title([num2str(chi2cdf(-2*(likelihood(i) - likelihood(i+1)), 3)) ' (' num2str(i) ') !!'])
+        %title([num2str(likelihood) ' (' num2str(i) ') !!'])
         pause(1)
       end
-
+    else
       break;
     end
     if (show_it)
       %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'k');
-      draw_points([pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1 pos(:,3)], 'k');
-      title([num2str(likelihood) ' (' num2str(i) ')'])
+      draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'k');
+      %title([num2str(likelihood) ' (' num2str(i) ')'])
+      title([num2str(chi2cdf(-2*(likelihood(i) - likelihood(i+1)), 3)) ' (' num2str(i) ') !!'])
     end
 
     if (all(bads))
-      pos = [prev_pos; [0,0, params(3)]];
+      pos = [prev_pos; [0,0, init_sigma]];
       if (i>1 & ~any(pos(:)))
-        pos(1:end-1, 1:2) = (rand(i-1, 2) - 0.5)*spot_max_size;
+        pos(1:end-1, 1:2) = (rand(i-1, 2) - 0.5)*nwindow;
       end
       prev_pos = pos;
     else
@@ -174,23 +265,23 @@ function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
 
     curr_window = window;
     for j=1:i
-      curr_window = curr_window - params(1)*GaussMask2D(pos(j,3), size_window, pos(j,[2 1]), 2);
+      curr_window = curr_window - intens(j)*GaussMask2D(pos(j,3), size_window, pos(j,[2 1]), 2);
     end
     curr_window(~isfinite(curr_window)) = -Inf;
     [junk, new] = max(curr_window(:));
     [new_y, new_x] = ind2sub(size_window, new);
 
-    new = [new_x new_y] - spot_max_size - 1;
+    new = [new_x new_y] - nwindow - 1;
     if (any(new < -inner_thresh | new > inner_thresh))
-      corrs = (params(3)/2)*sign(new) + new;
+      corrs = (init_sigma/2)*sign(new) + new;
     else
-      corrs = (params(3)/2)*sign(mean(pos(:, 1:2), 1) - new) + new;
+      corrs = (init_sigma/2)*sign(mean(pos(:, 1:2), 1) - new) + new;
     end
-    corrs = [corrs params(3)];
+    corrs = [corrs init_sigma];
 
     if (show_it)
-      scatter(new(1)+spot_max_size+1, new(2)+spot_max_size+1, 'm');
-      scatter(corrs(1)+spot_max_size+1, corrs(2)+spot_max_size+1, 'r');
+      scatter(new(1)+nwindow+1, new(2)+nwindow+1, 'm');
+      scatter(corrs(1)+nwindow+1, corrs(2)+nwindow+1, 'r');
       pause(1)
     end
 
@@ -227,7 +318,7 @@ function window = get_window(img, pos, wsize)
   return;
 end
 
-function [params, steps, likelihood] = step(img, params, cands, wsize)
+function [intens, steps, likelihood] = step(img, params, cands, wsize)
 
   steps = NaN(size(cands));
 
@@ -239,21 +330,19 @@ function [params, steps, likelihood] = step(img, params, cands, wsize)
 
   npos = length(posx);
   ncands = size(cands, 1);
-  uk = zeros(npos, npos);
+  uk = zeros(npos, npos, ncands);
 
   dukdx = NaN([npos, npos, ncands]);
   dukdy = NaN([npos, npos, ncands]);
   dukdo = NaN([npos, npos, ncands]);
-  dukdI = NaN([npos, npos, ncands]);
-  dukdb = ones(npos, npos);
   ddukdx2 = NaN([npos, npos, ncands]);
   ddukdy2 = NaN([npos, npos, ncands]);
-  ddukdI2 = zeros(npos, npos);
-  ddukdb2 = zeros(npos, npos);
   ddukdo2 = NaN([npos, npos, ncands]);
 
   for i=1:ncands
-    norm = (params(1)/(sqrt(2*pi)*cands(i,3)));
+    % intesity missing, fit it and introduce it after
+    norm = (1/(sqrt(2*pi)*cands(i,3)));
+    %norm = (1/(sqrt(2*pi)*cands(i,3)));
     sigma = 1 / (cands(i,3)^2);
 
     posxp = posx - cands(i,1) + 0.5;
@@ -273,20 +362,34 @@ function [params, steps, likelihood] = step(img, params, cands, wsize)
 
     dukdx(:,:,i) = norm*bsxfun(@times, Ey, expxm - expxp);
     dukdy(:,:,i) = norm*bsxfun(@times, expym - expyp, Ex);
-    dukdI(:,:,i) = bsxfun(@times, Ey, Ex);
 
     ddukdx2(:,:,i) = norm*sigma*exEy;
     ddukdy2(:,:,i) = norm*sigma*eyEx;
 
     dukdo(:,:,i) = (ddukdx2(:,:,i) + ddukdy2(:,:,i)) * cands(i,3);
     ddukdo2(:,:,i) = norm*(sigma^2)*(bsxfun(@times, ((posxm.^3).*expxm - (posxp.^3).*expxp), Ey) + bsxfun(@times, ((posym.^3).*expym - (posyp.^3).*expyp), Ex)) - 2*dukdo(:,:,i)/cands(i,3);
-    %2*(norm/(sqrt(2*pi)))*cands(i,3)*sigma*bsxfun(@times, ex, ey);
 
-    %norm*(sigma^2)*(sigma*(bsxfun(@times, ((posxm.^3).*expxm - (posxp.^3).*expxp), Ey) + bsxfun(@times, ((posym.^3).*expym - (posyp.^3).*expyp), Ex)) - ...
-    %                4*(exEy + eyEx) + 2*norm*bsxfun(@times, ey, ex));
+    uk(:,:,i) = bsxfun(@times, Ey, Ex);
   end
+  
+  intens = NaN(ncands, 1);
 
-  uk = sum(dukdI, 3)*params(1) + params(2);
+  % Full fitting
+  alls = reshape(uk, npos^2, []);
+  valids = isfinite(img);
+  intens = (alls(valids, :) \ (img(valids) - params(2)));
+  intens_thresh = max(intens) / 5;
+  intens(intens < intens_thresh) = intens_thresh;
+  uk = reshape(sum(bsxfun(@times, alls, intens.'), 2), npos, npos) + params(2);
+
+  % Single fit
+  %uk = sum(uk, 3);
+  %valids = isfinite(img);
+  %intens(:) = abs(uk(valids) \ (img(valids) - params(1)));
+  %uk = sum(uk, 3)*intens(1) + params(1);
+  
+  % No fitting
+  %uk = sum(uk, 3)*params(1) + params(2);
 
   % Undescribed contrains from the original code
   cf = ((img ./ uk) - 1);
@@ -301,33 +404,22 @@ function [params, steps, likelihood] = step(img, params, cands, wsize)
 
   for i=1:ncands
     xnum = dukdx(:,:,i) .* cf;
-    xdenom = (ddukdx2(:,:,i) .* cf - ((dukdx(:,:,i).^2) .* df));
+    xdenom = (ddukdx2(:,:,i) .* cf - ((dukdx(:,:,i).^2) .* df * intens(i)));
     stepx = sum(xnum(isfinite(xnum))) / sum(xdenom(isfinite(xdenom)));
 
     ynum = dukdy(:,:,i) .* cf;
-    ydenom = (ddukdy2(:,:,i) .* cf - ((dukdy(:,:,i).^2) .* df));
+    ydenom = (ddukdy2(:,:,i) .* cf - ((dukdy(:,:,i).^2) .* df * intens(i)));
     stepy = sum(ynum(isfinite(ynum))) / sum(ydenom(isfinite(ydenom)));
 
-    inum = dukdI(:,:,i) .* cf;
-    idenom = - ((dukdI(:,:,i).^2) .* df);
-    stepi = sum(inum(isfinite(inum))) / sum(idenom(isfinite(idenom)));
-
     onum = dukdo(:,:,i) .* cf;
-    odenom = (ddukdo2(:,:,i) .* cf - ((dukdo(:,:,i).^2) .* df));
+    odenom = (ddukdo2(:,:,i) .* cf - ((dukdo(:,:,i).^2) .* df * intens(i)));
     stepo = sum(onum(isfinite(onum))) / sum(odenom(isfinite(odenom)));
 
-    %steps(i,:) = [stepx, stepy, stepo, stepi];
-    %steps(i,:) = 0.5*[stepx, stepy, 0];
     steps(i,:) = 0.5*[stepx, stepy, stepo];
   end
 
   % Bounding the moves (undescribed)
   steps = bsxfun(@min, steps, maxjump(1:3));
-
-  bnum = cf;
-  bdenom =  -df;
-  stepb = sum(inum(isfinite(inum))) / sum(idenom(isfinite(idenom)));
-  stepb = min(stepb, maxjump(end));
 
   likelihood = img .* (log(uk) - log(img) + 1) - uk;
   % Undescribed contrains from the original code
@@ -336,14 +428,11 @@ function [params, steps, likelihood] = step(img, params, cands, wsize)
   % Undescribed contrains from the original code
   valids = isfinite(likelihood);
 
-  %noise = 0;
-  %best_like = noise*sum(valids(:)) - sum((uk(valids) + noise).*log(1+noise./uk(valids)));
-  best_like = 0;
-
   steps(isnan(steps)) = 0;
   steps = steps;
 
-  likelihood = exp(2*(sum(likelihood(valids)) - best_like));
+  %likelihood = exp(2*(sum(likelihood(valids)) - best_like));
+  likelihood = sum(likelihood(valids));
 
   return
 end

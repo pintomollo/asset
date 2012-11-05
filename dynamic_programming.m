@@ -55,6 +55,10 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     wimg = weight(img, weight_params);
   end
 
+  no_spawn = all(~isfinite(img), 2);
+  img(no_spawn, :) = mymean(img(:));
+  wimg(no_spawn, :) = mymean(wimg(:));
+
   if (isempty(init))
     init = zeros(1,w);
   elseif (length(init) == 1)
@@ -77,6 +81,7 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     end
   else
     spawn_gap = Inf;
+    no_spawn(:) = true;
   end
   spawn_dist = init;
 
@@ -108,7 +113,11 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
         [dist(j,:), map(j,:), emission(j,:,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn_dist);
       end
     else
-      [dist(j,:), map(j,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn_dist);
+      if (no_spawn(indx))
+        [dist(j,:), map(j,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular);
+      else
+        [dist(j,:), map(j,:)] = dp_score_mex(prev_line, line, wimg(indx,:), dist(j-1,:), map(j-1,:), params, is_circular, spawn_dist);
+      end
     end
 
     if (all(isinf(dist(j,:))))
