@@ -15,6 +15,7 @@ function [all_pts, pos] = domain_scaling(fnames, signal_type, sync_type)
     nmovies = length(movies);
 
     datas = cell(nmovies, 1);
+    domains = cell(nmovies, 1);
     widths = NaN(nmovies, 1);
     lengths = NaN(nmovies, 1);
 
@@ -22,14 +23,15 @@ function [all_pts, pos] = domain_scaling(fnames, signal_type, sync_type)
       load(movies(i).name);
 
       opts.recompute = false;
-      [fraction, width, cell_length] = domain_expansion(mymovie, opts);
+      [fraction, width, cell_length, domain] = domain_expansion(mymovie, opts);
 
       datas{i} = fraction;
       widths(i) = width;
       lengths(i) = cell_length;
+      domains{i} = domain;
     end
 
-    save(tmp_name, 'datas', 'widths', 'lengths');
+    save(tmp_name, 'datas', 'widths', 'lengths', 'domains');
   end
 
   nmovies = length(datas);

@@ -94,7 +94,7 @@ function [projection, atrous] = imatrou(img, size_max, coef)
     filtered_img = imfilter(img, atrou_kernel.', 'replicate');
     filtered_img = kernel_norm * imfilter(filtered_img, atrou_kernel, 'replicate');
 
-    % The new plan (termed "deltail image") is defined as the difference 
+    % The new plan (termed "detail image") is defined as the difference 
     % between two consecutive levels of filtering (termed "smoothed approximation").
     decomposition = img - filtered_img;
 

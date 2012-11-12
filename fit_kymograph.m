@@ -76,7 +76,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (~fitting.fit_full)
     nmaintenance = min(size(fitting.ground_truth, 2), 50) - 1;
-    fitting.ground_truth = fitting.ground_truth(:, end-nmaintenance:end);
+    fitting.ground_truth = fitting.ground_truth(:, end-nmaintenance:end, :);
     fitting.t_pos = fitting.t_pos(end-nmaintenance:end);
     fitting.aligning_type = 'end';
     fitting.fit_flow = false;
@@ -85,9 +85,26 @@ function uuids = fit_kymograph(fitting, opts)
   size_data = size(fitting.ground_truth);
 
   if (strncmp(fitting.aligning_type, 'domain', 6))
-    opts_expansion = load_parameters(opts, 'domain_expansion.txt');
-    f = domain_expansion(fitting.ground_truth(1:end/2, :).', fitting.ground_truth((end/2)+1:end, :).', size_data(1)/2, size_data(2), opts_expansion);
+    opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
+    f = domain_expansion(mymean(fitting.ground_truth(1:end/2, :, :), 3).', mymean(fitting.ground_truth((end/2)+1:end, :, :), 3).', size_data(1)/2, size_data(2), opts_expansion);
     frac_indx = find(f > fitting.fraction, 1, 'first');
+  end
+
+  multi_data = (numel(size_data) > 2 & size_data(3) > 1);
+  if (multi_data)
+    nlayers = size_data(3);
+    size_data = size_data(1:2);
+  end
+
+  if (strncmp(fitting.scale_type, 'normalize', 10))
+    if (multi_data)
+      for i=1:nlayers
+        tmp = fitting.ground_truth(:,:,i);
+        fitting.ground_truth(:,:,i) = tmp / mymean(tmp(:));
+      end
+    else
+      fitting.ground_truth = fitting.ground_truth / mymean(fitting.ground_truth(:));
+    end
   end
 
   linear_truth = fitting.ground_truth(:);
@@ -142,8 +159,9 @@ function uuids = fit_kymograph(fitting, opts)
     else
       display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
     end
-    
-    [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.5, opt);
+
+    [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, sqrt(p0(:)), 0.5, opt);
+    p = p.^2;
 
     display(['Best (' num2str(p.') ')']);
   end
@@ -160,6 +178,8 @@ function uuids = fit_kymograph(fitting, opts)
       nevals = curr_nparams; 
     end
     err_all = NaN(1, nevals);
+
+    p_all = p_all.^2;
 
     for i = 1:nevals
       correct = true;
@@ -187,7 +207,7 @@ function uuids = fit_kymograph(fitting, opts)
       switch fitting.aligning_type
         case 'best'
           if (length(t) < size_data(2))
-            cc = normxcorr2(res, fitting.ground_truth); 
+            cc = normxcorr2(res, mymean(fitting.ground_truth, 3)); 
 
             %[max_cc, imax] = max(cc(size_data(1), floor(size(res, 2)/2)+1:end));
             %corr_offset = [(imax-floor(size_data(2)/2))];
@@ -195,7 +215,7 @@ function uuids = fit_kymograph(fitting, opts)
             [max_cc, imax] = max(cc(size(res, 1), :));
             corr_offset = -(imax-size(res, 2));
           elseif (all(isfinite(res)))
-            cc = normxcorr2(fitting.ground_truth, res); 
+            cc = normxcorr2(mymean(fitting.ground_truth, 3), res); 
 
             %[max_cc, imax] = max(cc(size_data(1), floor(size_data(2)/2)+1:end));
             %corr_offset = -[(imax-floor(size(res, 2)/2))];
@@ -231,54 +251,44 @@ function uuids = fit_kymograph(fitting, opts)
         tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
 
         res = tmp;
+        if (multi_data)
+          res = repmat(res, [1 1 nlayers]);
+        end
 
-        if (fitting.scale_data)
-          gres = ~isnan(res(:)) & linear_goods;
-          c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
-          
-          if (c(2) <= 0)
-            err_all(i) = Inf;
-            continue;
-          end
+        switch (fitting.scale_type)
+          case 'best'
+            gres = ~isnan(res(:)) & linear_goods;
+            c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
+            
+            if (c(2) <= 0)
+              err_all(i) = Inf;
+              continue;
+            end
 
-          res = c(1) + c(2)*res;
-          
-          %{
-          %% Stop doing the full robust fit, too slow and not so useful...
-          try
-          c = robustfit(res(:), linear_truth);
-
-          if (c(2) <= 0)
-            err_all(i) = Inf;
-            continue;
-          end
-
-          res = c(1) + c(2)*res;
-          catch
-            %Aaaa
-          end
-          %}
+            res = c(1) + c(2)*res;
+          case 'normalize'
+            res = res / mymean(res(:));
         end
         
         tmp_err = (fitting.ground_truth - res).^2;
         tmp_err(isnan(fitting.ground_truth)) = 0;
         tmp_err = sum(tmp_err, 1);
         tmp_err(~isfinite(tmp_err)) = penalty;
-        err_all(i) = sum(tmp_err);
+        err_all(i) = sum(tmp_err(:));
 
         err_all(i) = err_all(i) + penalty*(~correct);
 
-        if (isnan(err_all(i)))
-          beep;beep;keyboard
-        end
+        %if (isnan(err_all(i)))
+        %  beep;beep;keyboard
+        %end
         
         %imagesc([res; fitting.ground_truth]);title([num2str(err_all(i)) ' (' num2str(log10(err_all(i))) ')']);drawnow
 
-        bads = (tmp_params < 0);
+        %bads = (tmp_params < 0);
 
-        if (any(bads))
-          err_all(i) = err_all(i) + sum(sum(exp(log_error*tmp_params(bads)), 2), 1);
-        end
+        %if (any(bads))
+        %  err_all(i) = err_all(i) + sum(sum(exp(log_error*tmp_params(bads)), 2), 1);
+        %end
       end
     end
 

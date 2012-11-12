@@ -65,14 +65,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (mxGetNumberOfElements(prhs[1]) == 1) {
           window_size = mxGetScalar(prhs[1]);
         } else if (mxGetNumberOfElements(prhs[1]) == 0) {
-          window_size = ceil((double)w/2.0);
+          window_size = ceil((double)h/2.0);
         } else {
           lengths = mxGetPr(prhs[1]);
           multi_scales = true;
         }
       }
     } else {
-      window_size = ceil((double)w/2.0);
+      window_size = ceil((double)h/2.0);
     }
 
     plhs[0] = mxCreateDoubleMatrix(h, w, mxREAL);

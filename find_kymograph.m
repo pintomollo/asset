@@ -21,45 +21,54 @@ function find_kymograph(varargin)
       end
 
       try
-        kymo.opts.recompute = false;
-          
+        if (isfield(kymo, 'mymovie'))
+          kymo.opts.recompute = false;
+          [fraction, max_width, cell_width, domain, pos] = domain_expansion(kymo.mymovie, kymo.opts);
+          times = get_manual_timing(kymo.mymovie, kymo.opts);
+          ground_truth = domain(1:times(end), :);
+
+          kymo_name = kymo.mymovie.experiment;
+        elseif (isfield(kymo, 'ground_truth') & isfield(kymo, 'pos'))
+          ground_truth = kymo.ground_truth;
+          pos = kymo.pos;
+          if (isfield(kymo, 'times'))
+            times = kymo.times;
+          else
+            times = NaN(1,3);
+          end
+
+          kymo_name = kymos(j).name(1:end-4);
+        else
+          error('No suitable data for performing the fitting procedure');
+        end
+
         fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
-        fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo.mymovie.experiment, fitting.parameter_set);
+        fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo_name, fitting.parameter_set);
         fclose(fid);
 
-        [domain, ruffles, pos] = gather_quantification(kymo.mymovie, kymo.opts);
-        domain = imnorm(domain);
-
-        kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
-        kymo.opts.quantification.weights.filt = ruffles;
-        kymo.mymovie.data.domain = dynamic_programming(domain, kymo.opts.quantification.params, @weight_symmetry, kymo.opts.quantification.weights, kymo.opts);
-
-        [ground_truth, junk, pos, indx] = align_domain(kymo.mymovie, kymo.opts);
-        %valids = any(isnan(ground_truth), 1);
-
-        %first = indx - find(valids(1:indx), 1, 'last') - 1;
-        %last = find(valids(indx:end), 1, 'first') - 2;
-        %boundary = min(first, last);
-        [ground_truth, boundary] = crop_domain(ground_truth, indx);
-        times = get_manual_timing(kymo.mymovie, kymo.opts);
-
-        %ground_truth = ground_truth(:,[-boundary:boundary]+indx);
-        ground_truth = ground_truth(1:times(end), :);
-        g = [ground_truth(:,1:boundary+1), fliplr(ground_truth(:,boundary+1:end))].';
-        p = pos(indx:indx+boundary);
-
-        fitting.ground_truth = g;
-        fitting.x_pos = p;
-        fitting.t_pos = [0:size(g, 2)-1]*10;
+        boundary = (length(pos)-1)/2;
+        fitting.ground_truth = permute([ground_truth(:, 1:boundary+1, :), ground_truth(:,end:-1:boundary+1, :)], [2 1 3]);
+        fitting.x_pos = pos(boundary+1:end);
+        fitting.t_pos = [0:size(ground_truth, 1)-1]*10;
         fitting.type = 'data';
 
         if (~fitting.fit_full)
+          for k=1:size(fitting.ground_truth, 3)
+            tmp = fitting.ground_truth(:,:,k);
+            tmp = tmp(any(~isnan(tmp), 2), :);
+            fitting.ground_truth(end-size(tmp,1)+1:end,:,k) = tmp;
+          end
+
           if (isnan(times(2)))
-            time = round((times(end) - times(1)) * 0.75);
-            fitting.ground_truth = fitting.ground_truth(:, end-time:end);
+            if (isnan(times(1)))
+              time = 10;
+            else
+              time = round((times(end) - times(1)) * 0.5);
+            end
+            fitting.ground_truth = fitting.ground_truth(:, end-time:end, :);
             fitting.t_pos = fitting.t_pos(:, end-time:end);
           else
-            fitting.ground_truth = fitting.ground_truth(:, times(2):end);
+            fitting.ground_truth = fitting.ground_truth(:, times(2):end, :);
             fitting.t_pos = fitting.t_pos(:, times(2):end);
           end
         end
@@ -68,15 +77,20 @@ function find_kymograph(varargin)
 
         fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         for u = 1:length(uuids)
-          fprintf(fid, '%s %s OK\n', uuids{u}, kymo.mymovie.experiment);
+          fprintf(fid, '%s %s OK\n', uuids{u}, kymo_name);
         end
         fclose(fid);
 
       catch ME
-        print_all(ME);
+
+        warning('Error during the fitting procedure');
 
         fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
-        fprintf(fid, '-1 %s NO\n', kymo.mymovie.experiment);
+        fprintf(fid, '-1 %s NO\n', kymo_name);
+        fclose(fid);
+
+        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.log'], 'a');
+        print_all(fid, ME);
         fclose(fid);
 
         continue;

@@ -1,4 +1,4 @@
-function [domain, ruffles, path, center_indx] = align_domain(mymovie, opts, path, ruffles)
+function [domain, ruffles, pos, center_indx] = align_domain(mymovie, opts, path, ruffles)
 
   if (nargin == 4)
     tmp = ruffles;
@@ -16,7 +16,7 @@ function [domain, ruffles, path, center_indx] = align_domain(mymovie, opts, path
     [img, ruffles, pos] = gather_quantification(mymovie, opts);
   else
     img = mymovie;
-    pos = [1:size(img, 2)];
+    pos = [1:size(img, 2)] * opts.quantification.resolution;
   end
   %path = path * opts.pixel_size;
 
@@ -28,25 +28,32 @@ function [domain, ruffles, path, center_indx] = align_domain(mymovie, opts, path
   if (any(isnan(path(:))))
     
     slope = diff(path);
-    x0 = find(~isnan(slope), 1, 'first');
-    s0 = slope(x0);
 
-    if (s0 == 0)
-      path(1:x0-1) = path(x0);
-    else
-      plateau = find(slope == 0, 1, 'first');
+    if (any(~isnan(slope)))
 
-      fact = 0.5;
-      if (isempty(plateau))
-        plateau = h;
+      x0 = find(~isnan(slope), 1, 'first');
+      s0 = slope(x0);
+
+      if (s0 == 0)
+        path(1:x0-1) = path(x0);
+      else
+        plateau = find(slope == 0, 1, 'first');
+
+        fact = 0.5;
+        if (isempty(plateau))
+          plateau = h;
+        end
+
+        C = path(plateau);
+        A = fact*2*(path(x0) - C);
+        B = s0 * 4 / A;
+
+        sig = A./(1 + exp(-B*([1:x0-1] - x0))) + C + A*((1-fact)/(fact*2));
+        path(1:x0-1) = round(sig);
       end
-
-      C = path(plateau);
-      A = fact*2*(path(x0) - C);
-      B = s0 * 4 / A;
-
-      sig = A./(1 + exp(-B*([1:x0-1] - x0))) + C + A*((1-fact)/(fact*2));
-      path(1:x0-1) = round(sig);
+    else
+      first = find(~isnan(path), 1, 'first');
+      path(1:first) = path(first);
     end
 
     %figure;plot(path, 1:h, 'b');

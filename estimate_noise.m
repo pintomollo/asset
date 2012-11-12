@@ -48,6 +48,13 @@ function [gammas] = estimate_noise(img, filter_type)
   noisefree = median_mex(img, mfilter);
   noisy = img - noisefree;
 
+  %figure;imagesc(blocks(:,:,1))
+  %figure;imagesc(blocks(:,:,2))
+  %figure;imagesc(blocks(:,:,3))
+
+  %figure;imshow(imnorm(img))
+  %figure;imshow(imnorm(noisefree))
+
   blocks = reshape(blocks, [], 3);
 
   blocks = sortrows(blocks);
@@ -76,6 +83,7 @@ function [gammas] = estimate_noise(img, filter_type)
   end
 
   goods = isfinite(vars);
+  goods(ceil(end/2):end) = false;
   vars = vars(goods);
   edges = (edges(1:end-1) + edges(2:end)) / 2;
   edges = edges(goods);
@@ -86,7 +94,7 @@ function [gammas] = estimate_noise(img, filter_type)
   X = [edges edges.^2];
   coefs = X \ vars;
 
-  switch (sum(coefs < 0))
+  switch (sum(coefs <= 0))
     case 0
       gammas = [gauss_noise coefs.'];
     case 1
@@ -97,13 +105,15 @@ function [gammas] = estimate_noise(img, filter_type)
         coefs = [edges] \ vars;
         gammas = [gauss_noise coefs 0];
       end
+
+      gammas(gammas < 0) = 0;
     case 2
       gammas = [gauss_noise 0 0];
   end
 
-  %figure;scatter(edges, vars);
+  %figure;scatter(edges + gauss_noise(1), vars + gauss_noise(2)^2);
   %hold on;
-  %plot(edges, gammas(4)*edges.^2 + gammas(3)*edges, 'r')
+  %plot(edges + gauss_noise(1), gammas(4)*edges.^2 + gammas(3)*edges + gauss_noise(2)^2, 'r')
 
   return;
 

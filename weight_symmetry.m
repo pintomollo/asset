@@ -13,14 +13,52 @@ function weight = weight_symmetry(img, params)
   delta = params.delta;
 
   depth = params.filt;
+  %center = params.path;
 
   if (isempty(depth))
     error('Missing invagination data for domain centration');
   end
+  %if (isempty(center))
+  %  error('Missing cortical position data for domain centration');
+  %end
 
-  ruffles = depth;
-  outside = ~isfinite(ruffles);
-  ruffles(outside) = 0;
+  outside = (~isfinite(depth) | ~isfinite(img));
+
+  depth(outside) = 0;
+  img(outside) = 0;
+
+  ruffles = imfilter(depth, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
+  ruffles = imfilter(ruffles, fspecial('gaussian', [ceil(beta) 1], 0.5*beta), 'symmetric');
+
+  domain = imfilter(img, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
+  domain = imfilter(domain, fspecial('gaussian', [ceil(beta) 1], 0.5*beta), 'symmetric');
+
+  corrs = symmetric_corrcoef_mex(domain.', gamma*size(img,2)).';
+  invags = symmetric_corrcoef_mex(ruffles.', gamma*size(img, 2)).';
+
+  corrs = (corrs + 1) / 2;
+  invags = (invags + 1) / 2;
+
+  %inners = abs(center) < 10;
+  %bias_x = abs(center).^(1/2);
+  %bias_x = bias_x / max(bias_x);
+  %bias_y = [0:size(domain,1)-1].';
+  %bias_y = bias_y / max(bias_y);
+
+  %bias = bias_y * bias_x;
+
+  %ruffles = imnorm(ruffles, [], 0.1);
+  vals = prctile(ruffles(:), [40 90]);
+  ruffles = imnorm(ruffles, 0, vals(2));
+
+  weight = alpha*(invags*delta + (1-delta)*ruffles) + (1-alpha)*corrs;
+  %weight = alpha*(delta*invags + (1-delta)*ruffles) + (1-alpha)*bias;
+  %weight = alpha*(gamma*invags + (1-gamma)*ruffles) + (1-alpha)*(delta*corrs + (1-delta)*bias);
+  weight(isnan(weight) | outside) = Inf;
+  %weight(end, ~inners) = Inf;
+
+  return;
+
   ruffles = imfilter(ruffles, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
   druffles = differentiator(ruffles, 2);
   ddruffles = differentiator(druffles, 2);

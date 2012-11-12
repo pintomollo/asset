@@ -1,5 +1,18 @@
-/****************************************************************************0002 * 0003 * Function: double ellipse_ellipse_overlap0004 * 0005 * Purpose: Given the parameters of two ellipses, this function calculates0006 * the area of overlap between the two curves. If the ellipses are0007 * disjoint, this function returns 0.0; if one ellipse is contained0008 * within the other, this function returns the area of the enclosed0009 * ellipse; if the ellipses intersect, this function returns the0010 * calculated area of overlap.0011 * 0012 * Reference: Hughes and Chraibi (2011), Calculating Ellipse Overlap Areas0013 * 0014 * Dependencies: math.h for calls to trig and absolute value functions0015 * program_constants.h error message codes and constants0016
-
+/****************************************************************************
+*
+* Function: double ellipse_ellipse_overlap
+*
+* Purpose: Given the parameters of two ellipses, this function calculates
+* the area of overlap between the two curves. If the ellipses are
+* disjoint, this function returns 0.0; if one ellipse is contained
+* within the other, this function returns the area of the enclosed
+* ellipse; if the ellipses intersect, this function returns the
+* calculated area of overlap.
+*
+* Reference: Hughes and Chraibi (2011), Calculating Ellipse Overlap Areas
+*
+* Dependencies: math.h for calls to trig and absolute value functions
+* program_constants.h error message codes and constants
  ****************************************************************************/
 
 //===========================================================================

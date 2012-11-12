@@ -5,7 +5,18 @@ function links = track_spots(spots, opts)
     opts = get_struct('ASSET');
   end
 
-  nframes = length(spots);
+  if (isstruct(spots) & isfield(spots, 'experiment'))
+    mymovie = spots;
+    nframes = length(mymovie.data.spots);
+    spots = cell(nframes, 1);
+
+    for i=1:nframes
+      spots{i} = [mymovie.data.spots(i).carth mymovie.data.spots(i).properties];
+    end
+  else
+    mymovie = [];
+    nframes = length(spots);
+  end
 
   % Initialize the output variable
   links = cell(nframes, 1);
@@ -68,8 +79,9 @@ function links = track_spots(spots, opts)
       dist(prev_npts+1:end,1:npts) = ends(1:npts,1:npts);
       dist(prev_npts+1:end,npts+1:end) = trans_dist;
 
-      [assign, cost] = munkres(dist);
-      assign_dist = dist(sub2ind(size(dist),[1:prev_npts+npts],assign));
+      %[assign, cost] = munkres(dist);
+      [assign, cost] = assignmentoptimal(dist);
+      assign_dist = dist(sub2ind(size(dist),[1:prev_npts+npts],assign.'));
       assign_dist = assign_dist(:);
       good_indx = (assign(1:prev_npts) <= npts);
       all_assign = [all_assign; (assign_dist(good_indx))];
@@ -78,7 +90,7 @@ function links = track_spots(spots, opts)
 
       valids = (tmp <= prev_npts);
       valids(npts+1:end) = false;
-      links{i} = [junk(valids).' tmp(valids).' (i-ones(sum(valids), 1))];
+      links{i} = [junk(valids) tmp(valids) (i-ones(sum(valids), 1))];
     end
 
     if (isempty(links{i}))
@@ -197,12 +209,13 @@ function links = track_spots(spots, opts)
 
   disp('Let''s go !')
 
-  figure;
-  imagesc(dist)
+%  figure;
+%  imagesc(dist)
 
-  [assign, cost] = munkres(dist);
+  %[assign, cost] = munkres(dist);
+  [assign, cost] =assignmentoptimal(dist);
   
-  hold on;scatter(assign, [1:length(assign)])
+%  hold on;scatter(assign, [1:length(assign)])
 
   for i=1:nends+ninterm
     if (assign(i) <= nstarts)

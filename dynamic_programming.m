@@ -26,6 +26,8 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
   half = floor(nhood/2);
 
   switch params.dp_method
+    case 'inverted'
+      indxs = [h:-1:1];
     case 'backward'
       indxs = [1:h h-1:-1:1];
     case 'double'
@@ -71,15 +73,17 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     nstart = sum(~isinf(init));
   end
 
-  if (~isempty(spawn) & isfinite(spawn) & spawn <= 1 & spawn >= 0)
+  spawn_gap = Inf;
+  if (~isempty(spawn) & all(isfinite(spawn) & spawn <= 1 & spawn >= 0))
     switch params.spawn_type
       case 'full'
-        spawn_gap = prctile(wimg(isfinite(wimg)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+        spawn_gap = prctile(wimg(isfinite(wimg)), 100*spawn(1)) * (params.alpha) + (1-params.alpha)*spawn;
       case 'end'
         tmp_img = wimg(end-10:end, :);
-        spawn_gap = prctile(tmp_img(isfinite(tmp_img)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+        spawn_gap = prctile(tmp_img(isfinite(tmp_img)), 100*spawn(1)) * (params.alpha) + (1-params.alpha)*spawn(1);
     end
-  else
+  end
+  if (~isfinite(spawn_gap))
     spawn_gap = Inf;
     no_spawn(:) = true;
   end
@@ -97,12 +101,15 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     indx = indxs(j);
     line = img(indx,:);
     
-    %switch params.spawn_type
-    %  case 'current'
-    %    spawn_gap = prctile(wimg(indx, isfinite(wimg(indx, :))), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
-    %  case 'previous'
-    %    tmp = wimg(1:indx, :);
-    %    spawn_gap = prctile(tmp(isfinite(tmp)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+%    switch params.spawn_type
+%      case 'current'
+%        spawn_gap = prctile(wimg(indx, isfinite(wimg(indx, :))), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+%      case 'previous'
+%        tmp = wimg(1:indx, :);
+%        spawn_gap = prctile(tmp(isfinite(tmp)), 100*spawn) * (params.alpha) + (1-params.alpha)*spawn;
+%    end
+    %if (~isfinite(spawn_gap))
+    %  spawn_gap = 0;
     %end
     spawn_dist = spawn_dist + spawn_gap;
 
@@ -135,22 +142,59 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
 
   tmp = NaN(nsteps, 1);
 
-  if (isfield(params, 'final') & ~isempty(params.final))
-    subdist = dist(end, params.final);
-    tmp(end,1) = params.final(find(subdist == min(subdist), 1));
-  else
-    tmp(end,1) = find(dist(end,:)==min(dist(end,:)),1);
-  end
+  if (strncmp(params.spawn_type, 'best', 4))
+    no_spawn = all(~isfinite(img), 2);
 
-  for j=1:nsteps-1
-    if (map(end-j+1, tmp(end-j+1,1)) == 0)
-      break;
+    if (spawn(1) < 1)
+      spawn(1) = spawn(1) * w;
     end
 
-    tmp(end-j,1) = map(end-j+1,tmp(end-j+1,1));
+    if (length(spawn) == 1)
+      spawn = [spawn 0];
+    else
+      spawn(2) = spawn(2)*h;
+    end
+
+    tmp(end,1) = find(dist(end,:)==min(dist(end,:)),1);
+
+    for j=1:nsteps-1
+      if (map(end-j+1, tmp(end-j+1,1)) == 0)
+        break;
+      end
+
+      tmp(end-j,1) = map(end-j+1,tmp(end-j+1,1));
+
+      alt_start = find(dist(end-j,:)==min(dist(end-j,:)),1);
+      if (abs(tmp(end-j, 1) - alt_start) > spawn(1) & h-j > spawn(2) & ~no_spawn(end-j))
+        tmp(:,1) = NaN;
+        tmp(end-j, 1) = alt_start;
+      end
+    end
+
+  else
+
+    if (isfield(params, 'final') & ~isempty(params.final))
+      subdist = dist(end, params.final);
+      tmp(end,1) = params.final(find(subdist == min(subdist), 1));
+    else
+      tmp(end,1) = find(dist(end,:)==min(dist(end,:)),1);
+    end
+
+    for j=1:nsteps-1
+      if (map(end-j+1, tmp(end-j+1,1)) == 0)
+        break;
+      end
+
+      tmp(end-j,1) = map(end-j+1,tmp(end-j+1,1));
+    end
   end
 
   switch params.dp_method
+    case 'inverted'
+      path = tmp(indxs);
+      if (do_probs)
+        emission = emission(indxs, :, :);
+      end
     case 'backward'
       path = tmp(end:-1:h,1);
       if (do_probs)
@@ -214,6 +258,9 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
 
   if (retrieve_maps)
     switch params.dp_method
+      case 'inverted'
+        emission = map(indxs,:);
+        transitions = dist(indxs,:);
       case 'backward'
         emission = map(end:-1:h,:);
         transitions = dist(end:-1:h,:);

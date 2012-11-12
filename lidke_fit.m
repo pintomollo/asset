@@ -1,191 +1,237 @@
-function lidke_fit(img)
+function [new_spots] = lidke_fit(img, opts, nimg)
 
-  nspots = 200;
-  noise_thresh = 2;
-  sigma = 4;
-  spot_max_size = 3*sigma;
-  nmax = 5;
+  if (isstruct(img) & isfield(img, 'experiment'))
 
-  niter = 20;
-  iter_thresh = 1e-10;
+    mymovie = img;
+    nframes = size_data(mymovie.data);
 
-  params = [500000 1000 sigma];
-
-
-  if (true)
-    if (nargin == 0)
-      img = zeros(600, 400);
-      size_img = size(img);
-      myspots = bsxfun(@times, rand(nspots, 2), size_img([2 1]));
-      myspots = [myspots (((rand(nspots, 1)-0.5)/2)+1)*params(3)];
-
-      for i=1:nspots
-        img = img  + GaussMask2D(myspots(i, 3), size_img, myspots(i, [2 1]), 2, 1) * params(1)*(rand(1) + 0.5);
-      end
-
-      gnoise = 100;
-      pnoise = 0.2;
-      mnoise = 0.01;
-      bkg = params(2);
-
-      orig_img = img;
-      myrange = 2*max(orig_img(:));
-      if (pnoise == 0)
-        pimg = orig_img;
-      else
-        %pimg = pnoise*double(imnoise(uint16(orig_img / pnoise), 'poisson'));
-        pimg = pnoise*double(poissrnd((orig_img / pnoise)));
-      end
-      %gimg = myrange*imnoise(orig_img/myrange, 'gaussian', 0, gnoise/myrange);
-      gimg = randn(size(img))*gnoise + bkg;
-      mimg = myrange*imnoise(orig_img/myrange, 'speckle', mnoise);
-
-      %img = pimg+gimg+mimg - orig_img;
-      img = gimg;
-
-      %img = img + params(2);
-      %img = img + poissrnd(1, size(img));
-      %img = img + randn(size(img))*3;
+    if (isfield(mymovie.data, 'spots') & ~isempty(mymovie.data.spots))
+      spots = mymovie.data.spots;
+    else
+      spots = get_struct('ruffles', [1,nframes]);
     end
 
-    img2 = imfilter(img, fspecial('gaussian', 7, 0.6), 'symmetric');
-    atrous = imatrou(img2, spot_max_size);
-    params = estimate_noise(img);
+    lastwarn('');
 
-    %thresh = mean(atrous(:)) + noise_thresh * std(atrous(:));
-    %bw = imfill(atrous > thresh, 'holes');
+    cpb = ConsoleProgressBar();
+    cpb.setLeftMargin(4);   % progress bar left margin
+    cpb.setTopMargin(1);    % rows margin
+    cpb.setLength(100);      % progress bar length: [.....]
+    cpb.setMinimum(0);
+    cpb.setMaximum(nframes);
 
-    %[imAvg imStd] = localAvgStd2D(img2, 9);
-    %mask = zeros(size_img);
-    %mask((img2 >= imAvg+noise_thresh*imStd) & (img2.*atrous >= mean(img2(:)))) = 1;
+    cpb.setElapsedTimeVisible(1);
+    cpb.setRemainedTimeVisible(1);
+    cpb.setElapsedTimePosition('left');
+    cpb.setRemainedTimePosition('right');
 
-    %bw = bwmorph(mask, 'shrink', Inf);
-    %[cand_y, cand_x] = find(bw);
+    cpb.start();
+    %indxs = randperm(nframes);
+    for i=1:nframes
+      nimg = i;
+      %nimg = indxs(i);
+      img = load_data(mymovie.data, nimg);
+      spots(nimg).carth = lidke_fit(double(img), opts, nimg);
 
-    figure;imagesc(img2);
-    hold on;
-    %scatter(cand_x, cand_y, 'y')
-
-    [atAvg, atStd] = localAvgStd2D(atrous, 2*spot_max_size + 1);
-    thresh = atAvg + noise_thresh * atStd;
-    bw = locmax2d(img2 .* (atrous > thresh), spot_max_size([1 1])/2);
-    %bw = imfill(atrous > thresh, 'holes');
-    %bw = bwmorph(bw, 'shrink', Inf);
-    [cand_y, cand_x] = find(bw > params(1) + noise_thresh*params(2));
-    scatter(cand_x, cand_y, 'r')
-
-    keyboard
-
-    %cand_y = cand_y(1:20);
-    %cand_x = cand_x(1:20);
-  else
-    img = zeros(600, 400);
-    size_img = size(img);
-    myspots = [60 30; 90 20];
-    for i=1:size(myspots, 1)
-      img = img  + GaussMask2D(sigma*2.5, size_img, myspots(i, [2 1]), 2, 1);
+      text = sprintf('Progress: %d/%d', i, nframes);
+      cpb.setValue(i);
+      cpb.setText(text);
     end
-    img = img*params(1) + params(2);
-    %img = img + poissrnd(1, size(img));
 
-    [Y,X] = meshgrid([-sigma:2:sigma] + myspots(1,2),[-sigma:3:sigma] + myspots(1,1));
-    cand_y = Y(:);
-    cand_x = X(:);
-    %cand_x = myspots(:,1);
-    %cand_y = myspots(:,2);
+    cpb.stop();
+
+    mymovie.data.spots = spots;
+    new_spots = mymovie;
+    
+    return;
   end
+
+  % Get the maximum spot size (in um), used only to reduce the amount of computation
+  spot_max_size = opts.spot_tracking.max_size;
+
+  % If the size of the puxels has been set, we can compute the actual spot size
+  if (opts.pixel_size > 0)
+    
+    % The maximal size of the spot in pixels
+    spot_max_size = ceil(spot_max_size / opts.pixel_size);
+  else
+    
+    % Try to compute the pixel size
+    opts = set_pixel_size(opts);
+
+    % If it worked, we can now compute the size in pixels
+    if (opts.pixel_size > 0)
+      spot_max_size = ceil(spot_max_size / opts.pixel_size);
+    else
+      % Otherwise we take it as such
+      spot_max_size = ceil(spot_max_size);
+    end
+  end
+  spot_max_size = ceil(spot_max_size);
+
+  % Get the other parameters used in the detection
+  % The first one is used to remove noise from the signal
+  noise_thresh = opts.spot_tracking.noise_thresh;
+
+  nmax = opts.spot_tracking.max_particles;
+  niter = opts.spot_tracking.max_iterations;
+  iter_thresh = opts.spot_tracking.iteration_threshold;
+  fit_sep = opts.spot_tracking.fit_intensities;
+  fusion_thresh = opts.spot_tracking.fusion_thresh;
+  intens_thresh = opts.spot_tracking.intensity_thresh;
+
+  img2 = imfilter(img, fspecial('gaussian', 7, 0.6), 'symmetric');
+  atrous = imatrou(img2, spot_max_size);
+  params = estimate_noise(img);
+
+  [atAvg, atStd] = localAvgStd2D(atrous, 3*spot_max_size + 1);
+  thresh = (atrous > (atAvg + noise_thresh * atStd) & img2 > (params(1) + noise_thresh*params(2)));
+  thresh = bwmorph(thresh, 'clean');
+  bw = locmax2d(img2 .* thresh, ceil(spot_max_size([1 1])/3));
+  [cand_y, cand_x] = find(bw);
 
   nspots = length(cand_x);
   new_spots = NaN(0, 5);
-  params = estimate_noise(img);
+  indexes = NaN(0, 1);
 
-  %figure;
+  figure;imagesc(img);
+  hold on;
+  scatter(cand_x, cand_y, 'k')
+
+  params(end+1) = sum(sum(img2 - params(1))) / nspots;
+  window_size = ceil(spot_max_size/3);
 
   for i=1:nspots
     cs = [cand_x(i), cand_y(i)];
-    window = get_window(img, cs, spot_max_size);
+    window = get_window(img, cs, window_size);
 
-    pos = fit_multi(window, params, spot_max_size, nmax, niter, false);
+    pos = fit_multi(window, params, spot_max_size/4, nmax, niter, iter_thresh, fit_sep);
 
     if (~isempty(pos))
       pos(:, 1:2) = bsxfun(@plus, cs, pos(:, 1:2));
       new_spots = [new_spots; pos];
-
-      %new_spots = [new_spots; bsxfun(@plus, [cs 0 0], pos)];
     else
-      new_size = ceil(spot_max_size/2);
+      new_size = ceil(window_size/2);
 
       window = get_window(img, cs, new_size);
-      pos = fit_multi(window, params, spot_max_size, nmax, niter, false);
+      pos = fit_multi(window, params, spot_max_size/4, nmax, niter, iter_thresh, fit_sep);
 
       if (~isempty(pos))
         pos(:, 1:2) = bsxfun(@plus, cs, pos(:, 1:2));
         new_spots = [new_spots; pos];
+      end
+    end
 
-        %new_spots = [new_spots; bsxfun(@plus, [cs 0 0], pos)];
+    indexes = [indexes; ones(size(pos, 1), 1)*i];
+  end
+
+  goods = (new_spots(:,4) > intens_thresh*params(2));
+  new_spots = fuse_spots(new_spots(goods, :), [cand_x cand_y], indexes(goods), fusion_thresh);
+
+  %{
+  center_dist = sqrt(bsxfun(@minus, new_spots(:,1), cand_x(indexes)).^2 + bsxfun(@minus, new_spots(:,2), cand_y(indexes)).^2);
+  best_spots = NaN(0,5);
+  best_index = [];
+
+  other_spots = NaN(0,5);
+
+  for i=1:nspots
+    groups = (indexes == i);
+    if (any(groups))
+      if (sum(groups) == 1)
+        best_spots = [best_spots; new_spots(groups, :)];
+        best_index = [best_index; indexes(groups)];
+      else
+        tmp_pts = new_spots(groups, :);
+        tmp_indx = indexes(groups);
+        [max_val, max_indx] = min(center_dist(groups));
+        best_spots = [best_spots; tmp_pts(max_indx, :)];
+        best_index = [best_index; tmp_indx(max_indx)];
+
+        tmp_pts(max_indx, :) = [];
+        other_spots = [other_spots; tmp_pts];
       end
     end
   end
 
-  %Fuse spots
-  dist = sqrt(bsxfun(@minus, new_spots(:,1), new_spots(:,1).').^2 + bsxfun(@minus, new_spots(:,2), new_spots(:,2).').^2);
 
-  %rads = params(3)/2;
-  rads = new_spots(:, 3)/2;
-  rads = bsxfun(@plus, rads, rads.') / 2;
+  for i=10:10:50
+    for j=1:2:9
+      for k=1:0.5:3
+        hold off;
+        imagesc(img);
+        hold on;
+        goods = ((new_spots(:,4) > i*params(2)) & (new_spots(:,3) > spot_max_size/j));
 
-  fused = dist < rads;
-  fused_spots = NaN(0,5);
-  best_spots = NaN(0,5);
-  for i=1:size(new_spots, 1)
-    groups = fused(:,i);
+  fused_spots = fuse_spots(new_spots(goods, :), [cand_x cand_y], indexes(goods), k);
+  %scatter(best_spots(:,1), best_spots(:,2), 'b');
+  scatter(fused_spots(:,1), fused_spots(:,2), 'r');
 
-    if (any(groups))
-      tmp_pts = new_spots(groups, :);
-      [max_val, max_indx] = min(tmp_pts(:, end));
-      best_spots = [best_spots; tmp_pts(max_indx, :)];
-
-      fused_spots = [fused_spots; mymean(new_spots(groups, :), 1)];
-      fused(:, groups) = false;
+        print('-dpng', '-r450', ['PNG/spots_' num2str(nimg) '-' num2str(i) '-' num2str(j) '-' num2str(k) '.png']);
+      end
     end
   end
-
-  figure;imagesc(img);hold on;
-  if (nargin == 0)
-    scatter(myspots(:,1), myspots(:,2), 'w')
-  end
-  scatter(cand_x, cand_y, 'y')
-  scatter(new_spots(:,1), new_spots(:,2), 'r');
-  scatter(fused_spots(:,1), fused_spots(:,2), 'g');
-  scatter(best_spots(:,1), best_spots(:,2), 'k');
-
-  beep;keyboard
+  %}
 
   return;
 end
 
-function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
+function fused_spots = fuse_spots(spots, init_pos, indexes, dist_thresh)
 
-  init_sigma = spot_max_size/3;
-  p_thresh = 0.5;
-  iter_thresh = 1e-6;
-  pos = [0, 0, init_sigma];
+  %Fuse spots
+  dist = sqrt(bsxfun(@minus, spots(:,1), spots(:,1).').^2 + bsxfun(@minus, spots(:,2), spots(:,2).').^2);
+  center_dist = sqrt(bsxfun(@minus, spots(:,1), init_pos(indexes, 1)).^2 + bsxfun(@minus, spots(:,2), init_pos(indexes, 2)).^2);
+
+  %rads = params(3)/2;
+  rads = spots(:, 3)/2;
+  rads = bsxfun(@plus, rads, rads.') / 2;
+
+  signal = spots(:,3).^2 .* spots(:,4);
+
+  fused = (dist < dist_thresh * rads);
+  fused_spots = NaN(0,5);
+
+  for i=1:size(spots, 1)
+    groups = fused(:,i);
+    groups = any(fused(:, groups), 2);
+
+    if (any(groups))
+      if (sum(groups) == 1)
+        fused_spots = [fused_spots; spots(groups, :)];
+      else
+
+        weights = exp(-center_dist(groups) ./ (2*spots(groups, 3).^2));
+        weights = (weights / sum(weights)) .* signal(groups);
+        weights = (weights / sum(weights));
+        fused_spots = [fused_spots; sum(bsxfun(@times, spots(groups, :), weights), 1)];
+      end
+      fused(:, groups) = false;
+    end
+  end
+
+  return;
+end
+
+function bests = fit_multi(window, params, spot_max_size, nmax, niter, iter_thresh, fit_sep)
+
   size_window = size(window);
   nwindow = (size_window(1) - 1)/2;
-  %max_like = -Inf;
   bests = NaN(0, 4);
   prev_pos = NaN(0,3);
   dist_thresh = nwindow*1.33;
   inner_thresh = nwindow*0.67;
 
+  init_sigma = nwindow/2;
+  %iter_thresh = 1e-6;
+  pos = [0, 0, init_sigma];
+
   likelihood = NaN(1, nmax+1);
 
   %% Constraining the solutions
-  maxvals = [2 2 0.75]*spot_max_size;
+  maxvals = [2 2 1]*spot_max_size;
   minvals = [-2 -2 0.01]*spot_max_size;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+  % Computing the likelihood for 0 spots
   uk = params(1);
   if (uk == 0)
     likelihood(1) = 0;
@@ -195,19 +241,15 @@ function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
     valids = isfinite(L0);
     likelihood(1) = sum(L0(valids));
   end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+  best_like = 0;
 
   for i=1:nmax
-    if (show_it)
-      hold off;imagesc(window);hold on;
-      %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'y');
-      draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'y');
-    end
+  figure;imagesc(window);
+  hold on
+  draw_points(bsxfun(@plus, pos, [1 1 0]*nwindow+1), 'b')
 
     for j=1:niter
-      [intens, steps, likelihood(i+1)] = step(window, params, pos, nwindow);
+      [intens, steps, likelihood(i+1)] = step(window, params, pos, nwindow, fit_sep);
       if (all(abs(steps(:)) < iter_thresh))
         break;
       else
@@ -218,46 +260,39 @@ function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
         pos = bsxfun(@min, pos, maxvals);
         pos = bsxfun(@max, pos, minvals);
 
-        if (show_it)
-          %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'c');
-          draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'c');
-          %pause(0.5)
+        if (size(unique(pos(:, 1:2), 'rows'),1) < i)
+          break;
         end
       end
+  draw_points(bsxfun(@plus, pos, [1 1 0]*nwindow+1), 'c')
     end
+  draw_points(bsxfun(@plus, pos, [1 1 0]*nwindow+1), 'k')
 
     bads = any((pos(:,1:2) < -dist_thresh) | (pos(:,1:2) > dist_thresh), 2);
 
-    p_better = chi2cdf(-2*(likelihood(i) - likelihood(i+1)), 4);
+    p_better = chi2cdf(-2*(likelihood(best_like+1) - likelihood(i+1)), (i - best_like)*4);
 
     if (p_better > 0.95)
-    %if (likelihood(i+1) > max_like & likelihood(i+1) > p_thresh)
       bests = [pos(~bads, :) intens(~bads)];
+      % Rescaling to obtain the amplitude
+      bests(:,end) = bests(:,end) ./ (2*pi*(bests(:,3).^2));
       bests = [bests ones(size(bests, 1), 1)*likelihood(i+1)];
-      %max_like = likelihood(i+1);
-
-      if (show_it)
-        draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'k');
-        %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'k');
-        title([num2str(chi2cdf(-2*(likelihood(i) - likelihood(i+1)), 3)) ' (' num2str(i) ') !!'])
-        %title([num2str(likelihood) ' (' num2str(i) ') !!'])
-        pause(1)
-      end
+      best_like = i
     else
       break;
     end
-    if (show_it)
-      %scatter(pos(:,1)+spot_max_size+1, pos(:,2)+spot_max_size+1, 'k');
-      draw_points([pos(:,1)+nwindow+1, pos(:,2)+nwindow+1 pos(:,3)], 'k');
-      %title([num2str(likelihood) ' (' num2str(i) ')'])
-      title([num2str(chi2cdf(-2*(likelihood(i) - likelihood(i+1)), 3)) ' (' num2str(i) ') !!'])
-    end
 
-    if (all(bads))
+    if (any(bads))
       pos = [prev_pos; [0,0, init_sigma]];
-      if (i>1 & ~any(pos(:)))
-        pos(1:end-1, 1:2) = (rand(i-1, 2) - 0.5)*nwindow;
-      end
+      %if (i>1 & ~any(pos(1:end, 1)))
+%      centered = (~any(pos(:, 1:2), 2));
+%      if (sum(centered) > 1)
+        % Randomizing the location
+        %pos(centered, 1:2) = (rand(sum(centered), 2) - 0.5)*nwindow;
+
+        % Give up instead
+%        break;
+%      end
       prev_pos = pos;
     else
       prev_pos = pos;
@@ -279,14 +314,11 @@ function bests = fit_multi(window, params, spot_max_size, nmax, niter, show_it)
     end
     corrs = [corrs init_sigma];
 
-    if (show_it)
-      scatter(new(1)+nwindow+1, new(2)+nwindow+1, 'm');
-      scatter(corrs(1)+nwindow+1, corrs(2)+nwindow+1, 'r');
-      pause(1)
-    end
-
     pos = [pos; corrs];
-    %keyboard
+
+    if (size(unique(pos(:, 1:2), 'rows'),1) < i+1)
+      break;
+    end
   end
 
   return;
@@ -318,7 +350,7 @@ function window = get_window(img, pos, wsize)
   return;
 end
 
-function [intens, steps, likelihood] = step(img, params, cands, wsize)
+function [intens, steps, likelihood] = step(img, params, cands, wsize, fit_sep)
 
   steps = NaN(size(cands));
 
@@ -342,7 +374,6 @@ function [intens, steps, likelihood] = step(img, params, cands, wsize)
   for i=1:ncands
     % intesity missing, fit it and introduce it after
     norm = (1/(sqrt(2*pi)*cands(i,3)));
-    %norm = (1/(sqrt(2*pi)*cands(i,3)));
     sigma = 1 / (cands(i,3)^2);
 
     posxp = posx - cands(i,1) + 0.5;
@@ -374,22 +405,29 @@ function [intens, steps, likelihood] = step(img, params, cands, wsize)
   
   intens = NaN(ncands, 1);
 
-  % Full fitting
-  alls = reshape(uk, npos^2, []);
-  valids = isfinite(img);
-  intens = (alls(valids, :) \ (img(valids) - params(2)));
-  intens_thresh = max(intens) / 5;
-  intens(intens < intens_thresh) = intens_thresh;
-  uk = reshape(sum(bsxfun(@times, alls, intens.'), 2), npos, npos) + params(2);
+  switch (fit_sep)
+    case 'separate'
+      % Full fitting
+      alls = reshape(uk, npos^2, []);
+      valids = isfinite(img);
+      intens = (alls(valids, :) \ (img(valids) - params(2)));
+      intens_thresh = max(intens) / 5;
+      intens(intens < intens_thresh) = intens_thresh;
+      uk = reshape(sum(bsxfun(@times, alls, intens.'), 2), npos, npos) + params(2);
 
-  % Single fit
-  %uk = sum(uk, 3);
-  %valids = isfinite(img);
-  %intens(:) = abs(uk(valids) \ (img(valids) - params(1)));
-  %uk = sum(uk, 3)*intens(1) + params(1);
-  
-  % No fitting
-  %uk = sum(uk, 3)*params(1) + params(2);
+      if(~isempty(lastwarn))
+        beep;keyboard
+      end
+    case 'together'
+      % Single fit
+      uk = sum(uk, 3);
+      valids = isfinite(img);
+      intens(:) = abs(uk(valids) \ (img(valids) - params(1)));
+      uk = sum(uk, 3)*intens(1) + params(1);
+    otherwise
+      intens(:) = params(end);
+      uk = sum(uk, 3)*intens(1) + params(1);
+  end
 
   % Undescribed contrains from the original code
   cf = ((img ./ uk) - 1);
@@ -431,7 +469,6 @@ function [intens, steps, likelihood] = step(img, params, cands, wsize)
   steps(isnan(steps)) = 0;
   steps = steps;
 
-  %likelihood = exp(2*(sum(likelihood(valids)) - best_like));
   likelihood = sum(likelihood(valids));
 
   return
@@ -445,13 +482,19 @@ function intens = emissions(p0, sigma, p)
   return;
 end
 
-function draw_points(pts, color)
+function draw_points(pts, color, min_intens)
   
   if (nargin == 1)
     color = 'b';
+%    min_intens = min(pts(:,4));
+  elseif (nargin == 2)
+%    min_intens = min(pts(:,4));
   end
 
+%  intens = pts(:,4) / (2*min_intens);
+
   for i=1:size(pts, 1)
+    %rectangle('Position', [pts(i,1)-pts(i, 3), pts(i,2) - pts(i,3), max(2*pts(i,[3 3]), [1e-1 1e-1])], 'Curvature', [1 1], 'EdgeColor', color, 'LineWidth', intens(i));
     rectangle('Position', [pts(i,1)-pts(i, 3), pts(i,2) - pts(i,3), max(2*pts(i,[3 3]), [1e-1 1e-1])], 'Curvature', [1 1], 'EdgeColor', color);
   end
 

@@ -34,15 +34,15 @@ function p = display_ml_results(fname, file_pattern)
     %subplot(1,2,1)
     %hold off
 
-    for p=1:size(all_pts, 2)-3
-      for q=p+1:size(all_pts, 2)-2
+    for q=1:size(all_pts, 2)-3
+      for r=q+1:size(all_pts, 2)-2
         figure;
-        scatter(all_pts(:,p), all_pts(:,q), 'b');
+        scatter(all_pts(:,q), all_pts(:,r), 'b');
         hold on
-        scatter(avg_pts(:,p), avg_pts(:,q), 'r');
+        scatter(avg_pts(:,q), avg_pts(:,r), 'r');
 
-        xlabel(num2str(p))
-        ylabel(num2str(q))
+        xlabel(num2str(q))
+        ylabel(num2str(r))
       end
     end
 
