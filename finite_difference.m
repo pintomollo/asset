@@ -2,10 +2,13 @@ function du = finite_difference(u, dx, deriv, accuracy, method, fid)
   
   switch method
     case 'forward'
-      switch accuracy
-        case 1
-        case 2
-      end
+      %switch accuracy
+      %  case 1
+          du = (u - u([1 1:end-1], :)) / dx;
+          dun = (-u + u([2:end end], :)) / dx;
+          du(u < 0) = dun(u < 0);
+      %  case 2
+      %end
     case 'central'
       switch accuracy
         case 1

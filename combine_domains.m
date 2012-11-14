@@ -1,4 +1,4 @@
-function [signals, full_pos] = combine_domains(mymovies, sync_type, sync_param, min_counts)
+function [signals, full_pos, shuffle] = combine_domains(mymovies, sync_type, sync_param, min_counts)
 
   if (nargin == 1)
     sync_type = 'lsr';

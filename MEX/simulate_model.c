@@ -2,171 +2,114 @@
 #include <string.h>
 #include <stdio.h>
 #include "mex.h"
+#include "rkf45.h"
 
-#define MOD(x, y) ((x) - (y) * floor((double)(x) / (double)(y)))
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define POS(x) ((x) > 0 ? 1 : 0)
 #define NEG(x) ((x) < 0 ? 1 : 0)
 
-static double finite_difference(double *x, double *dx, double *flow, double h, int npop, int npts, int order) {
+double *flow, *current_flow, *dx, *ddx, *cyto, *params;
+double t_flow, x_step;
+int npts, npops, nflow, nparams;
+
+static void finite_difference(double *x, double *dx, double *ddx, double *flow, double h, int npop, int npts) {
 
   int i, p;
-  double *xi, *dxi;
+  double *xi, *dxi, *ddxi;
   double x_2, x_1, x0, x1, x2, f_1, f0, f1, cpos, cneg;
-  double dnorm, ddnorm, max_val = 0;
+  double dnorm, ddnorm;
 
   dnorm = 1 / h;
-  //dnorm = 1 / (12*h);
   ddnorm = 1 / (12*h*h);
 
-  /*for (p=0; p<npop; ++p) {
-    xi = x + npts*p;
-    dxi = dx + npts*p;
+  xi = x;
+  dxi = dx;
+  ddxi = ddx;
 
-    // Reflective boundary conditions
+  for (p=0; p<npop; ++p) {
+
+    /* Reflective boundary conditions */
     x_2 = xi[1];
     x_1 = xi[0];
     x0 = xi[0];
     x1 = xi[1];
     x2 = xi[2];
 
-    for (i=0; i<npts; ++i) {
-      if (order == 1) {
-        dxi[i] = (x_2 - 8*x_1 + 8*x1 - x2) * dnorm;
-      } else {
-        dxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
-      }
+    f_1 = flow[0];
+    f0 = flow[0];
+    f1 = flow[1];
 
-      if (max_val < fabs(dxi[i])) {
-        max_val = fabs(dxi[i]);
-      }
+    for (i=0; i<npts-3; ++i) {
+      cpos = POS(f0);
+      cneg = NEG(f0);
+
+      dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+      ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
       x_2 = x_1;
       x_1 = x0;
       x0 = x1;
       x1 = x2;
 
-      if (i + 3 >= npts) {
-        x2 = xi[npts - ((i + 3) - (npts - 1))];
-      } else {
-        x2 = xi[i+3];
-      }
+      x2 = xi[i+3];
+
+      f_1 = f0;
+      f0 = f1;
+      f1 = flow[i+2];
     }
-  }*/
 
-  xi = x;
-  dxi = dx;
+    cpos = POS(f0);
+    cneg = NEG(f0);
 
-  if (order == 1) {
-    for (p=0; p<npop; ++p) {
+    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
-      /* Reflective boundary conditions */
-      //x_2 = xi[1];
-      x_1 = xi[0];
-      x0 = xi[0];
-      x1 = xi[1];
+    x_2 = x_1;
+    x_1 = x0;
+    x0 = x1;
+    x1 = x2;
 
-      f_1 = flow[0];
-      f0 = flow[0];
-      f1 = flow[1];
-      //x2 = xi[2];
+    x2 = xi[npts-1];
 
-      for (i=0; i<npts-2; ++i) {
-        cpos = POS(f0);
-        cneg = NEG(f0);
+    f_1 = f0;
+    f0 = f1;
+    f1 = flow[npts-1];
 
-        dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
-        /*dxi[i] = (x0 - x_1) * dnorm;
-        dxi[i] = (x1 - x0) * dnorm;*/
-        //dxi[i] = (x_2 - 8*x_1 + 8*x1 - x2) * dnorm;
+    i++;
 
-        if (max_val < fabs(dxi[i])) {
-          max_val = fabs(dxi[i]);
-        }
+    cpos = POS(f0);
+    cneg = NEG(f0);
 
-        //x_2 = x_1;
-        x_1 = x0;
-        x0 = x1;
-        //x1 = x2;
+    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
-        x1 = xi[i+2];
-        //x2 = xi[i+3];
+    x_2 = x_1;
+    x_1 = x0;
+    x0 = x1;
+    x1 = x2;
 
-        f_1 = f0;
-        f0 = f1;
-        f1 = flow[i+2];
-      }
+    x2 = xi[npts-2];
 
-      for (i=npts-2; i<npts; ++i) {
-        cpos = POS(f0);
-        cneg = NEG(f0);
+    f_1 = f0;
+    f0 = f1;
+    f1 = flow[npts-1];
 
-        dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
-        //dxi[i] = (x_2 - 8*x_1 + 8*x1 - x2) * dnorm;
-        //dxi[i] = (x0 - x_1) * dnorm;
-        //dxi[i] = (x1 - x0) * dnorm;
+    i++;
 
-        if (max_val < fabs(dxi[i])) {
-          max_val = fabs(dxi[i]);
-        }
+    cpos = POS(f0);
+    cneg = NEG(f0);
 
-        //x_2 = x_1;
-        x_1 = x0;
-        x0 = x1;
-        //x1 = x2;
+    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
-        x1 = xi[npts - ((i + 2) - (npts - 1))];
-        //x2 = xi[npts - ((i + 3) - (npts - 1))];
-        f_1 = f0;
-        f0 = f1;
-        f1 = flow[npts - ((i + 2) - (npts - 1))];
-      }
-
-      xi += npts;
-      dxi += npts;
-    }
-  } else {
-
-    for (p=0; p<npop; ++p) {
-
-      /* Reflective boundary conditions */
-      x_2 = xi[1];
-      x_1 = xi[0];
-      x0 = xi[0];
-      x1 = xi[1];
-      x2 = xi[2];
-
-      for (i=0; i<npts-3; ++i) {
-        dxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
-
-        x_2 = x_1;
-        x_1 = x0;
-        x0 = x1;
-        x1 = x2;
-
-        x2 = xi[i+3];
-      }
-
-      for (i=npts-3; i<npts; ++i) {
-        dxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
-
-        x_2 = x_1;
-        x_1 = x0;
-        x0 = x1;
-        x1 = x2;
-
-        x2 = xi[npts - ((i + 3) - (npts - 1))];
-      }
-
-      xi += npts;
-      dxi += npts;
-    }
+    xi += npts;
+    dxi += npts;
+    ddxi += npts;
   }
 
-  return max_val;
+  return;
 }
 
-static void bilinear_flow(double *flow, double *conc, double *current, double index, int npts, int ntimes) {
+static void bilinear_flow(double *flow, double *current, double index, int npts, int ntimes) {
 
   double yf, yc, value;
   int i, indf, indc;
@@ -194,9 +137,6 @@ static void bilinear_flow(double *flow, double *conc, double *current, double in
 
   for (i=0; i<npts; ++i) {
     current[i] = (flow[i+indf]*yf + flow[i+indc]*yc);
-    /*value = (flow[i+indf]*yf + flow[i+indc]*yc);
-    current[i] = value * conc[i];
-    current[i + npts] = value * conc[i + npts];*/
   }
 
   return;
@@ -204,106 +144,95 @@ static void bilinear_flow(double *flow, double *conc, double *current, double in
 
 static void trapezoidal_integral(double *x, double h, double *ints, int npts, int npops) {
 
-  double *xi, count;
+  double *xi, tmp_int, tmp_x;
   int i, p;
 
   for (p=0; p<npops; ++p) {
     xi = x + npts*p;
-    ints[p] = 0;
-    count = 0;
+    tmp_int = 0;
     for (i=1;i<npts-1;++i) {
-      ints[p] += 2*xi[i];
-      count += xi[i];
+      tmp_x = xi[i];
+      tmp_int += 2*tmp_x;
     }
 
-    ints[p] += xi[0];
-    ints[p] += xi[npts-1];
+    tmp_int += xi[0];
+    tmp_int += xi[npts-1];
 
-    ints[p] = ints[p] * (h/2);
+    ints[p] = tmp_int * (h/2);
   }
 
   return;
 }
 
-static void reactions(double *x, double *x_prev, double *dx, double *ddx, double *cyto, double *params, double dt, int npts, int npops, int nparams) {
+static void reactions(double *fx, double *x_prev, double *dx, double *ddx, double *cyto, double *params, int npts, int npops, int nparams) {
 
-  double *xi, *xi_prev, *dxi, *ddxi, *paramsi;
+  double *fxi, *xi_prev, *dxi, *ddxi, *paramsi;
   int i;
-  //int i, p, ntotal, incr;
 
-  //ntotal = npts*npops;
-
-  /*for (p=0; p<npops; ++p) {
-    incr = npts*p;
-    xi = x + incr;
-    xi_prev = x_prev + incr;
-    dxi = dx + incr;
-    ddxi = ddx + incr;
-    paramsi = params + nparams*p;
-
-    incr += npts;
-
-    cyto[p] = paramsi[5] - cyto[p] * (paramsi[6] / paramsi[7]);
-
-    for (i=0;i<npts;++i) {
-      xi[i] = xi_prev[i] + dt*(
-             paramsi[0]*ddxi[i] + 
-             paramsi[1]*cyto[p] - 
-             paramsi[2]*xi_prev[i] - 
-             paramsi[3]*xi_prev[i]*pow(x_prev[(int)MOD(i + incr, ntotal)], paramsi[4]) - 
-             dxi[i]);
-    }
-  }*/
-
-  xi = x;
+  fxi = fx;
   xi_prev = x_prev;
   dxi = dx;
   ddxi = ddx;
   paramsi = params;
-
-  //incr += npts;
-
-  cyto[0] = paramsi[5] - cyto[0] * (paramsi[6] / paramsi[7]);
+  
+  const double p0 = paramsi[0];
+  const double c0 = paramsi[1]*(paramsi[5] - cyto[0] * (paramsi[6] / paramsi[7]));
+  const double p2 = paramsi[2];
+  const double p3 = paramsi[3];
+  const double p4 = paramsi[4];
 
   for (i=0;i<npts;++i) {
-    xi[i] = xi_prev[i] + dt*(
-           paramsi[0]*ddxi[i] + 
-           paramsi[1]*cyto[0] - 
-           paramsi[2]*xi_prev[i] - 
-           paramsi[3]*xi_prev[i]*pow(x_prev[i + npts], paramsi[4]) - 
-           dxi[i]);
+    const double x_p = xi_prev[i];
+
+    fxi[i] = p0*ddxi[i] + 
+             c0 - 
+             x_p*p2 - 
+             x_p*p3*pow(x_prev[i + npts], p4) - 
+             dxi[i];
   }
 
-  xi += npts;
+  fxi += npts;
   xi_prev += npts;
   dxi += npts;
   ddxi += npts;
   paramsi += nparams;
 
-  //incr += npts;
-
-  cyto[1] = paramsi[5] - cyto[1] * (paramsi[6] / paramsi[7]);
+  const double p10 = paramsi[0];
+  const double c1 = paramsi[1]*(paramsi[5] - cyto[1] * (paramsi[6] / paramsi[7]));
+  const double p12 = paramsi[2];
+  const double p13 = paramsi[3];
+  const double p14 = paramsi[4];
 
   for (i=0;i<npts;++i) {
-    xi[i] = xi_prev[i] + dt*(
-           paramsi[0]*ddxi[i] + 
-           paramsi[1]*cyto[1] - 
-           paramsi[2]*xi_prev[i] - 
-           paramsi[3]*xi_prev[i]*pow(x_prev[i], paramsi[4]) - 
-           dxi[i]);
+    const double x_p = xi_prev[i];
+
+    fxi[i] = p10*ddxi[i] + 
+             c1 - 
+             x_p*p12 - 
+             x_p*p13*pow(x_prev[i], p14) - 
+             dxi[i];
   }
 
   return;
 }
 
+static void goehring_step(double t, double *x, double *fx) {
+
+  bilinear_flow(flow, current_flow, t * t_flow, npts, nflow);
+  finite_difference(x, dx, ddx, current_flow, x_step, npops, npts);
+  trapezoidal_integral(x, x_step, cyto, npts, npops);
+  reactions(fx, x, dx, ddx, cyto, params, npts, npops, nparams);
+}
+
 /* x0, dt, tmax, */
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-  double *time, *concentr, *flow, *current_flow, *x, *dx, *ddx, tmax, output_rate,
-         dt, current_dt, t = 0, t_flow, x_step, *x0, *params, *cyto, *x_prev, *tmp,
-         *simulation, *curr_sim, *timing, clf_const, inv_x_step, time_count = 0, diff,
-         flow_thresh = 0.005;
-  int ntimes, count = 1, npts, npops, page_size = 500, nflow, nparams, i, j, niter, ntotal, ndata;
+  double *time, *x, *fx, *x0, *tmp, *simulation, *curr_sim, *timing;
+  double tmax, output_rate, dt, current_dt, t = 0, clf_const, inv_x_step, 
+        time_count = 0;
+  double relerr, abserr;
+  int ntimes, count = 1, page_size = 500, i, j, niter, ntotal, ndata, nsteps = 1;
+  int flag, prev_flag;
   bool saved = false;
   mwSize m, n;
 
@@ -333,11 +262,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mexErrMsgTxt("A time step has to be defined");
     }
 
-    diff = MAX(params[0], params[0+nparams]);
-    if (diff*dt*3 / pow(x_step, 2) >= 1) {
-      dt = pow(x_step, 2) / (3*diff);
-    }
-
     flow = mxGetPr(prhs[6]);
     nflow = mxGetN(prhs[6]);
     if (mxGetM(prhs[6]) != npts) {
@@ -352,7 +276,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if ((x = mxCalloc(ntotal, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
-    if ((x_prev = mxCalloc(ntotal, sizeof(double))) == NULL) {
+    if ((fx = mxCalloc(ntotal*nsteps, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
     if ((dx = mxCalloc(ntotal, sizeof(double))) == NULL) {
@@ -364,9 +288,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if ((current_flow = mxCalloc(npts, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
-    /*if ((current_flow = mxCalloc(ntotal, sizeof(double))) == NULL) {
-      mexErrMsgTxt("Memory allocation failed !");
-    }*/
     if ((cyto = mxCalloc(npops, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
@@ -382,37 +303,31 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     memcpy(x, x0, ndata);
     timing[0] = 0;
 
+    abserr = sqrt(r8_epsilon());
+    relerr = sqrt(r8_epsilon());
+
+    prev_flag = -1;
+
     for (j = 0; j < niter; ++j) {
       saved = false;
       current_dt = dt;
 
-      bilinear_flow(flow, x, current_flow, t * t_flow, npts, nflow);
-      clf_const = finite_difference(x, dx, current_flow, x_step, npops, npts, 1);
-      finite_difference(x, ddx, current_flow, x_step, npops, npts, 2);
-      trapezoidal_integral(x, x_step, cyto, npts, npops);
+      flag = r8_rkf45(goehring_step, ntotal, x, fx, &t, tmax, &relerr, abserr, prev_flag);
 
-      if (clf_const*dt * inv_x_step >= flow_thresh) {
-        current_dt = flow_thresh * x_step / clf_const;
+      if (flag == 666) {
+        mexPrintf("Error due to flag %d\n", prev_flag);
+        return;
+      } else {
+        prev_flag = flag;
       }
 
-      //fprintf(fid, "%f %f %f %f\n", clf_const*dt * inv_x_step, dt, current_dt, clf_const* current_dt * inv_x_step);
-
-      tmp = x_prev;
-      x_prev = x;
-      x = tmp;
-
-      reactions(x, x_prev, dx, ddx, cyto, params, current_dt, npts, npops, nparams);
-
-      t += current_dt;
-      time_count += current_dt;
-
-      if (time_count >= output_rate) {
+      if (t - time_count >= output_rate) {
         saved = true;
         memcpy(curr_sim, x, ndata);
         curr_sim += ntotal;
         timing[count] = t;
         count++;
-        time_count -= output_rate;
+        time_count += output_rate;
 
         if (count == ntimes) {
           ntimes += page_size;
@@ -427,7 +342,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
       }
 
-      if (t > tmax) {
+      if (t >= tmax) {
         break;
       }
     }
@@ -451,7 +366,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mxFree(x);
     mxFree(dx);
     mxFree(ddx);
-    mxFree(x_prev);
+    mxFree(fx);
     mxFree(cyto);
     mxFree(current_flow);
     mxFree(simulation);
