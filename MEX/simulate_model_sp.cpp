@@ -70,7 +70,7 @@ inline __m128d exp2d2(__m128d x) {
 
   __m128i ipart, tmp_mi;
   __m128d fpart, expipart, expfpart;
-  int64_t *tmp_m;
+  //int64_t *tmp_m;
 
   x = _mm_min_pd(x, _mm_set1_pd( 129.00000));
   x = _mm_max_pd(x, _mm_set1_pd(-126.99999));
@@ -84,7 +84,7 @@ inline __m128d exp2d2(__m128d x) {
   /* expipart = (float) (1 << ipart) */
   //tmp_m = _mm_castsi128_pd(_mm_add_epi64(ipart, _mm_set1_epi64x(1023)));
   //tmp_mi = (_mm_set1_epi64x(1023));
-  tmp_m = (int64_t *) &ipart;
+  //tmp_m = (int64_t *) &ipart;
   
   //printf("%lld %lld\n", tmp_m[0], tmp_m[1]);
 
