@@ -231,7 +231,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   double tmax, output_rate, dt, current_dt, t = 0, clf_const, inv_x_step, 
         time_count = 0;
   double relerr, abserr;
-  int ntimes, count = 1, page_size = 500, i, j, niter, ntotal, ndata, nsteps = 1;
+  int ntimes, count = 1, page_size = 500, i, j, niter, ntotal, ndata;
   int flag, prev_flag;
   bool saved = false;
   mwSize m, n;
@@ -276,7 +276,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if ((x = (double *)mxCalloc(ntotal, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
-    if ((fx = (double *)mxCalloc(ntotal*nsteps, sizeof(double))) == NULL) {
+    if ((fx = (double *)mxCalloc(ntotal, sizeof(double))) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
     if ((dx = (double *)mxCalloc(ntotal, sizeof(double))) == NULL) {
@@ -308,6 +308,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     prev_flag = -1;
 
+    //niter = 1;
     for (j = 0; j < niter; ++j) {
       saved = false;
       current_dt = dt;

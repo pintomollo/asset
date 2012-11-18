@@ -16,13 +16,13 @@ function install_ASSET
   end
 
   % If we can see this function, ASSET is already in the matlabpath
-  if (exist('get_struct') ~= 2)
+  %if (exist('get_struct') ~= 2)
     here = pwd;
     addpath(here);
     addpath(fullfile(here, 'libraries'));
     addpath(fullfile(here, 'helpers'));
     savepath;
-  end
+  %end
 
   % If this function exists, the MEX files were properly compiled already
   is_first = true;
