@@ -191,7 +191,7 @@ static void finite_difference(float *x, float *dx, float *ddx, float *flow, floa
 
   int i, p;
   float *xi, *dxi, *ddxi;
-  float x_2, x_1, x0, x1, x2, f_1, f0, f1, cpos, cneg;
+  float x_2, x_1, x0, x1, x2, f_2, f_1, f0, f1, f2, cpos, cneg;
   float dnorm, ddnorm;
 
   dnorm = 1 / h;
@@ -200,6 +200,9 @@ static void finite_difference(float *x, float *dx, float *ddx, float *flow, floa
   xi = x;
   dxi = dx;
   ddxi = ddx;
+
+//  fprintf(fid, "%e %e %e %e %e\n", flow[0], flow[1], flow[2], flow[3], flow[4]);
+//  fprintf(fid, "%e %e %e %e %e\n", x[0], x[1], x[2], x[3], x[4]);
 
   for (p=0; p<npop; ++p) {
 
@@ -210,17 +213,27 @@ static void finite_difference(float *x, float *dx, float *ddx, float *flow, floa
     x1 = xi[1];
     x2 = xi[2];
 
+    f_2 = flow[1];
     f_1 = flow[0];
     f0 = flow[0];
     f1 = flow[1];
+    f2 = flow[2];
 
     for (i=0; i<npts-3; ++i) {
-
       cpos = POS(f0);
       cneg = NEG(f0);
 
-      dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+      dxi[i] = (cpos*((3*(x0*f0) - 4*(x_1*f_1))+(x_2*f_2)) + cneg*(-(3*(x0*f0) + (x2*f2)) + 4*(x1*f1))) * dnorm;
+      //ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
       ddxi[i] = ((16*(x_1+x1) - (x2+x_2)) - 30*x0) * ddnorm;
+
+      /*if ((i%2) == 0) {
+      fprintf(fid, "%f %f (? %e) (? %e) (? %e) (? %e) (? %e)\n", cpos, cneg, x_2*f_2, x_1*f_1, x0*f0, x1*f1, x2*f2);
+      fprintf(fid, "%e %e %e %e %e; %e %e %e %e\n", 4*(x_1*f_1), 3*(x0*f0), (3*(x0*f0)) - (4*(x_1*f_1)), (3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2), cpos*((3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2)), 3*(x0*f0), 3*(x0*f0) + (x2*f2), (-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)), cneg*(-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)));
+      //fprintf(fid, "%f (%e %e) %e (%e %e) %e (%e %e) %e : %e\n", cneg, x0, f0, 3*x0*f0, x2, f2, 3*x0*f0 + x2*f2, x1, f1, cneg*(-(3*x0*f0 +x2*f2) - 4*x_1*f_1));
+      }*/
+
+      //fprintf(fid, "%e\n%e\n%e\n%e\n%e\n", x_2, x_1, x0, x1, x2);
 
       x_2 = x_1;
       x_1 = x0;
@@ -229,16 +242,27 @@ static void finite_difference(float *x, float *dx, float *ddx, float *flow, floa
 
       x2 = xi[i+3];
 
+      f_2 = f_1;
       f_1 = f0;
       f0 = f1;
-      f1 = flow[i+2];
+      f1 = f2;
+
+      f2 = flow[i+3];
     }
 
     cpos = POS(f0);
     cneg = NEG(f0);
 
-    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    //fprintf(fid, "%d)\n", i);
+    //dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    dxi[i] = (cpos*((3*(x0*f0) - 4*(x_1*f_1))+(x_2*f_2)) + cneg*(-(3*(x0*f0) + (x2*f2)) + 4*(x1*f1))) * dnorm;
+    //dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-(3*x0*f0 + x2*f2) + 4*x1*f1)) * dnorm;
+    //dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-x2*f2 + 4*x1*f1 - 3*x0*f0)) * dnorm;
+    //ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
     ddxi[i] = ((16*(x_1+x1) - (x2+x_2)) - 30*x0) * ddnorm;
+
+    /*  fprintf(fid, "%f %f (? %e) (? %e) (? %e) (? %e) (? %e)\n", cpos, cneg, x_2*f_2, x_1*f_1, x0*f0, x1*f1, x2*f2);
+      fprintf(fid, "%e %e %e %e %e; %e %e %e %e\n", 4*(x_1*f_1), 3*(x0*f0), (3*(x0*f0)) - (4*(x_1*f_1)), (3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2), cpos*((3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2)), 3*(x0*f0), 3*(x0*f0) + (x2*f2), (-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)), cneg*(-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)));*/
 
     x_2 = x_1;
     x_1 = x0;
@@ -247,17 +271,29 @@ static void finite_difference(float *x, float *dx, float *ddx, float *flow, floa
 
     x2 = xi[npts-1];
 
+    f_2 = f_1;
     f_1 = f0;
     f0 = f1;
-    f1 = flow[npts-1];
+    f1 = f2;
+    f2 = flow[npts-1];
 
     i++;
 
     cpos = POS(f0);
     cneg = NEG(f0);
 
-    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+//    fprintf(fid, "%d)\n", i);
+    //dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    //dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-x2*f2 + 4*x1*f1 - 3*x0*f0)) * dnorm;
+    //dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-(3*x0*f0 + x2*f2) + 4*x1*f1)) * dnorm;
+    dxi[i] = (cpos*((3*(x0*f0) - 4*(x_1*f_1))+(x_2*f_2)) + cneg*(-(3*(x0*f0) + (x2*f2)) + 4*(x1*f1))) * dnorm;
+    //ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
     ddxi[i] = ((16*(x_1+x1) - (x2+x_2)) - 30*x0) * ddnorm;
+
+/*      fprintf(fid, "%f %f (? %e) (? %e) (? %e) (? %e) (? %e)\n", cpos, cneg, x_2*f_2, x_1*f_1, x0*f0, x1*f1, x2*f2);
+      fprintf(fid, "%e %e %e %e %e; %e %e %e %e\n", 4*(x_1*f_1), 3*(x0*f0), (3*(x0*f0)) - (4*(x_1*f_1)), (3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2), cpos*((3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2)), 3*(x0*f0), 3*(x0*f0) + (x2*f2), (-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)), cneg*(-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)));
+    fprintf(fid, "%e ", (cpos*((3*(x0*f0) - 4*(x_1*f_1))+(x_2*f_2)) + cneg*(-(3*(x0*f0) + (x2*f2)) + 4*(x1*f1))));
+    fprintf(fid, "%e\n", (cpos*((3*(x0*f0) - 4*(x_1*f_1))+(x_2*f_2)) + cneg*(-(3*(x0*f0) + (x2*f2)) + 4*(x1*f1))) * dnorm);*/
 
     x_2 = x_1;
     x_1 = x0;
@@ -266,26 +302,38 @@ static void finite_difference(float *x, float *dx, float *ddx, float *flow, floa
 
     x2 = xi[npts-2];
 
+    f_2 = f_1;
     f_1 = f0;
     f0 = f1;
-    f1 = flow[npts-1];
+    f1 = f2;
+
+    f2 = flow[npts-2];
 
     i++;
 
     cpos = POS(f0);
     cneg = NEG(f0);
 
-    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    //fprintf(fid, "%d)\n", i);
+    //dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    //dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-(3*x0*f0 + x2*f2) + 4*x1*f1)) * dnorm;
+    dxi[i] = (cpos*((3*(x0*f0) - 4*(x_1*f_1))+(x_2*f_2)) + cneg*(-(3*(x0*f0) + (x2*f2)) + 4*(x1*f1))) * dnorm;
+    //dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(4*x1*f1 - (3*x0*f0 + x2*f2))) * dnorm;
+    //ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
     ddxi[i] = ((16*(x_1+x1) - (x2+x_2)) - 30*x0) * ddnorm;
+
+      /*fprintf(fid, "%f %f (? %e) (? %e) (? %e) (? %e) (? %e)\n", cpos, cneg, x_2*f_2, x_1*f_1, x0*f0, x1*f1, x2*f2);
+      fprintf(fid, "%e %e %e %e %e; %e %e %e %e\n", 4*(x_1*f_1), 3*(x0*f0), (3*(x0*f0)) - (4*(x_1*f_1)), (3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2), cpos*((3*(x0*f0) - 4*(x_1*f_1)) + (x_2*f_2)), 3*(x0*f0), 3*(x0*f0) + (x2*f2), (-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)), cneg*(-(3*(x0*f0) +(x2*f2)) + 4*(x1*f1)));*/
 
     xi += npts;
     dxi += npts;
     ddxi += npts;
   }
 
- for (i=0;i<npts;i++){
+ /*for (i=0;i<npts;i++){
     fprintf(fid, "%f %f: %.12e %.12e, %f %f: %.12e %.12e\n", x[i], flow[i], dx[i], ddx[i], x[i+npts], flow[i], dx[i+npts], ddx[i+npts]);
-  }
+  }*/
+
 
   return;
 }
@@ -312,12 +360,18 @@ static void bilinear_flow(float *flow, float *current, float index, int npts, in
       yc = 1 - yf;
     }
   }
+  //fprintf(fid, "%f: %d %f %d %f\n", index, indf, yf, indc, yc);
 
   indf = indf*npts;
   indc = indc*npts;
 
   for (i=0; i<npts; ++i) {
     current[i] = (flow[i+indf]*yf + flow[i+indc]*yc);
+    /*fprintf(fid, "(%e %e) %e ", flow[i+indf], flow[i+indc], current[i]);
+
+    if ((i%4)==3){
+      fprintf(fid, "\n");
+    }*/
   }
 
   return;
@@ -414,12 +468,18 @@ static void reactions(float *fx, float *x_prev, float *dx, float *ddx, float *cy
 
 static void goehring_step(float t, float *x, float *fx) {
 
-  fprintf(fid, "-------------------%.12f---------------\n", t);
-
   bilinear_flow(flow, current_flow, t * t_flow, npts, nflow);
   finite_difference(x, dx, ddx, current_flow, x_step, npops, npts);
   trapezoidal_integral(x, x_step, cyto, npts, npops);
   reactions(fx, x, dx, ddx, cyto, params, npts, npops, nparams);
+
+/*  if (t>0 && t<20){
+    fprintf(fid, "-------------------%.12f---------------\n", t);
+    for (int i=0; i<npts; i++) {
+      fprintf(fid, "%e: %e %e: %e\n", x[i], dx[i], ddx[i], fx[i]);
+      fprintf(fid, "%e: %e %e: %e\n", x[i+npts], dx[i+npts], ddx[i+npts], fx[i+npts]);
+    }
+  }*/
 }
 
 /* x0, dt, tmax, */
@@ -471,17 +531,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     niter = (int)(mxGetScalar(prhs[8]));
 
-    if ((x = (float*) _mm_malloc(ntotal * sizeof(float), 16)) == NULL) {
+    if ((x = (float*) _mm_malloc(ndata, 16)) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
 
-    if ((fx = (float*) _mm_malloc(ntotal * sizeof(float), 16)) == NULL) {
+    if ((fx = (float*) _mm_malloc(ndata, 16)) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
-    if ((dx = (float*) _mm_malloc(ntotal * sizeof(float), 16)) == NULL) {
+    if ((dx = (float*) _mm_malloc(ndata, 16)) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
-    if ((ddx = (float*) _mm_malloc(ntotal * sizeof(float), 16)) == NULL) {
+    if ((ddx = (float*) _mm_malloc(ndata, 16)) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
     if ((current_flow = (float *)mxCalloc(npts, sizeof(float))) == NULL) {
@@ -509,7 +569,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     fid = fopen("sp_run.txt", "w");
 
-    niter = 200;
+    //niter = 200;
     for (j = 0; j < niter; ++j) {
       saved = false;
       current_dt = dt;
@@ -558,6 +618,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mexWarnMsgTxt("Simulation reached the iteration limit !");
     }
 
+    fflush(fid);
     fclose(fid);
 
     data_size[0] = (int)npops*npts;

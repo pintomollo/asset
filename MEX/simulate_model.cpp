@@ -15,7 +15,7 @@ static void finite_difference(double *x, double *dx, double *ddx, double *flow, 
 
   int i, p;
   double *xi, *dxi, *ddxi;
-  double x_2, x_1, x0, x1, x2, f_1, f0, f1, cpos, cneg;
+  double x_2, x_1, x0, x1, x2, f_2, f_1, f0, f1, f2, cpos, cneg;
   double dnorm, ddnorm;
 
   dnorm = 1 / h;
@@ -34,15 +34,17 @@ static void finite_difference(double *x, double *dx, double *ddx, double *flow, 
     x1 = xi[1];
     x2 = xi[2];
 
+    f_2 = flow[1];
     f_1 = flow[0];
     f0 = flow[0];
     f1 = flow[1];
+    f2 = flow[2];
 
     for (i=0; i<npts-3; ++i) {
       cpos = POS(f0);
       cneg = NEG(f0);
 
-      dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+      dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-x2*f2 + 4*x1*f1 - 3*x0*f0)) * dnorm;
       ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
       x_2 = x_1;
@@ -52,15 +54,19 @@ static void finite_difference(double *x, double *dx, double *ddx, double *flow, 
 
       x2 = xi[i+3];
 
+      f_2 = f_1;
       f_1 = f0;
       f0 = f1;
-      f1 = flow[i+2];
+      f1 = f2;
+
+      f2 = flow[i+3];
     }
 
     cpos = POS(f0);
     cneg = NEG(f0);
 
-    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    //dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-x2*f2 + 4*x1*f1 - 3*x0*f0)) * dnorm;
     ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
     x_2 = x_1;
@@ -70,16 +76,19 @@ static void finite_difference(double *x, double *dx, double *ddx, double *flow, 
 
     x2 = xi[npts-1];
 
+    f_2 = f_1;
     f_1 = f0;
     f0 = f1;
-    f1 = flow[npts-1];
+    f1 = f2;
+    f2 = flow[npts-1];
 
     i++;
 
     cpos = POS(f0);
     cneg = NEG(f0);
 
-    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    //dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-x2*f2 + 4*x1*f1 - 3*x0*f0)) * dnorm;
     ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
     x_2 = x_1;
@@ -89,16 +98,20 @@ static void finite_difference(double *x, double *dx, double *ddx, double *flow, 
 
     x2 = xi[npts-2];
 
+    f_2 = f_1;
     f_1 = f0;
     f0 = f1;
-    f1 = flow[npts-1];
+    f1 = f2;
+
+    f2 = flow[npts-2];
 
     i++;
 
     cpos = POS(f0);
     cneg = NEG(f0);
 
-    dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    //dxi[i] = (cpos*(x0*f0 - x_1*f_1) + cneg*(x1*f1 - x0*f0)) * dnorm;
+    dxi[i] = (cpos*(3*x0*f0 - 4*x_1*f_1+x_2*f_2) + cneg*(-x2*f2 + 4*x1*f1 - 3*x0*f0)) * dnorm;
     ddxi[i] = (-x_2 + 16*x_1 - 30*x0 + 16*x1 - x2) * ddnorm;
 
     xi += npts;
