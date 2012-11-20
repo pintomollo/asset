@@ -481,10 +481,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     relerr = sqrt(r8_epsilon());
 
     prev_flag = -1;
-
-    fid = fopen("sp_run.txt", "w");
-
-    //niter = 200;
     for (j = 0; j < niter; ++j) {
       saved = false;
       current_dt = dt;
@@ -528,15 +524,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     if (!saved) {
       memcpy(curr_sim, x, ndata);
       timing[count] = t;
-    } else {
-      count--;
+      count++;
     }
     if (j == niter) {
       mexWarnMsgTxt("Simulation reached the iteration limit !");
     }
-
-    fflush(fid);
-    fclose(fid);
 
     data_size[0] = (int)npops*npts;
     data_size[1] = (int)count;

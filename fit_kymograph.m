@@ -191,8 +191,6 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_params(fit_params) = p_all(:, i);
       end
 
-      p_all(:,i)
-      
       if (restart)
         opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
         [x0, correct] = opts.init_func(opts);
@@ -204,7 +202,11 @@ function uuids = fit_kymograph(fitting, opts)
       if (opts.nparticles ~= ndata)
         res = interp1q(simul_pos, res, fitting.x_pos.');
       end
-
+      %if (t(end) < opts.tmax)
+      %  keyboard;
+      %end
+      score_coeff = 1 + (opts.tmax - t(end)) / opts.tmax;
+      
       res = [res; res];
 
       switch fitting.aligning_type
@@ -279,7 +281,7 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err(:));
 
-        err_all(i) = err_all(i) + penalty*(~correct);
+        err_all(i) = score_coeff*err_all(i) + penalty*(~correct);
 
         %if (isnan(err_all(i)))
         %  beep;beep;keyboard
