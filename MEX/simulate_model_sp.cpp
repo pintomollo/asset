@@ -6,8 +6,8 @@
 #include "mex.h"
 #include "rkf45.h"
 
-#define POS(x) ((x) > 0 ? 1 : 0)
-#define NEG(x) ((x) < 0 ? 1 : 0)
+#define POS(x) ((x) > 0 ? 1.0f : 0.0f)
+#define NEG(x) ((x) < 0 ? 1.0f : 0.0f)
 
 #define FASTPOWD(x, y) exp2d2(_mm_mul_pd(log2d2(x), (y)))
 #define FASTPOWS(x, y) exp2f4(_mm_mul_ps(log2f4(x), (y)))
@@ -63,55 +63,6 @@ inline __m128 exp2f4(__m128 x)
   return _mm_mul_ps(expipart, expfpart);
 }
 
-inline __m128d exp2d2(__m128d x) {
-
-  double *tmp = (double*) _mm_malloc(2 * sizeof(double), 16);
-  long long int *tmpi = (long long int*) _mm_malloc(4 * sizeof(long long int), 16);
-
-  __m128i ipart, tmp_mi;
-  __m128d fpart, expipart, expfpart;
-  //int64_t *tmp_m;
-
-  x = _mm_min_pd(x, _mm_set1_pd( 129.00000));
-  x = _mm_max_pd(x, _mm_set1_pd(-126.99999));
-
-  /* ipart = int(x - 0.5) */
-  ipart = _mm_cvtpd_epi32(_mm_sub_pd(x, _mm_set1_pd(0.5)));
-
-  /* fpart = x - ipart */
-  fpart = _mm_sub_pd(x, _mm_cvtepi32_pd(ipart));
-
-  /* expipart = (float) (1 << ipart) */
-  //tmp_m = _mm_castsi128_pd(_mm_add_epi64(ipart, _mm_set1_epi64x(1023)));
-  //tmp_mi = (_mm_set1_epi64x(1023));
-  //tmp_m = (int64_t *) &ipart;
-  
-  //printf("%lld %lld\n", tmp_m[0], tmp_m[1]);
-
-  expipart = _mm_castsi128_pd(_mm_slli_epi64(_mm_add_epi64(ipart, _mm_set1_epi64x(1023)), 52));
-
-  //_mm_store_pd(&tmp[0], tmp_m);
-  //mexPrintf("%f %f\n", tmp[0], tmp[1]);
-
-  /* minimax polynomial fit of 2**x, in range [-0.5, 0.5[ */
-#if EXP_POLY_DEGREE == 5
-  expfpart = POLYD5(fpart, 9.9999994e-1, 6.9315308e-1, 2.4015361e-1, 5.5826318e-2, 8.9893397e-3, 1.8775767e-3);
-#elif EXP_POLY_DEGREE == 4
-  expfpart = POLYD4(fpart, 1.0000026, 6.9300383e-1, 2.4144275e-1, 5.2011464e-2, 1.3534167e-2);
-#elif EXP_POLY_DEGREE == 3
-  expfpart = POLYD3(fpart, 9.9992520e-1, 6.9583356e-1, 2.2606716e-1, 7.8024521e-2);
-#elif EXP_POLY_DEGREE == 2
-  expfpart = POLYD2(fpart, 1.0017247, 6.5763628e-1, 3.3718944e-1);
-#else
-#error
-#endif
-
-  _mm_free((void*) tmp);
-  _mm_free((void*) tmpi);
-
-  return _mm_mul_pd(expipart, expfpart);
-}
-
 inline __m128 log2f4(__m128 x)
 {
   __m128i exp = _mm_set1_epi32(0x7F800000);
@@ -144,42 +95,6 @@ inline __m128 log2f4(__m128 x)
   p = _mm_mul_ps(p, _mm_sub_ps(m, one));
 
   return _mm_add_ps(p, e);
-}
-
-inline __m128d log2d2(__m128d x)
-{
-  //__m128i exp = _mm_set1_epi32(0x7F800000);
-  //__m128i mant = _mm_set1_epi32(0x007FFFFF);
-  __m128i exp = _mm_set1_epi64x(0x7FF0000000000000);
-  __m128i mant = _mm_set1_epi64x(0x000FFFFFFFFFFFFF);
-
-  __m128d one = _mm_set1_pd(1.0);
-
-  __m128i i = _mm_castpd_si128(x);
-
-  __m128d e = _mm_cvtepi32_pd(_mm_sub_epi64(_mm_srli_epi64(_mm_and_si128(i, exp), 52), _mm_set1_epi64x(1023)));
-
-  __m128d m = _mm_or_pd(_mm_castsi128_pd(_mm_and_si128(i, mant)), one);
-
-  __m128d p;
-
-  /* Minimax polynomial fit of log2(x)/(x - 1), for x in range [1, 2[ */
-#if LOG_POLY_DEGREE == 6
-  p = POLYD5( m, 3.1157899f, -3.3241990f, 2.5988452f, -1.2315303f,  3.1821337e-1f, -3.4436006e-2f);
-#elif LOG_POLY_DEGREE == 5
-  p = POLYD4(m, 2.8882704548164776201f, -2.52074962577807006663f, 1.48116647521213171641f, -0.465725644288844778798f, 0.0596515482674574969533f);
-#elif LOG_POLY_DEGREE == 4
-  p = POLYD3(m, 2.61761038894603480148f, -1.75647175389045657003f, 0.688243882994381274313f, -0.107254423828329604454f);
-#elif LOG_POLY_DEGREE == 3
-  p = POLYD2(m, 2.28330284476918490682f, -1.04913055217340124191f, 0.204446009836232697516f);
-#else
-#error
-#endif
-
-  /* This effectively increases the polynomial degree by one, but ensures that log2(1) == 0*/
-  p = _mm_mul_pd(p, _mm_sub_pd(m, one));
-
-  return _mm_add_pd(p, e);
 }
 
 float *flow, *current_flow, *dx, *ddx, *cyto, *params;
@@ -577,8 +492,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       flag = r4_rkf45(goehring_step, ntotal, x, fx, &t, tmax, &relerr, abserr, prev_flag);
 
       if (flag == 666) {
-        mexPrintf("Error due to flag %d\n", prev_flag);
-        return;
+        char buffer[25];
+        sprintf(buffer, "Error due to flag %d\n", prev_flag);
+        mexWarnMsgTxt(buffer);
+        break;
       } else {
         prev_flag = flag;
       }
