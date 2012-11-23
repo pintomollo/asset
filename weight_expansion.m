@@ -1,5 +1,12 @@
 function weight = weight_expansion(img, params)
 
+  if (size(img, 1) <= 10)
+    warning('Not enough data points to estimate the weight matrix properly');
+    weight = ones(size(img));
+    
+    return;
+  end
+
   minmax = prctile(img(isfinite(img)), [0.1 99.9]);
   img = imnorm(img, minmax(1), minmax(2));
   %img = imnorm(img);

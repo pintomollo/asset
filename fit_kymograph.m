@@ -230,7 +230,12 @@ function uuids = fit_kymograph(fitting, opts)
             corr_offset = 0;
           end
         case 'domain'
-          f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+          if (size(res,2) <= 10)
+            err_all(i) = Inf;
+            continue;
+          else
+            f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+          end
 
           if (isnan(f(end)))
             err_all(i) = Inf;
