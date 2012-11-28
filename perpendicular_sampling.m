@@ -60,8 +60,7 @@ function [values, perp_path, dpos] = perpendicular_sampling(img, path, perp_path
   if (isempty(img))
     values = perp_path;
     perp_path = dpos;
-
-    dpos = [];
+    dpos = dist;
 
     return;
   end

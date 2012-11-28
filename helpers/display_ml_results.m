@@ -1,22 +1,14 @@
-function p = display_ml_results(fname, file_pattern)
+%function p = display_ml_results(fname, file_pattern, param_transform, show_evolution)
+function p = display_ml_results(varargin)
 
-  %close all;
-  if (isstruct(fname))
-    p = fname;
-  else
-
-    if (nargin == 2)
-      p = gather_ml_results(fname, file_pattern);
-    elseif (strncmp(fname(end-2:end), 'txt', 3))
-      p = gather_ml_results(fname);
-    else
-      p = parse_ml_results(fname, Inf, true);
-    end
-  end
+  [p, show_evolution, store_pattern] = parse_input(varargin{:});
+  store_pics = (~isempty(store_pattern));
 
   if (iscell(p))
     all_pts = [];
     avg_pts = [];
+    evols = {};
+
     for i=1:size(p,1)
       data = p{i, 2};
       pts = [];
@@ -24,6 +16,10 @@ function p = display_ml_results(fname, file_pattern)
         s = data{j,1}(end);
         if (isstruct(s))
           pts = [pts; [s.params s.score]];
+
+          if (show_evolution)
+            evols{end+1} = s.evolution{1}(:,2:end);
+          end
         end
       end
 
@@ -31,21 +27,87 @@ function p = display_ml_results(fname, file_pattern)
       avg_pts = [avg_pts; mymean(pts, 1)];
     end
 
-    %subplot(1,2,1)
-    %hold off
+    real_scores = all_pts(:,end-1);
+    scores = log(real_scores);
+    score_range = range(scores);
+    score_min = min(scores);
+    colors = bsxfun(@times, [0 0 1], 1 - (scores-score_min)/score_range);
+    [cvals, indx] = sort(real_scores);
+    cmap = colors(indx, :);
+    labels = [num2str(cvals) repmat(' (', length(indx), 1) num2str(indx) repmat(')', length(indx), 1)];
+    
+    if (store_pics)
+      figure;
+    end
 
     for q=1:size(all_pts, 2)-3
       for r=q+1:size(all_pts, 2)-2
-        figure;
-        scatter(all_pts(:,q), all_pts(:,r), 'b');
+        if (~store_pics)
+          figure;
+        else
+          hold off;
+        end
+
+        scatter(all_pts(:,q), all_pts(:,r), [], colors);
         hold on
         scatter(avg_pts(:,q), avg_pts(:,r), 'r');
+        colormap(cmap)
+        ax = colorbar;
+        set(ax, 'YTickLabel', labels);
 
         xlabel(num2str(q))
         ylabel(num2str(r))
+
+        if (store_pics)
+          print('-dpng', '-r450', ['PNG/' store_pattern '-' num2str(q) 'x' num2str(r) '.png']);
+        end
       end
     end
 
+    if (~store_pics)
+      figure;
+    else
+      hold off;
+    end
+    boxplot(all_pts(:, 1:end-2));
+    if (store_pics)
+      print('-dpng', '-r450', ['PNG/' store_pattern '-boxplot.png']);
+    end
+
+    if (~store_pics)
+      figure;
+    else
+      hold off;
+    end
+    colormap(jet);
+    imagesc(all_pts(:, 1:end-2));
+    xlabel('Parameters')
+    ylabel('Fits')
+    if (store_pics)
+      print('-dpng', '-r450', ['PNG/' store_pattern '-colors.png']);
+    end
+    %keyboard
+
+    if (show_evolution)
+      for i=1:size(all_pts, 2)-2
+        if (~store_pics)
+          figure;
+        else
+          hold off;
+        end
+        colormap(cmap)
+        ax = colorbar;
+        set(ax, 'YTickLabel', labels);
+        for j=1:length(evols)
+          plot(1-size(evols{j},1):0, evols{j}(:,i), 'Color', colors(j,:));
+          hold on;
+        end
+        xlabel(num2str(i))
+        if (store_pics)
+          print('-dpng', '-r450', ['PNG/' store_pattern '-evol-' num2str(i) '.png']);
+        end
+      end
+    end
     %figure;
     %scatter(all_pts(:,1), all_pts(:,2), 'b');
     %hold on
@@ -55,8 +117,6 @@ function p = display_ml_results(fname, file_pattern)
     %scatter(all_pts(:,1), all_pts(:,3), 'b');
     %hold on
     %scatter(avg_pts(:,1), avg_pts(:,3), 'r');
-
-    %keyboard
   else
     for i=1:length(p)
       confs = NaN(0, 3);
@@ -152,6 +212,56 @@ function p = display_ml_results(fname, file_pattern)
           print(h1, '-dpdf', '-r450', ['PNG/fit_synth_data-'  num2str(i) '-' num2str(j) '.pdf']);
 
           close(h1);
+        end
+      end
+    end
+  end
+
+  return;
+end
+
+function [p, show_evolution, store_pattern] = parse_input(varargin)
+
+  % Initialize the outputs to be sure that we don't return unassigned variables
+  p = {};
+  show_evolution = false;
+  store_pattern = '';
+  file_pattern = '';
+  param_transform = @(x)(x.^2);
+
+  % Check what we got as inputs
+  for i=1:length(varargin)
+    var_type = class(varargin{i});
+    switch var_type
+      case 'char'
+        if (isempty(p))
+          p = varargin{i};
+        elseif (isempty(file_pattern))
+          file_pattern = varargin{i};
+        else
+          store_pattern = varargin{i};
+        end
+      case 'logical'
+        show_evolution = varargin{i};
+      case {'cell', 'struct'}
+        p = varargin{i};
+      case 'function_handle'
+        param_transform = varargin{i};
+    end
+  end
+
+  if (ischar(p))
+    p = gather_ml_results(p, file_pattern, show_evolution);
+
+    for i=1:size(p,1)
+      for j=1:size(p{i,2}, 1)
+        s = p{i,2}{j,1}(end);
+        if (isstruct(s))
+          s.params = param_transform(s.params);
+          if (show_evolution)
+            s.evolution{i}(:,2:end) = param_transform(s.evolution{1}(:,2:end));
+          end
+          p{i,2}{j,1}(end) = s;
         end
       end
     end

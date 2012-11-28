@@ -1,4 +1,9 @@
 function [gammas] = estimate_noise(img, filter_type)
+% Returns an estimation of the noise present in the image as:
+% [BKG STD LAMBDA MU] where BKG and STD are the mean and standard
+% deviation of the uniform white noise, LAMBDA is the variance of
+% the linear noise (with respect to intensity) and MU is the variance 
+% of the multiplicative (quadratic) noise.
 
   if (nargin == 1)
     filter_type = 'adm';
@@ -8,7 +13,6 @@ function [gammas] = estimate_noise(img, filter_type)
   block_size = 21;
   middle = ((block_size-1)/2)+1;
 
-  %minsize = estimate_sample_size(0.9, 0.075);
   minsize = estimate_sample_size(0.8, 0.1);
   nbins = numel(img) / (50*minsize);
 
@@ -47,13 +51,6 @@ function [gammas] = estimate_noise(img, filter_type)
 
   noisefree = median_mex(img, mfilter);
   noisy = img - noisefree;
-
-  %figure;imagesc(blocks(:,:,1))
-  %figure;imagesc(blocks(:,:,2))
-  %figure;imagesc(blocks(:,:,3))
-
-  %figure;imshow(imnorm(img))
-  %figure;imshow(imnorm(noisefree))
 
   blocks = reshape(blocks, [], 3);
 
@@ -110,10 +107,6 @@ function [gammas] = estimate_noise(img, filter_type)
     case 2
       gammas = [gauss_noise 0 0];
   end
-
-  %figure;scatter(edges + gauss_noise(1), vars + gauss_noise(2)^2);
-  %hold on;
-  %plot(edges + gauss_noise(1), gammas(4)*edges.^2 + gammas(3)*edges + gauss_noise(2)^2, 'r')
 
   return;
 

@@ -62,7 +62,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
   global rescale_size;
   rescale_size = [388 591]*1;
 
-  if (length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
+  if (length(eggshell) < nimg | empty_struct(eggshell, 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
     update(1,nimg) = true;
 
     img = imnorm(double(load_data(mymovie.dic,nimg)));
@@ -194,7 +194,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     mymovie.dic.orientations = orientations;
   end
 
-  if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'cortex', 6) | strncmp(opts.ml_type, 'all', 3))))
+  if (length(cortex) < nimg | empty_struct(cortex, 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'cortex', 6) | strncmp(opts.ml_type, 'all', 3))))
     update(2,nimg) = true;
 
     if (isempty(img))

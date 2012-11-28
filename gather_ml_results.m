@@ -16,6 +16,10 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
     keep_evolution = tmp;
   end
 
+  if (isempty(file_pattern))
+    file_pattern = '.*%.4f?_evol\\.dat';
+  end
+
   if (~exist(fname, 'file'))
     results = [];
     return;

@@ -47,7 +47,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
 
   img = [];
 
-  if (length(cortex) < nimg | isempty(cortex(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'cortex', 6) | strncmp(opts.ml_type, 'all', 3))))
+  if (length(cortex) < nimg | empty_struct(cortex, 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'cortex', 6) | strncmp(opts.ml_type, 'all', 3))))
 
     update(2, nimg) = true;
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(neighbors(nimg), opts);
@@ -96,17 +96,21 @@ function mymovie = dp_data(mymovie, nimg, opts)
     
     %minimg = mean(mean(noise(noise~=-1)));
     %img = imnorm(img, minimg, []);
+    noise_params = estimate_noise(img);
 
     img = gaussian_mex(img, parameters.noise.gaussian);
     img = median_mex(img, parameters.noise.median);
     %img = imfilter(img,parameters.noise.gaussian,'symmetric');
     %img = medfilt2(img,parameters.noise.median);
-    img = imnorm(img);
+
+    img = imnorm(img, noise_params(1), []);
+
+    %img = imnorm(img);
 
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
     
     %figure;imagesc(polar_img);
-    polar_img = imnorm(polar_img,[],[],'rows');
+    %polar_img = imnorm(polar_img,[],[],'rows');
 
     polar_size = size(polar_img);
 
@@ -128,14 +132,17 @@ function mymovie = dp_data(mymovie, nimg, opts)
       cortex(nimg).temperatures = [beta; gamma];
       %[entropy] = posterior_decoding(cortex_path, emissions, transitions, 1, 1);
     else
-      parameters.cortex_params.nhood = 11;
-      parameters.cortex_params.alpha = 0.4;
-      parameters.cortex_params.beta = 0.85;
-      parameters.cortex_params.gamma = 0.1;
 
-      parameters.cortex_weights.alpha = 0.45;
-      parameters.cortex_weights.beta = 0.01;
-      parameters.cortex_weights.gamma = 0.15;
+      parameters.cortex_params.nhood = 15;
+      parameters.cortex_params.alpha = 0.1;
+      parameters.cortex_params.beta = 0.85;
+      parameters.cortex_params.gamma = 0.05;
+
+      parameters.cortex_weights.alpha = 0.55;
+      %parameters.cortex_weights.beta = 0.005;
+      %parameters.cortex_weights.gamma = 5*noise_params(2);
+      parameters.cortex_weights.beta = 0.025;
+      parameters.cortex_weights.gamma = 25*noise_params(2);
 
       %%%%%% Time-Lapse values
       %parameters.cortex_params.nhood = 11;
@@ -194,7 +201,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie.data.cortex = cortex;
   end
 
-  if (length(eggshell) < nimg | isempty(eggshell(nimg).carth) | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
+  if (length(eggshell) < nimg | empty_struct(eggshell, 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
 
     update(1, nimg) = true;
 

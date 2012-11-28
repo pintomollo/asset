@@ -1,0 +1,13 @@
+#spot_tracking
+max_size 1
+frame_displacement 0.5
+linking_function @spot_similarity
+joining_function []
+splitting_function []
+max_particles 5
+max_iterations  20
+intensity_thresh  30
+fit_intensities 'separate'
+iteration_threshold 1e-10
+fusion_thresh 0.5
+noise_thresh 1

@@ -90,7 +90,7 @@ inline __m128 log2f4(__m128 x)
 
 float *flow, *current_flow, *dx, *ddx, *cyto, *params;
 float flow_step, x_step;
-int npts, npops, nflow, nparams;
+int npts, npops, nflow, nparams, ncalls;
 
 static void finite_difference(float *t_x, float *t_dx, float *t_ddx, float *t_flow, float t_h, int t_npop, int t_npts) {
 
@@ -329,6 +329,8 @@ static void reactions(float *t_fx, float *t_x_prev, float *t_dx, float *t_ddx, f
 
 static void goehring_step(float t, float *x, float *fx) {
 
+  ncalls++;
+
   bilinear_flow(flow, current_flow, t * flow_step, npts, nflow);
   finite_difference(x, dx, ddx, current_flow, x_step, npops, npts);
   trapezoidal_integral(x, x_step, cyto, npts, npops);
@@ -337,7 +339,7 @@ static void goehring_step(float t, float *x, float *fx) {
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-  float *time, *x, *fx, *x0, *tmp, *simulation, *curr_sim, *timing;
+  float *time, *x, *fx, *x0, *tmp, *simulation, *curr_sim, *timing, *tmp_simul;
   float tmax, output_rate, dt, current_dt, t = 0, clf_const, inv_x_step, 
         time_count = 0;
   float relerr, abserr;
@@ -415,8 +417,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     memcpy(simulation, x0, ndata);
     curr_sim = simulation + ntotal;
-    memcpy(x, x0, ndata);
+    
+    for (j = 0; j < npts; ++j) {
+      x[2*j] = x0[j];
+      x[2*j+1] = x0[j+npts];
+    }
+    //memcpy(x, x0, ndata);
+
     timing[0] = 0;
+    ncalls = 0;
 
     abserr = sqrt(r8_epsilon());
     relerr = sqrt(r8_epsilon());
@@ -427,10 +436,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       current_dt = dt;
 
       flag = r4_rkf45(goehring_step, ntotal, x, fx, &t, tmax, &relerr, abserr, prev_flag);
+      //mexPrintf("%d / %d\n", ncalls, niter);
 
       if (flag == 666) {
-        mexPrintf("Error due to flag %d\n", prev_flag);
-        return;
+        char buffer[25];
+        sprintf(buffer, "Error due to flag %d\n", prev_flag);
+        mexWarnMsgTxt(buffer);
+        break;
       } else {
         prev_flag = flag;
       }
@@ -456,17 +468,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
       }
 
-      if (t >= tmax) {
+      if (t >= tmax || ncalls >= niter) {
         break;
       }
     }
     if (!saved) {
       memcpy(curr_sim, x, ndata);
       timing[count] = t;
-    } else {
-      count--;
+      count++;
     }
-    if (j == niter) {
+    if (j == niter || ncalls == niter) {
       mexWarnMsgTxt("Simulation reached the iteration limit !");
     }
 
@@ -474,7 +485,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     data_size[1] = (int)count;
     plhs[0] = mxCreateNumericArray(2, data_size, mxSINGLE_CLASS, mxREAL);
     tmp = (float*)mxGetData(plhs[0]);
-    memcpy(tmp, simulation, count*ndata);
+
+    tmp_simul = simulation;
+    for (i=1;i<count;i++){
+      tmp += ntotal;
+      tmp_simul += ntotal;
+      for (j=0; j<npts; j++) {
+        tmp[j] = tmp_simul[2*j];
+        tmp[j+npts] = tmp_simul[2*j+1];
+      }
+    }
+
+    //memcpy(tmp, simulation, count*ndata);
     data_size[0] = 1;
     plhs[1] = mxCreateNumericArray(2, data_size, mxSINGLE_CLASS, mxREAL);
     tmp = (float*)mxGetData(plhs[1]);

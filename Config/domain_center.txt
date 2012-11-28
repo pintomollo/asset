@@ -23,17 +23,17 @@ alpha 0.65
 beta 0.885
 gamma 0.06
 delta 0
-spawn_percentile [20/opts.quantification.resolution 0.75]
+spawn_percentile [10/opts.quantification.resolution 0.5]
 spawn_type 'best'
 
 #quantification.weights
-%alpha 0.65
+alpha 0.65
 %beta 0.52
-%gamma 0.5
+%gamma 0.15
+gamma 0.175
 %delta 0.6
 
-alpha 0.96
+%alpha 0.96
 beta 0.35
-gamma 0.13
+%gamma 0.13
 delta 0.51
-%delta 0.5

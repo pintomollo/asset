@@ -37,15 +37,15 @@ function [all_x, t] = simulate_adr_mix(x0, opts)
 
   %x0 = ([1:opts.nparticles; 1:opts.nparticles].')/10;
 
-  tmp = x0;
-  tmp(1:2:end-1) = x0(1:opts.nparticles);
-  tmp(2:2:end) = x0(opts.nparticles+1:end);
-  x0 = tmp;
+  %tmp = x0;
+  %tmp(1:2:end-1) = x0(1:opts.nparticles);
+  %tmp(2:2:end) = x0(opts.nparticles+1:end);
+  %x0 = tmp;
 
-  [all_m, t] = simulate_model_mix(single(x0), single(all_params), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow), single(opts.user_data), single(opts.max_iter));
-  all_x = all_m;
-  all_x(1:opts.nparticles, :) = all_m(1:2:end-1, :);
-  all_x(opts.nparticles+1:end, :) = all_m(2:2:end, :);
+  [all_x, t] = simulate_model_mix(single(x0), single(all_params), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow), single(opts.user_data), single(opts.max_iter));
+  %all_x = all_m;
+  %all_x(1:opts.nparticles, :) = all_m(1:2:end-1, :);
+  %all_x(opts.nparticles+1:end, :) = all_m(2:2:end, :);
 
   return;
 end

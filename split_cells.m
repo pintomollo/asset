@@ -57,7 +57,7 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
   for n = 1:nframes
     %nimg = randi(nframes, 1);
     nimg = n;
-    %nimg = 852
+    %nimg = 12
 
     if (isstruct(mymovie))
       
@@ -78,13 +78,17 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
           end
           img = (img > thresh*(max(img(:))));
         case 'data'
-          img = imnorm(double(load_data(mymovie.data, nimg)));
+          %keyboard
+          
+          %img = imnorm(double(load_data(mymovie.data, nimg)));
+          img = (double(load_data(mymovie.data, nimg)));
+          noise_params = estimate_noise(img);
           img = gaussian_mex(img, size250);
           img = median_mex(img, size200, 3);
-          thresh = graythresh(img);
 
-          %img = (img > thresh*0.5*(max(img(:))) );
-          img = (img > thresh*(max(img(:))) );
+          img = (img > noise_params(1) + 10*noise_params(2));
+          %thresh = graythresh(img);
+          %img = (img > thresh*(max(img(:))) );
         otherwise
           error 'Not implemented yet'
       end
@@ -92,7 +96,9 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
       img = mymovie(:, :, nimg);
     end
 
-    %imagesc(img);hold on;
+    %imagesc(img);title(num2str(n));drawnow;
+    %keyboard
+
     img = padarray(img, [size10 size10]);
 
     img = imdilate(img, strel('disk', size150));

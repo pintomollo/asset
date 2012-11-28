@@ -5,17 +5,17 @@ domain_expansion get_struct('segmentation')
 scoring_func @weight_expansion
 
 #segmentation_parameters.domain_expansion.cortex_weights
-alpha 0.7
-beta 0.4
-gamma 0.7
+alpha 0.68
+beta 0.35
+gamma 0.74
 
 #segmentation_parameters.domain_expansion.cortex_params
 force_circularity false
 dp_method 'normal'
 init 1
 nhood 41
-alpha 0.25
-beta 0.75
+alpha 0.5
+beta 0.95
 gamma 0.15
 prohibit 'horiz'
 spawn_percentile 0.15

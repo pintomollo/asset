@@ -1,5 +1,7 @@
 function [all_x, t] = simulate_adr(x0, opts)
 
+  %%%% Adapt volume to surface ratio to real embryos
+
   if (nargin == 1)
     if (isstruct(x0))
       opts = x0;

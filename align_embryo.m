@@ -59,7 +59,8 @@ function mymovie = align_embryo(mymovie, opts)
   bins = [0:2*pi/nbins:2*pi + 1e-5];
   [counts, indx] = histc(pts(:,1), bins);
 
-  depths = mymean(pts(:,2), 1, indx);
+  depths = zeros(nbins, 1);
+  depths(counts > 0) = mymean(pts(:,2), 1, indx);
 
   myhist = counts(1:nbins/2) + counts(end-1:-1:end-nbins/2);
   mydepth = depths(1:nbins/2) + depths(end-1:-1:end-nbins/2);
