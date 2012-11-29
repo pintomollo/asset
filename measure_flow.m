@@ -25,16 +25,16 @@ function mymovie = measure_flow(mymovie, opts)
     links = mymovie.data.spots(nimg).cluster;
 
     prev_links = links(links(:,end)==nimg-1, :);
+    cortex = mymovie.data.cortex(nimg).carth;
+    ncortex = size(cortex, 1);
 
-    if (~isempty(prev_links))
+    if (~isempty(prev_links) & ncortex > 0)
 
       prev_pts = prev_pts(prev_links(:,1), :);
       pts = all_pts(prev_links(:,2), :);
 
       npts = size(pts,1);
 
-      cortex = mymovie.data.cortex(nimg).carth;
-      ncortex = size(cortex, 1);
       [perp, junk, linear] = perpendicular_sampling(cortex, opts);
 
       vector_x = bsxfun(@minus, cortex(:,1), pts(:,1).');

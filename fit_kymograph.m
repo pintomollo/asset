@@ -20,6 +20,11 @@ function uuids = fit_kymograph(fitting, opts)
     end
   end
 
+  if (fitting.fit_relative)
+    opts.reaction_params(3,:) = opts.reaction_params(3,:) .* (opts.reaction_params(5,[2 1]).^(opts.reaction_params(4,:))) ./ opts.reaction_params(4,[2 1]);
+    opts.reaction_params(5,:) = 1;
+  end
+
   switch fitting.parameter_set
     case 2
       fit_params = [4 5 12 13];
@@ -198,7 +203,11 @@ function uuids = fit_kymograph(fitting, opts)
 
       %[res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
       %[res, t] = simulate_model_sp(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
-      [res, t] = simulate_model_mix(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+      if (fitting.fit_relative)
+        [res, t] = simulate_model_rel(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+      else
+        [res, t] = simulate_model_mix(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+      end
       res = res((end/2)+1:end, :);
       if (opts.nparticles ~= ndata)
         res = interp1q(simul_pos, res, fitting.x_pos.');

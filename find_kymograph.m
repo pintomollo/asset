@@ -42,7 +42,11 @@ function find_kymograph(varargin)
           error('No suitable data for performing the fitting procedure');
         end
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        if (fitting.fit_relative)
+          fid = fopen(['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        else
+          fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        end
         fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo_name, fitting.parameter_set);
         fclose(fid);
 
@@ -75,7 +79,11 @@ function find_kymograph(varargin)
 
         uuids = fit_kymograph(fitting, opts);
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        if (fitting.fit_relative)
+          fid = fopen(['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        else
+          fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        end
         for u = 1:length(uuids)
           fprintf(fid, '%s %s OK\n', uuids{u}, kymo_name);
         end
@@ -85,11 +93,19 @@ function find_kymograph(varargin)
 
         warning('Error during the fitting procedure');
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        if (fitting.fit_relative)
+          fid = fopen(['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        else
+          fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
+        end
         fprintf(fid, '-1 %s NO\n', kymo_name);
         fclose(fid);
 
-        fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.log'], 'a');
+        if (fitting.fit_relative)
+          fid = fopen(['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.log'], 'a');
+        else
+          fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.log'], 'a');
+        end
         print_all(fid, ME);
         fclose(fid);
 

@@ -30,16 +30,16 @@ function mymovie = dp_data(mymovie, nimg, opts)
 
       eggshell = get_struct('eggshell',[1,nframes]);
       cortex = get_struct('cortex',[1,nframes]);
-      ruffles = get_struct('ruffles',[1, nframes]);
-      
-      if (~isfield(mymovie.data, 'neighbors') | isempty(mymovie.data.neighbors))
-        mymovie = split_cells(mymovie, opts);
-      end
+      ruffles = get_struct('ruffles',[1, nframes]); 
     end
   else
     error 'No suitable channels available for the data segmentation'; 
 
     return;
+  end
+
+  if (~isfield(mymovie.data, 'neighbors') | isempty(mymovie.data.neighbors) | empty_struct(mymovie.data.neighbors, 'axes_length'))
+    mymovie = split_cells(mymovie, opts);
   end
 
   neighbors = mymovie.data.neighbors;

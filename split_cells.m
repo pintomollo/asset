@@ -78,15 +78,18 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
           end
           img = (img > thresh*(max(img(:))));
         case 'data'
-          %keyboard
-          
           %img = imnorm(double(load_data(mymovie.data, nimg)));
           img = (double(load_data(mymovie.data, nimg)));
           noise_params = estimate_noise(img);
+          vals = range(img(:));
+
+          noise_thresh = min(round(vals / (15*noise_params(2))) + 1, 10);
+
           img = gaussian_mex(img, size250);
           img = median_mex(img, size200, 3);
 
-          img = (img > noise_params(1) + 10*noise_params(2));
+          %img = (img > noise_params(1) + 10*noise_params(2));
+          img = (img > noise_params(1) + noise_thresh*noise_params(2));
           %thresh = graythresh(img);
           %img = (img > thresh*(max(img(:))) );
         otherwise

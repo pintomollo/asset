@@ -30,14 +30,14 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     eggshell = get_struct('eggshell',[1,nframes]);
     cortex = get_struct('cortex',[1,nframes]);
     ruffles = get_struct('ruffles',[1, nframes]);
-    
-    if (~isfield(mymovie.markers, 'neighbors') | isempty(mymovie.markers.neighbors))
-      mymovie = split_cells(mymovie, opts);
-    end
   else
     error 'No suitable channels available for the markers segmentation'; 
 
     return;
+  end
+
+  if (~isfield(mymovie.markers, 'neighbors') | isempty(mymovie.markers.neighbors) | empty_struct(mymovie.markers.neighbors, 'axes_length'))
+    mymovie = split_cells(mymovie, opts);
   end
 
   neighbors = mymovie.markers.neighbors;

@@ -26,6 +26,8 @@ function mymovie = perform_application(mymovie, opts)
           if (~done_timing)
             mymovie = detect_dic_nuclei(mymovie, opts);
           end
+        case 'flow'
+          mymovie = measure_flow(mymovie, opts);
         otherwise
           warning(['Application ' opts.application{i} ' not implemented.']);
       end

@@ -31,10 +31,6 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       eggshell = get_struct('eggshell',[1,nframes]);
       cortex = get_struct('cortex',[1,nframes]);
       ruffles = get_struct('ruffles',[1, nframes]);
-
-      if (~isfield(mymovie.dic, 'neighbors') | isempty(mymovie.dic.neighbors))
-        mymovie = split_cells(mymovie, opts);
-      end
     end
 
     mymovie.dic.eggshell = eggshell;
@@ -51,8 +47,9 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     return;
   end
 
-  %keyboard
- %nimg
+  if (~isfield(mymovie.dic, 'neighbors') | isempty(mymovie.dic.neighbors) | empty_struct(mymovie.dic.neighbors, 'axes_length'))
+    mymovie = split_cells(mymovie, opts);
+  end
 
   neighbors = mymovie.dic.neighbors;
   parameters = opts.segmentation_parameters.dic;
