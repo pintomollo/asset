@@ -477,7 +477,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       timing[count] = t;
       count++;
     }
-    if (j == niter || ncalls == niter) {
+    if (j >= niter || ncalls >= niter) {
       mexWarnMsgTxt("Simulation reached the iteration limit !");
     }
 
@@ -485,6 +485,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     data_size[1] = (int)count;
     plhs[0] = mxCreateNumericArray(2, data_size, mxSINGLE_CLASS, mxREAL);
     tmp = (float*)mxGetData(plhs[0]);
+
+    memcpy(tmp, simulation, ndata);
 
     tmp_simul = simulation;
     for (i=1;i<count;i++){

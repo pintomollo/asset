@@ -22,7 +22,7 @@ function uuids = fit_simulation(param_set, init_noise, noise_data, nfits, opts)
       fit_params = [4 10];
   end
 
-  RandStream.setDefaultStream(RandStream('mt19937ar','Seed', now + cputime));
+  rng(now + cputime, 'twister');
   uuids = NaN(nfits, 1);
 
   x0 = opts.init_params;

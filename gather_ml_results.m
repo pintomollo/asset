@@ -48,7 +48,7 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
       
       if (~any(done))
         results(end+1, 1) = tmp{1}(2);
-        results(end, 2) = {tmp{1}{1}};
+        results(end, 2) = {{tmp{1}{1}}};
       else
         results(done, 2) = {[results{done, 2}; tmp{1}(1)]};
       end

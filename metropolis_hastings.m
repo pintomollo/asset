@@ -35,7 +35,7 @@ function metropolis_hastings(fitting, opts)
       fit_params = [4 12];
   end
 
-  RandStream.setDefaultStream(RandStream('mt19937ar','Seed',now + cputime));
+  rng(now + cputime, 'twister');
   add_noise = (fitting.data_noise > 0);
 
   if (strncmp(fitting.type, 'data', 4))

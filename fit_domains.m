@@ -34,7 +34,7 @@ function fit_domains(fname, incremental, share_work)
     incremental = true;
   end
 
-  RandStream.setDefaultStream(RandStream('mt19937ar','Seed',data.uuid));
+  rng(data.uuid, 'twister');
 
   replicates = 1:3;
   t_choices = 0:3;

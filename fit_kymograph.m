@@ -40,7 +40,7 @@ function uuids = fit_kymograph(fitting, opts)
       fit_params = [4 12];
   end
 
-  RandStream.setDefaultStream(RandStream('mt19937ar','Seed', now + cputime));
+  rng(now + cputime, 'twister');
   uuids = cell(fitting.nfits, 1);
 
   if (strncmp(fitting.type, 'data', 4))
@@ -95,6 +95,11 @@ function uuids = fit_kymograph(fitting, opts)
     frac_indx = find(f > fitting.fraction, 1, 'first');
   end
 
+  if (strncmp(fitting.aligning_type, 'lsr', 3))
+    sindx = round(size(fitting.ground_truth, 2) / 2);
+    mean_ground_truth = mymean(fitting.ground_truth, 2);
+  end
+
   multi_data = (numel(size_data) > 2 & size_data(3) > 1);
   if (multi_data)
     nlayers = size_data(3);
@@ -117,6 +122,7 @@ function uuids = fit_kymograph(fitting, opts)
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
   penalty = ((median(linear_truth(linear_goods)))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
+  stable = 0;
 
   full_error = penalty * size_data(2) * 10;
   log_error = -log(penalty);
@@ -259,6 +265,11 @@ function uuids = fit_kymograph(fitting, opts)
           end
         case 'end'
           corr_offset = size_data(2) - size(res, 2) + 1;
+        case 'lsr'
+          rindx = min(sindx, size(res, 2));
+
+          [junk, junk2, rindx] = find_min_residue(mean_ground_truth, sindx, res, rindx, 0.95);
+          corr_offset = sindx - rindx;
       end
 
       gindxs = [0:size(res, 2)-1];
@@ -271,6 +282,9 @@ function uuids = fit_kymograph(fitting, opts)
         tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
 
         res = tmp;
+        if (~fitting.fit_full)
+          stable = -1/log(mymean(mymean(abs(diff(res, [], 2)))));
+        end
         if (multi_data)
           res = repmat(res, [1 1 nlayers]);
         end
@@ -296,7 +310,9 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err(:));
 
-        err_all(i) = score_coeff*err_all(i) + penalty*(~correct);
+        err_all(i) = (score_coeff + stable)*err_all(i) + penalty*(~correct);
+
+        %keyboard
 
         %if (isnan(err_all(i)))
         %  beep;beep;keyboard

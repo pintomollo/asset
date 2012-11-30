@@ -71,7 +71,7 @@ function [chi2ple, psple, errors] = model_identifiability(param_set, temp, nstep
   temp_norm = 1/(temp^2);
 
   uuid = now + cputime;
-  RandStream.setDefaultStream(RandStream('mt19937ar','Seed',uuid));
+  rng(uuid, 'twister');
   
   if (test_distribution)
     noisy = false;

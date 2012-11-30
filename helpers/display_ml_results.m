@@ -2,6 +2,7 @@
 function p = display_ml_results(varargin)
 
   [p, show_evolution, store_pattern] = parse_input(varargin{:});
+
   store_pics = (~isempty(store_pattern));
 
   if (iscell(p))
@@ -31,7 +32,11 @@ function p = display_ml_results(varargin)
     scores = log(real_scores);
     score_range = range(scores);
     score_min = min(scores);
-    colors = bsxfun(@times, [0 0 1], 1 - (scores-score_min)/score_range);
+    if (score_range == 0) 
+      colors = [0 0 1];
+    else
+      colors = bsxfun(@times, [0 0 1], 1 - (scores-score_min)/score_range);
+    end
     [cvals, indx] = sort(real_scores);
     cmap = colors(indx, :);
     labels = [num2str(cvals) repmat(' (', length(indx), 1) num2str(indx) repmat(')', length(indx), 1)];
@@ -226,7 +231,7 @@ function [p, show_evolution, store_pattern] = parse_input(varargin)
   p = {};
   show_evolution = false;
   store_pattern = '';
-  file_pattern = '';
+  file_pattern = 'adr-kymo-%.4f_evol.dat';
   param_transform = @(x)(x.^2);
 
   % Check what we got as inputs
