@@ -1,7 +1,7 @@
 function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
 
-  all_mvals = [];
-  all_svals = [];
+  all_mvals = all_vals;
+  all_svals = NaN;
   groups = [];
 
   vals_size = size(all_vals);

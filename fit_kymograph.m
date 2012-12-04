@@ -42,6 +42,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   rng(now + cputime, 'twister');
   uuids = cell(fitting.nfits, 1);
+  dp = 1e-3;
 
   if (strncmp(fitting.type, 'data', 4))
     if (isempty(fitting.ground_truth))
@@ -131,14 +132,6 @@ function uuids = fit_kymograph(fitting, opts)
   rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
 
-  opt = cmaes('defaults');
-  opt.MaxFunEvals = fitting.max_iter;
-  opt.TolFun = 1e-5;
-  opt.SaveFilename = '';
-  opt.SaveVariables = 'off';
-  opt.EvalParallel = 'yes';
-  opt.LogPlot = 0;
-
   if (strncmp(fitting.type, 'simulation', 5))
     noiseless = fitting.ground_truth;
     range_data = fitting.data_noise * range(linear_truth);
@@ -146,7 +139,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   for f = 1:fitting.nfits
     uuids{f} = num2str(now + cputime);
-    opt.LogFilenamePrefix = ['adr-kymo-' uuids{f} '_'];
+    log_name = ['adr-kymo-' uuids{f} '_'];
 
     tmp_params = ml_params;
 
@@ -171,7 +164,44 @@ function uuids = fit_kymograph(fitting, opts)
       display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
     end
 
-    [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, sqrt(p0(:)), 0.5, opt);
+    p0 = sqrt(p0(:));
+
+    switch (fitting.fitting_type)
+      case 'cmaes'
+
+        opt = cmaes('defaults');
+        opt.MaxFunEvals = fitting.max_iter;
+        opt.TolFun = dp;
+        opt.SaveFilename = '';
+        opt.SaveVariables = 'off';
+        opt.EvalParallel = 'yes';
+        opt.LogPlot = 0;
+        opt.LogFilenamePrefix = log_name;
+
+        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.25, opt); 
+      case 'pso'
+        opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 dp 250 NaN 0 0];
+        opt(2) = fitting.max_iter;
+        opt(9) = 1e-10;
+        opt(12) = 1;
+        opt(13) = 1;
+     
+
+        bounds = [zeros(nparams, 1) ones(nparams, 1)*10];
+        [pbest, tr, te] = pso_Trelea_vectorized(@error_function, nparams, NaN, bounds, 0, opt, '', p0.', [log_name 'evol']);
+        p = pbest(1:end-1);
+      case 'godlike'
+        opt = set_options('Display', 'on', 'MaxIters', fitting.max_iter, 'TolFun', dp, 'LogFile', [log_name 'evol']);
+        which_algos = {'DE';'GA';'PSO';'ASA'};
+        which_algos = which_algos(randperm(4));
+        [p, fval] = GODLIKE(@error_function, 20, zeros(nparams,1), ones(nparams,1) * 10, which_algos, opt);
+
+      otherwise
+        error [opts.do_ml ' machine learning algorithm is not implemented'];
+
+        return;
+    end
+
     p = p.^2;
 
     display(['Best (' num2str(p.') ')']);

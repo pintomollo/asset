@@ -264,7 +264,7 @@ function [p, show_evolution, store_pattern] = parse_input(varargin)
         if (isstruct(s))
           s.params = param_transform(s.params);
           if (show_evolution)
-            s.evolution{i}(:,2:end) = param_transform(s.evolution{1}(:,2:end));
+            s.evolution{1}(:,2:end) = param_transform(s.evolution{1}(:,2:end));
           end
           p{i,2}{j,1}(end) = s;
         end

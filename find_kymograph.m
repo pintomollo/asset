@@ -77,7 +77,11 @@ function find_kymograph(varargin)
           end
         end
 
-        uuids = fit_kymograph(fitting, opts);
+        if (strncmp(fitting.fitting_type, 'mcmc', 4))
+          uuids = metropolis_hastings(fitting, opts);
+        else
+          uuids = fit_kymograph(fitting, opts);
+        end
 
         if (fitting.fit_relative)
           fid = fopen(['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');

@@ -1,4 +1,4 @@
-function metropolis_hastings(fitting, opts)
+function uuids = metropolis_hastings(fitting, opts)
 
   if (nargin == 0)
     fitting = get_struct('fitting');
@@ -20,6 +20,11 @@ function metropolis_hastings(fitting, opts)
     end
   end
 
+  if (fitting.fit_relative)
+    opts.reaction_params(3,:) = opts.reaction_params(3,:) .* (opts.reaction_params(5,[2 1]).^(opts.reaction_params(4,:))) ./ opts.reaction_params(4,[2 1]);
+    opts.reaction_params(5,:) = 1;
+  end
+
   switch fitting.parameter_set
     case 2
       fit_params = [4 5 12 13];
@@ -37,6 +42,7 @@ function metropolis_hastings(fitting, opts)
 
   rng(now + cputime, 'twister');
   add_noise = (fitting.data_noise > 0);
+  uuids = cell(fitting.nfits, 1);
 
   if (strncmp(fitting.type, 'data', 4))
     if (isempty(fitting.ground_truth))
@@ -76,7 +82,7 @@ function metropolis_hastings(fitting, opts)
 
   if (~fitting.fit_full)
     nmaintenance = min(size(fitting.ground_truth, 2), 50) - 1;
-    fitting.ground_truth = fitting.ground_truth(:, end-nmaintenance:end);
+    fitting.ground_truth = fitting.ground_truth(:, end-nmaintenance:end, :);
     fitting.t_pos = fitting.t_pos(end-nmaintenance:end);
     fitting.aligning_type = 'end';
     fitting.fit_flow = false;
@@ -85,15 +91,42 @@ function metropolis_hastings(fitting, opts)
   size_data = size(fitting.ground_truth);
 
   if (strncmp(fitting.aligning_type, 'domain', 6))
-    opts_expansion = load_parameters(opts, 'domain_expansion.txt');
-    f = domain_expansion((fitting.ground_truth(1:end/2, :) + fitting.ground_truth((end/2)+1:end, :)).', size_data(1)/2, size_data(2), opts_expansion);
+    opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
+    f = domain_expansion(mymean(fitting.ground_truth(1:end/2, :, :), 3).', mymean(fitting.ground_truth((end/2)+1:end, :, :), 3).', size_data(1)/2, size_data(2), opts_expansion);
+    %opts_expansion = load_parameters(opts, 'domain_expansion.txt');
+    %f = domain_expansion((fitting.ground_truth(1:end/2, :) + fitting.ground_truth((end/2)+1:end, :)).', size_data(1)/2, size_data(2), opts_expansion);
     frac_indx = find(f > fitting.fraction, 1, 'first');
   end
 
+  if (strncmp(fitting.aligning_type, 'lsr', 3))
+    sindx = round(size(fitting.ground_truth, 2) / 2);
+    mean_ground_truth = mymean(fitting.ground_truth, 2);
+  end
+
+  multi_data = (numel(size_data) > 2 & size_data(3) > 1);
+  if (multi_data)
+    nlayers = size_data(3);
+    size_data = size_data(1:2);
+  end
+
+  if (strncmp(fitting.scale_type, 'normalize', 10))
+    if (multi_data)
+      for i=1:nlayers
+        tmp = fitting.ground_truth(:,:,i);
+        fitting.ground_truth(:,:,i) = tmp / mymean(tmp(:));
+      end
+    else
+      fitting.ground_truth = fitting.ground_truth / mymean(fitting.ground_truth(:));
+    end
+  end
+
   linear_truth = fitting.ground_truth(:);
+  linear_goods = ~isnan(linear_truth);
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
-  penalty = -((median(linear_truth))^2)*opts.nparticles;
+  penalty = -((median(linear_truth(linear_goods)))^2)*opts.nparticles;
+  %penalty = -((median(linear_truth))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
+  stable = 0;
 
   full_error = penalty * size_data(2) * 10;
   log_error = -log(penalty);
@@ -107,32 +140,69 @@ function metropolis_hastings(fitting, opts)
     range_data = fitting.data_noise * range(linear_truth);
   end
 
-  p0 = ml_params(fit_params);
+%  p0 = ml_params(fit_params);
 
-  if (fitting.fit_flow)
-    p0 = [p0 1];
-  else
-    flow_scale = 1;
-  end
+%  if (fitting.fit_flow)
+%    p0 = [p0 1];
+%  else
+%    flow_scale = 1;
+%  end
 
-  size_params = length(p0);
-  temp_norm = 1/(fitting.temperature^2);
+  size_params = length(fit_params);
+%  temp_norm = 1/(fitting.temperature^2);
 
-  for n=1:fitting.nfits
-    p_current = p0;
+%  figure;
+%  imagesc(mymean(fitting.ground_truth, 3));
+%  figure;
+
+  for f = 1:fitting.nfits
+    uuids{f} = num2str(now + cputime);
+    opt.LogFilenamePrefix = ['adr-kymo-' uuids{f} '_'];
+
+    tmp_params = ml_params;
+
+    p0 = ml_params(fit_params);
+
+    if (fitting.fit_flow)
+      p0 = [p0 1];
+      size_data = size_data + 1;
+    else
+      flow_scale = 1;
+    end
+
+    p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
+    nparams = length(p0);
+
+    if (strncmp(fitting.type, 'simulation', 5))
+      fitting.ground_truth = noiseless + range_data*randn(size_data);
+    end
+
+    if (fitting.fit_flow)
+      display(['Exploring ' num2str(nparams) ' parameters (' num2str(fit_params) ' & flow):']);
+    else
+      display(['Exploring ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
+    end
+
+    p_current = sqrt(p0);
     ndiscard = 0;
     correct = true;
 
-    uuid = now + cputime;
-    fid = fopen(['mcmc-' num2str(uuid) '.txt'], 'w');
+    %uuid = now + cputime;
+    %fid = fopen(['mcmc-' num2str(uuid) '.txt'], 'w');
+    fid = fopen(['mcmc-' num2str(uuids{f}) '.txt'], 'w');
 
-    print_all(fid, fitting);
+    tmp_fit = fitting;
+    tmp_fit.ground_truth = [];
+    print_all(fid, tmp_fit);
 
-    fprintf(fid, '0 (-1, 0, 0) :');
-    fprintf(fid, ' %f', p_current);
-    fprintf(fid, '\n');
+    if (strncmp(fitting.type, 'simulation', 5))
+      best_score = likelihood(p_current);
+      fprintf(fid, '%e (-1, 0, 0) :', best_score);
+      fprintf(fid, ' %f', p_current);
+      fprintf(fid, '\n');
+    end
 
-    display(['Working ID ' num2str(uuid)]);
+    %display(['Working ID ' num2str(uuid)]);
 
     has_error = 0;
     tmp_params = ml_params;
@@ -144,8 +214,14 @@ function metropolis_hastings(fitting, opts)
     fprintf(fid, ' %f', p_current);
     fprintf(fid, '\n');
 
+    cpb = ConsoleProgressBar();
+    cpb.setLength(100);      % progress bar length: [.....]
+    cpb.setMinimum(0);
+    cpb.setMaximum(fitting.max_iter);
+    cpb.start();
+
     for i=1:fitting.max_iter
-      p_new = exp(log(p_current) + fitting.step_size*randn(1, size_params, 1));
+      p_new = exp(log(p_current) + fitting.step_size*randn(1, size_params));
       new_score = likelihood(p_new);
       ratio = exp(new_score - best_score);
       rand_val = rand(1);
@@ -160,7 +236,11 @@ function metropolis_hastings(fitting, opts)
       fprintf(fid, '%e (%d, %d, %d) :', new_score, i, ndiscard, has_error);
       fprintf(fid, ' %f', p_new);
       fprintf(fid, '\n');
+
+      cpb.setValue(i);
     end
+
+    cpb.stop();
 
     fclose(fid);
   end
@@ -168,6 +248,8 @@ function metropolis_hastings(fitting, opts)
   return;
 
   function L = likelihood(params)
+
+    params = params.^2;
 
     if (fitting.fit_flow)
       flow_scale = params(end);
@@ -181,23 +263,29 @@ function metropolis_hastings(fitting, opts)
       [x0, correct] = opts.init_func(opts);
     end
 
-    [res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
+    %[res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
+    if (fitting.fit_relative)
+      [res, t] = simulate_model_rel(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+    else
+      [res, t] = simulate_model_mix(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+    end
     res = res((end/2)+1:end, :);
     if (opts.nparticles ~= ndata)
       res = interp1q(simul_pos, res, fitting.x_pos.');
     end
+    score_coeff = 1 + (opts.tmax - t(end)) / opts.tmax;
 
     res = [res; res];
 
     switch fitting.aligning_type
       case 'best'
         if (length(t) < size_data(2))
-          cc = normxcorr2(res, fitting.ground_truth); 
+          cc = normxcorr2(res, mymean(fitting.ground_truth,3)); 
           
           [max_cc, imax] = max(cc(size(res, 1), :));
           corr_offset = -(imax-size(res, 2));
         elseif (all(isfinite(res)))
-          cc = normxcorr2(fitting.ground_truth, res); 
+          cc = normxcorr2(mymean(fitting.ground_truth, 3), res); 
 
           [max_cc, imax] = max(cc(size_data(1), :));
           corr_offset = -(imax-size_data(2));
@@ -205,7 +293,14 @@ function metropolis_hastings(fitting, opts)
           corr_offset = 0;
         end
       case 'domain'
-        f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+        %f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+        if (size(res,2) <= 10)
+          L = -Inf;
+          return;
+          %continue;
+        else
+          f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+        end
 
         if (isnan(f(end)))
           L = -Inf;
@@ -219,6 +314,11 @@ function metropolis_hastings(fitting, opts)
         end
       case 'end'
         corr_offset = size_data(2) - size(res, 2) + 1;
+      case 'lsr'
+        rindx = min(sindx, size(res, 2));
+
+        [junk, junk2, rindx] = find_min_residue(mean_ground_truth, sindx, res, rindx, 0.95);
+        corr_offset = sindx - rindx;
     end
 
     gindxs = [0:size(res, 2)-1];
@@ -231,26 +331,77 @@ function metropolis_hastings(fitting, opts)
       tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
 
       res = tmp;
-
-      if (fitting.scale_data)
-        gres = ~isnan(res(:));
-        c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
-        
-        if (c(2) <= 0)
-          L = -Inf;
-          return;
-        end
-
-        res = c(1) + c(2)*res;
+      if (~fitting.fit_full)
+        stable = -1/log(mymean(mymean(abs(diff(res, [], 2)))));
       end
-      if (add_noise)
-        L = sum(-((fitting.ground_truth + randn(size_data)*range_data - res).^2) / 2);
-      else
-        L = sum(-((fitting.ground_truth - res).^2) / 2);
+      if (multi_data)
+        res = repmat(res, [1 1 nlayers]);
       end
-      has_error = sum(~isfinite(L(:)));
-      L(~isfinite(L)) = penalty;
-      L = (sum(L) + penalty*(~correct)) * temp_norm;
+
+      switch (fitting.scale_type)
+        case 'best'
+          gres = ~isnan(res(:)) & linear_goods;
+          c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
+          
+          if (c(2) <= 0)
+            L = -Inf;
+            return;
+            %err_all(i) = Inf;
+            %continue;
+          end
+
+          res = c(1) + c(2)*res;
+        case 'normalize'
+          res = res / mymean(res(:));
+      end
+
+      %tmp = ones(size_data)*res(1, 2);
+      %tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
+
+      %res = tmp;
+
+      %if (fitting.scale_data)
+      %  gres = ~isnan(res(:));
+      %  c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
+      %  
+      %  if (c(2) <= 0)
+      %    L = -Inf;
+      %    return;
+      %  end
+%
+      %  res = c(1) + c(2)*res;
+      %end
+      %if (add_noise)
+      %  L = sum(-((fitting.ground_truth + randn(size_data)*range_data - res).^2) / 2);
+      %else
+      %  L = sum(-((fitting.ground_truth - res).^2) / 2);
+      %end
+      %has_error = sum(~isfinite(L(:)));
+      %L(~isfinite(L)) = penalty;
+      %L = (sum(L) + penalty*(~correct)) * temp_norm;
+
+      %subplot(1,2,1);
+      %imagesc(mymean(res, 3));
+      %title(num2str(params));
+
+      tmp_err = -(fitting.ground_truth - res).^2;
+
+      %subplot(1,2,2);
+      %imagesc(mymean(tmp_err, 3));
+
+      tmp_err(~isfinite(fitting.ground_truth)) = 0;
+      tmp_err = sum(tmp_err, 1);
+
+      has_error = sum(~isfinite(tmp_err(:)));
+
+      tmp_err(~isfinite(tmp_err)) = penalty;
+      tmp_err = sum(tmp_err(:));
+
+      L = (score_coeff + stable)*tmp_err + penalty*(~correct);
+
+      %title([num2str(L) ' : ' num2str(score_coeff) ', ' num2str(tmp_err) ', ' num2str(penalty) ', ' num2str(correct) ', ' num2str(stable)]);
+
+      %keyboard
     end
 
     return;
