@@ -82,11 +82,17 @@ function [fraction, max_width, cell_width, raw_domain, pos] = domain_expansion(d
   domain = imnorm(domain(1:cytok, :));
   path = dynamic_programming(domain, opts.segmentation_parameters.domain_expansion.cortex_params, opts.segmentation_parameters.domain_expansion.scoring_func, opts.segmentation_parameters.domain_expansion.cortex_weights, opts);
 
+  %figure;
+  %imagesc(domain);hold on;
+  %plot(path, 1:length(path), 'k');figure;
+
   cell_width = median(2*sum(~isnan(domain(end-5:end, :)), 2) - 1) * opts.quantification.resolution;
   max_width = max(path(end-5:end));
   fraction = path / max_width;
 
-  max_width = max_width * opts.quantification.resolution;
+  if (opts.quantification.resolution > 0)
+    max_width = max_width * opts.quantification.resolution;
+  end
 
 %  if (~isempty(mymovie))
 %    mymovie.quantification.

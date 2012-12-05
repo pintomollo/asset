@@ -43,6 +43,9 @@ function uuids = fit_kymograph(fitting, opts)
   rng(now + cputime, 'twister');
   uuids = cell(fitting.nfits, 1);
   dp = 1e-3;
+  tail_coeff = 2;
+  stable_coeff = 2;
+  close_coeff = 10;
 
   if (strncmp(fitting.type, 'data', 4))
     if (isempty(fitting.ground_truth))
@@ -92,7 +95,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (strncmp(fitting.aligning_type, 'domain', 6))
     opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
-    f = domain_expansion(mymean(fitting.ground_truth(1:end/2, :, :), 3).', mymean(fitting.ground_truth((end/2)+1:end, :, :), 3).', size_data(1)/2, size_data(2), opts_expansion);
+    [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth(1:end/2, :, :), 3).', mymean(fitting.ground_truth((end/2)+1:end, :, :), 3).', size_data(1)/2, size_data(2), opts_expansion);
     frac_indx = find(f > fitting.fraction, 1, 'first');
   end
 
@@ -124,6 +127,7 @@ function uuids = fit_kymograph(fitting, opts)
   penalty = ((median(linear_truth(linear_goods)))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
   stable = 0;
+  closeness = 0;
 
   full_error = penalty * size_data(2) * 10;
   log_error = -log(penalty);
@@ -204,7 +208,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     p = p.^2;
 
-    display(['Best (' num2str(p.') ')']);
+    display(['Best (' num2str(p(:).') ')']);
   end
 
   return;
@@ -240,9 +244,13 @@ function uuids = fit_kymograph(fitting, opts)
       %[res, t] = simulate_model(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
       %[res, t] = simulate_model_sp(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
       if (fitting.fit_relative)
-        [res, t] = simulate_model_rel(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+        %[res, t] = simulate_model_rel(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+        %[res, t] = simulate_model_rel(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
+        [res, t] = simulate_model_rel(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
       else
-        [res, t] = simulate_model_mix(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+        %[res, t] = simulate_model_mix(single(x0), single(tmp_params .* rescaling), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow * flow_scale), single(opts.user_data), single(opts.max_iter));
+        %[res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
+        [res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
       end
       res = res((end/2)+1:end, :);
       if (opts.nparticles ~= ndata)
@@ -252,6 +260,7 @@ function uuids = fit_kymograph(fitting, opts)
       %  keyboard;
       %end
       score_coeff = 1 + (opts.tmax - t(end)) / opts.tmax;
+      stable = -1/log(mymean(mymean(abs(diff(res(:,end-min(10, length(t))+1:end), [], 2)))));
       
       res = [res; res];
 
@@ -280,7 +289,7 @@ function uuids = fit_kymograph(fitting, opts)
             err_all(i) = Inf;
             continue;
           else
-            f = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+            [f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
           end
 
           if (isnan(f(end)))
@@ -289,6 +298,7 @@ function uuids = fit_kymograph(fitting, opts)
           end
           findx = find(f > fitting.fraction, 1, 'first');
           corr_offset = frac_indx - findx + 1;
+          closeness = 4*(abs(frac_width - fwidth)/full_width);
           
           if (isempty(corr_offset))
             corr_offset = NaN;
@@ -312,9 +322,6 @@ function uuids = fit_kymograph(fitting, opts)
         tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
 
         res = tmp;
-        if (~fitting.fit_full)
-          stable = -1/log(mymean(mymean(abs(diff(res, [], 2)))));
-        end
         if (multi_data)
           res = repmat(res, [1 1 nlayers]);
         end
@@ -335,12 +342,17 @@ function uuids = fit_kymograph(fitting, opts)
         end
         
         tmp_err = (fitting.ground_truth - res).^2;
-        tmp_err(isnan(fitting.ground_truth)) = 0;
+        if (fitting.fit_full)
+          tmp_err(:, round(end/2):end,:) = tmp_err(:, round(end/2):end,:)*tail_coeff;
+        end
+
+        tmp_err(~isfinite(fitting.ground_truth)) = 0;
         tmp_err = sum(tmp_err, 1);
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err(:));
 
-        err_all(i) = (score_coeff + stable)*err_all(i) + penalty*(~correct);
+        %err_all(i) = (score_coeff + stable)*err_all(i) + penalty*(~correct);
+        err_all(i) = (score_coeff + stable_coeff*stable + close_coeff*closeness)*err_all(i) + penalty*(~correct);
 
         %keyboard
 

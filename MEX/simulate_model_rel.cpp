@@ -339,33 +339,48 @@ static void goehring_step(float t, float *x, float *fx) {
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-  float *time, *x, *fx, *x0, *tmp, *simulation, *curr_sim, *timing, *tmp_simul;
-  float tmax, output_rate, dt, current_dt, t = 0, clf_const, inv_x_step, 
-        time_count = 0;
+  double *tmp_vect_dbl;
+  float *x, *fx, *x0, *simulation, *curr_sim, *timing, *tmp_simul;
+  float tmax, output_rate, dt, current_dt, t = 0, time_count = 0;
   float relerr, abserr;
   int ntimes, count = 1, page_size = 500, i, j, niter, ntotal, ndata;
-  int flag, prev_flag, data_size[2];
+  int flag, prev_flag;
   bool saved = false;
-  mwSize m, n;
 
   if (nrhs != 9) {
     mexErrMsgTxt("Simulation requires 9 input arguments !");
   } else {
 
-    x0 = (float*)mxGetData(prhs[0]);
     npts = mxGetM(prhs[0]);
     npops = mxGetN(prhs[0]);
     ntotal = npts*npops;
     ndata = ntotal*sizeof(float);
 
-    params = (float*)mxGetData(prhs[1]);
     nparams = mxGetM(prhs[1]);
     if (mxGetN(prhs[1]) != npops) {
       mexErrMsgTxt("Parameters have to be defined for every population");
     }
 
+    if ((x = (float*) _mm_malloc(ndata, 16)) == NULL) {
+      mexErrMsgTxt("Memory allocation failed !");
+    } else {
+      tmp_vect_dbl = mxGetPr(prhs[0]);
+      for (i=0; i < npts; i++) {
+        x[2*i] = (float)tmp_vect_dbl[i];
+        x[2*i+1] = (float)tmp_vect_dbl[i+npts];
+      }
+    }
+
+    if ((params = (float *)mxCalloc(nparams*npops, sizeof(float))) == NULL) {
+      mexErrMsgTxt("Memory allocation failed !");
+    } else {
+      tmp_vect_dbl = mxGetPr(prhs[1]);
+      for (i=0; i < nparams*npops; i++) {
+        params[i] = (float)tmp_vect_dbl[i];
+      }
+    }
+
     x_step = (float) mxGetScalar(prhs[2]);
-    inv_x_step = 1 / x_step;
     tmax = (float) mxGetScalar(prhs[3]);
     dt = (float) mxGetScalar(prhs[4]);
     output_rate = (float) mxGetScalar(prhs[5]);
@@ -381,17 +396,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     if ((flow = (float*) _mm_malloc(nflow*npts * sizeof(float), 16)) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
+    } else {
+      tmp_vect_dbl = mxGetPr(prhs[6]);
+      for (i=0; i < nflow*npts; i++) {
+        flow[i] = (float)tmp_vect_dbl[i];
+      }
     }
-    memcpy(flow, (float*)mxGetData(prhs[6]), nflow*npts*sizeof(float));
 
     flow_step = (float) (1 / mxGetScalar(prhs[7]));
     ntimes = ceil(tmax / output_rate) + 1;
 
     niter = (int)(mxGetScalar(prhs[8]));
 
-    if ((x = (float*) _mm_malloc(ndata, 16)) == NULL) {
-      mexErrMsgTxt("Memory allocation failed !");
-    }
     if ((fx = (float*) _mm_malloc(ndata, 16)) == NULL) {
       mexErrMsgTxt("Memory allocation failed !");
     }
@@ -415,14 +431,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mexErrMsgTxt("Memory allocation failed !");
     }
 
-    memcpy(simulation, x0, ndata);
+    memcpy(simulation, x, ndata);
     curr_sim = simulation + ntotal;
-    
-    for (j = 0; j < npts; ++j) {
-      x[2*j] = x0[j];
-      x[2*j+1] = x0[j+npts];
-    }
-    //memcpy(x, x0, ndata);
 
     timing[0] = 0;
     ncalls = 0;
@@ -436,7 +446,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       current_dt = dt;
 
       flag = r4_rkf45(goehring_step, ntotal, x, fx, &t, tmax, &relerr, abserr, prev_flag);
-      //mexPrintf("%d / %d\n", ncalls, niter);
 
       if (flag == 666) {
         char buffer[25];
@@ -481,34 +490,36 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       mexWarnMsgTxt("Simulation reached the iteration limit !");
     }
 
-    data_size[0] = (int)npops*npts;
-    data_size[1] = (int)count;
-    plhs[0] = mxCreateNumericArray(2, data_size, mxSINGLE_CLASS, mxREAL);
-    tmp = (float*)mxGetData(plhs[0]);
-
-    memcpy(tmp, simulation, ndata);
+    plhs[0] = mxCreateDoubleMatrix(ntotal, count, mxREAL);
+    tmp_vect_dbl = mxGetPr(plhs[0]);
 
     tmp_simul = simulation;
+    for (j=0; j<npts; j++) {
+      tmp_vect_dbl[j] = (double)tmp_simul[2*j];
+      tmp_vect_dbl[j+npts] = (double)tmp_simul[2*j+1];
+    }
     for (i=1;i<count;i++){
-      tmp += ntotal;
+      tmp_vect_dbl += ntotal;
       tmp_simul += ntotal;
       for (j=0; j<npts; j++) {
-        tmp[j] = tmp_simul[2*j];
-        tmp[j+npts] = tmp_simul[2*j+1];
+        tmp_vect_dbl[j] = (double)tmp_simul[2*j];
+        tmp_vect_dbl[j+npts] = (double)tmp_simul[2*j+1];
       }
     }
 
-    //memcpy(tmp, simulation, count*ndata);
-    data_size[0] = 1;
-    plhs[1] = mxCreateNumericArray(2, data_size, mxSINGLE_CLASS, mxREAL);
-    tmp = (float*)mxGetData(plhs[1]);
-    memcpy(tmp, timing, count*sizeof(float));
+    plhs[1] = mxCreateDoubleMatrix(1, count, mxREAL);
+    tmp_vect_dbl = mxGetPr(plhs[1]);
+    for (i=0;i<count;i++){
+      tmp_vect_dbl[i] = (double)timing[i];
+    }
 
     _mm_free((void*) flow);
     _mm_free((void*) x);
     _mm_free((void*) dx);
     _mm_free((void*) ddx);
     _mm_free((void*) fx);
+
+    mxFree(params);
     mxFree(cyto);
     mxFree(current_flow);
     mxFree(simulation);
