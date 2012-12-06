@@ -79,6 +79,25 @@ function find_kymograph(varargin)
 
         if (strncmp(fitting.fitting_type, 'mcmc', 4))
           uuids = metropolis_hastings(fitting, opts);
+        elseif (iscell(fitting.fitting_type) | strncmp(fitting.fitting_type, 'all', 3))
+          if (iscell(fitting.fitting_type))
+            types = fitting.fitting_type;
+          else
+            types = {'cmaes', 'godlike', 'pso', 'mcmc'};
+          end
+          ntypes = length(types);
+          types = types(randi(ntypes, [1 fitting.nfits]));
+          uuids = cell(fitting.nfits, 1);
+          fitting.nfits = 1;
+
+          for t=1:fitting.nfits
+            fitting.fitting_type = types{t};
+            if (strncmp(fitting.fitting_type, 'mcmc', 4))
+              uuids{t} = metropolis_hastings(fitting, opts);
+            else
+              uuids{t} = fit_kymograph(fitting, opts);
+            end
+          end
         else
           uuids = fit_kymograph(fitting, opts);
         end
