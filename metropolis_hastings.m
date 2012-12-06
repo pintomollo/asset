@@ -171,7 +171,7 @@ function uuids = metropolis_hastings(fitting, opts)
 
     if (fitting.fit_flow)
       p0 = [p0 1];
-      size_data = size_data + 1;
+      size_params = size_params + 1;
     else
       flow_scale = 1;
     end
