@@ -83,7 +83,7 @@ function find_kymograph(varargin)
           if (iscell(fitting.fitting_type))
             types = fitting.fitting_type;
           else
-            types = {'cmaes', 'godlike', 'pso', 'mcmc'};
+            types = {'cmaes', 'godlike', 'pso', 'dram'};
           end
           ntypes = length(types);
           types = types(randi(ntypes, [1 fitting.nfits]));

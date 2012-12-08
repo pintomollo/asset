@@ -47,6 +47,11 @@ function uuids = fit_kymograph(fitting, opts)
   stable_coeff = 2;
   close_coeff = 10;
 
+  if (strncmp(fitting.fitting_type, 'dram', 4))
+    drscale  = 2; 
+    adaptint = 100;
+  end
+
   if (strncmp(fitting.type, 'data', 4))
     if (isempty(fitting.ground_truth))
       error('Data is missing for the fitting !');
@@ -122,7 +127,7 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   linear_truth = fitting.ground_truth(:);
-  linear_goods = ~isnan(linear_truth);
+  linear_goods = isfinite(linear_truth);
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
   penalty = ((median(linear_truth(linear_goods)))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
@@ -200,6 +205,25 @@ function uuids = fit_kymograph(fitting, opts)
         which_algos = which_algos(randperm(4));
         [p, fval] = GODLIKE(@error_function, 20, zeros(nparams,1), ones(nparams,1) * 10, which_algos, opt);
 
+      case 'dram'
+        model.ssfun    = @error_function;
+
+        params.par0    = p0(:); % initial parameter values
+        params.n       = sum(linear_goods);
+        params.sigma2  = 1;  % prior for error variance sigma^2
+        params.n0      = 1;  % prior accuracy for sigma^2
+
+        options.nsimu    = fitting.max_iter;               % size of the chain
+        options.adaptint = adaptint;            % adaptation interval
+        options.drscale  = drscale;
+        options.qcov     = fitting.step_size*eye(nparams).*2.4^2./nparams;      % initial proposal covariance 
+        options.ndelays  = fitting.ndelays;
+        options.log_file = [log_name 'evol'];
+
+        % run the chain
+        [results,chain,s2chain] = dramrun(model,[],params,options);
+        p = results.mean;
+        save(['dram-step-' num2str(f) '.mat'], 'results', 'chain', 's2chain');
       otherwise
         error [opts.do_ml ' machine learning algorithm is not implemented'];
 
@@ -213,7 +237,9 @@ function uuids = fit_kymograph(fitting, opts)
 
   return;
 
-  function err_all = error_function(p_all)
+  function err_all = error_function(varargin)
+
+    p_all = varargin{1};
 
     [curr_nparams, nevals] = size(p_all);
     flip = false;
@@ -346,7 +372,7 @@ function uuids = fit_kymograph(fitting, opts)
           tmp_err(:, round(end/2):end,:) = tmp_err(:, round(end/2):end,:)*tail_coeff;
         end
 
-        tmp_err(~isfinite(fitting.ground_truth)) = 0;
+        tmp_err(~linear_goods) = 0;
         tmp_err = sum(tmp_err, 1);
         tmp_err(~isfinite(tmp_err)) = penalty;
         err_all(i) = sum(tmp_err(:));
