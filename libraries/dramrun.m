@@ -154,6 +154,8 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   chainmean = [];
   wsum = [];
   lasti = 0;
+  stall_thresh = nsimu/20;
+  newi = 0;
 
   %%% the simulation loop
   for isimu=2:nsimu
@@ -181,6 +183,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
           acce     = acce+1;
           oldpar   = pars(dr+1,:);
           oldss    = scores(dr+1,:);
+          newi     = isimu;
           %oldprior = newprior;
           break;
         end
@@ -217,6 +220,11 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
       fprintf(fid, ' %f',oldpar);
       fprintf(fid, '\n');
       fclose(fid);
+    end
+
+    if (isimu-newi > stall_thresh)
+      warning(['Likelihood had not evolved for ' num2str(ceil(stall_thresh)) ' iterations, aborting']);
+      break;
     end
   end
 

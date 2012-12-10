@@ -210,7 +210,7 @@ function uuids = fit_kymograph(fitting, opts)
 
         params.par0    = p0(:); % initial parameter values
         params.n       = sum(linear_goods);
-        params.sigma2  = 1;  % prior for error variance sigma^2
+        params.sigma2  = 10;  % prior for error variance sigma^2
         params.n0      = 1;  % prior accuracy for sigma^2
 
         options.nsimu    = fitting.max_iter;               % size of the chain
