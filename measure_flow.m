@@ -17,6 +17,42 @@ function mymovie = measure_flow(mymovie, opts)
     flow = mymovie.data.flow;
   end
 
+  path_thresh = opts.spot_tracking.min_path_length;
+  path_length = cell(nframes, 1);
+  for i=1:nframes
+    nimg = i;
+
+    links = mymovie.data.spots(nimg).cluster;
+    prev_links = links(links(:,end)==nimg-1, :);
+    path_length{nimg} = zeros(size(mymovie.data.spots(nimg).carth, 1), 1);
+    if (~isempty(prev_links))
+      path_length{nimg}(prev_links(:,2)) = path_length{nimg-1}(prev_links(:,1)) + 1;
+    end
+  end
+  for i=nframes:-1:1
+    nimg = i;
+
+    links = mymovie.data.spots(nimg).cluster;
+    prev_links = links(links(:,end)==nimg-1, :);
+    if (~isempty(prev_links))
+      path_length{nimg-1}(prev_links(:,1)) = path_length{nimg}(prev_links(:,2));
+    end
+  end
+
+  proj_dist = opts.spot_tracking.projection_dist;
+  pos_bin = opts.spot_tracking.projection_bin_size;
+  frame_bin = opts.spot_tracking.projection_frames;
+
+  edges = [0:pos_bin:65];
+  edges = [-edges(end:-1:2) edges].';
+  centers = edges(1:end-1) + pos_bin/2;
+  edges(1) = -Inf;
+  edges(end) = Inf;
+
+  all_speed = [];
+  all_pos = [];
+  all_frame = [];
+
   prev_pts = mymovie.data.spots(1).carth;
   for i=2:nframes
     nimg = i;
@@ -25,6 +61,9 @@ function mymovie = measure_flow(mymovie, opts)
     links = mymovie.data.spots(nimg).cluster;
 
     prev_links = links(links(:,end)==nimg-1, :);
+    good_links = (path_length{nimg}(prev_links(:,2)) >= path_thresh);
+    prev_links = prev_links(good_links, :);
+
     cortex = mymovie.data.cortex(nimg).carth;
     ncortex = size(cortex, 1);
 
@@ -35,74 +74,80 @@ function mymovie = measure_flow(mymovie, opts)
 
       npts = size(pts,1);
 
-      [perp, junk, linear] = perpendicular_sampling(cortex, opts);
+      align_cortex = realign(cortex, [0;0], mymovie.data.centers(:, nimg), mymovie.data.orientations(nimg));
+      [pos, post_indxs, tot_dist] = carth2linear(align_cortex, true, opts);
+      cortex = cortex(post_indxs, :);
+      [perp] = perpendicular_sampling(cortex, opts);
 
-      vector_x = bsxfun(@minus, cortex(:,1), pts(:,1).');
-      vector_y = bsxfun(@minus, cortex(:,2), pts(:,2).');
+      switch (projection_type)
+        case 'perp'
+          vector_x = bsxfun(@minus, cortex(:,1), pts(:,1).');
+          vector_y = bsxfun(@minus, cortex(:,2), pts(:,2).');
 
-      dist = sqrt(vector_x.^2 + vector_y.^2);
-      vector_x = vector_x ./ dist;
-      vector_y = vector_y ./ dist;
+          dist = sqrt(vector_x.^2 + vector_y.^2);
+          vector_x = vector_x ./ dist;
+          vector_y = vector_y ./ dist;
 
-      all_perp = repmat(perp, npts, 1);
-      orient = acos(dot(all_perp, [vector_x(:) vector_y(:)], 2));
-      %orient = min(abs(orient), (pi - orient));
-      orient = reshape(orient, ncortex, npts);
+          all_perp = repmat(perp, npts, 1);
+          orient = acos(dot(all_perp, [vector_x(:) vector_y(:)], 2));
+          orient = reshape(orient, ncortex, npts);
 
-      %angle_thresh = pi/16;
-      prcnt_thresh = 1;
-      goods = false(ncortex, npts);
-      current = any(goods, 1);
+          goods = false(ncortex, npts);
+          current = any(goods, 1);
 
-      for p=5:5:50
-      %while(~all(current))
-        orient_thresh = prctile(orient(:, ~current), 2*p, 1);
-        dist_thresh = prctile(dist(:, ~current), p, 1);
+          for p=5:5:50
+            orient_thresh = prctile(orient(:, ~current), 2*p, 1);
+            dist_thresh = prctile(dist(:, ~current), p, 1);
 
-        %goods(:, ~current) = (orient(:, ~current) < angle_thresh);
-        goods(:, ~current) = bsxfun(@le, orient(:, ~current), orient_thresh) & bsxfun(@le, dist(:, ~current), dist_thresh);
-        current = any(goods, 1);
+            goods(:, ~current) = bsxfun(@le, orient(:, ~current), orient_thresh) & bsxfun(@le, dist(:, ~current), dist_thresh);
+            current = any(goods, 1);
 
-        if (all(current))
-          %display(p)
-          break;
-        end
-        %angle_thresh = angle_thresh + angle_thresh;
+            if (all(current))
+              break;
+            end
+          end
+
+          dist(~goods) = Inf;
+          dist(dist>opts.spot_tracking.projection_dist) = Inf;
+
+          [rel_dist, indxs] = min(dist, [], 1);
+          perp = perp(indxs, :);
+          pos = pos(indxs);
+
+          movement = pts(:,1:2) - prev_pts(:,1:2);
+        case 'gaussian'
+          speed = pts(:,1:2) - prev_pts(:,1:2);
+          dist = sqrt(bsxfun(@minus, cortex(:,1), pts(:,1).').^2 + ...
+                      bsxfun(@minus, cortex(:,2), pts(:,2).').^2);
+          dist(dist>3*opts.spot_tracking.projection_dist) = Inf;
+
+          weights = exp(-(dist.^2)/(2*opts.spot_tracking.projection_dist^2));
+          weights = bsxfun(@divide, weights, sum(weights, 2));
+
+          speed_x = sum(bsxfun(@times, weights, speed(:,1)), 2);
+          speed_y = sum(bsxfun(@times, weights, speed(:,2)), 2);
+
+          movement = [speed_x, speed_y];
       end
+      speed = dot([perp(:, 2), -perp(:, 1)], [speed_x speed_y], 2);
 
-      %img = imnorm(double(load_data(mymovie.data, nimg)));
-      %hold off;
-      %imshow(img);
-      %hold on;
-      %scatter(pts(:,1), pts(:,2), 'r');
-      %quiver(pts(:,1), pts(:,2), pts(:,1) - prev_pts(:,1), pts(:,2) - prev_pts(:,2), 0, 'r');
-      %print('-dpng', '-r150', ['PNG/Flow/tracking_' num2str(nimg) '.png']);
+      all_speed = [all_speed; speed];
+      all_pos = [all_pos; pos];
+      all_frame = [all_frame; nimg*ones(size(speed))];
 
-      %cortex = realign(cortex, [0;0], mymovie.data.centers(:, nimg), mymovie.data.orientations(nimg));
-      %hold off;
-      %plot(cortex(:,1), cortex(:,2), 'k')
-      %hold on;
-      %quiver(pts(:,1), pts(:,2), pts(:,1) - prev_pts(:,1), pts(:,2) - prev_pts(:,2), 'b');
-      %drawnow
-      %pause(0.25);
+      currents = (all_frame > nimg-frame_bin);
+      all_speed = all_speed(currents);
+      all_pos = all_pos(currents);
+      all_frame = all_frame(currents);
 
-      dist(~goods) = Inf;
-      [rel_dist, indxs] = min(dist, [], 1);
-      rel_perp = perp(indxs, :);
-      rel_pos = linear(indxs);
+      [counts, groups] = histc(all_pos, edges);
+      [curr_speed, curr_std, groups] = mymean(all_speed, 1, groups);
 
-      proj_speed = dot([rel_perp(:, 2), -rel_perp(:, 1)], pts(:,1:2) - prev_pts(:,1:2), 2);
-
-      flow(nimg).speed = proj_speed;
-      flow(nimg).distance = rel_dist;
-      flow(nimg).position = rel_pos;
-      flow(nimg).index = indxs;
-      %keyboard
+      flow(nimg).speed = [curr_speed; curr_std];
+      flow(nimg).position = centers;
     else
       flow(nimg).speed = [];
-      flow(nimg).distance = [];
       flow(nimg).position = [];
-      flow(nimg).index = [];
     end
 
     prev_pts = all_pts;

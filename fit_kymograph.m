@@ -18,6 +18,17 @@ function uuids = fit_kymograph(fitting, opts)
         opts = load_parameters(opts, 'maintenance.txt');
       end
     end
+  else
+    orig_opts = get_struct('modeling');
+    orig_opts = load_parameters(orig_opts, 'goehring.txt');
+    orig_params = [orig_opts.diffusion_params; ...
+                orig_opts.reaction_params];
+    if (fitting.fit_relative)
+      orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* (orig_opts.reaction_params(5,[2 1]).^(orig_opts.reaction_params(4,:))) ./ orig_opts.reaction_params(4,[2 1]);
+      orig_opts.reaction_params(5,:) = 1;
+    end
+    orig_scaling = 10.^(floor(log10(orig_params)));
+    orig_scaling(orig_params == 0) = 1;
   end
 
   if (fitting.fit_relative)
@@ -137,8 +148,9 @@ function uuids = fit_kymograph(fitting, opts)
   full_error = penalty * size_data(2) * 10;
   log_error = -log(penalty);
 
-  rescaling = 10.^(floor(log10(ml_params)));
-  rescaling(ml_params == 0) = 1;
+  rescaling = orig_scaling;
+  %rescaling = 10.^(floor(log10(ml_params)));
+  %rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
 
   if (strncmp(fitting.type, 'simulation', 5))
@@ -172,7 +184,6 @@ function uuids = fit_kymograph(fitting, opts)
     else
       display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
     end
-
     p0 = sqrt(p0(:));
 
     switch (fitting.fitting_type)
@@ -206,12 +217,14 @@ function uuids = fit_kymograph(fitting, opts)
         [p, fval] = GODLIKE(@error_function, 20, zeros(nparams,1), ones(nparams,1) * 10, which_algos, opt);
 
       case 'dram'
+        [estim_error, estim_sigma2] = error_function(p0(:));
+
         model.ssfun    = @error_function;
 
         params.par0    = p0(:); % initial parameter values
         params.n       = sum(linear_goods);
-        params.sigma2  = 10;  % prior for error variance sigma^2
-        params.n0      = 1;  % prior accuracy for sigma^2
+        params.sigma2  = params.n;  % prior for error variance sigma^2
+        params.n0      = estim_sigma2;  % prior accuracy for sigma^2
 
         options.nsimu    = fitting.max_iter;               % size of the chain
         options.adaptint = adaptint;            % adaptation interval
@@ -223,7 +236,7 @@ function uuids = fit_kymograph(fitting, opts)
         % run the chain
         [results,chain,s2chain] = dramrun(model,[],params,options);
         p = results.mean;
-        save(['dram-step-' num2str(f) '.mat'], 'results', 'chain', 's2chain');
+        %save(['dram-step-24_' num2str(f) '.mat'], 'results', 'chain', 's2chain');
       otherwise
         error [opts.do_ml ' machine learning algorithm is not implemented'];
 
@@ -237,8 +250,9 @@ function uuids = fit_kymograph(fitting, opts)
 
   return;
 
-  function err_all = error_function(varargin)
+  function [err_all, sigma2] = error_function(varargin)
 
+    sigma2 = 0;
     p_all = varargin{1};
 
     [curr_nparams, nevals] = size(p_all);
@@ -370,6 +384,11 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_err = (fitting.ground_truth - res).^2;
         if (fitting.fit_full)
           tmp_err(:, round(end/2):end,:) = tmp_err(:, round(end/2):end,:)*tail_coeff;
+        end
+
+        if (nargout == 2)
+          tmp_mean = mymean(tmp_err(:));
+          sigma2 = mymean((tmp_err(:) - tmp_mean).^2);
         end
 
         tmp_err(~linear_goods) = 0;

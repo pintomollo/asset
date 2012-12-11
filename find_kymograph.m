@@ -156,6 +156,25 @@ function [mymovies, uuid, fitting, opts] = parse_input(varargin)
     mymovies = varargin{1};
     varargin(1) = [];
 
+    if (length(varargin) > 0 & isstruct(varargin{1}))
+      if (isfield(varargin{1}, 'reaction_params'))
+        opts = varargin{1};
+        varargin(1) = [];
+      elseif (isfield(varargin{1}, 'parameter_set'))
+        fitting = varargin{1};
+        varargin(1) = [];
+      end
+      if (length(varargin) > 0 & isstruct(varargin{1}))
+        if (isfield(varargin{1}, 'reaction_params'))
+          opts = varargin{1};
+          varargin(1) = [];
+        elseif (isfield(varargin{1}, 'parameter_set'))
+          fitting = varargin{1};
+          varargin(1) = [];
+        end
+      end
+    end
+
     % Now we check that the parameters were provided in pairs
     npairs = length(varargin) / 2;
     if (npairs ~= floor(npairs))

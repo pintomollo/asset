@@ -154,7 +154,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   chainmean = [];
   wsum = [];
   lasti = 0;
-  stall_thresh = nsimu/20;
+  stall_thresh = nsimu/10;
   newi = 0;
 
   %%% the simulation loop

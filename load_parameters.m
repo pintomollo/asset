@@ -119,7 +119,7 @@ function opts = load_parameters(opts, fname)
         tokens = regexp(line,'^(\w+)\s+(.+)$','tokens');
 
         % If we found the two elements, we can assign the value to the field
-        if (length(tokens{1}) == 2)
+        if (~isempty(tokens) & length(tokens{1}) == 2)
 
           try
             % We use the eval function to interpret the values as in MATLAB 
