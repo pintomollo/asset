@@ -199,7 +199,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     if (adaptint>0 & fix(isimu/adaptint) == isimu/adaptint)
       % adapt the proposal covariances
       % update covariance and mean of the chain
-      [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-1),1, ...
+      [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-2),1, ...
                                          chaincov,chainmean,wsum);
       lasti = isimu;
       [Ra,is] = chol(chaincov + eye(npar)*qcovadj);
@@ -229,7 +229,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   end
 
   % calculate covariance and mean of the chain
-  [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-1),1, ...
+  [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-2),1, ...
                                      chaincov,chainmean,wsum);
 
   results.class = 'MCMC results';
