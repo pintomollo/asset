@@ -121,7 +121,6 @@ function uuids = fit_kymograph(fitting, opts)
     if (strncmp(fitting.scale_type, 'normalize', 10))
       fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
       normalization_done = true;
-      keyboard
     end
   end
 
@@ -151,8 +150,6 @@ function uuids = fit_kymograph(fitting, opts)
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
   penalty = ((median(linear_truth(linear_goods)))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
-  stable = 0;
-  closeness = 0;
 
   full_error = penalty * size_data(2) * 10;
   log_error = -log(penalty);
