@@ -59,12 +59,11 @@ function [linear, indexes, total_distance] = carth2linear(varargin)
     max_r = min(abs(pts_y(goods)));
     ant_indx = find(goods & abs(pts_y) == max_r, 1);
 
-    linear = linear * total_dist;
     linear = linear - linear(post_indx);
     if (ant_indx > post_indx)
-      linear = [linear(ant_indx:end, :) - total_dist; linear(1:ant_indx-1, :)];
+      linear = [linear(ant_indx:end, :) - 1; linear(1:ant_indx-1, :)];
     else
-      linear = [linear(ant_indx:end, :); linear(1:ant_indx-1, :) + total_dist];
+      linear = [linear(ant_indx:end, :); linear(1:ant_indx-1, :) + 1];
     end
 
     %dists = [linear(1), total_dist + linear(1)];

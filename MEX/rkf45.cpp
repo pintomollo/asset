@@ -652,11 +652,11 @@ int r4_rkf45 ( void f ( float t, float y[], float yp[] ), int neqn,
 */
       else
       {
-        fprintf ( stderr, "\n" );
-        fprintf ( stderr, "R4_RKF45 - Fatal error!\n" );
-        fprintf ( stderr, "  Integration cannot be continued.\n" );
-        fprintf ( stderr, "  The user did not respond to the output value\n" );
-        fprintf ( stderr, "  FLAG = 5, 6, 7 or 8.\n" );
+//        fprintf ( stderr, "\n" );
+//        fprintf ( stderr, "R4_RKF45 - Fatal error!\n" );
+//        fprintf ( stderr, "  Integration cannot be continued.\n" );
+//        fprintf ( stderr, "  The user did not respond to the output value\n" );
+//        fprintf ( stderr, "  FLAG = 5, 6, 7 or 8.\n" );
         //exit ( 1 );
         return 666;
       }

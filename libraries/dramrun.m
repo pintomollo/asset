@@ -119,13 +119,14 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   end
   chain   = zeros(nsimu,npar+2);  % we store the chain here
 
+  %%%% Assuming gaussian distributions and integrating variance out !!!
   s20 = 0;
-  if (n0>=0)
-    s2chain = zeros(nsimu,1);   % the sigma2 chain
-    s20 = sigma2;
-  else
+  %if (n0>=0)
+  %  s2chain = zeros(nsimu,1);   % the sigma2 chain
+  %  s20 = sigma2;
+  %else
     s2chain = [];
-  end
+  %end
 
   oldpar       = par0(:)';                % first row of the chain
   oldss        = feval(ssfun,oldpar,data);% first sum-of-squares
@@ -177,7 +178,8 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
       else % inside bounds, check if accepted
         scores(dr+1)  = feval(ssfun,pars(dr+1,:),data);   % sum-of-squares
 
-        [alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr, sigma2);
+        %[alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr, sigma2);
+        [alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr, n);
 
         if (rand < alpha) % we accept
           acce     = acce+1;

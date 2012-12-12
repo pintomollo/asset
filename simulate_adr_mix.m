@@ -1,4 +1,4 @@
-function [all_x, t] = simulate_adr_mix(x0, opts)
+function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
 
   if (nargin == 1)
     if (isstruct(x0))
@@ -12,6 +12,10 @@ function [all_x, t] = simulate_adr_mix(x0, opts)
     opts = get_struct('modeling');
     opts = load_parameters(opts, 'goehring.txt');
     x0 = [];
+  end
+
+  if (nargin < 3)
+    fit_relative = false;
   end
 
   if (isempty(x0))
@@ -46,7 +50,11 @@ function [all_x, t] = simulate_adr_mix(x0, opts)
   %[all_x, t] = simulate_model_mix(single(x0), single(all_params), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow), single(opts.user_data), single(opts.max_iter));
 
   %[all_x, t] = simulate_model_mix(single(x0), single(all_params), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow), single(opts.user_data), single(opts.max_iter));
-  [all_x, t] = simulate_model_mix(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+  if (fit_relative)
+    [all_x, t] = simulate_model_rel(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+  else
+    [all_x, t] = simulate_model_mix(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+  end
   %[all_x, t] = simulate_model_mix(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
 
   %keyboard

@@ -39,7 +39,7 @@ function mymovie = measure_flow(mymovie, opts)
     end
   end
 
-  proj_dist = opts.spot_tracking.projection_dist;
+  proj_dist = opts.spot_tracking.projection_dist / opts.pixel_size;
   pos_bin = opts.spot_tracking.projection_bin_size;
   frame_bin = opts.spot_tracking.projection_frames;
 
@@ -48,6 +48,9 @@ function mymovie = measure_flow(mymovie, opts)
   centers = edges(1:end-1) + pos_bin/2;
   edges(1) = -Inf;
   edges(end) = Inf;
+
+  tmp_speed = NaN(size(centers));
+  tmp_std = tmp_speed;
 
   all_speed = [];
   all_pos = [];
@@ -78,8 +81,9 @@ function mymovie = measure_flow(mymovie, opts)
       [pos, post_indxs, tot_dist] = carth2linear(align_cortex, true, opts);
       cortex = cortex(post_indxs, :);
       [perp] = perpendicular_sampling(cortex, opts);
+      pos = pos * tot_dist;
 
-      switch (projection_type)
+      switch (opts.spot_tracking.projection_type)
         case 'perp'
           vector_x = bsxfun(@minus, cortex(:,1), pts(:,1).');
           vector_y = bsxfun(@minus, cortex(:,2), pts(:,2).');
@@ -108,31 +112,34 @@ function mymovie = measure_flow(mymovie, opts)
           end
 
           dist(~goods) = Inf;
-          dist(dist>opts.spot_tracking.projection_dist) = Inf;
+          dist(dist>proj_dist) = Inf;
 
           [rel_dist, indxs] = min(dist, [], 1);
+          good_pts = isfinite(rel_dist);
+          indxs = indxs(good_pts);
           perp = perp(indxs, :);
           pos = pos(indxs);
 
           movement = pts(:,1:2) - prev_pts(:,1:2);
+          movement = movement(good_pts,:);
         case 'gaussian'
           speed = pts(:,1:2) - prev_pts(:,1:2);
           dist = sqrt(bsxfun(@minus, cortex(:,1), pts(:,1).').^2 + ...
                       bsxfun(@minus, cortex(:,2), pts(:,2).').^2);
-          dist(dist>3*opts.spot_tracking.projection_dist) = Inf;
+          dist(dist>3*proj_dist) = Inf;
 
-          weights = exp(-(dist.^2)/(2*opts.spot_tracking.projection_dist^2));
-          weights = bsxfun(@divide, weights, sum(weights, 2));
+          weights = exp(-(dist.^2)/(2*(proj_dist^2)));
+          weights = bsxfun(@rdivide, weights, sum(weights, 2));
 
-          speed_x = sum(bsxfun(@times, weights, speed(:,1)), 2);
-          speed_y = sum(bsxfun(@times, weights, speed(:,2)), 2);
+          speed_x = sum(bsxfun(@times, weights, speed(:,1).'), 2);
+          speed_y = sum(bsxfun(@times, weights, speed(:,2).'), 2);
 
           movement = [speed_x, speed_y];
       end
-      speed = dot([perp(:, 2), -perp(:, 1)], [speed_x speed_y], 2);
+      speed = dot([perp(:, 2), -perp(:, 1)], movement, 2);
 
-      all_speed = [all_speed; speed];
-      all_pos = [all_pos; pos];
+      all_speed = [all_speed; speed*opts.pixel_size];
+      all_pos = [all_pos; pos*opts.pixel_size];
       all_frame = [all_frame; nimg*ones(size(speed))];
 
       currents = (all_frame > nimg-frame_bin);
@@ -140,10 +147,12 @@ function mymovie = measure_flow(mymovie, opts)
       all_pos = all_pos(currents);
       all_frame = all_frame(currents);
 
+      curr_speed = tmp_speed;
+      curr_std = tmp_std;
       [counts, groups] = histc(all_pos, edges);
-      [curr_speed, curr_std, groups] = mymean(all_speed, 1, groups);
+      [curr_speed(counts~=0), curr_std(counts~=0), groups] = mymean(all_speed, 1, groups);
 
-      flow(nimg).speed = [curr_speed; curr_std];
+      flow(nimg).speed = [curr_speed, curr_std];
       flow(nimg).position = centers;
     else
       flow(nimg).speed = [];
