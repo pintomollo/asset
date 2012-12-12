@@ -21,12 +21,13 @@ function uuids = fit_kymograph(fitting, opts)
   else
     orig_opts = get_struct('modeling');
     orig_opts = load_parameters(orig_opts, 'goehring.txt');
-    orig_params = [orig_opts.diffusion_params; ...
-                orig_opts.reaction_params];
     if (fitting.fit_relative)
       orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* (orig_opts.reaction_params(5,[2 1]).^(orig_opts.reaction_params(4,:))) ./ orig_opts.reaction_params(4,[2 1]);
       orig_opts.reaction_params(5,:) = 1;
     end
+    orig_params = [orig_opts.diffusion_params; ...
+                orig_opts.reaction_params];
+
     orig_scaling = 10.^(floor(log10(orig_params)));
     orig_scaling(orig_params == 0) = 1;
   end
@@ -223,8 +224,8 @@ function uuids = fit_kymograph(fitting, opts)
 
         params.par0    = p0(:); % initial parameter values
         params.n       = sum(linear_goods);
-        params.sigma2  = params.n;  % prior for error variance sigma^2
-        params.n0      = estim_sigma2;  % prior accuracy for sigma^2
+        params.n0      = params.n;  % prior for error variance sigma^2
+        params.sigma2  = estim_sigma2;  % prior accuracy for sigma^2
 
         options.nsimu    = fitting.max_iter;               % size of the chain
         options.adaptint = adaptint;            % adaptation interval

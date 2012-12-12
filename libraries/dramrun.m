@@ -117,7 +117,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     Rs{i} = R./(drscale^(i-1)); % second proposal for DR try
     iRs{i} = inv(Rs{i});
   end
-  chain   = zeros(nsimu,npar+1);  % we store the chain here
+  chain   = zeros(nsimu,npar+2);  % we store the chain here
 
   s20 = 0;
   if (n0>=0)
@@ -131,7 +131,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   oldss        = feval(ssfun,oldpar,data);% first sum-of-squares
   %oldprior     = feval(priorfun,oldpar,params);
   acce         = 1;                       %  how many accepted moves
-  chain(1,:)   = [oldpar oldss];
+  chain(1,:)   = [oldpar sigma2 oldss];
 
   if (s20>0)
     s2chain(1,:) = sigma2;
@@ -143,9 +143,9 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   if (do_log)
     [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
     fprintf(fid, [uuid '%% columns="iteration, evalutation | lastbest" (' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')\n']);
-    fprintf(fid, [uuid '1 : %ld |'], oldss);
+    fprintf(fid, [uuid '1 : %e |'], oldss);
     fprintf(fid, ' %f',oldpar);
-    fprintf(fid, '\n');
+    fprintf(fid, ' | %f\n', sigma2);
     fclose(fid);
   end
 
@@ -189,7 +189,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
         end
       end
     end
-    chain(isimu,:) = [oldpar oldss];
+    chain(isimu,:) = [oldpar sigma2 oldss];
     % update the error variance sigma2
     if (s20 > 0)
       sigma2  = 1./gammar_mt(1,1,(n0+n)./2,2./(n0*s20+oldss));
@@ -216,9 +216,9 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
 
     if (do_log)
       [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
-      fprintf(fid, [uuid '%ld : %ld |'], isimu, oldss);
+      fprintf(fid, [uuid '%ld : %e |'], isimu, oldss);
       fprintf(fid, ' %f',oldpar);
-      fprintf(fid, '\n');
+      fprintf(fid, ' | %f\n', sigma2);
       fclose(fid);
     end
 
