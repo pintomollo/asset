@@ -435,6 +435,10 @@ function domain = normalize_domain(domain, path, opts)
   bkg = mymean(domain(~full_mask));
   int = mymean(domain(full_mask));
 
+  if (isempty(bkg))
+    bkg = 0;
+  end
+
   domain = (domain - bkg) / (int-bkg);
 
   return;
