@@ -36,7 +36,5 @@ function weight = intens_sum(img, params)
 
   %weight = weight.^0.1;
 
-  %figure;imagesc(weight)
-
   return;
 end

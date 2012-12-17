@@ -4,8 +4,8 @@ function [acc_ratio, Ns, Ds] = dr_acceptance(scores, params, iR, Ns, Ds, ntrials
   dist = -0.5*norm((params(ntrials+1,:) - params(ntrials,:))*iR{1})^2;
   %N = -0.5*((scores(ntrials+1)/sigma2) + dist);
   %D = -0.5*((scores(ntrials)/sigma2) + dist);
-  N = (scores(ntrials+1)^(-n/2) + dist);
-  D = (scores(ntrials)^(-n/2) + dist);
+  N = (log(scores(ntrials+1))*(-n/2) + dist);
+  D = (log(scores(ntrials))*(-n/2) + dist);
 
   Ns{ntrials, ntrials} = N;
   Ds{ntrials, ntrials} = D;

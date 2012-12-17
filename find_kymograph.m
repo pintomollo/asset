@@ -86,12 +86,12 @@ function find_kymograph(varargin)
             types = {'cmaes', 'godlike', 'pso', 'dram'};
           end
           ntypes = length(types);
-          types = types(randi(ntypes, [1 fitting.nfits]));
+          types = types(randperm(ntypes));
           uuids = cell(fitting.nfits, 1);
           fitting.nfits = 1;
 
           for t=1:fitting.nfits
-            fitting.fitting_type = types{t};
+            fitting.fitting_type = types{mod(t-1, ntypes)+1};
             if (strncmp(fitting.fitting_type, 'mcmc', 4))
               uuids{t} = metropolis_hastings(fitting, opts);
             else

@@ -70,7 +70,13 @@ function mymovie = dp_data(mymovie, nimg, opts)
       return;
     end
 
-    img = imnorm(double(load_data(mymovie.data, nimg)));
+    %img = imnorm(double(load_data(mymovie.data, nimg)));
+    img = double(load_data(mymovie.data, nimg));
+    noise_params = estimate_noise(img);
+    vals = range(img(:));
+    noise_thresh = min(round(vals/(8*noise_params(2)))+1, 25);
+    signal_thresh = noise_params(2)*noise_thresh / vals;
+
     img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
       %img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
 
@@ -96,7 +102,6 @@ function mymovie = dp_data(mymovie, nimg, opts)
     
     %minimg = mean(mean(noise(noise~=-1)));
     %img = imnorm(img, minimg, []);
-    noise_params = estimate_noise(img);
 
     img = gaussian_mex(img, parameters.noise.gaussian);
     img = median_mex(img, parameters.noise.median);
@@ -139,10 +144,9 @@ function mymovie = dp_data(mymovie, nimg, opts)
       parameters.cortex_params.gamma = 0.05;
 
       parameters.cortex_weights.alpha = 0.55;
-      %parameters.cortex_weights.beta = 0.005;
-      %parameters.cortex_weights.gamma = 5*noise_params(2);
       parameters.cortex_weights.beta = 0.025;
-      parameters.cortex_weights.gamma = 25*noise_params(2);
+      %parameters.cortex_weights.gamma = 25*noise_params(2);
+      parameters.cortex_weights.gamma = signal_thresh;
 
       %%%%%% Time-Lapse values
       %parameters.cortex_params.nhood = 11;

@@ -136,7 +136,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (strncmp(fitting.aligning_type, 'lsr', 3))
     sindx = round(size(fitting.ground_truth, 2) / 2);
-    mean_ground_truth = mymean(fitting.ground_truth, 2);
+    mean_ground_truth = mymean(fitting.ground_truth, 3);
   end
 
   multi_data = (numel(size_data) > 2 & size_data(3) > 1);
@@ -148,7 +148,7 @@ function uuids = fit_kymograph(fitting, opts)
   linear_truth = fitting.ground_truth(:);
   linear_goods = isfinite(linear_truth);
   simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
-  penalty = ((median(linear_truth(linear_goods)))^2)*opts.nparticles;
+  penalty = ((max(linear_truth(linear_goods)))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
 
   full_error = penalty * size_data(2) * 10;
@@ -395,13 +395,13 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_err(~linear_goods) = 0;
         err_all(i) = sum(tmp_err(:));
 
-%        figure;
-%        subplot(1,2,1);
-%        imagesc(mymean(res, 3));
-%        subplot(1,2,2);
-%        imagesc(mymean(tmp_err, 3));
-%        title(num2str(err_all(i)))
-%        keyboard
+        %figure;
+        %subplot(1,2,1);
+        %imagesc(mymean(res, 3));
+        %subplot(1,2,2);
+        %imagesc(mymean(tmp_err, 3));
+        %title([num2str(err_all(i)) ' ' num2str(p_all(:,i).')]);
+        %keyboard
       end
     end
 
