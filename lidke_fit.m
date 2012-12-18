@@ -99,7 +99,7 @@ function [new_spots] = lidke_fit(img, opts, nimg)
 %  figure;imagesc(atrous);
   params = estimate_noise(img);
 
-  [atAvg, atStd] = localAvgStd2D(atrous, 3*spot_max_size + 1);
+  [atAvg, atStd] = localAvgStd2D(atrous, 3*spot_max_size + (1-mod(spot_max_size, 2)));
   thresh = (atrous > (atAvg + noise_thresh * atStd) & img2 > (params(1) + noise_thresh*params(2)));
 %  figure;imagesc(thresh);
 

@@ -307,7 +307,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
       varargin(1) = [];
 
     % Maybe the name of the MAT-file was provided
-    elseif (ischar(varargin{1}))
+    elseif (ischar(varargin{1}) & (mod(length(varargin), 2)==1 | isstruct(varargin{2})))
 
       fname = varargin{1};
       fname = absolutepath(fname);

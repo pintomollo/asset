@@ -89,7 +89,7 @@ function mymovie = convert_struct(mymovie, opts)
               warpers(j) = carth2normalized(mymovie.(field).eggshell(j).carth, [], opts, mymovie.(field).centers(:,j), mymovie.(field).axes_length(:,j), mymovie.(field).orientations(1,j));
               %first = false;
             end
-            
+
             mymovie.(field).(subfield)(j).warped = carth2normalized(mymovie.(field).(subfield)(j).carth, warpers(j), opts); 
 
             if (dv_inversion)

@@ -24,6 +24,16 @@ function [new_angles, path] = interp_elliptic(varargin)
 
   [orig_angles, orig_values, new_angles, angle_range, is_resampling] = parse_input(varargin{:});
 
+  if (all(isnan(orig_angles)))
+    path = NaN(size(new_angles));
+    if (nargout==1)
+      new_angles = [new_angles path];
+      path = [];
+    end
+
+    return;
+  end
+
   % Measure the "size" of the range
   drange = diff(angle_range);
 
@@ -202,7 +212,7 @@ function [orig_angles, orig_values, new_angles, angle_range, is_resampling] = pa
   end
 
   % If we still do not have the angles, they are in the values
-  if (isnan(orig_angles))
+  if (isnan(orig_angles) & ~isempty(orig_values))
     orig_angles = orig_values(:, 1);
     orig_values = orig_values(:, 2:end);
   end

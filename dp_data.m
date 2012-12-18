@@ -47,7 +47,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
 
   img = [];
 
-  if (length(cortex) < nimg | empty_struct(cortex, 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'cortex', 6) | strncmp(opts.ml_type, 'all', 3))))
+  if (length(cortex) < nimg | empty_struct(cortex(nimg), 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'cortex', 6) | strncmp(opts.ml_type, 'all', 3))))
 
     update(2, nimg) = true;
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg)] = detect_ellipse(neighbors(nimg), opts);
@@ -205,7 +205,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie.data.cortex = cortex;
   end
 
-  if (length(eggshell) < nimg | empty_struct(eggshell, 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
+  if (length(eggshell) < nimg | empty_struct(eggshell(nimg), 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
 
     update(1, nimg) = true;
 
