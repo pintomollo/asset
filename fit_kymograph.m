@@ -298,10 +298,10 @@ function uuids = fit_kymograph(fitting, opts)
         [res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
       end
       
-      if (t(end) < opts.tmax)
-        err_all(i) = Inf;
-        continue;
-      end
+      %if (t(end) < opts.tmax)
+      %  err_all(i) = Inf;
+      %  continue;
+      %end
       
       res = res((end/2)+1:end, :);
       if (opts.nparticles ~= ndata)
