@@ -234,7 +234,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     
                 end % algorithm loop
             end
-            
+      
             % if we have convergence inside the algorithm 
             % loop, break the main loop
             if converged, break, end
@@ -248,8 +248,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         if (generation >= options.MaxIters), converged = true; end        
         
         % check for convergence (and update output structure)
-        [converged, output] = check_convergence(converged, output);
-                
+        [converged, output] = check_convergence(converged, output);         
     end % GODLIKE loop
     
     % display final results

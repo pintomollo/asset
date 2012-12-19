@@ -108,7 +108,11 @@ function find_kymograph(varargin)
           fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
         end
         for u = 1:length(uuids)
-          fprintf(fid, '%s %s OK\n', uuids{u}, kymo_name);
+          if (iscell(uuids{u}))
+            fprintf(fid, '%s %s OK\n', uuids{u}{1}, kymo_name);
+          else
+            fprintf(fid, '%s %s OK\n', uuids{u}, kymo_name);
+          end
         end
         fclose(fid);
 
