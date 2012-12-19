@@ -47,7 +47,7 @@ function uuids = metropolis_hastings(fitting, opts)
   stable_coeff = 2;
   close_coeff = 10;
 
-  if (strncmp(fitting.type, 'data', 4))
+  if (~strncmp(fitting.type, 'simulation', 10))
     if (isempty(fitting.ground_truth))
       error('Data is missing for the fitting !');
     end
@@ -76,7 +76,7 @@ function uuids = metropolis_hastings(fitting, opts)
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
 
-  if (strncmp(fitting.type, 'simulation', 5))
+  if (strncmp(fitting.type, 'simulation', 10))
     [fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
     fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
     fitting.ground_truth = [fitting.ground_truth; fitting.ground_truth];
@@ -141,7 +141,7 @@ function uuids = metropolis_hastings(fitting, opts)
   rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
 
-  if (strncmp(fitting.type, 'simulation', 5))
+  if (strncmp(fitting.type, 'simulation', 10))
     noiseless = fitting.ground_truth;
     range_data = fitting.data_noise * range(linear_truth);
   end
@@ -179,7 +179,7 @@ function uuids = metropolis_hastings(fitting, opts)
     p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     nparams = length(p0);
 
-    if (strncmp(fitting.type, 'simulation', 5))
+    if (strncmp(fitting.type, 'simulation', 10))
       fitting.ground_truth = noiseless + range_data*randn(size_data);
     end
 
@@ -201,7 +201,7 @@ function uuids = metropolis_hastings(fitting, opts)
     tmp_fit.ground_truth = [];
     print_all(fid, tmp_fit);
 
-    if (strncmp(fitting.type, 'simulation', 5))
+    if (strncmp(fitting.type, 'simulation', 10))
       best_score = likelihood(p_current);
       fprintf(fid, '%e (-1, 0, 0) :', best_score);
       fprintf(fid, ' %f', p_current);

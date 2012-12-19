@@ -67,7 +67,7 @@ function uuids = fit_kymograph(fitting, opts)
     adaptint = 100;
   end
 
-  if (strncmp(fitting.type, 'data', 4))
+  if (~strncmp(fitting.type, 'simulation', 10))
     if (isempty(fitting.ground_truth))
       error('Data is missing for the fitting !');
     end
@@ -96,7 +96,7 @@ function uuids = fit_kymograph(fitting, opts)
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
 
-  if (strncmp(fitting.type, 'simulation', 5))
+  if (strncmp(fitting.type, 'simulation', 10))
     [fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
     fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
     fitting.ground_truth = [fitting.ground_truth; fitting.ground_truth];
@@ -159,10 +159,19 @@ function uuids = fit_kymograph(fitting, opts)
   %rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
 
-  if (strncmp(fitting.type, 'simulation', 5))
+  if (strncmp(fitting.type, 'simulation', 10))
     noiseless = fitting.ground_truth;
     range_data = fitting.data_noise * range(linear_truth);
   end
+
+  if (~isempty(fitting.init_pos) & numel(fit_params) ~= numel(fitting.init_pos))
+    warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
+    fitting.init_pos = [];
+  else
+    fitting.init_pos = fitting.init_pos ./ rescaling(fit_params);
+  end
+
+  warning off;
 
   for f = 1:fitting.nfits
     uuids{f} = num2str(now + cputime);
@@ -170,7 +179,11 @@ function uuids = fit_kymograph(fitting, opts)
 
     tmp_params = ml_params;
 
-    p0 = ml_params(fit_params);
+    if (isempty(fitting.init_pos))
+      p0 = ml_params(fit_params);
+    else
+      p0 = fitting.init_pos;
+    end
 
     if (fitting.fit_flow)
       p0 = [p0 1];
@@ -181,7 +194,7 @@ function uuids = fit_kymograph(fitting, opts)
     p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     nparams = length(p0);
 
-    if (strncmp(fitting.type, 'simulation', 5))
+    if (strncmp(fitting.type, 'simulation', 10))
       fitting.ground_truth = noiseless + range_data*randn(size_data);
     end
 
@@ -191,6 +204,12 @@ function uuids = fit_kymograph(fitting, opts)
       display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
     end
     p0 = sqrt(p0(:));
+
+    tmp_fit = fitting;
+    tmp_fit.ground_truth = [];
+    fid = fopen([log_name 'evol.dat'], 'w');
+    print_all(fid, tmp_fit);
+    fclose(fid)
 
     switch (fitting.fitting_type)
       case 'cmaes'
@@ -252,6 +271,8 @@ function uuids = fit_kymograph(fitting, opts)
 
     display(['Best (' num2str(p(:).') ')']);
   end
+
+  warning on;
 
   return;
 
@@ -401,13 +422,13 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_err(~linear_goods) = 0;
         err_all(i) = sum(tmp_err(:));
 
-        %figure;
-        %subplot(1,2,1);
-        %imagesc(mymean(res, 3));
-        %subplot(1,2,2);
-        %imagesc(mymean(tmp_err, 3));
-        %title([num2str(err_all(i)) ' ' num2str(p_all(:,i).')]);
-        %keyboard
+%        figure;
+%        subplot(1,2,1);
+%        imagesc(mymean(res, 3));
+%        subplot(1,2,2);
+%        imagesc(mymean(tmp_err, 3));
+%        title([num2str(err_all(i)) ' ' num2str(p_all(:,i).')]);
+%        keyboard
       end
     end
 

@@ -54,7 +54,7 @@ function find_kymograph(varargin)
         fitting.ground_truth = permute([ground_truth(:, 1:boundary+1, :), ground_truth(:,end:-1:boundary+1, :)], [2 1 3]);
         fitting.x_pos = pos(boundary+1:end);
         fitting.t_pos = [0:size(ground_truth, 1)-1]*10;
-        fitting.type = 'data';
+        fitting.type = kymo_name;
 
         if (~fitting.fit_full)
           for k=1:size(fitting.ground_truth, 3)
@@ -189,6 +189,24 @@ function [mymovies, uuid, fitting, opts] = parse_input(varargin)
 
     % Loop over the pairs of parameters
     for i = 1:npairs
+      switch varargin{2*i - 1}
+        case 'config_modeling'
+          conf_mod = varargin{2*i};
+        case 'config_fitting'
+          conf_fit = varargin{2*i};
+      end
+    end
+
+    if (~isempty(conf_mod))
+      opts = load_parameters(opts, conf_mod);
+    end
+
+    if (~isempty(conf_fit))
+      fitting = load_parameters(fitting, conf_fit);
+    end
+
+    % Loop over the pairs of parameters
+    for i = 1:npairs
 
       % If the parameter exists in opts we simply assign it the
       % provided value
@@ -209,14 +227,6 @@ function [mymovies, uuid, fitting, opts] = parse_input(varargin)
 
   if (~fitting.fit_full)
     opts = load_parameters(opts, 'maintenance.txt');
-  end
-
-  if (~isempty(conf_mod))
-    opts = load_parameters(opts, conf_mod);
-  end
-
-  if (~isempty(conf_fit))
-    fitting = load_parameters(fitting, conf_fit);
   end
 
   if (~iscell(mymovies))

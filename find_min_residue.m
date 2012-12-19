@@ -13,7 +13,14 @@ function [signal, indx, rel_indx] = find_min_residue(signal, indx, candidate, ca
   end
   
   [w,h,n] = size(signal);
-  npts = size(candidate, 2);
+  [npos, npts] = size(candidate);
+
+  if (w ~= npos)
+    [X, Y] = meshgrid([1:npts], 1+([0:npos-1]*(w-1)/(npos-1)).');
+    candidate = bilinear_mex(candidate, X, Y, [2 2]);
+    [npos, npts] = size(candidate);
+  end
+
   cand_pos = 1:npts;
   sign_pos = [1:h];
   rel_pos = sign_pos - indx;
