@@ -111,7 +111,8 @@ function uuids = fit_kymograph(fitting, opts)
     fitting.fit_flow = false;
   end
 
-  size_data = size(fitting.ground_truth);
+  [n,m,o] = size(fitting.ground_truth);
+  size_data = [n,m,o];
 
   if (strncmp(fitting.aligning_type, 'domain', 6))
     opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
@@ -209,7 +210,7 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_fit.ground_truth = [];
     fid = fopen([log_name 'evol.dat'], 'w');
     print_all(fid, tmp_fit);
-    fclose(fid)
+    fclose(fid);
 
     switch (fitting.fitting_type)
       case 'cmaes'
