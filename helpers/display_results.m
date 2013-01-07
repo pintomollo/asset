@@ -114,18 +114,19 @@ handles = struct('trackings',trackings, ...
                                    'img', -1, ...
                                    'lines', [], ...
                                    'pts',[], ...
-                                   'ruffles', [], ...
-                                   'errors', hTable1), ...
+                                   'ruffles', []), ...
                  'cortex',struct('axes', hCortex, ...
                                  'img', -1, ...
                                  'lines', [], ...
                                  'pts', [], ...
-                                 'ruffles', [], ...
-                                 'errors', hTable2), ...
+                                 'ruffles', []), ...
                  'current', nframe, ...
                  'previous', nframe, ...
                  'type', 'dic', ...
                  'uitype',hType);
+
+%                                   'errors', hTable1), ...
+%                                 'errors', hTable2), ...
 
 set(hFig, 'UserData', handles);
 update_display(hFig);
@@ -168,6 +169,8 @@ elseif (isfield(handles.mymovie, 'data') & ~isempty(handles.mymovie.data))
   [nframes] = size_data(handles.mymovie.data);
 end
 
+moved = false;
+
 switch key
   case 28
 
@@ -178,6 +181,8 @@ switch key
       if (handles.current < 1)
         handles.current = nframes;
       end
+
+      moved = true;
     else
 
       xaxes = get(handles.eggshell.axes,'XLim');
@@ -201,6 +206,8 @@ switch key
       if (handles.current > nframes)
         handles.current = 1;
       end
+
+      moved = true;
   else
       maxx = size(get(handles.eggshell.img,'CData'),2);
 
@@ -255,7 +262,9 @@ case double('Z')
 end
 
 set(hfig,'UserData',handles);
-update_display(hfig);
+if (moved)
+  update_display(hfig);
+end
 
 return;
 end  % KeyPressFcn
@@ -318,15 +327,17 @@ nans = NaN(1,2);
 
 ref_egg = nans;
 ref_cor = nans;
-err_egg = NaN;
-err_cor = NaN;
-det_egg = nans;
-det_cor = nans;
-pts_egg = nans;
-pts_cor = nans;
-ruf_cor = nans;
-ruf_prev = nans;
-ruf_int = nans;
+%err_egg = NaN;
+%err_cor = NaN;
+%det_egg = nans;
+%det_cor = nans;
+%pts_egg = nans;
+%pts_cor = nans;
+%ruf_cor = nans;
+%ruf_prev = nans;
+%ruf_int = nans;
+%prev_pts = nans;
+%prev_links = nans;
 
 switch handles.type
 %  case 'dic'
@@ -402,9 +413,20 @@ switch handles.type
 %
 %    egg_type = 'dic';
 %    cor_type = 'dic';
+  case 'data'
+    fields = {'data', 'data', 'eggshell', 'cortex', 'eggshell', 'ruffles'; ...
+              'img',  'img',  'carth',    'carth',  'axes',     'carth'};
+
+    if (isfield(mymovie.data, 'spots') & ~empty_struct(mymovie.data.spots, 'carth'))
+      fields(:,end+1) = {'spots'; 'carth'};
+      if (~empty_struct(mymovie.data.spots, 'cluster'))
+        fields(:,end+1) = {'spots'; 'cluster'};
+      end
+    end
+
   otherwise
-    fields = {handles.type, handles.type, 'eggshell', 'cortex', 'eggshell', 'ruffles', 'centrosomes'; ...
-              'img', 'img', 'carth',      'carth',    'axes',   'carth',    'carth'};
+    fields = {handles.type, handles.type, 'eggshell', 'cortex', 'eggshell', 'ruffles'; ...
+              'img',        'img',        'carth',    'carth',  'axes',     'carth'};
 
 end
 
@@ -423,8 +445,8 @@ values = extract_fields(mymovie, handles.current, handles.type, fields);
 %det_egg = mymovie.(egg_type).eggshell(handles.current).carth;
 %det_cor = mymovie.(cor_type).cortex(handles.current).carth;
 
-set(handles.eggshell.errors,'Data',{err_egg});
-set(handles.cortex.errors,'Data',{err_cor});
+%set(handles.eggshell.errors,'Data',{err_egg});
+%set(handles.cortex.errors,'Data',{err_cor});
 
 if (ishandle(handles.eggshell.img))
   set(handles.eggshell.img, 'CData', values{1});
@@ -439,6 +461,38 @@ if (ishandle(handles.eggshell.img))
   set(handles.eggshell.pts, 'XData', values{5}(:,1), 'YData', values{5}(:,2));
 
   set(handles.cortex.ruffles, 'XData', values{6}(:,1), 'YData', values{6}(:,2));
+
+  if (numel(handles.cortex.pts) > 1 & handles.current ~= handles.previous)
+    prev_pts = get(handles.cortex.pts(1), {'XData', 'YData'});
+
+    if (~any(isnan(values{8})))
+      goods = (values{8}(:,3) == handles.current - 1);
+      if (handles.current > handles.previous)
+        x = [values{7}(values{8}(goods,2),1), prev_pts{1}(values{8}(goods,1)).'];
+        y = [values{7}(values{8}(goods,2),2), prev_pts{2}(values{8}(goods,1)).'];
+      else
+        prev_links = get(handles.cortex.pts(3), {'XData', 'YData'});
+        if (numel(prev_links{1}) > 0)
+          x = [values{7}(prev_links{1},1), prev_pts{1}(prev_links{2}).'];
+          y = [values{7}(prev_links{1},2), prev_pts{2}(prev_links{2}).'];
+        else
+          x = [];
+          y = [];
+        end
+      end
+      
+      x(:,end+1) = NaN;
+      y(:,end+1) = NaN;
+
+      x = x.';
+      y = y.';
+
+      set(handles.cortex.pts(2), 'XData', x(:), 'YData', y(:));
+
+      goods = (values{8}(:,3) == handles.current - 1);
+      set(handles.cortex.pts(3), 'XData', values{8}(goods,1), 'YData', values{8}(goods, 2));
+    end
+  end
 
   switch handles.type
     case 'markers'
@@ -469,6 +523,17 @@ else
   switch handles.type
     case 'markers'
       handles.cortex.pts(1) = line(values{7}(:,1),values{7}(:,2),'Color',[1 1 0],'Parent',handles.cortex.axes);
+    case 'data'
+      handles.cortex.pts(1) = line(values{7}(:,1),values{7}(:,2),'LineStyle','none','Marker','o','Color',[1 0 0],'Parent',handles.cortex.axes);
+      if (numel(values) > 7)
+        handles.cortex.pts(2) = line(NaN, NaN, 'Color', [0 0 1],'Parent',handles.cortex.axes);
+        if (~any(isnan(values{8})))
+          goods = ((values{8}(:,3) == handles.current - 1) & ~any(isnan(values{8}),2));
+          handles.cortex.pts(3) = line(values{8}(goods,1), values{8}(goods,2), 'Visible', 'off','Parent',handles.cortex.axes);
+        else
+          handles.cortex.pts(3) = line(NaN, NaN, 'Visible', 'off','Parent',handles.cortex.axes);
+        end
+      end
     otherwise
       handles.cortex.pts(1) = line(values{7}(:,1),values{7}(:,2),'Marker','o','Color',[1 0 0],'Parent',handles.cortex.axes);
 %      handles.cortex.pts(2) = line(values{7}(2,1),values{7}(2,2),'Marker','o','Color',[0 0 1],'Parent',handles.cortex.axes);

@@ -7,9 +7,9 @@ function mymovie = measure_flow(mymovie, opts)
 
     mymovie = lidke_fit(mymovie, opts);
   end
-  if (opts.recompute | empty_struct(mymovie.data.spots, 'cluster'))
+%  if (opts.recompute | empty_struct(mymovie.data.spots, 'cluster'))
     mymovie = track_spots(mymovie, opts);
-  end
+%  end
 
   if (~isfield(mymovie.data, 'flow'))
     flow = get_struct('flow', [1, nframes]);

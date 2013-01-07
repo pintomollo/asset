@@ -1,7 +1,27 @@
-function migrate_data(orig_folder, new_folder)
+function migrate_data(orig_folder, new_folder, duplicate)
 
   if (nargin == 1)
     new_folder = '.';
+    duplicate = [];
+  elseif (nargin == 2)
+    if (islogical(new_folder))
+      duplicate = new_folder;
+      new_folder = '.';
+    else
+      duplicate = [];
+    end
+  end
+
+  if (isempty(duplicate))
+    answer = questdlg('Do you want to keep the original files ?', 'Data Migration');
+    switch answer
+      case 'Yes'
+        duplicate = true;
+      case 'No'
+        duplicate = false;
+      case 'Cancel'
+        return;
+    end
   end
 
   orig_folder = absolutepath(orig_folder);
@@ -54,7 +74,13 @@ function migrate_data(orig_folder, new_folder)
             orig_file = fullfile(tmp_folder, name);
             new_file = get_new_name('tmpmat(\d+)\.ome\.tiff?', new_tmp_folder);
             if (exist(orig_file, 'file') == 2)
-              movefile(orig_file, new_file, 'f');
+
+              if (duplicate)
+                copyfile(orig_file, new_file, 'f');
+              else
+                movefile(orig_file, new_file, 'f');
+              end
+
               data.mymovie.(field).fname = new_file;
 
               data.mymovie.(field).file = strrep(data.mymovie.(field).file, '\', filesep);
@@ -71,11 +97,14 @@ function migrate_data(orig_folder, new_folder)
       mymovie = data.mymovie;
       opts = data.opts;
       trackings = data.trackings;
-
-      save(fname, 'mymovie', 'trackings', 'opts');
     end
 
-    movefile(fname, new_folder, 'f');
+    if (duplicate)
+      save(new_fname, 'mymovie', 'trackings', 'opts');
+    else
+      save(fname, 'mymovie', 'trackings', 'opts');
+      movefile(fname, new_folder, 'f');
+    end
   end
 
   return;
