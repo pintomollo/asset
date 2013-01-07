@@ -21,7 +21,7 @@ function  abs_path = absolutepath( rel_path, act_path )
 
 %   Jochen Lenz
 
-if ((ispc & rel_path(2) == ':') | (~ispc & rel_path(1) == filesep))
+if (numel(rel_path) > 1 & ((ispc & rel_path(2) == ':') | (~ispc & rel_path(1) == filesep)))
   %warning(['Path ' rel_path ' is already absolute']);
   abs_path = rel_path;
 
