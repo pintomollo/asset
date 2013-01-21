@@ -30,7 +30,7 @@ function [all_x, t] = simulate_adr(x0, opts)
 
   flow = opts.advection_params;
   if (size(flow, 1) ~= size(x0, 1))
-    [X, Y] = meshgrid([1:size(flow, 1)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
+    [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
 

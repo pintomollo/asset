@@ -7,9 +7,9 @@ function mymovie = measure_flow(mymovie, opts)
 
     mymovie = lidke_fit(mymovie, opts);
   end
-%  if (opts.recompute | empty_struct(mymovie.data.spots, 'cluster'))
+  if (opts.recompute | empty_struct(mymovie.data.spots, 'cluster'))
     mymovie = track_spots(mymovie, opts);
-%  end
+  end
 
   if (~isfield(mymovie.data, 'flow'))
     flow = get_struct('flow', [1, nframes]);
@@ -56,6 +56,20 @@ function mymovie = measure_flow(mymovie, opts)
   all_pos = [];
   all_frame = [];
 
+  nucleus_center = (isfield(mymovie.data, 'nuclei') & ~empty_struct(mymovie.data.nuclei, 'carth'));
+  if (nucleus_center)
+    for i=1:nframes
+      if (~isempty(mymovie.data.nuclei(i).carth))
+        prev_center = [mymovie.data.nuclei(i).carth mymovie.data.nuclei(i).properties i];
+        break;
+      end
+    end
+  end
+
+  nucleus_with = 1.25;
+
+  all_dists = NaN(nframes, 2);
+
   prev_pts = mymovie.data.spots(1).carth;
   for i=2:nframes
     nimg = i;
@@ -77,8 +91,67 @@ function mymovie = measure_flow(mymovie, opts)
 
       npts = size(pts,1);
 
-      align_cortex = realign(cortex, [0;0], mymovie.data.centers(:, nimg), mymovie.data.orientations(nimg));
+      egg_angle = mymovie.data.orientations(nimg);
+      if (nucleus_center)
+        if (~isempty(mymovie.data.nuclei(nimg).carth))
+          nucleus_center = [mymovie.data.nuclei(nimg).carth mymovie.data.nuclei(nimg).properties nimg];
+        else
+          nucleus_center = prev_center;
+        end
+
+        ells = carth2elliptic([cortex; nucleus_center(1:2)], mymovie.data.centers(:, nimg), [1;1], 0, 'radial');
+        ell_nucleus = ells(end,:);
+        ells = ells(1:end-1, :);
+
+        dangle = asin(nucleus_with*nucleus_center(3)/ell_nucleus(2));
+        good_ells = (ells(:,1) >= ell_nucleus(1) - dangle & ells(:,1) <= ell_nucleus(1) + dangle);
+
+        if (ell_nucleus(1) - dangle < 0)
+          good_ells = good_ells | (ells(:,1)-2*pi >= ell_nucleus(1) - dangle & ells(:,1)-2*pi <= ell_nucleus(1) + dangle);
+        end
+        if (ell_nucleus(1) + dangle > 2*pi)
+          good_ells = good_ells | (ells(:,1)+2*pi >= ell_nucleus(1) - dangle & ells(:,1)+2*pi <= ell_nucleus(1) + dangle);
+        end
+
+%        hold off;
+%        plot(cortex(:,1), cortex(:,2), 'b');
+%        hold on;
+%        scatter(cortex(good_ells,1), cortex(good_ells,2), 'm');
+%        rectangle
+%        rectangle('Position', [nucleus_center(1:2)-nucleus_center(3) 2*nucleus_center(1,[3 3])], 'Curvature', [1 1], 'EdgeColor', 'k');
+%        scatter(mymovie.data.centers(1,nimg), mymovie.data.centers(2,nimg), 'g');
+
+%        drawnow
+
+        dist = sqrt(mymean(sum(bsxfun(@minus, cortex(good_ells,:), nucleus_center(1:2)).^2, 2), 1));
+        all_dists(i,1) = dist;
+        dist = dist / nucleus_center(3);
+        %rads & some function ....
+        all_dists(i,2) = dist;
+
+        if (dist <= 2)
+          egg_angle = ell_nucleus(1);
+        elseif (dist <= 3)
+          dist = dist - 2;
+          egg_angle = ell_nucleus(1)*(1-dist) + egg_angle*dist;
+        end
+
+        prev_center = nucleus_center;
+      end
+
+      align_cortex = realign(cortex, [0;0], mymovie.data.centers(:, nimg), egg_angle);
       [pos, post_indxs, tot_dist] = carth2linear(align_cortex, true, opts);
+
+%        hold off;
+%        plot(align_cortex(:,1), align_cortex(:,2), 'b');
+%        hold on;
+%        scatter(align_cortex(good_ells,1), align_cortex(good_ells,2), 'm');
+%        tmp_nucl = realign(nucleus_center(1:2), [0;0], mymovie.data.centers(:, nimg), egg_angle);
+%        rectangle('Position', [tmp_nucl-nucleus_center(3) 2*nucleus_center(1,[3 3])], 'Curvature', [1 1], 'EdgeColor', 'k');
+%        scatter(0, 0, 'g');
+%
+%        drawnow
+
       cortex = cortex(post_indxs, :);
       [perp] = perpendicular_sampling(cortex, opts);
       pos = pos * tot_dist;

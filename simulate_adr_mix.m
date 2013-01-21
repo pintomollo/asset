@@ -35,7 +35,7 @@ function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
   flow = opts.advection_params;
   %flow = rand(size(x0));
   if (size(flow, 1) ~= size(x0, 1))
-    [X, Y] = meshgrid([1:size(flow, 1)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
+    [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
   %flow(:) = pi;

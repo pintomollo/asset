@@ -85,13 +85,11 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
 
   % precision of sigma2 as imaginative observations
   %  if n0<0, no sigma2 update
-  n0  = getpar(params,'n0',-1);
-  % initial/prior value for the Gaussian error variance
-  sigma2 = getpar(params,'sigma2',1);
+  %n0  = getpar(params,'n0',-1);
   % number of observations (needed for sigma2 update)
-  if (n0>=0)
-    n = getpar(params,'n');
-  end
+  %if (n0>=0)
+  n = getpar(params,'n');
+  %end
 
   qcov = getpar(options,'qcov'); % proposal covariance
 
@@ -117,10 +115,10 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     Rs{i} = R./(drscale^(i-1)); % second proposal for DR try
     iRs{i} = inv(Rs{i});
   end
-  chain   = zeros(nsimu,npar+2);  % we store the chain here
+  chain   = zeros(nsimu,npar+1);  % we store the chain here
 
   %%%% Assuming gaussian distributions and integrating variance out !!!
-  s20 = 0;
+  %s20 = 0;
   %if (n0>=0)
   %  s2chain = zeros(nsimu,1);   % the sigma2 chain
   %  s20 = sigma2;
@@ -132,11 +130,11 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   oldss        = feval(ssfun,oldpar,data);% first sum-of-squares
   %oldprior     = feval(priorfun,oldpar,params);
   acce         = 1;                       %  how many accepted moves
-  chain(1,:)   = [oldpar sigma2 oldss];
+  chain(1,:)   = [oldpar oldss];
 
-  if (s20>0)
-    s2chain(1,:) = sigma2;
-  end
+%  if (s20>0)
+%    s2chain(1,:) = sigma2;
+%  end
 
   % Unique identifier for multiple writers in the same file
   uuid = ['DRAM' num2str(round(rand(1)*100)) ' '];
@@ -145,8 +143,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
     fprintf(fid, [uuid '%% columns="iteration, evalutation | lastbest" (' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')\n']);
     fprintf(fid, [uuid '1 : %e |'], oldss);
-    fprintf(fid, ' %f',oldpar);
-    fprintf(fid, ' | %f\n', sigma2);
+    fprintf(fid, ' %f\n',oldpar);
     fclose(fid);
   end
 
@@ -181,7 +178,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
         %[alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr, sigma2);
         [alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr, n);
 
-        if (rand < alpha) % we accept
+        if (log(rand) <= alpha) % we accept
           acce     = acce+1;
           oldpar   = pars(dr+1,:);
           oldss    = scores(dr+1,:);
@@ -191,17 +188,17 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
         end
       end
     end
-    chain(isimu,:) = [oldpar sigma2 oldss];
+    chain(isimu,:) = [oldpar oldss];
     % update the error variance sigma2
-    if (s20 > 0)
-      sigma2  = 1./gammar_mt(1,1,(n0+n)./2,2./(n0*s20+oldss));
-      s2chain(isimu,:) = sigma2;
-    end
+%    if (s20 > 0)
+%      sigma2  = 1./gammar_mt(1,1,(n0+n)./2,2./(n0*s20+oldss));
+%      s2chain(isimu,:) = sigma2;
+%    end
     
     if (adaptint>0 & fix(isimu/adaptint) == isimu/adaptint)
       % adapt the proposal covariances
       % update covariance and mean of the chain
-      [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-2),1, ...
+      [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-1),1, ...
                                          chaincov,chainmean,wsum);
       lasti = isimu;
       [Ra,is] = chol(chaincov + eye(npar)*qcovadj);
@@ -219,19 +216,21 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     if (do_log)
       [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
       fprintf(fid, [uuid '%ld : %e |'], isimu, oldss);
-      fprintf(fid, ' %f',oldpar);
-      fprintf(fid, ' | %f\n', sigma2);
+      fprintf(fid, ' %f\n',oldpar);
       fclose(fid);
     end
 
     if (isimu-newi > stall_thresh)
       warning(['Likelihood had not evolved for ' num2str(ceil(stall_thresh)) ' iterations, aborting']);
+      nsimu = isimu;
+      chain = chain(1:nsimu, :);
+
       break;
     end
   end
 
   % calculate covariance and mean of the chain
-  [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-2),1, ...
+  [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-1),1, ...
                                      chaincov,chainmean,wsum);
 
   results.class = 'MCMC results';

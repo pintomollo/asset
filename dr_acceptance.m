@@ -4,8 +4,14 @@ function [acc_ratio, Ns, Ds] = dr_acceptance(scores, params, iR, Ns, Ds, ntrials
   dist = -0.5*norm((params(ntrials+1,:) - params(ntrials,:))*iR{1})^2;
   %N = -0.5*((scores(ntrials+1)/sigma2) + dist);
   %D = -0.5*((scores(ntrials)/sigma2) + dist);
-  N = (log(scores(ntrials+1))*(-n/2) + dist);
-  D = (log(scores(ntrials))*(-n/2) + dist);
+%  if (integrate)
+    % Should normally be ^(-n/2) but we assume score is squared already
+%    N = (log(scores(ntrials+1))*(-n/4) + dist);
+%    D = (log(scores(ntrials))*(-n/4) + dist);
+%  else
+    N = -scores(ntrials+1) + dist;
+    D = -scores(ntrials) + dist;
+%  end
 
   Ns{ntrials, ntrials} = N;
   Ds{ntrials, ntrials} = D;
@@ -22,7 +28,7 @@ function [acc_ratio, Ns, Ds] = dr_acceptance(scores, params, iR, Ns, Ds, ntrials
     %Ns{ntrials, pos} = prob*(Ns{ntrials, pos+1} - Ds{ntrials, pos+1});
   end
 
-  acc_ratio = exp(Ns{ntrials, 1} - Ds{ntrials, 1});
+  acc_ratio = Ns{ntrials, 1} - Ds{ntrials, 1};
 
   return;
 end

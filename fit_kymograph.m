@@ -89,7 +89,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   flow = opts.advection_params;
   if (size(flow, 1) ~= size(x0, 1))
-    [X, Y] = meshgrid([1:size(flow, 1)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
+    [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
 
@@ -194,6 +194,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     nparams = length(p0);
+    nobs = sum(linear_goods) / nparams;
 
     if (strncmp(fitting.type, 'simulation', 10))
       fitting.ground_truth = noiseless + range_data*randn(size_data);
@@ -248,8 +249,8 @@ function uuids = fit_kymograph(fitting, opts)
         model.ssfun    = @error_function;
 
         params.par0    = p0(:); % initial parameter values
-        params.n       = sum(linear_goods);
-        params.n0      = params.n;  % prior for error variance sigma^2
+        params.n       = nobs;
+%        params.n0      = params.n;  % prior for error variance sigma^2
 %        params.sigma2  = estim_sigma2;  % prior accuracy for sigma^2
 
         options.nsimu    = fitting.max_iter;               % size of the chain
@@ -277,7 +278,8 @@ function uuids = fit_kymograph(fitting, opts)
 
   return;
 
-  function [err_all, sigma2] = error_function(varargin)
+  %function [err_all, sigma2] = error_function(varargin)
+  function [err_all] = error_function(varargin)
 
     sigma2 = 0;
     p_all = varargin{1};
@@ -415,13 +417,16 @@ function uuids = fit_kymograph(fitting, opts)
         
         tmp_err = (fitting.ground_truth - res).^2;
 
-        if (nargout == 2)
-          tmp_mean = mymean(tmp_err(:));
-          sigma2 = mymean((tmp_err(:) - tmp_mean).^2);
-        end
+        %if (nargout == 2)
+        %  tmp_mean = mymean(tmp_err(:));
+        %  sigma2 = mymean((tmp_err(:) - tmp_mean).^2);
+        %end
 
         tmp_err(~linear_goods) = 0;
-        err_all(i) = sum(tmp_err(:));
+        % Integrated the sigma out from the gaussian error function
+        err_all(i) = (0.5*nobs)*log(sum(tmp_err(:)));
+        % Standard log likelihood with gaussian prob
+        %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
 
 %        figure;
 %        subplot(1,2,1);

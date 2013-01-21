@@ -1,0 +1,7 @@
+#nuclei_tracking
+frame_displacement 1
+frame_window 5
+interpolate true
+min_path_length 20
+joining_function []
+splitting_function []

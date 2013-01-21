@@ -42,7 +42,12 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie = split_cells(mymovie, opts);
   end
 
+  if (~isfield(mymovie.data, 'nuclei') | isempty(mymovie.data.nuclei) | empty_struct(mymovie.data.nuclei, 'carth'))
+    mymovie = detect_data_nuclei(mymovie, opts);
+  end
+
   neighbors = mymovie.data.neighbors;
+  nuclei = mymovie.data.nuclei;
   parameters = opts.segmentation_parameters.data;
 
   img = [];
@@ -108,6 +113,13 @@ function mymovie = dp_data(mymovie, nimg, opts)
     %img = imfilter(img,parameters.noise.gaussian,'symmetric');
     %img = medfilt2(img,parameters.noise.median);
 
+    if (~isempty(nuclei(nimg).carth))
+%      subplot(1,2,1);imagesc(img);
+      img = img + GaussMask2D(nuclei(nimg).properties*0.75, size(img), nuclei(nimg).carth([2 1]), 0, 1)*prctile(img(:), 95);
+%      subplot(1,2,2);imagesc(img);
+%      drawnow;
+    end
+
     img = imnorm(img, noise_params(1), []);
 
     %img = imnorm(img);
@@ -163,8 +175,8 @@ function mymovie = dp_data(mymovie, nimg, opts)
       cortex_path = dynamic_programming(polar_img, parameters.cortex_params, parameters.scoring_func{2}, parameters.cortex_weights, opts);
       cortex_path = remove_polar_body(polar_img, cortex_path, parameters.cortex_params, parameters.scoring_func{2}, parameters.cortex_weights, opts);
 
-      %figure;imshow(polar_img);
-      %hold on;plot(cortex_path,[1:length(cortex_path)],'Color',[1 0.5 0]);
+%      figure;imshow(polar_img);
+%      hold on;plot(cortex_path,[1:length(cortex_path)],'Color',[1 0.5 0]);
 
       %keyboard
     end
