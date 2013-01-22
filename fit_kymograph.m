@@ -63,8 +63,8 @@ function uuids = fit_kymograph(fitting, opts)
   normalization_done = false;
 
   if (strncmp(fitting.fitting_type, 'dram', 4))
-    drscale  = 2; 
-    adaptint = 100;
+    drscale  = 10; 
+    adaptint = 0;
   end
 
   if (~strncmp(fitting.type, 'simulation', 10))
@@ -152,9 +152,6 @@ function uuids = fit_kymograph(fitting, opts)
   penalty = ((max(linear_truth(linear_goods)))^2)*opts.nparticles;
   ndata = length(fitting.x_pos);
 
-  full_error = penalty * size_data(2) * 10;
-  log_error = -log(penalty);
-
   rescaling = orig_scaling;
   %rescaling = 10.^(floor(log10(ml_params)));
   %rescaling(ml_params == 0) = 1;
@@ -195,6 +192,7 @@ function uuids = fit_kymograph(fitting, opts)
     p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     nparams = length(p0);
     nobs = sum(linear_goods) / nparams;
+    full_error = (0.5*nobs)*log(penalty * size_data(2) * 10);
 
     if (strncmp(fitting.type, 'simulation', 10))
       fitting.ground_truth = noiseless + range_data*randn(size_data);
@@ -209,6 +207,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     tmp_fit = fitting;
     tmp_fit.ground_truth = [];
+    tmp_fit.flow_size = size(flow);
     fid = fopen([log_name 'evol.dat'], 'w');
     print_all(fid, tmp_fit);
     fclose(fid);
