@@ -1,5 +1,6 @@
-function params = parse_ml_results(fname, varargin)
+function [params, opts] = parse_ml_results(fname, varargin)
 
+  opts = [];
   [nbests, keep_evolution, sort_method] = parse_input(varargin{:});
   params = get_struct('ml_params',1);
 
@@ -18,7 +19,7 @@ function params = parse_ml_results(fname, varargin)
 
   line = fgetl(fid);
   had_headers = false;
-  if (ischar(line) & strncmp(line, '###', 3))
+  if (ischar(line) & (strncmp(line, '###', 3) | isempty(findstr(line, ','))));
     had_headers = true;
   end
 
@@ -32,6 +33,14 @@ function params = parse_ml_results(fname, varargin)
     curr_conf = {};
     curr_goal = [];
     curr_ic = [];
+    conf = curr_conf;
+    goal = curr_goal;
+    init_cond = curr_ic;
+
+    tmp_name = fopen(fid);
+    fclose(fid);
+    opts = load_parameters(get_struct('fitting'), fname);
+    fid = fopen(tmp_name);
   end
 
   if (keep_evolution)

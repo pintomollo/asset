@@ -2,6 +2,8 @@ fit_relative true
 fitting_type 'dram'
 init_noise 0
 ndelays 5
-init_pos [0.0992 2.1085 2.8936 2.5281]
-step_size 1e-5
+%init_pos [0.0992 2.1085 2.8936 2.5281]
+%init_pos [0.104 2.065 2.8936 2.5281]
+init_pos [0.10424 2.07036 2.87754 2.51468]
+step_size 1e-3
 nfits 1

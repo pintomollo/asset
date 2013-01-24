@@ -38,14 +38,14 @@ function [signals, full_pos, shuffle] = combine_domains(mymovies, sync_type, syn
     
     [fraction, max_width, cell_width, domain, pos] = domain_expansion(mymovie, opts);
     time = get_manual_timing(mymovie, opts);
-    domain = domain(1:time(end), :);
+    domain = domain(1:time(end), :).';
 
-    size_diff = size(signals, 2) - size(domain, 2);
+    size_diff = size(signals, 1) - size(domain, 1);
     if (size_diff > 0)
-      domain = padarray(domain, [0 size_diff/2], NaN);
+      domain = padarray(domain, [size_diff/2 0], NaN);
     end
     if (~isempty(signals) & size_diff < 0)
-      signals = padarray(signals, [0 -size_diff/2 0], NaN);
+      signals = padarray(signals, [-size_diff/2 0 0], NaN);
     end
 
     switch (sync_type)
@@ -56,9 +56,15 @@ function [signals, full_pos, shuffle] = combine_domains(mymovies, sync_type, syn
         end
       case 'lsr'
         domain = domain / mymean(domain(:));
-        [signals, align_time] = find_min_residue(signals, align_time, domain, time(1));
+        [signals, new_time] = find_min_residue(signals, align_time, domain, time(1), 0.75, 20);
+        if (new_time == 0)
+          keyboard
+        end
+        align_time = new_time;
     end
   end
+
+  keyboard
 
   [h,w,n] = size(signals);
   full_pos = [1:w] - (((w-1)/2)+1);

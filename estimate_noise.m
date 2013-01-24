@@ -9,6 +9,16 @@ function [gammas] = estimate_noise(img, filter_type)
     filter_type = 'adm';
   end
 
+  nplanes = size(img, 3);
+  if (nplanes > 1)
+    gammas = NaN(nplanes, 4);
+    for i=1:nplanes
+      gammas(i,:) = estimate_noise(img(:,:,i), filter_type);
+    end
+
+    return;
+  end
+
   mfilter = 3;
   block_size = 21;
   middle = ((block_size-1)/2)+1;

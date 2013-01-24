@@ -143,7 +143,8 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
     fprintf(fid, [uuid '%% columns="iteration, evalutation | lastbest" (' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')\n']);
     fprintf(fid, [uuid '1 : %e |'], oldss);
-    fprintf(fid, ' %f\n',oldpar);
+    fprintf(fid, ' %f',oldpar);
+    fprintf(fid, '\n');
     fclose(fid);
   end
 
@@ -157,6 +158,8 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
 
   %%% the simulation loop
   for isimu=2:nsimu
+%  keyboard
+
 
     if (isimu/printint == fix(isimu/printint)) % info on every printint iteration
       fprintf('isimu=%d, %d%% done, accepted: %d%%\n',...
@@ -194,8 +197,10 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
 %      sigma2  = 1./gammar_mt(1,1,(n0+n)./2,2./(n0*s20+oldss));
 %      s2chain(isimu,:) = sigma2;
 %    end
-    
+
     if (adaptint>0 & fix(isimu/adaptint) == isimu/adaptint)
+%      beep;keyboard
+
       % adapt the proposal covariances
       % update covariance and mean of the chain
       [chaincov,chainmean,wsum] = covupd(chain((lasti+1):isimu,1:end-1),1, ...
@@ -216,7 +221,8 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     if (do_log)
       [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
       fprintf(fid, [uuid '%ld : %e |'], isimu, oldss);
-      fprintf(fid, ' %f\n',oldpar);
+      fprintf(fid, ' %f',oldpar);
+      fprintf(fid, '\n');
       fclose(fid);
     end
 
