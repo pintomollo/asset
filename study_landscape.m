@@ -15,7 +15,7 @@ function study_landscape(file)
     for v = variation
       tmp_pos = init_pos;
       tmp_pos(i) = tmp_pos(i)*v;
-      find_kymograph(file, 'fit_full', true,  'config_fitting', 'param_distribution', 'integrate_sigma', true, 'init_pos', tmp_pos);
+      find_kymograph(file, 'fit_full', true,  'config_fitting', 'param_distribution', 'integrate_sigma', true, 'init_pos', tmp_pos, 'max_iter', 2000);
     end
   end
 
