@@ -1,9 +1,5 @@
 function study_landscape(file)
 
-  if (ischar(file))
-    file = load(file);
-  end
-
   fitting = get_struct('fitting');
   fitting = load_parameters(fitting, 'param_distribution.txt');
 

@@ -201,7 +201,7 @@ function mymovie = measure_flow(mymovie, opts)
                       bsxfun(@minus, cortex(:,2), pts(:,2).').^2);
           dist(dist>3*proj_dist) = Inf;
 
-          weights = exp(-(dist.^2)/(2*(proj_dist^2)));
+          weights = exp(-(dist.^2)/(2*((proj_dist/2)^2)));
           weights = bsxfun(@rdivide, weights, sum(weights, 2));
 
           speed_x = sum(bsxfun(@times, weights, speed(:,1).'), 2);

@@ -480,8 +480,6 @@ function uuids = fit_kymograph(fitting, opts)
 %        imagesc(mymean(tmp_err, 3));
 %        title([num2str(err_all(i)) ' ' num2str(p_all(:,i).')]);
 %        drawnow
-
-%        keyboard
       end
     end
 
@@ -511,7 +509,48 @@ function domain = normalize_domain(domain, path, opts, has_noise)
   mask = bsxfun(@le, pos_mat, path.');
   mask = repmat(flipud(mask), [2, 1]);
 
+%  orig = domain;
+  path = round(path);
+
   nplanes = size(domain, 3);
+  noise = estimate_noise(domain);
+
+  for i=1:nplanes
+    for x=1:length(path)
+      pos = path(x);
+      if (isnan(pos))
+        pos = 1;
+      end
+      pos = h-pos+1;
+      mins = domain(pos+[0;h], x, i);
+      for y=pos-1:-1:1
+        indx = y+[0;h];
+        vals = domain(indx, x, i);
+        mins(mins>vals+noise(2)) = vals(mins>vals+noise(2));
+        bads = (vals>mins+noise(2)) | isnan(vals);
+        domain(indx(bads), x, i) = mins(bads);
+      end
+      maxs = domain(pos+[0;h], x, i);
+      for y=pos+1:h
+        indx = y+[0;h];
+        vals = domain(indx, x, i);
+        maxs(maxs<vals) = vals(maxs<vals);
+        bads = (vals<maxs-noise(2)) | isnan(vals);
+        domain(indx(bads), x, i) = maxs(bads);
+      end
+    end
+
+    img = domain(:,:,i);
+    min_val = prctile(img(~mask), prct_thresh);
+    max_val = prctile(img(mask), 100-prct_thresh);
+    domain(:,:,i) = (img - min_val) / (max_val - min_val);
+  end
+
+%  figure;imagesc(orig);
+%  figure;imagesc(domain);
+%  domain = orig;
+
+  %{
   if (has_noise)
     noise = estimate_noise(domain);
 
@@ -527,10 +566,6 @@ function domain = normalize_domain(domain, path, opts, has_noise)
       domain(:,:,i) = (img - noise(1)) / (max_val - noise(1));
     end
 
-    img = mymean(domain, 3);
-    min_val = prctile(img(~mask), prct_thresh);
-    max_val = prctile(img(mask), 100-prct_thresh);
-    domain = (domain - min_val) / (max_val - min_val);
   else
     for i=1:nplanes
       img = domain(:,:,i);
@@ -539,6 +574,36 @@ function domain = normalize_domain(domain, path, opts, has_noise)
       domain(:,:,i) = (img - min_val) / (max_val - min_val);
     end
   end
+
+  for i=1:length(path)
+    pos = path(i);
+    if (isnan(pos))
+      pos = 0;
+    end
+    pos = h-pos;
+    mins = domain(pos+[0;h], i);
+    for j=pos-1:-1:1
+      vals = domain(j+[0;h], i);
+      mins(mins>vals) = vals(mins>vals);
+      domain(j+[0;h], i) = mins;
+    end
+    maxs = domain(pos+[0;h], i);
+    for j=pos+1:h
+      vals = domain(j+[0;h], i);
+      maxs(maxs<vals) = vals(maxs<vals);
+      domain(j+[0;h], i) = maxs;
+    end
+  end
+
+  figure;imagesc(domain);
+
+  img = mymean(domain, 3);
+  min_val = prctile(img(~mask), prct_thresh);
+  max_val = prctile(img(mask), 100-prct_thresh);
+  domain = (domain - min_val) / (max_val - min_val);
+  %}
+
+%  keyboard
 
   return;
 
