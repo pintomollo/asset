@@ -16,8 +16,10 @@ function find_kymograph(varargin)
     for j=1:length(kymos)
       if (isfield(kymos(j), 'mymovie'))
         kymo = kymos(j);
+        kymo_name = kymo.mymovie.experiment
       else
         kymo = load(kymos(j).name);
+        kymo_name = kymos(j).name;
       end
 
       try
