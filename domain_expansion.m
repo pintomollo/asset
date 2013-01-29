@@ -1,7 +1,9 @@
 function [fraction, max_width, cell_width, raw_domain, pos] = domain_expansion(domain, center, cytok, opts, domain_half)
 
   mymovie = [];
-  if (nargin == 2)
+  if (nargin < 2)
+    error('Minimal number of arguments is 2');
+  elseif (nargin == 2)
     mymovie = domain;
     opts = center;
 
@@ -63,8 +65,8 @@ function [fraction, max_width, cell_width, raw_domain, pos] = domain_expansion(d
   end
   boundary = min(first, last)-1;
 
-  if (boundary <= 10)
-    if (max(first, last) > 10)
+  if (boundary <= 5)
+    if (max(first, last) > 5)
       if (first > last)
         domain = domain(:,[0:-1:-first]+center);
       else

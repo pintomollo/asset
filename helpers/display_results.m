@@ -498,7 +498,9 @@ if (ishandle(handles.eggshell.img))
     case 'markers'
       set(handles.cortex.pts(1), 'XData', values{7}(:,1), 'YData', values{7}(:,2));
     otherwise
-      set(handles.cortex.pts(1), 'XData', values{7}(:,1), 'YData', values{7}(:,2));
+      if (length(values) >= 7)
+        set(handles.cortex.pts(1), 'XData', values{7}(:,1), 'YData', values{7}(:,2));
+      end
 %      set(handles.cortex.pts(2), 'XData', values{7}(:,1), 'YData', values{7}(:,2));
   end
   %set(handles.cortex.ruffles(2), 'XData', ruf_cor(:,1), 'YData', ruf_cor(:,2));
@@ -535,7 +537,11 @@ else
         end
       end
     otherwise
-      handles.cortex.pts(1) = line(values{7}(:,1),values{7}(:,2),'Marker','o','Color',[1 0 0],'Parent',handles.cortex.axes);
+      if (length(values) >= 7)
+        handles.cortex.pts(1) = line(values{7}(:,1),values{7}(:,2),'Marker','o','Color',[1 0 0],'Parent',handles.cortex.axes);
+      else
+        handles.cortex.pts(1) = line(NaN, NaN,'Parent',handles.cortex.axes);
+      end
 %      handles.cortex.pts(2) = line(values{7}(2,1),values{7}(2,2),'Marker','o','Color',[0 0 1],'Parent',handles.cortex.axes);
   end
   %handles.cortex.ruffles(2) = line(ruf_cor(:,1),ruf_cor(:,2),'Marker','*','Color',[0 1 0],'LineStyle','none','Parent',handles.cortex.axes);

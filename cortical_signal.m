@@ -34,18 +34,19 @@ function mymovie = cortical_signal(mymovie, opts)
     %if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
       mymovie = find_ruffles(mymovie, opts);
       mymovie = follow_invaginations(mymovie, opts);
-    elseif (~isfield(mymovie.(type).ruffles, 'paths') | isempty(mymovie.(type).ruffles(1).paths))
-      do_it = true;
-      for j=1:nframes
-        if (~isempty(mymovie.(type).ruffles(j).paths))
-          do_it = false;
-
-          break;
-        end
-      end
-      if (do_it)
+    elseif (~isfield(mymovie.(type).ruffles, 'paths') | empty_struct(mymovie.(type).ruffles, 'paths'))
+    %elseif (~isfield(mymovie.(type).ruffles, 'paths') | isempty(mymovie.(type).ruffles(1).paths))
+      %do_it = true;
+      %for j=1:nframes
+      %  if (~isempty(mymovie.(type).ruffles(j).paths))
+      %    do_it = false;
+%
+      %    break;
+      %  end
+      %end
+      %if (do_it)
         mymovie = follow_invaginations(mymovie, opts);
-      end
+      %end
     end
   end
 
@@ -71,7 +72,7 @@ function mymovie = cortical_signal(mymovie, opts)
 
     nimg = i;
     %nimg = randi(nframes)
-    %nimg = i + 5
+    %nimg = i + 70
     %nimg = 93
 
     cortex = mymovie.data.cortex(nimg).carth;
@@ -95,6 +96,13 @@ function mymovie = cortical_signal(mymovie, opts)
 
       [values, dperp, dpos] = perpendicular_sampling(img, cortex, opts);
       [ph_values] = perpendicular_sampling(ph, cortex, dperp, dpos, opts);
+
+%      figure;subplot(1,2,1)
+%      imagesc(values)
+%      subplot(1,2,2)
+%      imagesc(ph_values)
+%      mtit(num2str(nimg))
+%      drawnow
 
       npts = size(values, 1);
       slopes = NaN(npts, 2);

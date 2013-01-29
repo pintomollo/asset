@@ -120,6 +120,7 @@ function find_kymograph(varargin)
 
       catch ME
 
+        warning on;
         warning('Error during the fitting procedure');
 
         if (fitting.fit_relative)

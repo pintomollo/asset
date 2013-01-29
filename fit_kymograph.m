@@ -175,14 +175,33 @@ function uuids = fit_kymograph(fitting, opts)
   if (~isempty(fitting.init_pos) & numel(fit_params) ~= numel(fitting.init_pos))
     warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
     fitting.init_pos = [];
-  else
+  elseif (~isempty(fitting.init_pos))
     fitting.init_pos = fitting.init_pos ./ rescaling(fit_params);
   end
 
   warning off;
   useful_data = [];
 
+  if (fitting.cross_measure & multi_data)
+    fitting.nfits = 2*fitting.nfits;
+    orig_fit = fitting;
+  end
+
   for f = 1:fitting.nfits
+    if (fitting.cross_measure)
+      fitting = orig_fit;
+      if (mod(f, 2) == 1)
+        selection = randperm(size(fitting.ground_truth, 3));
+        nlayers = round(length(selection)/2);
+        fitting.ground_truth = fitting.ground_truth(:,:,selection(1:nlayers));
+      else
+        fitting.ground_truth = fitting.ground_truth(:,:,selection(nlayers+1:end));
+        nlayers = length(selection) - nlayers;
+      end
+      linear_truth = fitting.ground_truth(:);
+      linear_goods = isfinite(linear_truth);
+    end
+
     uuids{f} = num2str(now + cputime);
     log_name = ['adr-kymo-' uuids{f} '_'];
 
@@ -206,7 +225,14 @@ function uuids = fit_kymograph(fitting, opts)
 
     p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     nparams = length(p0);
-    nobs = sum(linear_goods) / nparams;
+    if (fitting.estimate_n)
+      ns = identify_n(fitting.ground_truth);
+      nobs = sum([ns(:,1); ns(:,3)]);
+      norm_coeff = sum(linear_goods)/nobs;
+    else
+      nobs = sum(linear_goods) / nparams;
+      norm_coeff = 1;
+    end
 
     if (fitting.integrate_sigma)
       full_error = (0.5*nobs)*log(penalty * size_data(2) * 10);
@@ -228,7 +254,7 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_fit = fitting;
     tmp_fit.ground_truth = [];
     tmp_fit.flow_size = size(flow);
-    tmp_fit.recaling_factor = rescaling(fit_params);
+    tmp_fit.rescale_factor = rescaling(fit_params);
     fid = fopen([log_name 'evol.dat'], 'w');
     print_all(fid, tmp_fit);
     fclose(fid);
@@ -452,7 +478,7 @@ function uuids = fit_kymograph(fitting, opts)
           res = c(1) + c(2)*res;
         end
         
-        tmp_err = (fitting.ground_truth - res).^2;
+        tmp_err = (fitting.ground_truth - res).^2 / norm_coeff;
 
         %if (nargout == 2)
         %  tmp_mean = mymean(tmp_err(:));
@@ -479,7 +505,9 @@ function uuids = fit_kymograph(fitting, opts)
 %        subplot(1,2,2);
 %        imagesc(mymean(tmp_err, 3));
 %        title([num2str(err_all(i)) ' ' num2str(p_all(:,i).')]);
-%        drawnow
+
+%        keyboard
+        drawnow
       end
     end
 
@@ -509,12 +537,20 @@ function domain = normalize_domain(domain, path, opts, has_noise)
   mask = bsxfun(@le, pos_mat, path.');
   mask = repmat(flipud(mask), [2, 1]);
 
-%  orig = domain;
-  path = round(path);
+%  path = round(path);
 
   nplanes = size(domain, 3);
   noise = estimate_noise(domain);
 
+  domain = min_max_domain(domain, path, noise(2));
+
+  for i=1:nplanes
+    img = domain(:,:,i);
+    min_val = prctile(img(~mask), prct_thresh);
+    max_val = prctile(img(mask), 100-prct_thresh);
+    domain(:,:,i) = (img - min_val) / (max_val - min_val);
+  end
+%{
   for i=1:nplanes
     for x=1:length(path)
       pos = path(x);
@@ -545,6 +581,7 @@ function domain = normalize_domain(domain, path, opts, has_noise)
     max_val = prctile(img(mask), 100-prct_thresh);
     domain(:,:,i) = (img - min_val) / (max_val - min_val);
   end
+%}
 
 %  figure;imagesc(orig);
 %  figure;imagesc(domain);
