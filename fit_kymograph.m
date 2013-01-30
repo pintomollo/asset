@@ -101,6 +101,12 @@ function uuids = fit_kymograph(fitting, opts)
     fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
     fitting.ground_truth = [fitting.ground_truth; fitting.ground_truth];
     fitting.x_pos = [0:opts.nparticles-1] * opts.x_step;
+  elseif (~isempty(fitting.t_pos))
+    if (numel(fitting.t_pos) == 1)
+      opts.output_rate = fitting.t_pos;
+    else
+      opts.output_rate = median(diff(fitting.t_pos));
+    end
   end
 
   if (~fitting.fit_full)
@@ -306,6 +312,7 @@ function uuids = fit_kymograph(fitting, opts)
         options.drscale  = drscale;
         options.qcov     = fitting.step_size*eye(nparams).*2.4^2./nparams;      % initial proposal covariance 
         options.ndelays  = fitting.ndelays;
+        options.stall_thresh = fitting.stall_thresh;
         options.log_file = [log_name 'evol'];
 
         % run the chain

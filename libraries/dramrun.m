@@ -83,6 +83,8 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   % log file
   log_file = getpar(options,'log_file', '');
 
+  stall_thresh = getpar(options, 'stall_thresh', 0.1);
+
   % precision of sigma2 as imaginative observations
   %  if n0<0, no sigma2 update
   %n0  = getpar(params,'n0',-1);
@@ -153,7 +155,9 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   chainmean = [];
   wsum = [];
   lasti = 0;
-  stall_thresh = nsimu/10;
+  if (stall_thresh < 1)
+    stall_thresh = nsimu*stall_thresh;
+  end
   newi = 0;
 
   %%% the simulation loop
@@ -226,7 +230,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
       fclose(fid);
     end
 
-    if (isimu-newi > stall_thresh)
+    if (stall_thresh > 0 & isimu-newi > stall_thresh)
       warning(['Likelihood had not evolved for ' num2str(ceil(stall_thresh)) ' iterations, aborting']);
       nsimu = isimu;
       chain = chain(1:nsimu, :);
