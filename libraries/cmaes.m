@@ -366,7 +366,7 @@ stopTolX = myeval(opts.TolX);
 stopTolUpX = myeval(opts.TolUpX);
 stopTolFun = myeval(opts.TolFun);
 stopTolHistFun = myeval(opts.TolHistFun);
-stopOnWarnings = myevalbool(opts.StopOnWarnings); 
+stopOnWarnings = myevalbool(opts.StopOnWarnings);
 flgWarnOnEqualFunctionValues = myevalbool(opts.WarnOnEqualFunctionValues);
 flgEvalParallel = myevalbool(opts.EvalParallel);
 flgDiagonalOnly = myeval(opts.DiagonalOnly); 
@@ -803,13 +803,66 @@ while isempty(stopflag)
 
   % parallel evaluation
   if flgEvalParallel
-      arz = randn(N,lambda);
 
-      if ~flgDiagonalOnly
-        arx = repmat(xmean, 1, lambda) + sigma * (BD * arz); % Eq. (1)
+      % You may handle constraints here. You may either resample
+      % arz(:,k) and/or multiply it with a factor between -1 and 1
+      % (the latter will decrease the overall step size) and
+      % recalculate arx accordingly. Do not change arx or arz in any
+      % other way.
+ 
+      %{
+      if ~bnd.isactive
+        arz = randn(N,lambda)
+
+        if ~flgDiagonalOnly
+          arx = repmat(xmean, 1, lambda) + sigma * (BD * arz); % Eq. (1)
+        else
+          arx = repmat(xmean, 1, lambda) + repmat(sigma * diagD, 1, lambda) .* arz; 
+        end
+
+        if noiseHandling 
+          if noiseEpsilon == 0
+            arx = [arx arx(:,1:noiseReevals)]; 
+          elseif flgDiagonalOnly
+            arx = [arx arx(:,1:noiseReevals) + ...
+                   repmat(noiseEpsilon * sigma * diagD, 1, noiseReevals) ...
+                   .* randn(N,noiseReevals)]; 
+          else 
+            arx = [arx arx(:,1:noiseReevals) + ...
+                   noiseEpsilon * sigma * ...
+                   (BD * randn(N,noiseReevals))]; 
+          end
+        end
+
+        arxvalid = arx;
       else
-        arx = repmat(xmean, 1, lambda) + repmat(sigma * diagD, 1, lambda) .* arz; 
+        arz = randn(N,lambda)
+
+        if ~flgDiagonalOnly
+          arx = repmat(xmean, 1, lambda) + sigma * (BD * arz); % Eq. (1)
+        else
+          arx = repmat(xmean, 1, lambda) + repmat(sigma * diagD, 1, lambda) .* arz; 
+        end
+
+        if noiseHandling 
+          if noiseEpsilon == 0
+            arx = [arx arx(:,1:noiseReevals)]; 
+          elseif flgDiagonalOnly
+            arx = [arx arx(:,1:noiseReevals) + ...
+                   repmat(noiseEpsilon * sigma * diagD, 1, noiseReevals) ...
+                   .* randn(N,noiseReevals)]; 
+          else 
+            arx = [arx arx(:,1:noiseReevals) + ...
+                   noiseEpsilon * sigma * ...
+                   (BD * randn(N,noiseReevals))]; 
+          end
+        end
+
+        arxvalid = xintobounds(arx, lbounds, ubounds);
       end
+      %}
+
+      [arx, arz] = getxinsidebounds(xmean, lambda, sigma, BD, flgDiagonalOnly, lbounds, ubounds);
 
       if noiseHandling 
         if noiseEpsilon == 0
@@ -824,18 +877,8 @@ while isempty(stopflag)
                  (BD * randn(N,noiseReevals))]; 
         end
       end
+      arxvalid = xintobounds(arx, lbounds, ubounds);
 
-      % You may handle constraints here. You may either resample
-      % arz(:,k) and/or multiply it with a factor between -1 and 1
-      % (the latter will decrease the overall step size) and
-      % recalculate arx accordingly. Do not change arx or arz in any
-      % other way.
- 
-      if ~bnd.isactive
-        arxvalid = arx;
-      else
-        arxvalid = xintobounds(arx, lbounds, ubounds);
-      end
       % You may handle constraints here.  You may copy and alter
       % (columns of) arxvalid(:,k) only for the evaluation of the
       % fitness function. arx and arxvalid should not be changed.
@@ -853,6 +896,7 @@ while isempty(stopflag)
     % Resample, until fitness is not NaN
     while isnan(fitness.raw(k))
       if k <= lambda
+        %{
         arz(:,k) = randn(N,1); % resample
 
         if flgDiagonalOnly  
@@ -860,6 +904,9 @@ while isempty(stopflag)
         else
           arx(:,k) = xmean + sigma * (BD * arz(:,k));                % Eq. (1)
         end
+        %}
+
+        [arx(:,k), arz(:,k)] = getxinsidebounds(xmean, 1, sigma, BD, flgDiagonalOnly, lbounds, ubounds);
       else % re-evaluation solution with index > lambda
         if flgDiagonalOnly  
           arx(:,k) = arx(:,k-lambda) + (noiseEpsilon * sigma) * diagD .* randn(N,1);
@@ -965,7 +1012,8 @@ while isempty(stopflag)
     %bnd.arpenalty = (bnd.weights ./ bnd.scale)' * (arxvalid - arx).^2; 
     bnd.arpenalty = (bnd.weights ./ bnd.scale)' * (arxvalid - arx).^2; 
 
-    fitness.sel = fitness.raw + bnd.arpenalty.';
+    %fitness.sel = fitness.raw + bnd.arpenalty.';
+    fitness.sel = fitness.raw + bnd.arpenalty;
 
   end % handle boundaries
   % ----- end handle boundaries -----
@@ -1514,6 +1562,40 @@ end
     break; 
   end
 end % while irun <= Restarts
+
+% ---------------------------------------------------------------  
+% ---------------------------------------------------------------  
+function [arx, arz] = getxinsidebounds(xmean, lambda, sigma, BD, flgDiagonalOnly, lbounds, ubounds);
+
+  nsafety = 10*lambda;
+  N = size(xmean, 1);
+  arz = NaN(N, lambda);
+  arx = NaN(N, lambda);
+
+  t_arz = randn(N, nsafety);
+
+  if ~flgDiagonalOnly
+    t_arx = repmat(xmean, 1, nsafety) + sigma * (BD * t_arz); % Eq. (1)
+  else
+    t_arx = repmat(xmean, 1, nsafety) + repmat(sigma * diagD, 1, nsafety) .* t_arz; 
+  end
+
+  [t_arx, idx] = xintobounds(t_arx, lbounds, ubounds);
+  if (numel(idx)==1)
+    idx = idx*ones(1, nsafety);
+  end
+  goods = t_arz(:, ~any(idx, 1));
+  ngoods = min(size(goods,2), lambda);
+  arz(:,[1:ngoods]) = goods(:,1:ngoods);
+  goods = t_arx(:, ~any(idx, 1));
+  arx(:,[1:ngoods]) = goods(:,1:ngoods);
+
+  if (ngoods < lambda)
+    others = t_arz(:, any(idx, 1));
+    arz(:,ngoods+1:end) = others(:, 1:lambda-ngoods);
+    others = t_arx(:, any(idx, 1));
+    arx(:,ngoods+1:end) = others(:, 1:lambda-ngoods);
+  end
 
 % ---------------------------------------------------------------  
 % ---------------------------------------------------------------  

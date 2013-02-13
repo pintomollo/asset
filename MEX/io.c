@@ -25,9 +25,10 @@ input_t get_input(int nlhs,int nrhs,const mxArray *prhs[]) {
   input.error_flag=0;
   #endif
   input.max_imfs=0;
+  input.is_circular=false;
   
   /* argument checking*/
-  if (nrhs>4)
+  if (nrhs>5)
     mexErrMsgTxt("Too many arguments");
   if (nrhs<2)
     mexErrMsgTxt("Not enough arguments");
@@ -54,49 +55,64 @@ input_t get_input(int nlhs,int nrhs,const mxArray *prhs[]) {
   else
     x=mxGetPr(prhs[0]);
   y_temp=mxGetPr(prhs[1]);
-  
-  /* third argument */
+
+  /* Third argument, circularity */
   if (nrhs>=3) {
     if(!mxIsEmpty(prhs[2])) {
-      if (!mxIsNumeric(prhs[2]) || mxIsComplex(prhs[2]) || mxIsSparse(prhs[2])
-      || !mxIsDouble(prhs[2]) || (mxGetN(prhs[2])!=1 && mxGetM(prhs[2])!=1))
+      if (!mxIsLogical(prhs[2]) || mxGetNumberOfElements(prhs[2])!=1){
+        mexErrMsgTxt("CIRCULARITY must be boolean element");
+      } else {
+        input.is_circular = (bool)mxGetScalar(prhs[2]);
+      }
+    }
+  }
+  
+  /* fourth argument */
+  if (nrhs>=4) {
+    if(!mxIsEmpty(prhs[3])) {
+      if (!mxIsNumeric(prhs[3]) || mxIsComplex(prhs[3]) || mxIsSparse(prhs[3])
+      || !mxIsDouble(prhs[3]) || (mxGetN(prhs[3])!=1 && mxGetM(prhs[3])!=1))
         mexErrMsgTxt("STOP must be a real vector of 1 or 2 elements");
-      i = GREATER(mxGetN(prhs[2]),mxGetM(prhs[2]));
+      i = GREATER(mxGetN(prhs[3]),mxGetM(prhs[3]));
       if (i>2)
         mexErrMsgTxt("STOP must be a vector of 1 or 2 elements");
-      third=mxGetPr(prhs[2]);
+      third=mxGetPr(prhs[3]);
       switch (i) {
         case 1 : {
-          if (nrhs==3 && *third==(int)*third && *third > 0) {/* third argument is max_imfs */
+          if (nrhs==4 && *third==(int)*third && *third > 0) {/* third argument is max_imfs */
             input.max_imfs=(int)*third;
           }
           else {/* third argument is input.stop_params.threshold */
             input.stop_params.threshold=*third;
           }
         }
+        break;
         case 2 : {
           input.stop_params.threshold=third[0];
           input.stop_params.tolerance=third[1];
         }
       }
       /* input checking */
-      if (input.stop_params.threshold <= 0)
+      if (input.stop_params.threshold <= 0){
         mexErrMsgTxt("threshold must be a positive number");
-      if (input.stop_params.threshold >= 1)
+      }
+      if (input.stop_params.threshold >= 1){
         mexWarnMsgTxt("threshold should be lower than 1");
-      if (input.stop_params.tolerance < 0 || input.stop_params.tolerance >= 1)
+      }
+      if (input.stop_params.tolerance < 0 || input.stop_params.tolerance >= 1){
         mexErrMsgTxt("tolerance must be a real number in [O,1]");
+      }
     }
   }
   
   
-  /* fourth argument */
-  if (nrhs==4) {
-    if (!mxIsEmpty(prhs[3])) { /* if empty -> do nothing */
-      if (!mxIsNumeric(prhs[3]) || mxIsComplex(prhs[3]) || mxIsSparse(prhs[3])
-      || !mxIsDouble(prhs[3]) || mxGetN(prhs[3])!=1 || mxGetM(prhs[3])!=1)
+  /* fifth argument */
+  if (nrhs==5) {
+    if (!mxIsEmpty(prhs[4])) { /* if empty -> do nothing */
+      if (!mxIsNumeric(prhs[4]) || mxIsComplex(prhs[4]) || mxIsSparse(prhs[4])
+      || !mxIsDouble(prhs[4]) || mxGetN(prhs[4])!=1 || mxGetM(prhs[4])!=1)
         mexErrMsgTxt("NB_IMFS must be a positive integer");
-      fourth=*mxGetPr(prhs[3]);
+      fourth=*mxGetPr(prhs[4]);
       if ((unsigned int)fourth != fourth)
         mexErrMsgTxt("NB_IMFS must be a positive integer");
       input.max_imfs=(int)fourth;

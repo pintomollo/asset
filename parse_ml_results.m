@@ -226,7 +226,8 @@ function [params, opts] = parse_ml_results(fname, varargin)
 
           score = str2double(tokens{4});
 
-          if (score >= 0)
+          %if (score >= 0)
+          if (isfinite(score))
             if (score < curr_score | keep_evolution)
               if (length(params) < lparams)
                 params(lparams) = get_struct('ml_params',1);
@@ -265,9 +266,9 @@ function [params, opts] = parse_ml_results(fname, varargin)
                 evol(evol_indx, :) = [score myparams];
               end
             end
-          elseif (first & isfinite(score))
-            warning(['Found a negative score on line ' num2str(nline) ', make sure this is normal as they are ignored!']);
-            first = false;
+          %elseif (first & isfinite(score))
+          %  warning(['Found a negative score on line ' num2str(nline) ', make sure this is normal as they are ignored!']);
+          %  first = false;
           end
         end
       end

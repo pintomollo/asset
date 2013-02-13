@@ -14,6 +14,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h> 
 #include "mex.h"
 #include "io.h"
 #include "extr.h"
@@ -31,7 +32,6 @@
 #endif
 
 int stop_sifting(double *, double *,extrema_t *,stop_t *,int,int);
-
 #include "io.c"
 #include "extr.c"
 #include "interpolation.c"
@@ -46,14 +46,13 @@ int stop_sifting(double *, double *,extrema_t *,stop_t *,int,int);
 void mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[]) {
   
     /* declarations */
-  int i,n,nb_imfs,max_imfs,iteration_counter,stop_status,allocated_x,stop_EMD;
+  int i,n,nb_imfs,max_imfs,iteration_counter,stop_status,allocated_x,stop_EMD,nbits;
   extrema_t ex;
   input_t input;
   envelope_t env;
   stop_t stop_params;
   double *x,*y,*z,*m,*a;
   imf_list_t list;
-  FILE *fid;
   
     /* get input data */
   input=get_input(nlhs,nrhs,prhs);
@@ -70,25 +69,28 @@ void mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[]) {
 
     /* initialisations */
   ex=init_extr(n+2*NBSYM);
+  ex.is_circular = input.is_circular;
   list=init_imf_list(n);
-  z=(double *)malloc(n*sizeof(double));
-  m=(double *)malloc(n*sizeof(double));
-  a=(double *)malloc(n*sizeof(double));
+  nbits = n*sizeof(double);
+  z=(double *)malloc(nbits);
+  m=(double *)malloc(nbits);
+  a=(double *)malloc(nbits);
   env=init_local_mean(n+2*NBSYM);
   
-  
     /* MAIN LOOP */
-  
+
   nb_imfs=0;
   stop_EMD=0;
   
   while ((!max_imfs || (nb_imfs < max_imfs)) && !stop_EMD) {
     
         /* initialisation */
-    for (i=0;i<n;i++){
-      z[i]=y[i];
-    }
-    for (i=0;i<n;i++) m[i]=y[i];
+    //for (i=0;i<n;i++){
+    //  z[i]=y[i];
+    //}
+    //for (i=0;i<n;i++) m[i]=y[i];
+    memcpy(z, y, nbits);
+    memcpy(m, y, nbits);
     iteration_counter=0;
     
     stop_status = mean_and_amplitude(x,z,m,a,n,&ex,&env);

@@ -28,6 +28,7 @@ typedef struct {
   #endif
   double *x;
   double *y;
+  bool is_circular;
   stop_t stop_params;
 } input_t;
 

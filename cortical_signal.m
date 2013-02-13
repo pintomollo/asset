@@ -52,6 +52,7 @@ function mymovie = cortical_signal(mymovie, opts)
 
   if ((opts.recompute & opts.segment) | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
     mymovie = duplicate_segmentation(mymovie, 'data', opts);
+    mymovie.data = smooth_segmentation(mymovie.data, opts);
   end
 
   % Progress bar
@@ -62,18 +63,34 @@ function mymovie = cortical_signal(mymovie, opts)
   optims = optimset('Display', 'off');
   bin_dist = 64;
   bin_step = 1;
+  prev_width = NaN;
+  ninit = 10;
+
+  priors = NaN(ninit, 2);
+  for i=1:ninit
+    nimg = randi(nframes);
+    ph = double(load_data(mymovie.cortex, nimg));
+    cortex = mymovie.data.cortex(nimg).carth;
+
+    if (~isempty(cortex))
+      [priors(i,:)] = estimate_peak(ph, cortex, opts);
+    end
+  end
+  
+  priors = median(priors, 1);
+%  keyboard
 
   for i=1:nframes
-    bounds = [-Inf bin_step 0 0 -Inf 0 0; ...
-               Inf Inf Inf Inf Inf Inf Inf];
+    %bounds = [-Inf bin_step 0 0 -Inf 0 0; ...
+    %           Inf Inf Inf Inf Inf Inf Inf];
 
-    bounds_invag = [-Inf bin_step -Inf -Inf 0 0; ...
-                     Inf Inf Inf Inf Inf Inf];
+    %bounds_invag = [-Inf bin_step -Inf -Inf 0 0; ...
+    %                 Inf Inf Inf Inf Inf Inf];
 
     nimg = i;
     %nimg = randi(nframes)
-    %nimg = i + 70
-    %nimg = 93
+    %nimg = i + 213
+    %nimg = 80
 
     cortex = mymovie.data.cortex(nimg).carth;
 
@@ -94,8 +111,68 @@ function mymovie = cortical_signal(mymovie, opts)
       ph = double(load_data(mymovie.cortex, nimg));
       ph = mask_neighbors(ph, mymovie.data.centers(:,nimg), mymovie.data.axes_length(:,nimg), mymovie.data.orientations(1,nimg), mymovie.data.neighbors(nimg), opts);
 
+      % Background substraction
+      figure;imagesc(img);
+
+      safety = ceil(2 / opts.pixel_size);
+      path = draw_ellipse(mymovie.data.centers(:, nimg), mymovie.data.axes_length(:, nimg)+safety, mymovie.data.orientations(nimg));
+      mask = roipoly(img, path(:,1), path(:,2));
+      img2 = img;
+      img2(mask) = NaN;
+      vertical_bkg = nanmean(img2,2);
+      img = bsxfun(@minus, img, vertical_bkg);
+      figure;imagesc(img);
+      img2 = img;
+      img2(mask) = NaN;
+      horizontal_bkg = nanmean(img2,1);
+      img = bsxfun(@minus, img, horizontal_bkg);
+      img(img < 0) = 0;
+
+      figure;imagesc(img);
+      keyboard
+
+      %egg = mymovie.markers.eggshell(nimg).carth;
+      %if (nimg>1)
+      %  if (prev_width > 0)
+      %    prev_width = 0.9*prev_width + 0.1*mean(mymovie.data.quantification(nimg).front(:,3));
+      %  else
+      %    prev_width = mean(mymovie.data.quantification(nimg).front(:,3));
+      %  end
+      %end
+
+%      keyboard
+
+%      [curr_prior, dperp, dpos] = estimate_peak(img, cortex, priors, opts);
+%      curr_prior
+
+%      if (isfinite(prev_width))
+%        prev_width = 0.9*prev_width + 0.1*peak_prior(2);
+%      else
+%        prev_width = peak_prior(2);
+%      end
+      %peak_prior = priors;
+      %peak_prior(1) = 0.9*priors(1) + 0.1*curr_prior(1)
+
+      %[gs] = estimate_signal(img, cortex, dperp, dpos, peak_prior, opts);
+      [gs, dperp] = estimate_signal(img, cortex, priors, opts);
+
+%      [gs, dperp] = new_estimate(img, ph, cortex, egg, prev_width, opts);
+
+      %keyboard
+
+      %{
       [values, dperp, dpos] = perpendicular_sampling(img, cortex, opts);
       [ph_values] = perpendicular_sampling(ph, cortex, dperp, dpos, opts);
+
+      egg_vect_x = bsxfun(@minus, egg(:,1).', cortex(:,1));
+      egg_vect_y = bsxfun(@minus, egg(:,2).', cortex(:,2));
+
+      dotprod = bsxfun(@times, dperp(:,1), egg_vect_x) + bsxfun(@times, dperp(:,2), egg_vect_y);
+      norm = (egg_vect_x.^2 + egg_vect_y.^2);
+      dist = (norm - dotprod.^2);
+      dist(dotprod < 0) = Inf;
+      [junk, conn_indx] = min(dist, [], 2);
+      egg_dist = dotprod(sub2ind(size(dotprod), [1:size(cortex, 1)].', conn_indx));
 
 %      figure;subplot(1,2,1)
 %      imagesc(values)
@@ -107,12 +184,18 @@ function mymovie = cortical_signal(mymovie, opts)
       npts = size(values, 1);
       slopes = NaN(npts, 2);
 
-      [params, bounds] = estimate_mean(dpos, ph_values(~rescale, :), false, bounds, optims);
+      [params, bounds] = estimate_mean(dpos, ph_values(~rescale, :), egg_dist(~rescale), false, bounds, optims);
+      params(1:2)
+      [params, junk, slopes(~rescale, 1)] = estimate_mean(dpos, values(~rescale, :), egg_dist(~rescale), false, bounds, optims);
+      params(1:2)
 
-      [params, junk, slopes(~rescale, 1)] = estimate_mean(dpos, values(~rescale, :), false, bounds, optims);
+      egg_values = perpendicular_sampling(img, egg(conn_indx, :), dperp, dpos(dpos > params(2)*1.79), opts);
+
+      keyboard
+
       bounds_invag(:, 1) = bounds(:, 1) + bounds(:, 2);
       bounds_invag(:, 2) = 2*bounds(:,2);
-      [params_invag, bounds_invag, slopes(rescale, :)] = estimate_mean(dpos, values(rescale, :), true, bounds_invag, optims);
+      [params_invag, bounds_invag, slopes(rescale, :)] = estimate_mean(dpos, values(rescale, :), NaN, true, bounds_invag, optims);
 
       signal = NaN(npts, 7); 
 
@@ -159,9 +242,14 @@ function mymovie = cortical_signal(mymovie, opts)
 
         signal(j, :) = line_params;
       end
+      %}
 
-      mymovie.data.quantification(nimg).front = signal(:, [1 2 end]);
-      mymovie.data.quantification(nimg).bkg = signal(:, [3:end-1]);
+      %mymovie.data.quantification(nimg).front = signal(:, [1 2 end]);
+      %mymovie.data.quantification(nimg).bkg = signal(:, [3:end-1]);
+      %mymovie.data.quantification(nimg).carth = cortex;
+      mymovie.data.quantification(nimg).front = gs;
+      mymovie.data.quantification(nimg).bkg = {vertical_bkg, horizontal_bkg};
+      mymovie.data.quantification(nimg).ruffles = rescale;
       mymovie.data.quantification(nimg).carth = cortex;
 
     else
@@ -195,89 +283,6 @@ function mymovie = cortical_signal(mymovie, opts)
   if (opts.verbosity > 0)
     close(hwait);
   end
-
-  return;
-end
-
-function [params, bounds, slopes] = estimate_mean(x, ys, is_invag, bounds, optims)
-
-  if (isempty(ys))  
-    params = [];
-    bounds = [];
-    slopes = zeros(0,2);
-
-    return;
-  end
-
-  y = mymean(ys, 1);
-  valids = isfinite(y);
-
-  y = y(valids);
-  x = x(valids);
-
-  imf = emdc(x, y);
-  if (size(imf, 1) > 2)
-    smoothed = sum(imf(end-1:end, :), 1);
-  else
-    smoothed = imf(end, :);
-  end
-
-  tmp_params = [];
-  if (isfinite(bounds(2,2)))
-    tmp_params = mean(bounds(:,1:2), 1);
-  end
-
-  params = estimate_front(x, smoothed, tmp_params, is_invag);
-  params = max(params, bounds(1,:));
-  params = min(params, bounds(2,:));
-  params = fit_front(@front, params, x, y, bounds(1,:), bounds(2, :), optims);
-
-  if (nargout == 3)
-    y = -mymean(diff(ys(:, x < params(1) - 3*params(2)), [], 2), 2);
-
-    if (isempty(y))
-      slopes = ones(size(ys, 1), 1) * params(end-1);
-    else
-      imf = emdc([], y);
-
-      if (size(imf, 1) > 2)
-        slopes = sum(imf(end-1:end, :), 1).';
-      else
-        slopes = imf(end, :).';
-      end
-    end
-
-    if (is_invag)
-      y = -mymean(diff(ys(:, x > params(1) + 3*params(2)), [], 2), 2);
-
-      if (isempty(y))
-        slopes = [slopes ones(size(slopes)) * params(end-2)];
-      else
-        imf = emdc([], y);
-        slopes = [slopes, imf(end, :).'];
-      end
-    end
-  else
-    slopes = [];
-  end
-
-  bounds(1, 1) = params(1) - 1.5*params(2);
-  bounds(2, 1) = params(1) + 1.5*params(2);
-  bounds(2, 1) = max(params(2) / 3, bounds(2,1));
-  bounds(2, 2) = 2*params(2);
-
-  return;
-end
-
-function new_params = estimate_front(x, y, params, is_invag)
-
-  params_sigmoid = estimate_piecewise(x, y, params, is_invag);
-
-  [estim, junk] = front([params_sigmoid 0], x);
-  peak_range = get_peak(x, y-estim);
-  params_gaussian = estimate_gaussian(x(peak_range), y(peak_range)-estim(peak_range));
-
-  new_params = [mean([params_sigmoid(1) params_gaussian(1)]) params_gaussian(2) params_sigmoid(3:end-1) params_sigmoid(end) params_gaussian(3:end-2) diff(params_gaussian([end end-1]))];
 
   return;
 end
@@ -343,6 +348,46 @@ function [range, center] = get_peak(x, y)
   return;
 end
 
+function [sigma, ks] = normality_test(x, y, factor)
+% Kolmogorov-Smirnov test
+
+  if (nargin == 2)
+    factor = 3;
+  end
+
+  min_length = 2;
+  half = find(x==0);
+  max_length = floor(min(half-1, length(x)-half)/(2*factor)) - 1;
+  ks = NaN(max_length, 1);
+
+  if (max_length < min_length)
+    sigma = NaN;
+    ks = NaN;
+    return;
+  end
+
+  for i=min_length:max_length
+    w = x(half+i);
+    pos = (abs(x) <= factor*w);
+    bkg = interp1(x(~pos), y(~pos), x(pos), 'linear');
+
+    tmp_x = x(pos) / w;
+    tmp_y = y(pos) - bkg;
+
+    tmp_y = cumsum(tmp_y);
+    tmp_y = tmp_y / tmp_y(end);
+
+    norm_vals = cdf('norm', tmp_x, 0, 1);
+    delta = abs(norm_vals - tmp_y);
+    ks(i, 1) = max(delta);
+  end
+
+  [ks, indx] = min(ks, [], 1);
+  sigma = x(half+indx);
+
+  return;
+end
+
 function correl = gaussian_correlation(x, y, thresh)
 
   y = y - mean(y([1 end]));
@@ -356,59 +401,58 @@ function correl = gaussian_correlation(x, y, thresh)
   return;
 end
 
-function params = estimate_gaussian(x,y)
+function [peak_params, dperp, dpos] = estimate_peak(ph, cortex, priors, opts)
 
-  orig_y = y;
-  y = y - min(y);
-
-  y = y / sum(y);
-  center = sum(x .* y);
-
-  x = (x - center).^2;
-  sigma = sum(y .* x);
-
-  vals = [exp(-x / (2*sigma)).' ones(size(x)).'] \ orig_y.';
-  [ampl, bkg] = deal(vals(1), vals(2));
-  if (ampl < 0)
-    ampl = 0;
+  if (nargin == 3)
+    opts = priors;
+    priors = [];
   end
-  sigma = sqrt(sigma);
 
-  params = [center sigma ampl bkg];
+  ph = gaussian_mex(ph, 1.5);
+  [ph_values, dperp, dpos] = perpendicular_sampling(ph, cortex, opts);
 
-  return;
-end
+  y = mymean(ph_values, 1);
+  x = dpos;
 
-function params = estimate_piecewise(x, y, params, is_invag)
+  valids = isfinite(y);
 
-  if (nargin < 3)
-    params = [];
-    is_invag = false;
-  elseif (nargin == 3)
-    if (islogical(params))
-      is_invag = params;
-      params = [];
-    else
-      is_invag = false;
-    end
-  end
+  y = y(valids);
+  x = x(valids);
+
+%  imf = emdc(x, y);
+%  if (size(imf, 1) > 2)
+%    smoothed = sum(imf(end-1:end, :), 1);
+%  else
+%    smoothed = imf(end, :);
+%  end
 
   dy = differentiator(x, y, true);
-
-  if (~isempty(params))
-    gauss = (0.9*exp(-((x-params(1)).^2) / (8*(params(2)^2))) + 0.1);
-    center = params(1);
-  else
-    gauss = ones(size(x));
-    center = 0;
-  end
-
-  ddy = -differentiator(x, dy .* gauss, true);
+  ddy = -differentiator(x, dy, true);
   dddy = differentiator(x, ddy, true);
 
-  maxs = find(dddy(1:end-1) > 0 & dddy(2:end) <= 0) + 1;
+  maxs = find(dddy(1:end-1) > 0 & dddy(2:end) <= 0);
+  ks = NaN(length(maxs), 2);
 
-  [junk, indx] = min(abs(x(maxs) - center));
+  for i=1:length(maxs)
+    [ks(i,1), ks(i,2)] = normality_test(x - x(maxs(i)), y);
+  end
+
+  if (~isempty(priors))
+    ks(ks(:,1) < priors(2)-1 | ks(:,1) > priors(2)+1, :) = NaN;
+  end
+
+  [junk, indx] = min(ks(:,2));
+  peak_params = [x(maxs(indx)) ks(indx, 1)];
+
+  if (~isempty(priors) & ~isfinite(peak_params(1)))
+    peak_params = priors;
+  end
+
+  %keyboard
+
+  return;
+
+  [junk, indx] = min(abs(x(maxs)));
   indx = maxs(indx);
 
   if (isempty(indx))
@@ -419,55 +463,258 @@ function params = estimate_piecewise(x, y, params, is_invag)
 
   [peak, peak_params] = get_peak(x - center, ddy);
 
-  center = center + peak_params(1);
-
-  % Correction for estimating 2nd derivative
+  peak_params(1) = center + peak_params(1);
   peak_params(2) = sqrt(3)*peak_params(2);
 
+  
+%  ampls(ampls < 0) = 0;
+%  p0 = [ampls(:) repmat(peak_prior, npts, 1)];
+
+  lbound = [0 -0.25*peak_params(2)+peak_params(1) peak_params(2)];
+  ubound = [max(smoothed(:)) 0.25*peak_params(2)+peak_params(1) peak_params(2)*3];
+
+  test = y;
+  test(peak) = interp1(x(~peak), y(~peak), x(peak), 'linear');
+
+  keyboard
+
+  %[niter, params] = fit_gaussian_mex(p0.', values.', 400, 1e-6, lbound.', ubound.', dpos, smoothed.');
+  [niter, params] = fit_cminpack_mex(p0.', values.', 400, 1e-6, lbound.', ubound.', dpos, smoothed.');
+
+
+
+  return;
+end
+
+%function [gaussians, dperp] = estimate_signal(img, cortex, dperp, dpos, peak_prior, opts)
+function [gaussians, dperp] = estimate_signal(img, cortex, peak_prior, opts)
+ 
+  [values, dperp, dpos] = perpendicular_sampling(img, cortex, opts);
+  
+  halfed = gaussian_mex(img, peak_prior(2)/2);
+  [halfed] = perpendicular_sampling(halfed, cortex, dperp, dpos, opts);
+
+  %{
+  img = gaussian_mex(img, peak_prior(2));
+  [smoothed] = perpendicular_sampling(img, cortex, dperp, dpos, opts);
+
+  g = exp(-(dpos-peak_prior(1)).^2 / (2*peak_prior(2)^2));
+
+  [X,Y] = meshgrid(dpos, [1:size(values,1)].');
+
+  bkg = smoothed;
+  coef = 3;
+
   % Approx 1/5
-  peak_dist = 1.79*peak_params(2);
+  peak_dist = coef*peak_prior(2);
 
-  dx = range(x);
+  gauss = (abs(dpos-peak_prior(1)) < peak_dist);
 
-  if (peak_dist > dx/4)
-    x_neg = (x < center - dx/4);
-    x_pos = (x > center + dx/4);
+  prc = [0 0.25 0.5 0.75 1];
+  vals = prctile(halfed(:,gauss).', prc*100);
+
+  coefs = [prc.' ones(length(prc), 1)] \ vals;
+  ampls = coefs(1,:).';
+
+  imf = emdc([], ampls, true);
+  if (size(imf, 1) > 4)
+    ampls = sum(imf(end-3:end, :), 1);
   else
-    x_neg = (x < center - peak_dist);
-    x_pos = (x > center + peak_dist);
+    ampls = imf(end, :);
   end
 
-  if (sum(x_neg) < 3)
-    x_neg  = (x < center);
-  end
-  if (sum(x_pos) < 3)
-    x_pos  = (x > center);
-  end
+  ampls(ampls < 0) = 0;
+  bkg = halfed;
+  bkg(:,gauss) = interp2(X(:,~gauss), Y(:,~gauss), bkg(:,~gauss), X(:,gauss), Y(:, gauss), 'linear');
+  approx1 = bkg + bsxfun(@times, ampls.', g);
 
-  if (is_invag)
+  gaussians = perform_fit(ampls, peak_prior, dpos, values, halfed, coef);
 
-    vals3 = [[zeros(size(x(x_neg).')) (center - x(x_neg).') ones(size(x(x_neg))).']; ...
-             [(center - x(x_pos).') zeros(size(x(x_pos).')) ones(size(x(x_pos).'))]] \ [(y(x_neg)).'; y(x_pos).'];
+  p = bsxfun(@minus, dpos, gaussians(:,2));
+  gauss = logical(median(double(bsxfun(@lt, abs(p), gaussians(:,3)*coef)), 1));
 
-    params = [center peak_params(2) vals3.'];
+  bkg = halfed;
+  bkg(:,gauss) = interp2(X(:,~gauss), Y(:,~gauss), bkg(:,~gauss), X(:,gauss), Y(:,gauss), 'linear');
+  final1 = bkg + bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
+
+  %------------------------------------------
+
+  coef = 3;
+  peak_dist = coef*peak_prior(2);
+
+  gauss2 = (abs(dpos-peak_prior(1)) < peak_dist);
+
+  prc = [0 0.25 0.5 0.75 1];
+  vals = prctile(smoothed(:,gauss2).', prc*100);
+
+  coefs = [prc.' ones(length(prc), 1)] \ vals;
+  ampls = coefs(1,:).';
+
+  imf = emdc([], ampls, true);
+  if (size(imf, 1) > 4)
+    ampls = sum(imf(end-3:end, :), 1);
   else
-
-    vals = real([(center - x(x_pos).') ones(size(x(x_pos))).'] \ log(-dy(x_pos)).');
-
-    if (vals(1) < 0)
-      valids = (x > center);
-      vals = real([(center - x(valids).') ones(size(x(valids))).'] \ log(-dy(valids)).');
-
-      if (vals(1) < 0)
-        vals(1) = 1e-5;
-      end
-    end
-
-    vals3 = [[zeros(size(x(x_neg).')) (center - x(x_neg).') ones(size(x(x_neg))).']; ...
-             [-(1 - exp(vals(1)*(center - x(x_pos).'))) zeros(size(x(x_pos).')) ones(size(x(x_pos).'))]] \ [(y(x_neg)).'; y(x_pos).'];
-
-    params = [center peak_params(2) vals(1) vals3.'];
+    ampls = imf(end, :);
   end
+
+  ampls(ampls < 0) = 0;
+  bkg = smoothed;
+  bkg(:,gauss2) = interp2(X(:,~gauss2), Y(:,~gauss2), bkg(:,~gauss2), X(:,gauss2), Y(:, gauss2), 'linear');
+  approx2 = bkg + bsxfun(@times, ampls.', g);
+
+  gaussians = perform_fit(ampls, peak_prior, dpos, values, smoothed, coef);
+
+  p = bsxfun(@minus, dpos, gaussians(:,2));
+  gauss = logical(median(double(bsxfun(@lt, abs(p), gaussians(:,3)*coef)), 1));
+
+  bkg = smoothed;
+  bkg(:,gauss) = interp2(X(:,~gauss), Y(:,~gauss), bkg(:,~gauss), X(:,gauss), Y(:,gauss), 'linear');
+  final2 = bkg + bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
+  %}
+
+  %------------------------------------------
+
+  coef = 3;
+  peak_dist = coef*peak_prior(2);
+
+  gauss3 = (abs(dpos-peak_prior(1)) < peak_dist);
+
+  [X,Y] = meshgrid(dpos, [1:size(values,1)].');
+
+  bkg = halfed;
+  bkg(:,gauss3) = interp2(X(:,~gauss3), Y(:,~gauss3), bkg(:,~gauss3), X(:,gauss3), Y(:, gauss3), 'linear');
+
+  s = halfed - bkg;
+  [maxs, indxs] = max(s(:, gauss3), [], 2);
+  avgs = mymean(s(:, gauss3), 2);
+  % Average over [-3 3]*sigma of a gaussian is ~0.42*ampl
+  ampls = (maxs-avgs)/0.58;
+
+  imf = emdc([], ampls, true);
+  if (size(imf, 1) > 4)
+    ampls = sum(imf(end-3:end, :), 1);
+  else
+    ampls = imf(end, :);
+  end
+
+  %bkg = halfed;
+  %bkg(:,gauss3) = interp2(X(:,~gauss3), Y(:,~gauss3), bkg(:,~gauss3), X(:,gauss3), Y(:, gauss3), 'linear');
+
+  ampls(ampls < 0) = 0;
+  %approx3 = bkg + bsxfun(@times, ampls.', g);
+
+  gaussians = perform_fit(ampls, peak_prior, dpos, values, halfed, coef);
+
+  %p = bsxfun(@minus, dpos, gaussians(:,2));
+  %gauss = logical(median(double(bsxfun(@lt, abs(p), gaussians(:,3)*coef)), 1));
+
+  %bkg = halfed;
+  %bkg(:,gauss) = interp2(X(:,~gauss), Y(:,~gauss), bkg(:,~gauss), X(:,gauss), Y(:,gauss), 'linear');
+  %final3 = bkg + bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
+
+  %------------------------------------------
+  %{
+  coef = 3;
+  peak_dist = coef*peak_prior(2);
+
+  gauss4 = (abs(dpos-peak_prior(1)) < peak_dist);
+
+  bkg = smoothed;
+  bkg(:,gauss4) = interp2(X(:,~gauss4), Y(:,~gauss4), bkg(:,~gauss4), X(:,gauss4), Y(:, gauss4), 'linear');
+
+  s = smoothed - bkg;
+  [maxs, indxs] = max(s(:, gauss4), [], 2);
+  avgs = mymean(s(:, gauss4), 2);
+  % Average over [-3 3]*sigma of a gaussian is ~0.42*ampl
+  ampls = (maxs-avgs)/0.58;
+
+  imf = emdc([], ampls, true);
+  if (size(imf, 1) > 4)
+    ampls = sum(imf(end-3:end, :), 1);
+  else
+    ampls = imf(end, :);
+  end
+
+  bkg = smoothed;
+  bkg(:,gauss4) = interp2(X(:,~gauss4), Y(:,~gauss4), bkg(:,~gauss4), X(:,gauss4), Y(:, gauss4), 'linear');
+
+  ampls(ampls < 0) = 0;
+  approx4 = bkg + bsxfun(@times, ampls.', g);
+
+  gaussians = perform_fit(ampls, peak_prior, dpos, values, smoothed, coef);
+
+  p = bsxfun(@minus, dpos, gaussians(:,2));
+  gauss = logical(median(double(bsxfun(@lt, abs(p), gaussians(:,3)*coef)), 1));
+
+  bkg = smoothed;
+  bkg(:,gauss) = interp2(X(:,~gauss), Y(:,~gauss), bkg(:,~gauss), X(:,gauss), Y(:,gauss), 'linear');
+  final4 = bkg + bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
+
+  [[nanmean(nanmean(abs(values - approx1))); ...
+  nanmean(nanmean(abs(values - approx2))); ...
+  nanmean(nanmean(abs(values - approx3))); ...
+  nanmean(nanmean(abs(values - approx4)))], ...
+  [nanmean(nanmean(abs(values - final1))); ...
+  nanmean(nanmean(abs(values - final2))); ...
+  nanmean(nanmean(abs(values - final3))); ...
+  nanmean(nanmean(abs(values - final4)))]]
+  %}
+  
+  return;
+end
+
+function gaussians = perform_fit(ampls, peak_prior, dpos, values, smoothed, coef)
+%  [maxs, indxs] = max(smoothed(:, gauss), [], 2);
+%  avgs = mymean(smoothed(:, gauss), 2);
+  % Average over [-1.79 1.79]*sigma of a gaussian is ~0.65*ampl
+%  ampls = (maxs-avgs)/0.35;
+
+  npts = length(ampls);
+
+  p0 = [ampls(:) repmat(peak_prior, npts, 1)];
+  %lbound = [0 -2*peak_prior(2)+peak_prior(1) peak_prior(2)*0.75];
+  %ubound = [max(smoothed(:)) 2*peak_prior(2)+peak_prior(1) 2*peak_prior(2)];
+
+  lbound = [0 -2*peak_prior(2)+peak_prior(1) peak_prior(2)*0.95];
+  ubound = [max(smoothed(:)) 2*peak_prior(2)+peak_prior(1) peak_prior(2)*1.05];
+
+  %[niter, params] = fit_gaussian_mex(p0.', values.', 400, 1e-6, lbound.', ubound.', dpos, smoothed.');
+  [niter, params] = fit_cminpack_mex(p0.', values.', coef, 1e-6, lbound.', ubound.', dpos, smoothed.');
+
+  bound = lbound;
+  params = params.';
+
+%  plot(params(:,1), 'b')
+
+  [dm,ds] = mymean(diff(params, [], 1), 1);
+
+  half = round(npts/2);
+
+  imf = emdc([], params(:,1), true);
+  p0(:,1) = sum(imf(end-3:end,:), 1).';
+  bound(1) = ds(1)/2;
+
+  imf = emdc([], params(:,2), true);
+  p0(:,2) = sum(imf(end-2:end,:), 1).';
+  bound(2) = ds(2)/4;
+
+  [m,s] = mymean(params(:,3));
+  p0(:,3) = m;
+  bound(3) = s/10;
+
+  lbound = bsxfun(@minus, p0, bound);
+  ubound = bsxfun(@plus, p0, bound);
+
+  p0(p0(:,1)<0,1)=0;
+  lbound(lbound(:,1)<0,1)=0;
+
+  %[niter, params] = fit_gaussian_mex(p0.', values.', 400, 1e-6, lbound.', ubound.', dpos, smoothed.');
+  [niter, params] = fit_cminpack_mex(p0.', values.', coef, 1e-6, lbound.', ubound.', dpos, smoothed.');
+  
+  gaussians = params.';
+%  plot(gaussians(:,1), 'c')
+
+%  keyboard
 
   return;
 end

@@ -6,7 +6,9 @@ function is_empty = empty_struct(mystruct, field)
     nstruct = numel(mystruct);
 
     for i=1:nstruct
-      if (~isempty(mystruct(i).(field)) & ((iscell(mystruct(i).(field)) & any(cellfun(@(x)(any(isfinite(x(:)))), mystruct(i).(field)))) | (any(isfinite(mystruct(i).(field)(:))))))
+      if (~isempty(mystruct(i).(field)) & ...
+         ((iscell(mystruct(i).(field)) & any(cellfun(@(x)(any(isfinite(x(:)))), mystruct(i).(field)))) | ...
+         (~iscell(mystruct(i).(field)) & any(isfinite(mystruct(i).(field)(:))))))
         is_empty = false;
         break;
       end

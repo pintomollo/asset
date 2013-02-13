@@ -201,15 +201,27 @@ function mymovie = measure_flow(mymovie, opts)
                       bsxfun(@minus, cortex(:,2), pts(:,2).').^2);
           dist(dist>3*proj_dist) = Inf;
 
+          dist_thresh = 1.4 / opts.pixel_size;
+%          scaling = ones(size(dist));
+%          scaling(dist < dist_thresh) = dist_thresh ./ (dist_thresh - dist(dist < dist_thresh));
+
           weights = exp(-(dist.^2)/(2*((proj_dist/2)^2)));
           weights = bsxfun(@rdivide, weights, sum(weights, 2));
 
+          dist(isinf(dist)) = 0;
+          dist = dist .* weights;
+          dist = sum(dist, 2);
+          scaling = ones(size(dist));
+          scaling(dist < 0.75*dist_thresh) = dist_thresh ./ (dist_thresh - dist(dist < 0.75*dist_thresh));
+
           speed_x = sum(bsxfun(@times, weights, speed(:,1).'), 2);
           speed_y = sum(bsxfun(@times, weights, speed(:,2).'), 2);
+%          speed_x = sum(bsxfun(@times, weights.*scaling, speed(:,1).'), 2);
+%          speed_y = sum(bsxfun(@times, weights.*scaling, speed(:,2).'), 2);
 
           movement = [speed_x, speed_y];
       end
-      speed = dot([perp(:, 2), -perp(:, 1)], movement, 2);
+      speed = dot([perp(:, 2), -perp(:, 1)], movement, 2) .* scaling;
 
       all_speed = [all_speed; speed*opts.pixel_size];
       all_pos = [all_pos; pos*opts.pixel_size];

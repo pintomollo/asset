@@ -11,6 +11,11 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
       %nimg = 14 + i
 
       cortex = mymovie.data.quantification(nimg).carth;
+      %if (opts.quantification.use_ruffles)
+      %  [ cortex, rescale] = insert_ruffles(cortex, mymovie.data.ruffles(nimg).paths);
+      %else
+%        rescale = false(size(cortex, 1), 1);
+      %end
 
       [dperp, dpos] = perpendicular_sampling(cortex, opts);
 
@@ -18,7 +23,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
         error('Quantification and path do not correspond, you need to recompute both.')
       end
 
-      rescale = isnan(mymovie.data.quantification(nimg).bkg(:,1));
+      rescale = mymovie.data.quantification(nimg).ruffles;
 
       mymovie.data.quantification(nimg).cortex = extract_ridge(mymovie.data.quantification(nimg).front, cortex, dperp, rescale, opts);
 
@@ -45,22 +50,66 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
     return;
   end
 
-  goods = (~all(isnan(params), 2));
+  if (numel(rescale) ~= size(params, 1))
+    warning('Size of the ruffles does not match the size of the cortex, recompute !');
+
+    return;
+  end
+
+  goods = (~any(isnan(params), 2));
+  full_values = NaN(numel(goods), 1);
+
   params = params(goods, :);
   dperp = dperp(goods, :);
   pos = pos(goods, :);
+  rescale = rescale(goods, :);
 
   npts = size(params, 1);
   values = NaN(npts,1);
-  safety = 1.5;
 
-  centers = bsxfun(@times, params(:,1), dperp) + pos;
+  window_width = (opts.quantification.window_params / opts.pixel_size);
+  gaussian_var = 1 / (2*(window_width^2));
+  window_size = (1.79 * window_width)^2;
 
-  gaussian_var = 2*(opts.quantification.window_params / opts.pixel_size)^2;
+  %{
+  dist = bsxfun(@minus, pos(:,1), pos(:,1).').^2 + bsxfun(@minus, pos(:,2), pos(:,2).').^2;
+  dist(dist>window_size) = Inf;
+  dist = exp(-dist * gaussian_var);
+  dist = bsxfun(@rdivide, dist, sum(dist, 2));
+
+  signal1 = sum(bsxfun(@times, dist, params(:,1).*exp(-params(:,2).^2 ./ (2*params(:,3).^2))),1).';
+
+  centers = bsxfun(@times, params(:,2), dperp) + pos;
+
+  dist = bsxfun(@minus, centers(:,1), pos(:,1).').^2 + bsxfun(@minus, centers(:,2), pos(:,2).').^2;
+  dist(dist>window_size) = Inf;
+  dist = exp(-dist * gaussian_var);
+  dist = bsxfun(@rdivide, dist, sum(dist, 2));
+
+  signal2 = sum(bsxfun(@times, dist, params(:,1)),1).';
+  %}
+
+  [lin_pos, tot] = carth2linear(pos);
+  lin_pos = lin_pos*tot;
+
+  dist = sqrt(bsxfun(@minus, lin_pos, lin_pos.').^2);
+  dist = min(dist, abs(dist-tot)).^2;
+  dist(dist>window_size) = Inf;
+  dist = exp(-dist * gaussian_var);
+  dist = bsxfun(@rdivide, dist, sum(dist, 2));
+
+  values = sum(bsxfun(@times, dist, params(:,1).*exp(-params(:,2).^2 ./ (2*params(:,3).^2))),1).';
+
+  %{
+
+  centers = bsxfun(@times, params(:,2), dperp) + pos;
+  window_width = (opts.quantification.window_params / opts.pixel_size);
+
+  gaussian_var = 2*(window_width^2);
   mdist = median(sqrt(sum(diff(centers).^2, 2)));
-  window_size = ceil(safety * gaussian_var / mdist);
+  window_size = ceil(1.79 * window_width / mdist);
 
-  mvar = median(params(:,2));
+  mvar = median(params(:,3));
 
   centers = [centers(end-window_size+1:end, :); centers; centers(1:window_size,:)];
   params = [params(end-window_size+1:end, :); params; params(1:window_size,:)];
@@ -69,13 +118,11 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
 
   %factor = sqrt(2*pi);
 
-  %% Might want to normalize the integral back to an amplitude ?!?
-
   for i=1:npts
     window = centers(indexes+i, :);
     window_params = params(indexes+i, :);
     dist = exp(-(sum(bsxfun(@minus, window, pos(i,:)).^2, 2)) ./ gaussian_var);
-    signal = exp(-(sum(bsxfun(@minus, window, pos(i,:)).^2, 2)) ./ (2*(window_params(:,2).^2))) .* window_params(:,3);
+    signal = exp(-(sum(bsxfun(@minus, window, pos(i,:)).^2, 2)) ./ (2*(window_params(:,3).^2))) .* window_params(:,1);
     
     % Maximum value
     %values(i) = max(signal);
@@ -93,12 +140,25 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
   %scatter(centers(:,1), centers(:,2), 'b');
   %hold on
   %scatter(pos(:,1), pos(:,2), 'r');
-  %subplot(222)
-  %plot(params(:,3));
-  %subplot(224)
-  %plot(values);
+  figure;
+  plot([params(window_size+1:end-window_size, 1);params(window_size+1:end-window_size, 1)], 'b');
+  hold on
+  plot([values(1:npts, 1);values(1:npts, 1)], 'r');
+
+  %}
+
+  %figure;
+  %plot(params(:,1), 'b');
+  %hold on
+  %plot(params(:,1).*exp(-params(:,2).^2 ./ (2*params(:,3).^2)), 'k');
+  %plot(signal1, 'r');
+  %plot(signal2, 'm');
+  %plot(signal3, 'g');
+
+  %keyboard
 
   %pause
+  %values = signal1;
 
   [pos, len, val] = boolean_domains(rescale);
   ndom = length(pos);
@@ -160,6 +220,9 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
       end
     end
   end
+
+  full_values(goods) = values;
+  values = full_values;
 
   return;
 end

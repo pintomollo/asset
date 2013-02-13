@@ -12,6 +12,7 @@
 
 /* structure used to store the local extrema of the signal */
 typedef struct {
+  bool is_circular;
   int n_min;
   int n_max;
   double *x_min;

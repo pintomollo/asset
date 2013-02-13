@@ -161,7 +161,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
     noise = img;
     noise(mask) = -1;
-    img = img .* mask;
+    %img = img .* mask;
     
     minimg = mean(mean(noise(noise~=-1)));
     img = imnorm(img, minimg, []);
@@ -180,6 +180,10 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     egg_path = elliptic2pixels(egg_path, polar_size, axes_length(:,nimg), parameters.safety);
 
     egg_path = adapt_path(polar_size, egg_path);
+    egg_path = egg_path+(polar_size(2)/20);
+
+    mask = bsxfun(@gt, 1:polar_size(2), egg_path);
+    polar_img(mask) = 0;
 
     %egg_path = adapt_path(size(polar_img), parameters.safety, ellpts);
 
