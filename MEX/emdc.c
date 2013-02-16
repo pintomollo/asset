@@ -27,6 +27,7 @@
 #define MAX_ITERATIONS 1000
 #define LIM_GMP 30000
 #define NBSYM 2
+#define COEFF 3
 #ifdef _ALT_MEXERRMSGTXT_
 #define mexErrMsgTxt(x) {mexPrintf(x); input.error_flag = 1;return(input);}
 #endif

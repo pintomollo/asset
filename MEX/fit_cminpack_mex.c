@@ -42,23 +42,17 @@ typedef struct {double *pos;
                 double coef;
                 } user_data;
 
-//FILE *fid;
-
-//static void func(double *p, double *hx, int m, int n)
 static int func(void *d, int n, int m, double *p, double *hx, int iflag)
 {
 user_data *data = (user_data*)d;
-bool params_inside = true;
-int i, min_indx = 0, max_indx = n-1;
+int i, min_indx = 0, max_indx = n-1, params_inside=0;
 double ampl, min_pos, max_pos, width, center, variance, base, slope;
 
   for (i=0;i<m;i++){
-    params_inside = (params_inside && p[i] >= data->lb[i] && p[i] <= data->ub[i]);
-  //  fprintf(fid,"%e ", p[i]);
+    params_inside += (int)(p[i] >= data->lb[i] && p[i] <= data->ub[i]);
   }
-  //fprintf(fid,"\n");
 
-  if (params_inside) {
+  if (params_inside==m) {
     ampl = p[0];
     center = p[1];
     width = data->coef*p[2];
@@ -71,11 +65,9 @@ double ampl, min_pos, max_pos, width, center, variance, base, slope;
     for (i = 0; i < n; i++) {
       hx[i] += ampl * exp((data->pos[i] - center)*(data->pos[i] - center)*variance) - data->values[i];
       if (data->pos[i] < min_pos) {
-  //      hx[i] += data->smooth[i];
         min_indx++;
       }
       if (data->pos[i] > max_pos) {
-  //      hx[i] += data->smooth[i];
         max_indx--;
       }
     }
@@ -91,7 +83,7 @@ double ampl, min_pos, max_pos, width, center, variance, base, slope;
       hx[i] += base - data->smooth[i];
     }
   } else {
-    memset(hx, (unsigned char)DBL_MAX, n*sizeof(double));
+    memset(hx, ((m-params_inside)/m)*((unsigned char)DBL_MAX), n*sizeof(double));
   }
 
   return iflag;
@@ -101,17 +93,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 register int i, j;
 int status=0, *iwa, lwa;
-double *p, *p0, *ret, *x, *pos, *smoothed, stop_tol, *dwa, *fvec, coef;
-int m, n, niter, itmax, nbounds;
-//double opts[LM_OPTS_SZ]={LM_INIT_MU, LM_STOP_THRESH, LM_STOP_THRESH, LM_STOP_THRESH, LM_DIFF_DELTA};
+double *p, *p0, *ret, *x, *pos, *smoothed, stop_tol, *dwa, *fvec, coef, myNaN;
+int m, n, niter, itmax, nbounds, tmp_n;
 double *lb=NULL, *ub=NULL; 
 user_data data;
 
   /* parse input args; start by checking their number */
-  if((nrhs!=8))
-    mexErrMsgTxt("cminpack: 8 input arguments required");
-    
-  /* note that in order to accommodate optional args, prhs & nrhs are adjusted accordingly below */
+  if((nrhs!=7))
+    mexErrMsgTxt("cminpack: 7 input arguments required");
 
   /* the second required argument must be a real row or column vector */
   if(!mxIsDouble(prhs[0]) || mxIsComplex(prhs[0]))
@@ -121,14 +110,13 @@ user_data data;
   m = mxGetM(prhs[0]);
   niter = mxGetN(prhs[0]);
 
-  /* copy input parameter vector to avoid destroying it */
+  /* copy input parameter vector to avoid destroying it, directly to the 2nd output argument */
   plhs[1]=mxCreateDoubleMatrix(m, niter, mxREAL);
   p=mxGetPr(plhs[1]);
   memcpy(p, p0, m*niter*sizeof(double));
 
   /** x **/
   /* the third required argument must be a real row or column vector */
-  //|| !(mxGetM(prhs[1])==1 || mxGetN(prhs[1])==1))
   if(!mxIsDouble(prhs[1]) || mxIsComplex(prhs[1]) || mxGetN(prhs[1])!=niter)
     mexErrMsgTxt("cminpack: data must be a real matrix.");
 
@@ -141,37 +129,19 @@ user_data data;
     mexErrMsgTxt("cminpack: coef must be a scalar.");
   coef=mxGetScalar(prhs[2]);
 
-  /** stop_tol **/
-  /* the fourth required argument must be a scalar */
-  if(!mxIsDouble(prhs[3]) || mxIsComplex(prhs[3]) || mxGetM(prhs[3])!=1 || mxGetN(prhs[3])!=1)
-    mexErrMsgTxt("cminpack: itmax must be a scalar.");
-  stop_tol=mxGetScalar(prhs[3]);
-
-  stop_tol = sqrt(DBL_EPSILON);
-//  opts[1] = stop_tol;
-//  opts[2] = stop_tol;
-//  opts[3] = stop_tol;
-
-  /* arguments below this point are optional and their presence depends
-   * upon the minimization type determined above
-   */
   /** lb, ub **/
-    /* check if the next two arguments are real row or column vectors */
-  if(mxIsDouble(prhs[4]) && !mxIsComplex(prhs[4])) {
-  //&& (mxGetM(prhs[4])==1 || mxGetN(prhs[4])==1)){
-    if(mxIsDouble(prhs[5]) && !mxIsComplex(prhs[5])) {
-    //&& (mxGetM(prhs[5])==1 || mxGetN(prhs[5])==1)){
-      //if((__MAX__(mxGetM(prhs[4]), mxGetN(prhs[4])))!=m)
-      if(mxGetM(prhs[4])!=m)
+  /* check if the next two arguments are real row or column vectors */
+  if(mxIsDouble(prhs[3]) && !mxIsComplex(prhs[3])) {
+    if(mxIsDouble(prhs[4]) && !mxIsComplex(prhs[4])) {
+      if(mxGetM(prhs[3])!=m)
         mexErrMsgTxt("cminpack: lb must have as many elements as p0");
-      //if((__MAX__(mxGetM(prhs[5]), mxGetN(prhs[5])))!=m)
-      if(mxGetM(prhs[5])!=m)
+      if(mxGetM(prhs[4])!=m)
         mexErrMsgTxt("cminpack: ub must have as many elements as p0");
 
-      lb=mxGetPr(prhs[4]);
-      ub=mxGetPr(prhs[5]);
+      lb=mxGetPr(prhs[3]);
+      ub=mxGetPr(prhs[4]);
 
-      nbounds = mxGetN(prhs[4]);
+      nbounds = mxGetN(prhs[3]);
 
       if (nbounds > 1 && nbounds != niter)
         mexErrMsgTxt("cminpack: ub and lb must have as many elements as p0");
@@ -179,16 +149,16 @@ user_data data;
   }
 
   /** pos **/
-  /* the 7th argument must be a real row or column vector */
-  if(!mxIsDouble(prhs[6]) || mxIsComplex(prhs[6]) || mxGetNumberOfElements(prhs[6])!=n)
+  /* the 6th argument must be a real row or column vector */
+  if(!mxIsDouble(prhs[5]) || mxIsComplex(prhs[5]) || mxGetNumberOfElements(prhs[5])!=n)
     mexErrMsgTxt("cminpack: pos must be a real vector.");
-  pos=mxGetPr(prhs[6]);
+  pos=mxGetPr(prhs[5]);
 
   /** smoothed **/
   /* the last required argument must be a real row or column matrix */
-  if(!mxIsDouble(prhs[7]) || mxIsComplex(prhs[7]) || mxGetM(prhs[7])!=n || mxGetN(prhs[7])!=niter)
+  if(!mxIsDouble(prhs[6]) || mxIsComplex(prhs[6]) || mxGetM(prhs[6])!=n || mxGetN(prhs[6])!=niter)
     mexErrMsgTxt("cminpack: smoothed data must be a matrix similar to the data.");
-  smoothed=mxGetPr(prhs[7]);
+  smoothed=mxGetPr(prhs[6]);
 
   data.pos = pos;
   data.smooth = smoothed;
@@ -202,15 +172,29 @@ user_data data;
   iwa = (int*)malloc(m*sizeof(int));
   dwa = (double*)malloc(lwa*sizeof(double));
 
-  //fid = fopen("sampling_test.txt", "a+");
-  //fprintf(fid,"---------------CMINPACK-------------------\n");
+  stop_tol = sqrt(DBL_EPSILON);
 
   for (i = 0; i < niter; i++) {
-  //for (i = 0; i < 1; i++) {
 
-    //status=dlevmar_bc_dif(func, p, x, m, n, lb, ub, NULL, itmax, opts, NULL, NULL, NULL);
-    //status=lmdif1((void*) func, n, m,(const double*) p, x, (double)stop_tol, iwa, dwa, lwa);
-    status=cminpack_lmdif(func, &data, n, m, p, fvec, stop_tol, iwa, dwa, lwa);
+    tmp_n = n;
+    for (j = 0; j < n; j++) {
+      if (mxIsNaN(data.smooth[j])) {
+        tmp_n = j;
+        break;
+      }
+    }
+
+    if (tmp_n < m) {
+      //mexWarnMsgTxt("cminpack: not enough valid points to perform the optimization!");
+      status = 1;
+    } else {
+      status=cminpack_lmdif(func, &data, tmp_n, m, p, fvec, stop_tol, iwa, dwa, lwa);
+
+      for (j = 0; j < m; j++){
+        p[j] = (p[j] < data.lb[j]) ? data.lb[j] : p[j];
+        p[j] = (p[j] > data.ub[j]) ? data.ub[j] : p[j];
+      }
+    }
 
     p+=m;
     data.values += n;
@@ -229,9 +213,7 @@ user_data data;
   free(dwa);
   free(fvec);
 
-  //fclose(fid);
-
-  /* copy back return results */
+  /* copy back return flag */
   /** ret **/
   plhs[0]=mxCreateDoubleMatrix(1, 1, mxREAL);
   ret=mxGetPr(plhs[0]);

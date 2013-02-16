@@ -19,6 +19,10 @@ extrema_t init_extr(int n) {
     ex.x_max=(double *)malloc(n*sizeof(double));
     ex.y_min=(double *)malloc(n*sizeof(double));
     ex.y_max=(double *)malloc(n*sizeof(double));
+    ex.x_tmp=(double *)malloc(n*sizeof(double));
+    ex.y_tmp=(double *)malloc(n*sizeof(double));
+    ex.i_min=(int *)malloc(n*sizeof(int));
+    ex.i_max=(int *)malloc(n*sizeof(int));
     return ex;
 }
 
@@ -30,20 +34,25 @@ extrema_t init_extr(int n) {
 /************************************************************************/
 
 void extr(double x[],double y[],int n,extrema_t *ex) {
-    int cour;
+    int cour, iter, count;
+    double prev, next;
     ex->n_min=0;
     ex->n_max=0;
-    
+
+    double dmin = 0, dmax = 0;
+
   /* search for extrema */
     if (ex->is_circular) {
         if (y[0]<=y[n-1] && y[0]<=y[1]) /* local minimum */ {
-            ex->x_min[ex->n_min+NBSYM]=x[0];
-            ex->y_min[ex->n_min+NBSYM]=y[0];
+            ex->x_min[NBSYM]=x[0];
+            ex->y_min[NBSYM]=y[0];
+            ex->i_min[NBSYM]=0;
             ex->n_min++;
         }
         if (y[0]>=y[n-1] && y[0]>=y[1]) /* local maximum */ {
-            ex->x_max[ex->n_max+NBSYM]=x[0];
-            ex->y_max[ex->n_max+NBSYM]=y[0];
+            ex->x_max[NBSYM]=x[0];
+            ex->y_max[NBSYM]=y[0];
+            ex->i_max[NBSYM]=0;
             ex->n_max++;
         }
     }
@@ -51,11 +60,23 @@ void extr(double x[],double y[],int n,extrema_t *ex) {
         if (y[cour]<=y[cour-1] && y[cour]<=y[cour+1]) /* local minimum */ {
             ex->x_min[ex->n_min+NBSYM]=x[cour];
             ex->y_min[ex->n_min+NBSYM]=y[cour];
+            ex->i_min[ex->n_min+NBSYM]=cour;
+
+            if (ex->n_min) {
+              dmin += x[cour] - ex->x_min[ex->n_min+NBSYM-1];
+            }
+
             ex->n_min++;
         }
         if (y[cour]>=y[cour-1] && y[cour]>=y[cour+1]) /* local maximum */ {
             ex->x_max[ex->n_max+NBSYM]=x[cour];
             ex->y_max[ex->n_max+NBSYM]=y[cour];
+            ex->i_max[ex->n_max+NBSYM]=cour;
+
+            if (ex->n_max) {
+              dmax += x[cour] - ex->x_max[ex->n_max+NBSYM-1];
+            }
+
             ex->n_max++;
         }
     }
@@ -64,14 +85,86 @@ void extr(double x[],double y[],int n,extrema_t *ex) {
         if (y[cour]<=y[cour-1] && y[cour]<=y[0]) /* local minimum */ {
             ex->x_min[ex->n_min+NBSYM]=x[cour];
             ex->y_min[ex->n_min+NBSYM]=y[cour];
+            ex->i_min[ex->n_min+NBSYM]=cour;
+
+            dmin += x[cour] - ex->x_min[ex->n_min+NBSYM-1];
+
             ex->n_min++;
         }
         if (y[cour]>=y[cour-1] && y[cour]>=y[0]) /* local maximum */ {
             ex->x_max[ex->n_max+NBSYM]=x[cour];
             ex->y_max[ex->n_max+NBSYM]=y[cour];
+            ex->i_max[ex->n_max+NBSYM]=cour;
+
+            dmax += x[cour] - ex->x_max[ex->n_max+NBSYM-1];
+
             ex->n_max++;
         }
     }
+
+    /* Fill large gaps with intermediate extrema to avoid explosions */
+    dmin = COEFF*(dmin / ex->n_min);
+    dmax = COEFF*(dmax / ex->n_max);
+
+    ex->x_tmp[0] = ex->x_min[NBSYM];
+    ex->y_tmp[0] = ex->y_min[NBSYM];
+
+    count = 1;
+    prev = ex->x_tmp[0];
+    for(iter=NBSYM+1;iter<ex->n_min+NBSYM;iter++) {
+      if ((ex->x_min[iter] - prev) > 2*dmin) {
+        next = ex->x_min[iter];
+        for(cour=ex->i_min[iter-1];cour<ex->i_min[iter];cour++) {
+          if ((x[cour] - prev) > dmin && (next - x[cour]) > dmin) {
+            ex->x_tmp[count] = x[cour];
+            ex->y_tmp[count] = y[cour];
+
+            prev = x[cour];
+            count++;
+          }
+        }
+      }
+      ex->x_tmp[count] = ex->x_min[iter];
+      ex->y_tmp[count] = ex->y_min[iter];
+
+      prev = ex->x_tmp[count];
+
+      count++;
+    }
+
+    ex->n_min = count;
+    memcpy(ex->x_min+NBSYM, ex->x_tmp, count*sizeof(double));
+    memcpy(ex->y_min+NBSYM, ex->y_tmp, count*sizeof(double));
+
+    ex->x_tmp[0] = ex->x_max[NBSYM];
+    ex->y_tmp[0] = ex->y_max[NBSYM];
+
+    count = 1;
+    prev = ex->x_tmp[0];
+    for(iter=NBSYM+1;iter<ex->n_max+NBSYM;iter++) {
+      if ((ex->x_max[iter] - prev) > 2*dmax) {
+        next = ex->x_max[iter];
+        for(cour=ex->i_max[iter-1];cour<ex->i_max[iter];cour++) {
+          if ((x[cour] - prev) > dmax && (next - x[cour]) > dmax) {
+            ex->x_tmp[count] = x[cour];
+            ex->y_tmp[count] = y[cour];
+
+            prev = x[cour];
+            count++;
+          }
+        }
+      }
+      ex->x_tmp[count] = ex->x_max[iter];
+      ex->y_tmp[count] = ex->y_max[iter];
+
+      prev = ex->x_tmp[count];
+
+      count++;
+    }
+
+    ex->n_max = count;
+    memcpy(ex->x_max+NBSYM, ex->x_tmp, count*sizeof(double));
+    memcpy(ex->y_max+NBSYM, ex->y_tmp, count*sizeof(double));
 }
 
 /************************************************************************/
@@ -280,4 +373,8 @@ void free_extr(extrema_t ex) {
     free(ex.x_min);
     free(ex.y_max);
     free(ex.y_min);
+    free(ex.i_max);
+    free(ex.i_min);
+    free(ex.x_tmp);
+    free(ex.y_tmp);
 }

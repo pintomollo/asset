@@ -139,6 +139,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     end
   end
 
+  mymovie = correct_jitter(mymovie, opts);
   mymovie = align_embryo(mymovie, opts);
 
   if (opts.verbosity > 0)

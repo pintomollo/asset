@@ -19,6 +19,10 @@ typedef struct {
   double *y_min;
   double *x_max;
   double *y_max;
+  double *x_tmp;
+  double *y_tmp;
+  int *i_min;
+  int *i_max;
 } extrema_t;
 
 extrema_t init_extr(int);

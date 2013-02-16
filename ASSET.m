@@ -259,9 +259,8 @@ function [mymovie,trackings] = ASSET(varargin)
   end
 
   % Really save at least once
-  if (~opts.auto_save)
-    save(mymovie.experiment, 'mymovie', 'trackings','opts');
-  end
+  opts.recompute = false;
+  save(mymovie.experiment, 'mymovie', 'trackings','opts');
 
   % Catch the error overall
   catch

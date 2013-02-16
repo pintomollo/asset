@@ -12,7 +12,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   mwSize w, h, m, n, nvals;
   double *x_indx, *y_indx, *tmp, *img, *values;
   bool free_memory = false;
-//  FILE *fid;
 
   if (nrhs < 2) {
     mexErrMsgTxt("Not enough input arguments (2 is the minimum) !");
@@ -83,8 +82,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   h = mxGetM(prhs[0]);
   w = mxGetN(prhs[0]);
   img = mxGetPr(prhs[0]);
-
-//  fid = fopen("indexes.txt", "w");
 
   /* Bilinear interpolation*/
   for (i=0; i < m*n; i++) {
@@ -187,13 +184,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         break;
     }
 
-/*    fprintf(fid, "%f (%d %d) ", img[xf*h + yf] * dxc * dyc + 
-        img[xc*h + yf] * dxf * dyc +
-        img[xf*h + yc] * dxc * dyf +
-        img[xc*h + yc] * dxf * dyf,
-        xf*h + yf, xc*h + yf);
-*/
-
     if (xf >= w || yf >= h || xc < 0 || yc < 0 || xc >= w || xf < 0 || yc >= h || yf < 0) {
       values[i] = mxGetNaN();
 
@@ -209,8 +199,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mxFree(x_indx);
     mxFree(y_indx);
   }
-
-//  fclose(fid);
 
   return;
 }
