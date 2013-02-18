@@ -1294,9 +1294,9 @@ void lmpar(int n, double *r, int ldr,
   /*     calculate an upper bound, paru, for the zero of the function. */
 
   for (j = 0; j < n; ++j) {
-    double sum;
-    sum = 0.;
+    double sum = 0.;
     int i;
+
     for (i = 0; i <= j; ++i) {
       sum += r[i + j * ldr] * qtb[i];
     }

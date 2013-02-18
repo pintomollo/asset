@@ -35,11 +35,9 @@ extrema_t init_extr(int n) {
 
 void extr(double x[],double y[],int n,extrema_t *ex) {
     int cour, iter, count;
-    double prev, next;
+    double prev, next, dmin = 0, dmax = 0;
     ex->n_min=0;
     ex->n_max=0;
-
-    double dmin = 0, dmax = 0;
 
   /* search for extrema */
     if (ex->is_circular) {

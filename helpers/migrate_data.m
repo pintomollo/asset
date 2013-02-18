@@ -93,18 +93,22 @@ function migrate_data(orig_folder, new_folder, duplicate)
       end
     end
 
-    if (changed)
-      mymovie = data.mymovie;
-      opts = data.opts;
+    mymovie = data.mymovie;
+    opts = data.opts;
+    if (isfield(data, 'trackings'))
       trackings = data.trackings;
+    else
+      trackings = [];
     end
-
+  
     if (duplicate)
       save(new_fname, 'mymovie', 'trackings', 'opts');
     else
       save(fname, 'mymovie', 'trackings', 'opts');
       movefile(fname, new_folder, 'f');
     end
+    
+    display(new_fname);
   end
 
   return;
