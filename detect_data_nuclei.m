@@ -16,19 +16,19 @@ function mymovie = detect_data_nuclei(mymovie, opts)
 
   if (opts.recompute | empty_struct(nuclei, 'carth'))
 
-  cpb = ConsoleProgressBar();
-  cpb.setLeftMargin(4);   % progress bar left margin
-  cpb.setTopMargin(1);    % rows margin
-  cpb.setLength(100);      % progress bar length: [.....]
-  cpb.setMinimum(0);
-  cpb.setMaximum(nframes);
+    cpb = ConsoleProgressBar();
+    cpb.setLeftMargin(4);   % progress bar left margin
+    cpb.setTopMargin(1);    % rows margin
+    cpb.setLength(100);      % progress bar length: [.....]
+    cpb.setMinimum(0);
+    cpb.setMaximum(nframes);
 
-  cpb.setElapsedTimeVisible(1);
-  cpb.setRemainedTimeVisible(1);
-  cpb.setElapsedTimePosition('left');
-  cpb.setRemainedTimePosition('right');
+    cpb.setElapsedTimeVisible(1);
+    cpb.setRemainedTimeVisible(1);
+    cpb.setElapsedTimePosition('left');
+    cpb.setRemainedTimePosition('right');
 
-  cpb.start();
+    cpb.start();
 
     radius_thresh = 0.5 / opts.pixel_size;
     %surf_thresh = 0.5;
@@ -145,7 +145,7 @@ function mymovie = detect_data_nuclei(mymovie, opts)
   for i=nframes:-1:1
     nimg = i;
 
-    links = nuclei(nimg).cluster;
+    links = nuclei(nimg).cluster
     for j=1:size(links, 1)
       path_length{links(j,3)}(links(j,2)) = path_length{nimg}(links(j,1));
     end
@@ -180,6 +180,8 @@ function mymovie = detect_data_nuclei(mymovie, opts)
       all_pos(first:last, :) = interp1q(indxs(goods), all_pos(goods, :), indxs(first:last));
     end
   end
+
+  keyboard
 
   prev_good = 0;
   for i=1:nframes

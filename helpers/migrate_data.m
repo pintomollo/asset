@@ -38,6 +38,8 @@ function migrate_data(orig_folder, new_folder, duplicate)
   tmp_folder = fullfile(orig_folder, 'TmpData');
   new_tmp_folder = fullfile(new_folder, 'TmpData');
 
+  migrate_data = (exist(tmp_folder, 'dir') == 7);
+
   for i=1:length(files)
     changed = false;
     fname = fullfile(orig_folder, files(i).name);

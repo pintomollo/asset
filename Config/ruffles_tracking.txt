@@ -1,0 +1,5 @@
+#ruffles_tracking
+frame_displacement 3.5
+frame_window 3
+interpolate true
+min_path_length 5

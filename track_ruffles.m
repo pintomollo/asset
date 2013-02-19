@@ -29,6 +29,16 @@ function mymovie = track_ruffles(mymovie, opts)
     mymovie = find_ruffles(mymovie, opts);
   end
 
+  if (~isfield(opts, 'ruffles_tracking'))
+    opts.ruffles_tracking = get_struct('spot_tracking');
+    opts = load_parameters(opts, 'ruffles_tracking');
+  end
+
+  opts.ruffles_tracking.pixel_size = opts.pixel_size;
+  mymovie.(type).ruffles = track_spots(mymovie.(type).ruffles, opts.ruffles_tracking);
+
+  return;
+
   max_thresh = 35;
   min_thresh = 5e-5;
 

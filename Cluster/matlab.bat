@@ -1,5 +1,5 @@
 .\tar.exe -xvf CelegansAnalysis.tar
-\.tar.exe -xvf TmpData.tar
+.\tar.exe -xvf TmpData.tar
 
 cd CelegansAnalysis
 

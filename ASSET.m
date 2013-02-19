@@ -294,6 +294,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
   trackings = [];
   opts = [];
   real_mat = true;
+  reset_opts = false;
 
   % Check what we got as inputs
   if (nargin > 0)
@@ -469,9 +470,17 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
       % Otherwise we notify its inexistence
       if (~is_valid)
-        warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
+        if (strncmp(varargin{2*i-1}, 'reset', 5))
+          reset_opts = varargin{2*i};
+        else
+          warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
+        end
       end
     end
+  end
+
+  if (reset_opts)
+    opts = new_opts;
   end
 
   % Try to load the parameters from a configuration file

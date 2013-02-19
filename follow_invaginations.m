@@ -22,6 +22,7 @@ function mymovie = follow_invaginations(mymovie, opts)
   jump_coef = 0.05;
   coef = 3.5;
   straighten_coef = 0.5;
+  bound_thresh = 50;
 
   for i = 1:nframes
     nimg = i;
@@ -29,16 +30,20 @@ function mymovie = follow_invaginations(mymovie, opts)
     %nimg = 16 + i
 
     ruffles = mymovie.(type).ruffles(nimg).carth;
+    valid_ruffles = all(~isnan(ruffles), 2);
     nruffles = size(ruffles,1);
+
     paths = cell(nruffles, 1);
+    inv_length = NaN(nruffles, 1);
+    mins = NaN(nruffles, 2);
+    maxs = mins;
 
-    if (nruffles > 0 & ~all(isnan(ruffles)))
+    if (nruffles > 0)
 
-      inv_length = zeros(nruffles, 1);
-      %tmp_mins = zeros(nruffles, 1);
       bounds = mymovie.(type).ruffles(nimg).bounds;
-      mins = bounds(:,1:2);
-      maxs = bounds(:,3:4);
+      nbounds = size(bounds, 1);
+      mins(1:nbounds, :) = bounds(:,1:2);
+      maxs(1:nbounds, :) = bounds(:,3:4);
 
       img = double(load_data(mymovie.(channel), nimg));
       img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
@@ -107,14 +112,38 @@ function mymovie = follow_invaginations(mymovie, opts)
       end
 
       for r=1:nruffles
-        if (ell_mins(r,2) > ell_maxs(r,2))
-          circular = true;
-          portion = dist_path([ell_mins(r,2):end 1:ell_maxs(r,2)]);
-        else
+        if (~valid_ruffles(r))
+          continue;
+        end
+
+        init_pos = ell_mins(r,2);
+        if (ell_mins(r,2) < ell_maxs(r,2))
           circular = false;
           portion = dist_path([ell_mins(r,2):ell_maxs(r,2)]);
+        elseif (isnan(init_pos))
+          bound_size = (polar_size(2)/bound_thresh);
+          curr_bounds = round([ell_ruffles(r, 2) - bound_size ell_ruffles(r, 2) + bound_size]);
+          if (curr_bounds(1) < 1)
+            curr_bounds(1) = curr_bounds(1) + polar_size(1);
+          end
+          if (curr_bounds(2) > polar_size(1))
+            curr_bounds(2) = curr_bounds(2) - polar_size(1);
+          end
+
+          if (curr_bounds(1) < curr_bounds(2))
+            circular = false;
+            portion = dist_path([curr_bounds(1):curr_bounds(2)]);
+          else
+            circular = true;
+            portion = dist_path([curr_bounds(2):end 1:curr_bounds(1)]);
+          end
+
+          init_pos = curr_bounds(1);
+        else
+          circular = true;
+          portion = dist_path([ell_mins(r,2):end 1:ell_maxs(r,2)]);
         end
-        start = find(min(portion) == portion) + ell_mins(r,2) - 1;
+        start = find(min(portion) == portion) + init_pos - 1;
         if (circular)
           start(start > flipped_size(2)) = start(start > flipped_size(2)) - flipped_size(2);
         end
@@ -123,6 +152,7 @@ function mymovie = follow_invaginations(mymovie, opts)
           inv_dist = abs(start - ell_ruffles(r,1));
           start = start(find(inv_dist == min(inv_dist),1));
         elseif (length(start) == 0)
+          inv_length(r,1) = 0;
           continue;
         end
 

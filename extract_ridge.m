@@ -98,7 +98,8 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
   dist = exp(-dist * gaussian_var);
   dist = bsxfun(@rdivide, dist, sum(dist, 2));
 
-  values = sum(bsxfun(@times, dist, params(:,1).*exp(-params(:,2).^2 ./ (2*params(:,3).^2))),1).';
+  %values = sum(bsxfun(@times, dist, params(:,1).*exp(-params(:,2).^2 ./ (2*params(:,3).^2))),1).';
+  values = sum(bsxfun(@times, dist, params(:,1)),1).';
 
   %{
 
@@ -164,7 +165,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
   ndom = length(pos);
 
   for i=1:ndom
-    if (val(i))
+    if (val(i) && len(i)>1)
       prev_indx = (i-1);
       if (prev_indx < 1)
         prev_indx = prev_indx + ndom;

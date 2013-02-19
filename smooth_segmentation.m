@@ -20,6 +20,7 @@ function mystruct = smooth_segmentation(mystruct, nimg, opts)
   cortex = mystruct.cortex(nimg).carth;
   ruffles = mystruct.ruffles(nimg).carth;
   bounds = mystruct.ruffles(nimg).bounds;
+  props = mystruct.ruffles(nimg).properties;
   [pts, total_dist] = carth2linear(egg);
   pts = pts*total_dist;
 
@@ -66,6 +67,10 @@ function mystruct = smooth_segmentation(mystruct, nimg, opts)
 %  new_cortex = cortex;
 
   for i=1:size(ruffles, 1)
+    if (isnan(props(i)))
+      continue;
+    end
+
     ruf = [ruffles(i,:); bounds(i,1:2); bounds(i,3:4)];
     dist = (bsxfun(@minus, ruf(:,1).', cortex(:,1)).^2 + bsxfun(@minus, ruf(:,2).', cortex(:,2)).^2);
     [junk, indx] = min(dist, [], 1);

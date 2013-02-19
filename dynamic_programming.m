@@ -10,16 +10,6 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
     retrieve_maps = false;
   end
 
-  if (~isfield(params, 'dp_method'))
-    params.dp_method = opts.dp_method;
-  end
-  if (~isfield(params, 'force_circularity'))
-    params.force_circularity = opts.force_circularity;
-  end
-  if (~isfield(params, 'spawn_type'))
-    params.spawn_type = 'full';
-  end
-
   [h,w] = size(img);
 
   nhood = params.nhood;

@@ -32,12 +32,11 @@ function mystruct = get_struct(type, nstruct)
                         'ccd_pixel_size', 6.45, ...         % X-Y size of the pixels in µm (of the CCD camera, without magnification)
                         'compression', 'none', ...           % Compression used for the data files (prompted is empty)
                         'compute_probabilities', false, ... % Compute the posterior probability
-                        'config_file', '', ...              % Name of the configuration file that will be loaded 
+                        'config_file', 'default_params.txt', ... % Name of the configuration file that will be loaded 
                         'crop_export', false, ...           % Crop the images when exporting the results
                         'crop_size', 2.2, ...               % Crop size is the axes_length*crop_size
                         'debug', false, ...                 % Debug mode ON
                         'do_ml', 'none', ...                % Machine learning (ML) is performed
-                        'dp_method', 'double', ...          % Dynamic programming method used (see dynamic_programming.m)
                         'export_movie', false, ...          % Export the results of the analysis
                         'file_regexpr', '(.+[-_])?(.*?[-_]?)(\.[\w\.]+)', ... % The regular expression representing the files
                         'filters', get_struct('channel_filter'), ...
@@ -56,7 +55,7 @@ function mystruct = get_struct(type, nstruct)
                         'parse_frames', 'normal', ...       % Order of the frames for the segmentation (normal or random)
                         'pixel_size', 0, ...                % X-Y size of the pixels in ï¿½m (computed as ccd_pixel_size / magnification)
                         'quantification', get_struct('quantification'), ... % Parameters of the quantification
-                        'recompute', false, ...             % Recompute previously computed features (mainly segmentaiton and trackings)
+                        'recompute', true, ...              % Recompute previously computed features (mainly segmentaiton and trackings)
                         'segment', true, ...                % Perform the segmentation (useful when combine with recompute)
                         'segmentation_parameters', get_struct('segmentations'), ... % Parameters of the segmentation
                         'segmentation_type', 'dic', ...     % Type of segmentation (dic, markers, all)
@@ -65,7 +64,7 @@ function mystruct = get_struct(type, nstruct)
                         'temperatures', get_struct('temperatures'), ... % Parameters of the posterior decoding
                         'trackings', '', ...                % List of tracking files
                         'uuid', 0 , ...                     % Universal Unique IDentifier (used in ML to identify processes) 
-                        'verbosity', 2, ...                 % Verbosity level (0 null, 1 text only, 2 gui, 3 full with plots)
+                        'verbosity', 1, ...                 % Verbosity level (0 null, 1 text only, 2 gui, 3 full with plots)
                         'warp_type', 'radial');             % Warp type used to normalize the embryo (see carth2normalized.m)
 
       % Compute the pixel size based on the default values. This needs to be re-done
@@ -102,11 +101,11 @@ function mystruct = get_struct(type, nstruct)
     % Structure used to store the parameters of the correction function (see duplicate_segmentation.m)
     % The correction function is : F(i) = a + b*I(i+s) + c*R(I)
     case 'conversion'
-      mystruct = struct('bkg', 0.0424, ...                  % Value of the background shift ('a')
-                        'factor', -0.0440, ...              % Value of the intensity factor ('b')
-                        'range', -0.0176, ...               % Value of the range factor ('c')
+      mystruct = struct('bkg', -0.0114, ...                  % Value of the background shift ('a')
+                        'factor', 0.0446, ...              % Value of the intensity factor ('b')
+                        'range', -0.0072, ...               % Value of the range factor ('c')
                         'safety', 0, ...                    % Value used to expand the eggshell to avoid excluding part of the membrane signal
-                        'shift', 5.1836);                   % Value of the shift between the intensity and the correction ('s')
+                        'shift', 2.2504);                   % Value of the shift between the intensity and the correction ('s')
 
     % Parameters used to compute the data part of the DP scoring function (see dynamic_programming.m)
     case 'data_parameters'
@@ -230,7 +229,7 @@ function mystruct = get_struct(type, nstruct)
       params = get_struct('smoothness_parameters');
       weights = get_struct('data_parameters');
 
-      params.nhood = 5;
+      params.nhood = 21;
       params.alpha = 0.25;
       params.beta = 0.75;
       params.gamma = 0.75;
@@ -240,11 +239,10 @@ function mystruct = get_struct(type, nstruct)
       weights.beta = 0.75;
       weights.gamma = 0.25;
 
-      init.alpha = 0.45;
-      init.beta = 0.25;
-      init.gamma = 1e-03;
-      init.delta = 0.4;
-
+      init.alpha = 0;
+      init.beta = 0;
+      init.gamma = 0;
+      init.delta = 0;
 
       mystruct = struct('channel', 'data', ...              % Quantified channel
                         'field', 'cortex', ...              % Quantified field in the previously defined channel
@@ -256,6 +254,7 @@ function mystruct = get_struct(type, nstruct)
                         'use_ruffles', true, ...            % Quantify along the ruffles ?
                         'resolution', 0.5, ...
                         'pole_threshold', 1/10, ...
+                        'scoring_func', @weight_symmetry, ...
                         'kymograph_type', 'projected', ...
                         'window_shape', 'gaussian', ...     % Shape of the quantification window, can either be a filter or a 'fspecial' type
                         'window_params', 0.5, ...           % Parameters required to compute the filter
@@ -420,10 +419,13 @@ function mystruct = get_struct(type, nstruct)
     % Structure used to store the smoothness parameters (see 'segmentations')
     case 'smoothness_parameters'
       mystruct = struct('final', [], ...                % Final position used for backtracking DP
+                        'force_circularity', true, ...  % Enforces that the last row of the DP conincides with the first one
+                        'dp_method', 'double', ...      % Dynamic programming method used (see dynamic_programming.m)
                         'init', [], ...                 % Initial position for DP (see dynamic_programming.m)
                         'nhood', 0, ...                 % Neighborhood explored during dynamic programming (nhood pixels on each side)
                         'prohibit', 'none', ...         % Prohibiting particular moves
                         'spawn_percentile', [], ...     % Score used when spawning a new path (as percentile of the previous step)
+                        'spawn_type', 'full', ...
                         'alpha', 0, ...                 % Weights of the different smoothness terms
                         'beta', 0, ...                  %  "
                         'gamma', 0, ...                 %  "

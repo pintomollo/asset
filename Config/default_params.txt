@@ -1,24 +1,28 @@
 % Add here the default values of your parameters
+application 'quantification'
+segmentation_type 'markers'
+
+%%% NOT SURE ACTUALLY BETTER...
 
 % Hyperbolic projection optimization for DIC segmentation
-#segmentation_parameters.dic.eggshell_params
-alpha 0.8094
-beta 0.1675
-gamma 0.9887
+%#segmentation_parameters.dic.eggshell_params
+%alpha 0.8094
+%beta 0.1675
+%gamma 0.9887
 
-#segmentation_parameters.dic.eggshell_weights
-alpha 0.3273
-beta 0.0152
-eta 0.3847
+%#segmentation_parameters.dic.eggshell_weights
+%alpha 0.3273
+%beta 0.0152
+%eta 0.3847
 
-#segmentation_parameters.dic.cortex_params
-alpha 0.7618
-beta 0.0340
-gamma 0.6939
+%#segmentation_parameters.dic.cortex_params
+%alpha 0.7618
+%beta 0.0340
+%gamma 0.6939
 
 #segmentation_parameters.dic.cortex_weights
-alpha 0.4385
-beta 0.3070
-gamma 0.3967
-delta 0.1201
-eta 0.8232
+%alpha 0.4385
+%beta 0.3070
+%gamma 0.3967
+%delta 0.1201
+%eta 0.8232

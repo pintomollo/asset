@@ -33,6 +33,7 @@ function mymovie = cortical_signal(mymovie, opts)
     if ((opts.recompute & opts.segment) | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
     %if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
       mymovie = find_ruffles(mymovie, opts);
+      mymovie = track_ruffles(mymovie, opts);
       mymovie = follow_invaginations(mymovie, opts);
     elseif (~isfield(mymovie.(type).ruffles, 'paths') | empty_struct(mymovie.(type).ruffles, 'paths'))
     %elseif (~isfield(mymovie.(type).ruffles, 'paths') | isempty(mymovie.(type).ruffles(1).paths))
@@ -89,7 +90,7 @@ function mymovie = cortical_signal(mymovie, opts)
     nimg = i;
     %nimg = randi(nframes)
     %nimg = i + 213
-    %nimg = 50
+    %nimg = 27
 
     cortex = mymovie.data.cortex(nimg).carth;
 
@@ -272,9 +273,9 @@ function mymovie = cortical_signal(mymovie, opts)
   if (opts.recompute|~isfield(mymovie.data, 'domain')|isempty(mymovie.data.domain))
     mymovie = carth2normalized(mymovie, opts);
 
-    params = opts.quantification.params;
-    weights = opts.quantification.weights;
-    init_params = opts.quantification.init_params;
+%    params = opts.quantification.params;
+%    weights = opts.quantification.weights;
+%    init_params = opts.quantification.init_params;
 
     %img = gather_quantification(mymovie, opts);
     %img = imnorm(img);
@@ -294,7 +295,7 @@ function [sigma, ks] = normality_test(x, y, factor)
 % Kolmogorov-Smirnov test
 
   if (nargin == 2)
-    factor = 3;
+    factor = 5;
   end
 
   min_length = 2;
@@ -421,7 +422,7 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   halfed = gaussian_mex(img, peak_width/2);
   [halfed] = perpendicular_sampling(halfed, cortex, dperp, dpos, opts);
 
-  coef = 3;
+  coef = 5;
   peak_dist = coef*peak_width;
 
   gauss3 = (abs(bsxfun(@minus, dpos, pos)) < peak_dist);
@@ -437,11 +438,11 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   avgs = mymean(s(:, gauss3), 2);
   % Average over [-3 3]*sigma of a gaussian is ~0.42*ampl
   ampls = (maxs-avgs)/0.58;
+  goods = ~isnan(ampls);
 
-  if (any(isnan(ampls)))
-    goods = ~isnan(ampls);
-    pos = [1:length(ampls)].';
-    [junk, ampls] = interp_elliptic(pos(goods), ampls(goods), pos, pos([1 end]));
+  if (~all(goods))
+    tmp_pos = [1:length(ampls)].';
+    [junk, ampls] = interp_elliptic(tmp_pos(goods), ampls(goods), tmp_pos, tmp_pos([1 end]));
   end
 
   imf = emdc([], ampls, true, 3);
@@ -484,9 +485,18 @@ function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coe
 %  ampls = (maxs-avgs)/0.35;
 
   [niter, params] = fit_cminpack_mex(p0.', values.', coef, lbound.', ubound.', dpos, smoothed.');
+  params = params.';
+
+  goods = (params(:,3) ~= -1);
+  if (~all(goods))
+    tmp_pos = [1:length(goods)].';
+    [junk, params] = interp_elliptic(tmp_pos(goods), params(goods, :), tmp_pos, tmp_pos([1 end]));
+  end
+
+
+  %%%%%%%%%%%%%%% Need to handle NaNs where params(:,3) < 0
 
 %  bound = lbound;
-  params = params.';
 
 %  plot(params(:,1), 'b')
 
@@ -515,6 +525,8 @@ function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coe
   [niter, params] = fit_cminpack_mex(p0.', values.', coef, lbound.', ubound.', dpos, smoothed.');
   
   gaussians = params.';
+  goods = (gaussians(:,3) ~= -1);
+  gaussians(~goods, :) = NaN;
 %  plot(gaussians(:,1), 'c')
 
 %  keyboard

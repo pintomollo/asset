@@ -96,6 +96,10 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   dic_opts = opts;
   dic_opts.segmentation_type = 'dic';
 
+  if (opts.recompute)
+    mymovie = split_cells(mymovie, opts);
+  end
+
   for i = 1:max_frames
     nframe = frames(i);
 

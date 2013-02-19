@@ -56,8 +56,8 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
 
   for n = 1:nframes
     %nimg = randi(nframes, 1);
-    %nimg = n;
-    nimg = 8
+    nimg = n;
+    %nimg = 8
 
     if (isstruct(mymovie))
       
@@ -134,7 +134,7 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
       [pac, indxs] = impac(tmp_estim);
 
       %borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize([2 1])-1), 2));
-      borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize([2 1])-1), 2))
+      borders = (any(tmp_estim == 2 | bsxfun(@eq, tmp_estim, imgsize([2 1])-1), 2));
       border_indx = find(xor(borders, borders([2:end 1])));
 
       concaves = compute_concavity(pac, opts.split_parameters.angle_thresh);

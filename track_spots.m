@@ -1,4 +1,4 @@
-function links = track_spots(spots, opts)
+function [links, spots] = track_spots(spots, opts)
 
   % Input checking
   if (nargin < 2)
@@ -61,19 +61,21 @@ function links = track_spots(spots, opts)
   all_assign = [];
   prev_max = NaN;
 
-  cpb = ConsoleProgressBar();
-  cpb.setLeftMargin(4);   % progress bar left margin
-  cpb.setTopMargin(1);    % rows margin
-  cpb.setLength(100);      % progress bar length: [.....]
-  cpb.setMinimum(0);
-  cpb.setMaximum(nframes);
+  if (opts.verbosity > 1)
+    cpb = ConsoleProgressBar();
+    cpb.setLeftMargin(4);   % progress bar left margin
+    cpb.setTopMargin(1);    % rows margin
+    cpb.setLength(100);      % progress bar length: [.....]
+    cpb.setMinimum(0);
+    cpb.setMaximum(nframes);
 
-  cpb.setElapsedTimeVisible(1);
-  cpb.setRemainedTimeVisible(1);
-  cpb.setElapsedTimePosition('left');
-  cpb.setRemainedTimePosition('right');
+    cpb.setElapsedTimeVisible(1);
+    cpb.setRemainedTimeVisible(1);
+    cpb.setElapsedTimePosition('left');
+    cpb.setRemainedTimePosition('right');
 
-  cpb.start();
+    cpb.start();
+  end
 
   for i=1:nframes
 
@@ -136,12 +138,16 @@ function links = track_spots(spots, opts)
       links{i} = NaN(0, 3);
     end
 
-    text = sprintf('Progress: %d/%d', i, nframes);
-    cpb.setValue(i);
-    cpb.setText(text);
+    if (opts.verbosity > 1)
+      text = sprintf('Progress: %d/%d', i, nframes);
+      cpb.setValue(i);
+      cpb.setText(text);
+    end
   end
 
-  cpb.stop();
+  if (opts.verbosity > 1)
+    cpb.stop();
+  end
 
   if (max_frames == 0)
     return;
@@ -283,22 +289,100 @@ function links = track_spots(spots, opts)
       end
 
       if (i <= nends)
-        reference = [target(end-1) ends(i,end-1:end)];
+        %reference = [target(end-1) ends(i,end-1:end)];
+        reference = ends(i,:);
       else
-        reference = [target(end-1) interm(i-nends,end-1:end)];
+        %reference = [target(end-1) interm(i-nends,end-1:end)];
+        reference = interm(i-nends,:);
       end
-      links{target(end)} = [links{target(end)}; reference];
+
+      if (opts.interpolate)
+        ninterp = target(end) - reference(end);
+        new_pts = bsxfun(@plus, bsxfun(@times, (reference(1:2) - target(1:2)) / ninterp, [1:ninterp-1].'), target(1:2));
+
+        curr_pos = target(4);
+        curr_indx = target(end);
+        for j=1:ninterp-1
+          curr_indx = target(end)-j;
+          nprev = size(spots{curr_indx}, 1) + 1;
+          spots{curr_indx} = [spots{curr_indx}; [new_pts(j,:) NaN]];
+          links{curr_indx+1} = [links{curr_indx+1}; [curr_pos nprev curr_indx]];
+          curr_pos = nprev;
+        end
+        links{curr_indx} = [links{curr_indx}; [curr_pos, reference(4), curr_indx-1]];
+      else
+        links{target(end)} = [links{target(end)}; [target(end-1), reference(end-1:end)]];
+      end
+    end
+  end
+
+  if (opts.min_path_length > 0)
+    min_length = opts.min_path_length;
+    path_length = cell(nframes, 1);
+
+    for i=1:nframes
+      nimg = i;
+
+      curr_links = links{nimg};
+      path_length{nimg} = zeros(size(spots{nimg}, 1), 1);
+      for j=1:size(curr_links, 1)
+        path_length{nimg}(curr_links(j,1)) = path_length{curr_links(j,3)}(curr_links(j,2)) + nimg - curr_links(j,3);
+      end
+    end
+    for i=nframes:-1:1
+      nimg = i;
+
+      curr_links = links{nimg};
+      if (~isempty(curr_links))
+        for j=1:size(curr_links, 1)
+          path_length{curr_links(j,3)}(curr_links(j,2)) = path_length{nimg}(curr_links(j,1));
+        end
+      end
+
+      long = (path_length{nimg} > min_length);
+      good_indx = find(long);
+      links{nimg} = curr_links(ismember(curr_links(:,1), good_indx), :);
+
+      bad_indx = find(~long);
+      spots{nimg}(bad_indx, :) = NaN;
+      bad_prev = curr_links(ismember(curr_links(:,1), bad_indx), 2:3);
+      if (~isempty(bad_prev))
+        prev_frames = unique(bad_prev(:, 2)).';
+
+        for p=prev_frames
+          %interpolated = isnan(spots{nimg-1}(bad_prev, end));
+          %spots{nimg-1}(bad_prev(interpolated), :) = NaN;
+          curr_prev = bad_prev(bad_prev(:,2)==p,1);
+          spots{p}(curr_prev, :) = NaN;
+        end
+      end
     end
   end
 
   if (~isempty(mymovie))
     if (isfield(mymovie, 'experiment'))
-      for i=1:nframes
-        mymovie.data.spots(i).cluster = links{i};
+      if (opts.interpolate)
+        for i=1:nframes
+          mymovie.data.spots(i).cluster = links{i};
+          mymovie.data.spots(i).carth = spots{i}(:, 1:2);
+          mymovie.data.spots(i).properties = spots{i}(:, 3:end);
+        end
+      else
+        for i=1:nframes
+          mymovie.data.spots(i).cluster = links{i};
+        end
       end
     else
-      for i=1:nframes
-        mymovie(i).cluster = links{i};
+      if (opts.interpolate)
+        for i=1:nframes
+          mymovie(i).cluster = links{i};
+          mymovie(i).carth = spots{i}(:, 1:2);
+          mymovie(i).properties = spots{i}(:, 3:end);
+        end
+      else
+        for i=1:nframes
+          mymovie(i).cluster = links{i};
+        end
       end
     end
     links = mymovie;

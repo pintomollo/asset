@@ -1,6 +1,6 @@
 function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
 
-  opts = merge_structures(opts, get_struct('ASSET'));
+%  opts = merge_structures(opts, get_struct('ASSET'));
 
   thresh = opts.quantification.pole_threshold;
   type = opts.quantification.kymograph_type;
@@ -80,11 +80,11 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
         cortex = realign(cortex, [0;0], mymovie.data.centers(:, i), mymovie.data.orientations(i));
         cortex = cortex * opts.pixel_size;
 
-        [pts, indexes, dist(i, :)] = realign_poles(cortex, thresh);
+        [pts, indexes, dist(i, :)] = realign_poles(cortex, thresh, opts);
       case 'normalized'
         cortex = carth2normalized(cortex, warper, opts);
 
-        [pts, indexes, dist(i, :)] = realign_poles(cortex, thresh);
+        [pts, indexes, dist(i, :)] = realign_poles(cortex, thresh, opts);
       case 'projected'
         if (isnan(mymovie.metadata.relative_z(i)))
           pts = [];
@@ -93,7 +93,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
           cortex = project2midplane(cortex, mymovie.metadata.center_3d(:, i), mymovie.metadata.axes_length_3d, mymovie.metadata.orientation_3d(i), mymovie.metadata.relative_z(i));
           cortex = realign(cortex, [0;0], mymovie.metadata.center_3d(1:2, i), mymovie.metadata.orientation_3d(i));
 
-          [pts, indexes, dist(i, :)] = realign_poles(cortex, thresh);
+          [pts, indexes, dist(i, :)] = realign_poles(cortex, thresh, opts);
         end
     end
     tmp_pts{i,1} = pts;
@@ -165,6 +165,17 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
 
   theta = full_indexes;
 
+  goods = ~all(isnan(datas), 2);
+
+  if (any(~goods))
+    first = find(goods, 1, 'first');
+    last = find(goods, 1, 'last');
+    goods([1:first last:end]) = true;
+
+    [X,Y] = meshgrid(theta, [1:size(datas, 1)].');
+    datas(~goods, :) = interp2(X(goods, :), Y(goods, :), datas(goods, :), X(~goods, :), Y(~goods, :), 'linear');
+  end
+
   if (nargout == 3)
     tmp = theta;
     theta = ruffles;
@@ -174,9 +185,9 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
   return;
 end
 
-function [pts, indexes, dists] = realign_poles(cortex, thresh)
+function [pts, indexes, dists] = realign_poles(cortex, thresh, opts)
 
-  [pts, total_dist] = carth2linear(cortex);
+  [pts, total_dist] = carth2linear(cortex, opts);
   
   goods = (cortex(:,1) > 0);
   max_pos = max(cortex(goods, 1));

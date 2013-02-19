@@ -36,10 +36,6 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     return;
   end
 
-  if (~isfield(mymovie.markers, 'neighbors') | isempty(mymovie.markers.neighbors) | empty_struct(mymovie.markers.neighbors, 'axes_length'))
-    mymovie = split_cells(mymovie, opts);
-  end
-
   neighbors = mymovie.markers.neighbors;
   parameters = opts.segmentation_parameters.markers;
 
@@ -172,12 +168,12 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     %img = medfilt2(img,parameters.noise.median);
     img = imnorm(img);
 
-    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety, 'radial');
 
     polar_size = size(polar_img);
 
-    egg_path = carth2elliptic(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-    egg_path = elliptic2pixels(egg_path, polar_size, axes_length(:,nimg), parameters.safety);
+    egg_path = carth2elliptic(eggshell(nimg).carth, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), 'radial');
+    egg_path = elliptic2pixels(egg_path, polar_size, axes_length(:,nimg), parameters.safety, 'radial');
 
     egg_path = adapt_path(polar_size, egg_path);
     egg_path = egg_path+(polar_size(2)/20);
@@ -202,8 +198,8 @@ function mymovie = dp_markers(mymovie, nimg, opts)
       cortex_path = remove_polar_body(polar_img, cortex_path, parameters.cortex_params, parameters.scoring_func{2}, parameters.cortex_weights, opts);
     end
 
-    ellpts = pixels2elliptic(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety);
-    carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg));
+    ellpts = pixels2elliptic(cortex_path,size(polar_img), axes_length(:,nimg),parameters.safety, 'radial');
+    carths = elliptic2carth(ellpts,centers(:,nimg),axes_length(:,nimg),orientations(1,nimg), 'radial');
     carths = carths(all(carths >= 1 & bsxfun(@le, carths , fliplr(size(img))), 2), :);
 
     if (opts.measure_performances)

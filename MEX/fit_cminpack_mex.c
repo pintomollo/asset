@@ -93,7 +93,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
 register int i, j;
 int status=0, *iwa, lwa;
-double *p, *p0, *ret, *x, *pos, *smoothed, stop_tol, *dwa, *fvec, coef, myNaN;
+double *p, *p0, *ret, *x, *pos, *smoothed, stop_tol, *dwa, *fvec, coef, max_pos;
 int m, n, niter, itmax, nbounds, tmp_n;
 double *lb=NULL, *ub=NULL; 
 user_data data;
@@ -176,23 +176,29 @@ user_data data;
 
   for (i = 0; i < niter; i++) {
 
-    tmp_n = n;
+    tmp_n = n-1;
     for (j = 0; j < n; j++) {
       if (mxIsNaN(data.smooth[j])) {
         tmp_n = j;
         break;
       }
     }
+    max_pos = data.pos[tmp_n];
 
-    if (tmp_n < m) {
+    if (tmp_n < m || (p[1] + coef*p[2]) >= max_pos) {
       //mexWarnMsgTxt("cminpack: not enough valid points to perform the optimization!");
       status = 1;
+      p[2] = -1;
     } else {
       status=cminpack_lmdif(func, &data, tmp_n, m, p, fvec, stop_tol, iwa, dwa, lwa);
 
       for (j = 0; j < m; j++){
         p[j] = (p[j] < data.lb[j]) ? data.lb[j] : p[j];
         p[j] = (p[j] > data.ub[j]) ? data.ub[j] : p[j];
+      }
+
+      if ((p[1] + coef*p[2]) >= max_pos) {
+        p[2] = -1;
       }
     }
 

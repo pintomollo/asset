@@ -1,13 +1,19 @@
 function [best_coefs, shift] = calibrate_dic_correction(mymovie, trackings, opts)
-%  Orig. Err ? std, Corr. Err ? std (% of Embryo radius)
-%      0.0424    0.0312    0.0193    0.0174
-%      a =
-%          0.0424
-%          -0.0440
-%          -0.0176
-%      b =
+% Parameters from the publication
 %
-%          5.1836
+%       bkg: 0.0424
+%       factor: -0.0440
+%       range: -0.0176
+%       safety: 0
+%       shift: 5.1836
+%
+
+% Parameters for the new dataset
+%       bkg: -0.0114
+%    factor: 0.0446
+%     range: -0.0072
+%    safety: 0
+%     shift: 2.2504
 
   npts = 200;
   thetas = [0:2*pi/npts:2*pi]';

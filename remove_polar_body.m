@@ -5,8 +5,8 @@ function [path, emissions] = remove_polar_body(img, path, params, scoring_func, 
 
   vert_indexes = [1:height]';
 
-  opts.force_circularity = false;
-  opts.dp_method = 'normal';
+  params.force_circularity = false;
+  params.dp_method = 'normal';
   weights_path = weights.path;
   weights.alpha = 1;
 
