@@ -61,7 +61,8 @@ function [links, spots] = track_spots(spots, opts)
   all_assign = [];
   prev_max = NaN;
 
-  if (opts.verbosity > 1)
+  do_display = (isfield(opts, 'verbosity') && opts.verbosity > 1);
+  if (do_display)
     cpb = ConsoleProgressBar();
     cpb.setLeftMargin(4);   % progress bar left margin
     cpb.setTopMargin(1);    % rows margin
@@ -138,14 +139,14 @@ function [links, spots] = track_spots(spots, opts)
       links{i} = NaN(0, 3);
     end
 
-    if (opts.verbosity > 1)
+    if (do_display)
       text = sprintf('Progress: %d/%d', i, nframes);
       cpb.setValue(i);
       cpb.setText(text);
     end
   end
 
-  if (opts.verbosity > 1)
+  if (do_display)
     cpb.stop();
   end
 
