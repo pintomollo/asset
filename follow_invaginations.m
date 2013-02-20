@@ -58,6 +58,7 @@ function mymovie = follow_invaginations(mymovie, opts)
 
       polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
       polar_size = size(polar_img);
+      polar_size = polar_size(:);
       vert_indx = [1:polar_size(1)]';
       flipped_size = polar_size([2 1]);
       polar_img = polar_img.';
@@ -73,16 +74,24 @@ function mymovie = follow_invaginations(mymovie, opts)
       ell_ruffles = elliptic2pixels(ell_ruffles, polar_size, axes_length(:, nimg), parameters.safety);
 
       ell_mins = carth2elliptic(mins, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-      ell_mins = elliptic2pixels(ell_mins, polar_size, axes_length(:, nimg), parameters.safety);
-      ell_maxs = carth2elliptic(maxs, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
-      ell_maxs = elliptic2pixels(ell_maxs, polar_size, axes_length(:, nimg), parameters.safety);
+      if (isempty(ell_mins))
+        ell_mins = mins;
+      else
+        ell_mins = elliptic2pixels(ell_mins, polar_size, axes_length(:, nimg), parameters.safety);
+        ell_mins = round(ell_mins(:, [2 1]));
+        ell_mins(ell_mins(:,2) < 1, 2) = ell_mins(ell_mins(:,2) < 1, 2) + flipped_size(2);
+        ell_mins(ell_mins(:,2) > flipped_size(2), 2) = ell_mins(ell_mins(:,2) > flipped_size(2), 2) - flipped_size(2);
+      end
 
-      ell_mins = round(ell_mins(:, [2 1]));
-      ell_mins(ell_mins(:,2) < 1, 2) = ell_mins(ell_mins(:,2) < 1, 2) + flipped_size(2);
-      ell_mins(ell_mins(:,2) > flipped_size(2), 2) = ell_mins(ell_mins(:,2) > flipped_size(2), 2) - flipped_size(2);
-      ell_maxs = round(ell_maxs(:, [2 1]));
-      ell_maxs(ell_maxs(:,2) < 1, 2) = ell_maxs(ell_maxs(:,2) < 1, 2) + flipped_size(2);
-      ell_maxs(ell_maxs(:,2) > flipped_size(2), 2) = ell_maxs(ell_maxs(:,2) > flipped_size(2), 2) - flipped_size(2);
+      ell_maxs = carth2elliptic(maxs, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg));
+      if (isempty(ell_maxs))
+        ell_maxs = maxs;
+      else
+        ell_maxs = elliptic2pixels(ell_maxs, polar_size, axes_length(:, nimg), parameters.safety);
+        ell_maxs = round(ell_maxs(:, [2 1]));
+        ell_maxs(ell_maxs(:,2) < 1, 2) = ell_maxs(ell_maxs(:,2) < 1, 2) + flipped_size(2);
+        ell_maxs(ell_maxs(:,2) > flipped_size(2), 2) = ell_maxs(ell_maxs(:,2) > flipped_size(2), 2) - flipped_size(2);
+      end
 
       %ell_bounds = round([ell_mins ell_maxs]);
       %ell_bounds(ell_bounds < 1) = ell_bounds(ell_bounds < 1) + flipped_size(2);
