@@ -11,3 +11,4 @@ fit_intensities 'separate'
 iteration_threshold 1e-10
 fusion_thresh 0.5
 noise_thresh 1
+verbosity 2

@@ -144,7 +144,7 @@ function mymovie = follow_invaginations(mymovie, opts)
             portion = dist_path([curr_bounds(1):curr_bounds(2)]);
           else
             circular = true;
-            portion = dist_path([curr_bounds(2):end 1:curr_bounds(1)]);
+            portion = dist_path([curr_bounds(1):end 1:curr_bounds(2)]);
           end
 
           init_pos = curr_bounds(1);

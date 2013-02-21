@@ -3,7 +3,7 @@ function mymovie = measure_flow(mymovie, opts)
   opts = load_parameters(opts, 'track_flow');
   nframes = size_data(mymovie.data);
 
-  if (opts.recompute | ~isfield(mymovie.data, 'spots') | isempty(mymovie.data.spots) | length(mymovie.data.spots)~=nframes | empty_struct(mymovie.data.spots, 'carth'))
+  if ((opts.recompute & opts.segment) | ~isfield(mymovie.data, 'spots') | isempty(mymovie.data.spots) | length(mymovie.data.spots)~=nframes | empty_struct(mymovie.data.spots, 'carth'))
 
     mymovie = lidke_fit(mymovie, opts);
   end
@@ -17,6 +17,7 @@ function mymovie = measure_flow(mymovie, opts)
     flow = mymovie.data.flow;
   end
 
+  %{
   path_thresh = opts.spot_tracking.min_path_length;
   path_length = cell(nframes, 1);
   for i=1:nframes
@@ -39,9 +40,17 @@ function mymovie = measure_flow(mymovie, opts)
     end
   end
 
+  keyboard
+  %}
+
   proj_dist = opts.spot_tracking.projection_dist / opts.pixel_size;
   pos_bin = opts.spot_tracking.projection_bin_size;
   frame_bin = opts.spot_tracking.projection_frames;
+  if (isfield(opts.spot_tracking, 'projection_dist_min'))
+    proj_min = opts.spot_tracking.projection_dist_min / opts.pixel_size;
+  else
+    proj_min = 0;
+  end
 
   edges = [0:pos_bin:65];
   edges = [-edges(end:-1:2) edges].';
@@ -78,16 +87,16 @@ function mymovie = measure_flow(mymovie, opts)
     links = mymovie.data.spots(nimg).cluster;
 
     prev_links = links(links(:,end)==nimg-1, :);
-    good_links = (path_length{nimg}(prev_links(:,2)) >= path_thresh);
-    prev_links = prev_links(good_links, :);
+    %good_links = (path_length{nimg}(prev_links(:,2)) >= path_thresh);
+    %prev_links = prev_links(good_links, :);
 
     cortex = mymovie.data.cortex(nimg).carth;
     ncortex = size(cortex, 1);
 
     if (~isempty(prev_links) & ncortex > 0)
 
-      prev_pts = prev_pts(prev_links(:,1), :);
-      pts = all_pts(prev_links(:,2), :);
+      pts = all_pts(prev_links(:,1), :);
+      prev_pts = prev_pts(prev_links(:,2), :);
 
       npts = size(pts,1);
 
@@ -220,6 +229,63 @@ function mymovie = measure_flow(mymovie, opts)
 %          speed_y = sum(bsxfun(@times, weights.*scaling, speed(:,2).'), 2);
 
           movement = [speed_x, speed_y];
+        case 'range'
+          speed = pts(:,1:2) - prev_pts(:,1:2);
+          dist = sqrt(bsxfun(@minus, cortex(:,1), pts(:,1).').^2 + ...
+                      bsxfun(@minus, cortex(:,2), pts(:,2).').^2);
+
+          close_ones = any(dist < proj_min, 1);
+          weights = (dist <= proj_dist);
+          weights(:, close_ones) = 0;
+          good_ones = any(weights, 1);
+          weights = bsxfun(@rdivide, weights, sum(weights, 2));
+
+%          hold off;
+%          plot(cortex(:,1), cortex(:,2), 'k');
+%          hold on;
+%          scatter(pts(:,1), pts(:,2), 'b');
+%          scatter(pts(close_ones,1), pts(close_ones,2), 'r');
+%          scatter(pts(good_ones,1), pts(good_ones,2), 'g');
+%          drawnow
+
+          scaling = ones(size(dist, 1), 1);
+          %dist(isinf(dist)) = 0;
+          %dist = dist .* weights;
+          %dist = sum(dist, 2);
+          %scaling = ones(size(dist));
+          %scaling(dist < 0.75*dist_thresh) = dist_thresh ./ (dist_thresh - dist(dist < 0.75*dist_thresh));
+
+          speed_x = sum(bsxfun(@times, weights, speed(:,1).'), 2);
+          speed_y = sum(bsxfun(@times, weights, speed(:,2).'), 2);
+%          speed_x = sum(bsxfun(@times, weights.*scaling, speed(:,1).'), 2);
+%          speed_y = sum(bsxfun(@times, weights.*scaling, speed(:,2).'), 2);
+
+          movement = [speed_x, speed_y];
+        case 'nullcline'
+          
+          speed = pts(:,1:2) - prev_pts(:,1:2);
+
+          speed_norm = sqrt(sum(speed.^2, 2));
+          good_ones = (speed_norm < proj_min);
+
+          dist = sqrt(bsxfun(@minus, cortex(:,1), pts(:,1).').^2 + ...
+                      bsxfun(@minus, cortex(:,2), pts(:,2).').^2);
+
+          dist(:, ~good_ones) = Inf;
+
+%          hold off;
+%          plot(cortex(:,1), cortex(:,2), 'k');
+%          hold on;
+%          scatter(pts(:,1), pts(:,2), 'b');
+%          scatter(pts(good_ones,1), pts(good_ones,2), 'g');
+%          drawnow
+
+
+          scaling = min(dist, [], 2);
+
+          movement = [perp(:,2), -perp(:,1)];
+        otherwise
+          error(['Projection type ''' opts.spot_tracking.projection_type ''' unknown.']);
       end
       speed = dot([perp(:, 2), -perp(:, 1)], movement, 2) .* scaling;
 

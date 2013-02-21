@@ -52,7 +52,7 @@ function [links, spots] = track_spots(spots, opts)
   max_frames = opts.frame_window;
 
   % The maximal size of the spot in pixels
-  spot_max_movement = (spot_max_movement / opts.pixel_size);
+  spot_max_movement = (spot_max_movement / pixel_size);
 
   pts = [];
   npts = 0;

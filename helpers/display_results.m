@@ -468,8 +468,8 @@ if (ishandle(handles.eggshell.img))
     if (~any(isnan(values{8})))
       goods = (values{8}(:,3) == handles.current - 1);
       if (handles.current > handles.previous)
-        x = [values{7}(values{8}(goods,2),1), prev_pts{1}(values{8}(goods,1)).'];
-        y = [values{7}(values{8}(goods,2),2), prev_pts{2}(values{8}(goods,1)).'];
+        x = [values{7}(values{8}(goods,1),1), prev_pts{1}(values{8}(goods,2)).'];
+        y = [values{7}(values{8}(goods,1),2), prev_pts{2}(values{8}(goods,2)).'];
       else
         prev_links = get(handles.cortex.pts(3), {'XData', 'YData'});
         if (numel(prev_links{1}) > 0)
