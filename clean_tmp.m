@@ -119,7 +119,7 @@ function tmps = recursive_tmp(mystruct)
       used_tmp = [used_tmp; str2double(char(tokens{1}))];
 
       if (~exist(mystruct.fname, 'file'))
-        diaply(['Missing ' mystruct.fname]);
+        display(['Missing ' mystruct.fname]);
       end
     end
 
