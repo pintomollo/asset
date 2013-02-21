@@ -26,6 +26,7 @@ function [times, names] = get_manual_timing(mymovie, opts)
   elseif (exist(['celegans-analysis' filesep 'Config' filesep 'timings.txt'], 'file'))
     fid = fopen(['celegans-analysis' filesep 'Config' filesep 'timings.txt']);
     values = textscan(fid, '%s %u %f %u');
+    fclose(fid);
   else
     warning('Cannot find the timings text file');
 
