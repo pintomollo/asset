@@ -15,12 +15,18 @@ function [times, names] = get_manual_timing(mymovie, opts)
     end
   end
 
-  try
+  if (exist('timings.txt', 'file'))
     fid = fopen('timings.txt');
     values = textscan(fid, '%s %u %f %u');
     fclose(fid);
-  catch ME
-    beep;keyboard
+  elseif (exist('Config/timings.txt', 'file'))
+    fid = fopen('Config/timings.txt');
+    values = textscan(fid, '%s %u %f %u');
+    fclose(fid);
+  else
+    warning('Cannot find the timings text file');
+
+    return;
   end
 
   names = values{1};

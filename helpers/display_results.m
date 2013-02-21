@@ -430,9 +430,14 @@ switch handles.type
 
 end
 
-if (~isempty(trackings))
-  ref_egg = trackings.(handles.type).average{1,handles.current};
-  ref_cor = trackings.(handles.type).average{2,handles.current};
+if (~isempty(trackings) && isfield(trackings, handles.type))
+  if (isfield(trackings.(handles.type), 'average'))
+    ref_egg = trackings.(handles.type).average{1,handles.current};
+    ref_cor = trackings.(handles.type).average{2,handles.current};
+  elseif (isfield(trackings.(handles.type), 'eggshell') && isfield(trackings.(handles.type), 'cortex'))
+    ref_egg = trackings.(handles.type).eggshell(handles.current).carth;
+    ref_cor = trackings.(handles.type).cortex(handles.current).carth;
+  end
 
   %tmp = mymovie.(handles.type).errors(1, handles.current, :, :);
   %err_egg = mymean(tmp(:));
