@@ -1,4 +1,4 @@
-function [window, params] = simultaneous_registration(imgs, centers)
+function [window, params, score] = simultaneous_registration(imgs, centers)
 
   nimgs = length(imgs);
   has_intuition = (nargin==2);
@@ -60,7 +60,7 @@ function [window, params] = simultaneous_registration(imgs, centers)
   end
   params(params < 1) = 1;
 
-  [junk, indx] = min(params(:,end));
+  [score, indx] = min(params(:,end));
   params = params(indx, 1:end-1).';
 
   after = sizes(:,1) - params;

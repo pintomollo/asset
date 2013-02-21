@@ -1,17 +1,23 @@
-function flow_nate(use_timing)
+function flow_nate(niter, use_timing)
 
   if (nargin == 0)
+    niter = 1;
     use_timing = false;
+  elseif (nargin == 1) 
+    if (islogical(niter))
+      use_timing = niter;
+      niter = 1;
+    else
+      use_timing = false;
+    end
   end
 
   files = dir('749-*_.mat');
   nfiles = length(files);
   res = cell(nfiles, 3);
   signals = cell(nfiles, 1);
-  %signals2 = cell(nfiles, 1);
-  align = 10;
-  align2 = 10;
   times = NaN(nfiles, 1);
+  signals_full = cell(niter, 3);
 
   for i=1:nfiles
     load(files(i).name);
@@ -26,51 +32,27 @@ function flow_nate(use_timing)
 
     times(i) = time(2);
 
-    imagesc(tmp);
-    set(gca, 'XTickLabel', pos(get(gca, 'XTick')));
-    colorbar;
-    print('-dpng', ['PNG/' mymovie.experiment 'flow.png']);
-
-    %tmp = res{i,1};
-    %tmp = ((-tmp(end/2:-1:1, :) + tmp((end/2)+1:end, :))/2);
-    %[signals, align, rel_indx] = find_min_residue(signals, align, tmp, time(1), 0.1);
-%    [signals2, align2, rel_indx] = find_min_residue(signals2, align2, ((-tmp(end/2:-1:1, :) + tmp((end/2)+1:end, :))/2), time(1), 20);
-
-%    [signals, align, rel_indx] = find_min_residue(signals, align, -tmp(end/2:-1:1, :), time(1), 20);
-%    [signals, align, rel_indx] = find_min_residue(signals, align, tmp((end/2)+1:end, :), time(1), 20);
+    %imagesc(tmp);
+    %set(gca, 'XTickLabel', pos(get(gca, 'XTick')));
+    %colorbar;
+    %print('-dpng', ['PNG/' mymovie.experiment 'flow.png']);
 
     signals{i} = tmp;
-    %signals{2*i-1} = -tmp(:,end/2:-1:1);
-    %signals{2*i} = tmp(:,(end/2)+1:end);
   end
-%  load(files(1).name);
-%  display(mymovie.experiment);
 
-  %opts.spot_tracking.projection_bin_size = 2;
-  %mymovie = measure_flow(mymovie, opts);
-
-%  time = get_manual_timing(mymovie, opts);
-%  [tmp, pos] = display_flow(mymovie, opts);
-
-%    imagesc(tmp.');
-%    set(gca, 'XTickLabel', pos(get(gca, 'XTick')));
-%    colorbar;
-%    print('-dpng', ['PNG/' mymovie.experiment 'flow.png']);
-
-
-  %tmp = res{i,1};
-  %tmp = ((-tmp(end/2:-1:1, :) + tmp((end/2)+1:end, :))/2);
-  %[signals, align, rel_indx] = find_min_residue(signals, align, tmp, time(1), 0.1);
-%  [signals2, align2, rel_indx] = find_min_residue(signals2, align2, ((-tmp(end/2:-1:1, :) + tmp((end/2)+1:end, :))/2), time(1), 20);
-
-%  [signals, align, rel_indx] = find_min_residue(signals, align, -tmp(end/2:-1:1, :), time(1), 20);
-%  [signals, align, rel_indx] = find_min_residue(signals, align, tmp((end/2)+1:end, :), time(1), 20);
-
-  if (use_timing)
-    signals_full = simultaneous_registration(signals, times - min(times) + 1);
-  else
-    signals_full = simultaneous_registration(signals);
+  for i=1:niter
+    if (use_timing)
+      [signals_full{i,1}, signals_full{i,2}, signals{i,3}] = simultaneous_registration(signals, times - min(times) + 1);
+    else
+      [signals_full{i,1}, signals_full{i,2}, signals{i,3}] = simultaneous_registration(signals);
+    end
   end
+
+  uuid = num2str(now + cputime);
+  save(['aligned_flow_' num2str(use_timing) '_' uuid], 'signals_full', 'signals');
+
+  return;
+
 %  signals2 = simultaneous_registration(signals2);
   signals = (signals_full(:,(end/2)+1:end,:) - signals_full(:,end/2:-1:1,:)) / 2;
 
