@@ -76,7 +76,13 @@ function mymovie = convert_struct(mymovie, opts)
         dv_inversion = true;
       end
 
-      nframes = size(mymovie.(field).centers,2);
+      if (isfield(mymovie.(field), 'fname'))
+        nframes = size_data(mymovie.(field));
+      elseif (strncmp(field, 'markers', 7) && isfield(mymovie, 'cortex') && isfield(mymovie.cortex, 'fname'))
+        nframes = size_data(mymovie.cortex); 
+      else
+        nframes = size(mymovie.(field).centers,2);
+      end
       warpers = get_struct('warper',[1 nframes]);
       
       subfields = fieldnames(mymovie.(field));

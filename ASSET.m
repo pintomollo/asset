@@ -305,9 +305,20 @@ function [mymovie, trackings, opts] = parse_input(varargin)
       % Assign it and delete it from the list
       mymovie = varargin{1};
       varargin(1) = [];
+      
+    % Maybe several names were provided
+    elseif (iscell(varargin{1}) && (mod(length(varargin), 2)==1 || isstruct(varargin{2})))
 
+      files = varargin{1};
+      for i=1:length(files)
+        ASSET(files{i}, varargin{2:end});
+      end
+
+      % Do not forget to stop here !
+      return;
+      
     % Maybe the name of the MAT-file was provided
-    elseif (ischar(varargin{1}) & (mod(length(varargin), 2)==1 | isstruct(varargin{2})))
+    elseif (ischar(varargin{1}) && (mod(length(varargin), 2)==1 || isstruct(varargin{2})))
 
       fname = varargin{1};
       fname = absolutepath(fname);
@@ -396,7 +407,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
   % If mymovie was not provided, we use the standard structure
   if (isempty(mymovie))
-    if (~real_mat & mod(length(varargin), 2) == 1 & ischar(varargin{1}))
+    if (~real_mat && mod(length(varargin), 2) == 1 && ischar(varargin{1}))
       mymovie = varargin{1};
       varargin(1) = [];
     else
