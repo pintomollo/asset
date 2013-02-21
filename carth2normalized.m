@@ -119,7 +119,7 @@ function pts = linearize_egg(pts)
 
   theta = pts(:,1);
   dt = diff(theta);
-  step = median(dt);
+  step = mean(abs(dt));
   
   negs = (dt < 0);
   smalls = (abs(dt) < 2*step) & negs;
