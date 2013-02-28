@@ -49,7 +49,7 @@ function flow_nate(niter, use_timing)
   end
 
   uuid = num2str(now + cputime);
-  save(['aligned_flow_' num2str(use_timing) '_' uuid], 'signals_full', 'signals');
+  save(['aligned_flow_' num2str(use_timing) '_' uuid '.mat'], 'signals_full', 'signals');
 
   return;
 

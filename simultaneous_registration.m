@@ -6,10 +6,20 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
     centers = ones(nimgs, 1);
   end
 
+  if (numel(centers) ~= nimgs)
+      keyboard
+  end
+  
   sizes = NaN(nimgs, 2);
   for i=1:nimgs
     sizes(i,:) = size(imgs{i});
   end
+  
+  goods = all(sizes > 0, 2);
+  sizes = sizes(goods, :);
+  imgs = imgs(goods);
+  centers = centers(goods);
+  nimgs = length(imgs);
 
   window_size = min(sizes, [], 1);
   window = NaN([window_size nimgs]);
@@ -51,7 +61,11 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
 
   for i=1:nstart
     if (has_intuition)
+        try
       [params_c, fval, ncoutns, stopflag, out, bests] = cmaes(@error_function, centers(:) ./ sizes(:,1), 0.5 / i, opt); 
+        catch
+            keyboard
+        end
     else
       init = rand(length(centers), 1);
       [params_c, fval, ncoutns, stopflag, out, bests] = cmaes(@error_function, init, 0.5, opt); 

@@ -885,6 +885,11 @@ while isempty(stopflag)
       fitness.raw = feval(fitfun, arxvalid); 
       countevalNaN = countevalNaN + sum(isnan(fitness.raw));
       counteval = counteval + sum(~isnan(fitness.raw)); 
+      
+      if (countevalNaN >= stopMaxFunEvals || countevalNaN >= stopMaxIter)
+        warning(['Unable to find a valid objective function value, aborting']);
+        return;    
+      end
   end
 
   % non-parallel evaluation and remaining NaN-values
@@ -932,12 +937,15 @@ while isempty(stopflag)
       fitness.raw(k) = feval(fitfun, arxvalid(:,k)'); 
       tries = tries + 1;
       if isnan(fitness.raw(k))
-	countevalNaN = countevalNaN + 1;
+        countevalNaN = countevalNaN + 1;
       end
       if mod(tries, 100) == 0
 	warning([num2str(tries) ...
                  ' NaN objective function values at evaluation ' ...
                  num2str(counteval)]);
+      end
+      if (countevalNaN >= stopMaxFunEvals || countevalNaN >= stopMaxIter)
+        keyboard;
       end
     end
     counteval = counteval + 1; % retries due to NaN are not counted
