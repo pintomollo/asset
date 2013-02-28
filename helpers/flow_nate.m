@@ -42,9 +42,9 @@ function flow_nate(niter, use_timing)
 
   for i=1:niter
     if (use_timing)
-      [signals_full{i,1}, signals_full{i,2}, signals{i,3}] = simultaneous_registration(signals, times - min(times) + 1);
+      [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals, times - min(times) + 1);
     else
-      [signals_full{i,1}, signals_full{i,2}, signals{i,3}] = simultaneous_registration(signals);
+      [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals);
     end
   end
 

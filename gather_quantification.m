@@ -120,6 +120,8 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
   end
 
   if (npts > 1e4)
+    keyboard
+
     warning('Too many elements necessary for the quantification');
     datas = [];
     ruffles = [];

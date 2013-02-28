@@ -100,6 +100,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     mymovie = split_cells(mymovie, opts);
   end
 
+  did_dic = false;
   for i = 1:max_frames
     nframe = frames(i);
 
@@ -117,6 +118,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
 
     if (strncmp(opts.segmentation_type, 'markers', 7) | strncmp(opts.segmentation_type, 'all', 3))
       if (opts.recompute |~isfield(mymovie, 'eggshell') | isempty(mymovie.eggshell))
+        did_dic = true;
         mymovie = dp_dic(mymovie, nframe, opts);
 
         if (any(mymovie.dic.update(:, nframe)))
@@ -143,6 +145,10 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     end
   end
 
+  if (did_dic)
+    mymovie = correct_jitter(mymovie, dic_opts);
+    mymovie = align_embryo(mymovie, dic_opts);
+  end
   mymovie = correct_jitter(mymovie, opts);
   mymovie = align_embryo(mymovie, opts);
 

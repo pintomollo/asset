@@ -13,6 +13,7 @@ function [fraction, max_width, cell_width, raw_domain, pos] = domain_expansion(d
     opts.quantification.weights.filt = ruffles;
     opts.quantification.params.init = (1-exp(-theta.^2/(2*(opts.quantification.params.spawn_percentile(1)/10)^2)));
     params = opts.quantification;
+
     path = dynamic_programming(domain, opts.quantification.params, opts.quantification.scoring_func, opts.quantification.weights, opts);
 
     [domain, ruffles, pos, indx] = align_domain(domain, ruffles, path, opts);

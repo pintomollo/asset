@@ -17,6 +17,9 @@ function mymovie = perform_application(mymovie, opts)
           mymovie = track_centrosomes(mymovie, opts);
         case 'quantification'
           mymovie = cortical_signal(mymovie, opts);
+          if (strncmp(opts.quantification.kymograph_type, 'projected', 9))
+            mymovie = reconstruct_egg(mymovie, opts);
+          end
         case 'timing'
           mymovie = time_cell_cycle(mymovie, opts);
           done_timing = true;

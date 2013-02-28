@@ -46,7 +46,7 @@ function mymovie = align_embryo(mymovie, opts)
     if (isempty(ell))
       continue;
     end
-    ell = [ell(:,1) mymovie.(type).ruffles(i).properties i*ones(size(ell, 1), 1)];
+    ell = [ell(:,1) mymovie.(type).ruffles(i).properties(:,1) i*ones(size(ell, 1), 1)];
     pts = [pts; ell];
   end
 
@@ -56,30 +56,78 @@ function mymovie = align_embryo(mymovie, opts)
     return;
   end
 
+  %figure;scatter3(pts(:,1), pts(:,2), pts(:,3));
+
   bins = [0:2*pi/nbins:2*pi + 1e-5];
   [counts, indx] = histc(pts(:,1), bins);
 
+  valids = (indx > 0);
   depths = zeros(nbins, 1);
-  depths(counts > 0) = mymean(pts(:,2), 1, indx);
+  depths(counts > 0) = mymean(pts(valids,2), 1, indx(valids));
 
   myhist = counts(1:nbins/2) + counts(end-1:-1:end-nbins/2);
   mydepth = depths(1:nbins/2) + depths(end-1:-1:end-nbins/2);
+  mydepth2 = cumsum(mydepth(end:-1:1)); 
 
   inverted = false(3,1);
+
+  %figure;subplot(121);plot(myhist);subplot(122);plot(mydepth)
 
   %% Couting invaginations on both sides
   inverted(1) = (sum(myhist(1:nbins/8)) > sum(myhist(end-(nbins/8)+1:end)));
   %inverted(1) = (sum(mydepth(1:nbins/8)) > sum(mydepth(end-(nbins/8)+1:end)));
 
   %% Checking where the deepest ones are located
-  %[junk, cytok_pos] = max(myhist(nbins/8+1:end-(nbins/8)));
-  [junk, cytok_pos] = max(mydepth(nbins/8+1:end-(nbins/8)));
-  inverted(2) = (cytok_pos > nbins/8);
+  % And the smalle ones, compare basically smooth vs rough
+  mydepth = cumsum(mydepth);
+  mydepth = (mydepth / mydepth(end));
+  inverted(2) = (mydepth(nbins/4) < 0.5);
 
-  if (inverted(1) ~= inverted(2))
+  %[junk, cytok_pos] = max(mydepth(nbins/8+1:end-(nbins/8)))
+%  [junk, cytok_pos] = max(mydepth);
+%  inverted(2) = (cytok_pos >= nbins/4);
+
+%  if (inverted(1) ~= inverted(2))
+
+    times = get_manual_timing(mymovie, opts);
+    frames = [];
+    if (~isnan(times(3)))
+      frames = [frames times(3):nframes];
+    elseif (~isnan(times(1)))
+      frames = [frames times(1)-5:times(1)+5];
+    else
+      frames = [1:nframes];
+    end
+    
+    frames = frames(frames > 0 & frames <= nframes);
+
+    good_ruffles = (ismember(pts(:,3), frames) & pts(:,2)>0.1);
+    if(~any(good_ruffles))
+      good_ruffles = (ismember(pts(:,3), frames));
+    end
+
+    if (any(good_ruffles))
+      targets = pts(good_ruffles, :);
+      targets(targets(:,1)>pi,1) = 2*pi - targets(targets(:,1)>pi,1);
+
+      weights = targets(:,2) .* (targets(:,3) / frames(end));
+      weights = weights / sum(weights);
+      %avg_angl = sum(targets(:,1) .* weights);
+
+      % Weighted median
+      [angls, indxs] = sort(targets(:,1));
+      weights = cumsum(weights(indxs));
+      indx = find(weights>0.5, 1, 'first');
+      med_angl = angls(indx);
+
+      inverted(3) = (med_angl > pi/2);
+    end
+
+    %{
     angl_thresh = 0.2;
     times = get_manual_timing(mymovie, opts);
     tests = NaN(nframes, 1);
+    angls = NaN(nframes, 1);
     max_depth = 0;
 
     for i=nframes:-1:1
@@ -120,6 +168,7 @@ function mymovie = align_embryo(mymovie, opts)
         %end
       end
       tests(i) = ((angl < pi & angl > pi/2) | (angl > pi & angl < 3*pi/2));
+      angls(i) = angl;
 
 %      max_indx = find(dists == min(dists) & dists < angl_thresh, 2)
 %      if (isempty(max_indx))
@@ -133,21 +182,48 @@ function mymovie = align_embryo(mymovie, opts)
 %      break;
       if (curr_depth < max_depth/2 | i < times(end))
       %if (i < times(end))
-        break
+        break;
       end
     end
     inverted(3) = (mymean(tests)+(1e-6*(tests(end)-0.5)) > 0.5);
-  end
+    %}
+
+    %[junk, smooth_pos] = min(mydepth);
+    %inverted(3) = (smooth_pos >= nbins/4);
+%  end
+
+%  if (any(inverted))
+%    beep;
+%    keyboard
+%  end
 
   orient = mymean(mymovie.(type).orientations);
   if (sum(inverted) > 1)
     if (opts.verbosity > 0)
       disp(['A-P were inverted !']);
     end
-    inverted = ~actu_invert;
 
-    orient = orient + pi;
-    orient = orient - 2*pi*(orient > 2*pi);
+    accept_detection = true;
+    if (actu_inverted)
+      if (opts.verbosity > 2)
+        answer = questdlg('The orientation of this embryo was previously set manually, revert to the detected one instead ?', 'ASSET');
+      elseif (opts.verbosity > 0)
+        answer = input('The orientation of this embryo was previously set manually,\nrevert to the detected one instead ? Y/[N]:', 's');
+      else
+        answer = 'no';
+      end
+
+      accept_detection = strncmpi(answer, 'Y', 1);
+    end
+
+    if (accept_detection)
+      inverted = false;
+
+      orient = orient + pi;
+      orient = orient - 2*pi*(orient > 2*pi);
+    else
+      inverted = actu_invert;
+    end
 
     mymovie.(type) = align_orientations(mymovie.(type), orient);
   else

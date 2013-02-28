@@ -63,17 +63,7 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
   [score, indx] = min(params(:,end));
   params = params(indx, 1:end-1).';
 
-  after = sizes(:,1) - params;
-  before = max(params);
-  shift = before - (params - 1);
-
-  window_size = [before+max(after) max(sizes(:,2))];
-  window = NaN([window_size nimgs]);
-
-  dw = round((window_size(2) - sizes(:,2))/2);
-  for i=1:nimgs
-    window(shift(i):before+after(i,1),dw(i)+1:dw(i)+sizes(i,2),i) = imgs{i};
-  end
+  window = stack_images(imgs, params);
 
   return;
 

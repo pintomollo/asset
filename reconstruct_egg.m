@@ -1,22 +1,30 @@
-function mymovie = reconstruct_egg(mymovie, opts)
+function [mymovie, updated] = reconstruct_egg(mymovie, opts)
 
+  updated = true;
   if (nargin == 1 & ischar(mymovie))
 
     fname = mymovie;
     tmp = dir(fname); 
+    updated = false;
 
     for i=1:length(tmp)
       name = tmp(i).name
       load(name);
 
-      mymovie = reconstruct_egg(mymovie, opts);
-      save(mymovie.experiment, 'mymovie', 'opts');
+      [mymovie, curr_up] = reconstruct_egg(mymovie, opts);
+
+      if (cur_up)
+        save(mymovie.experiment, 'mymovie', 'opts');
+        updated = true;
+      end
     end
     
     return;
   end
 
   if ((isfield(mymovie, 'metadata') & isfield(mymovie.metadata, 'relative_z') & ~isempty(mymovie.metadata.relative_z)) & ~opts.recompute)
+    updated = false;
+
     return;
   end
 
@@ -150,13 +158,25 @@ function [relative_z, centers, orient] = relative_position(pts, z, centers, axes
         goods = (sharpness >= val_thresh);
         goods = filter_goods(goods, 15);
 
-        [centers(1:2, i), tmp_a, orient(i)] = fit_ellipse(pts{i}(goods, 1:2));
-        ell_coords = carth2elliptic(pts{i}(goods, 1:2), centers(1:2, i), axes_length(1:2), orient(i), 'radial');
+        [tmp_c, tmp_a, tmp_o] = fit_ellipse(pts{i}(goods, 1:2));
+        ell_coords = carth2elliptic(pts{i}(goods, 1:2), tmp_c, axes_length(1:2), tmp_o, 'radial');
         dist = mymean(ell_coords(:,2));
         z_pos = axes_length(3)*sqrt(1 - dist.^2);
 
         if (~imag(z_pos))
-          relative_z(i) = z_pos;
+          bounding_box = [min(pts{i}(:,1:2)) max(pts{i}(:,1:2))];
+          bb_center = [(bounding_box(1:2) + bounding_box(3:4))/2].';
+          dist_thresh = [(bounding_box(3:4) - bounding_box(1:2))/4].';
+
+          % Simple verification that the estimation did not fall completly off
+          if (all(tmp_c >= bb_center - dist_thresh) && all(tmp_c <= bb_center + dist_thresh))
+
+            relative_z(i) = z_pos;
+            centers(1:2, i) = tmp_c;
+            orient(i) = tmp_o;
+          else
+            display(['Weird estimation in frame ' num2str(i)])
+          end
         end
       else
         relative_z(i) = z_pos;
@@ -172,10 +192,15 @@ end
 function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, centers, axes_length, orient)
 
   all_coords = NaN(0, size(pts{1}, 2)+1);
-
   neggs = length(pts);
+  missing_frames = false(neggs, 1);
+
   for i=1:neggs
-    all_coords = [all_coords; [realign(pts{i}(:,1:2), [0;0], centers(1:2, i), orient(i)) pts{i}(:,3) - centers(3,i) pts{i}(:,4:5) ones(size(pts{i}(:,4)))*i]];
+    if (~isempty(pts{i}))
+      all_coords = [all_coords; [realign(pts{i}(:,1:2), [0;0], centers(1:2, i), orient(i)) pts{i}(:,3) - centers(3,i) pts{i}(:,4:5) ones(size(pts{i}(:,4)))*i]];
+    else
+      missing_frames(i) = true;
+    end
   end
 
   pts = all_coords(:,1:3);
@@ -218,8 +243,11 @@ function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, cente
   bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
   axes_length = bests(1:3);
 
-  [errs, relative_z] = fit_z(sqrt(axes_length));
+  [errs, rel_z] = fit_z(sqrt(axes_length));
   errs = errs(:);
+
+  relative_z = NaN(1, neggs);
+  relative_z(~missing_frames) = rel_z;
 
   return;
 

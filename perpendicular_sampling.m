@@ -22,7 +22,7 @@ function [values, perp_path, dpos] = perpendicular_sampling(img, path, perp_path
 
   if (isempty(perp_path))
 
-    [dist, tot_dist] = carth2linear(path);
+    [dist, tot_dist] = carth2linear(path, opts);
 
     if (isempty(dist))
       values = [];

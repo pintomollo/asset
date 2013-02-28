@@ -51,6 +51,19 @@ function mymovie = measure_flow(mymovie, opts)
   else
     proj_min = 0;
   end
+  if (isfield(opts.spot_tracking, 'projection_args'))
+    proj_args = opts.spot_tracking.projection_args;
+  else
+    proj_args = [];
+  end
+  if (strncmp(opts.spot_tracking.projection_type, 'gaussian', 8))
+    if (isempty(proj_args))
+      nullcline = 1.4;
+    else
+      nullcline = proj_args(1);
+    end
+    g_factor = 0.85;
+  end
 
   edges = [0:pos_bin:65];
   edges = [-edges(end:-1:2) edges].';
@@ -210,23 +223,66 @@ function mymovie = measure_flow(mymovie, opts)
                       bsxfun(@minus, cortex(:,2), pts(:,2).').^2);
           dist(dist>3*proj_dist) = Inf;
 
-          dist_thresh = 1.4 / opts.pixel_size;
-%          scaling = ones(size(dist));
-%          scaling(dist < dist_thresh) = dist_thresh ./ (dist_thresh - dist(dist < dist_thresh));
+          dist_thresh = nullcline / opts.pixel_size;
 
           weights = exp(-(dist.^2)/(2*((proj_dist/2)^2)));
+
+          % Other means to compute the same thing, but less robust
+          %{
+          if (isfinite(dist_thresh))
+            rescale = min(dist, [], 1);
+            goods = (rescale < g_factor*dist_thresh);
+            rescale = dist_thresh ./ (dist_thresh - rescale);
+            weights(:,~goods) = 0;
+            rescale(~goods) = 0;
+          else
+            rescale = ones(size(dist, 1), 1);
+          end
+
+          weights = bsxfun(@rdivide, weights, sum(weights, 2));
+          weights = bsxfun(@times, weights, rescale);
+
+          scaling = ones(size(dist, 1), 1);
+          %}
+
+          if (isfinite(dist_thresh))
+            rescale = min(dist, [], 1);
+            goods = (rescale < g_factor*dist_thresh);
+            rescale(~goods) = 0;
+            weights(:, ~goods) = 0;
+            weights = bsxfun(@rdivide, weights, sum(weights, 2));
+            rescale = bsxfun(@times, weights, rescale);
+            rescale = sum(rescale, 2);
+            goods = (rescale < g_factor*dist_thresh);
+            scaling = dist_thresh ./ (dist_thresh - rescale);
+            scaling(~goods) = NaN;
+          else
+            scaling = ones(size(dist, 1), 1);
+          end
+
           weights = bsxfun(@rdivide, weights, sum(weights, 2));
 
-          dist(isinf(dist)) = 0;
-          dist = dist .* weights;
-          dist = sum(dist, 2);
-          scaling = ones(size(dist));
-          scaling(dist < 0.75*dist_thresh) = dist_thresh ./ (dist_thresh - dist(dist < 0.75*dist_thresh));
+          %{
+          if (isfinite(dist_thresh))
+            rescale = min(dist, [], 1);
+            goods = (rescale < dist_thresh);
+            rescale(~goods) = 0;
+            weights(:, ~goods) = 0;
+            weights = bsxfun(@rdivide, weights, sum(weights, 2));
+            rescale = bsxfun(@times, weights, rescale);
+            rescale = sum(rescale, 2);
+            goods = (rescale < g_factor*dist_thresh);
+            scaling = dist_thresh ./ (dist_thresh - rescale);
+            scaling(~goods) = NaN;
+          else
+            scaling = ones(size(dist, 1), 1);
+          end
+
+          weights = bsxfun(@rdivide, weights, sum(weights, 2));
+          %}
 
           speed_x = sum(bsxfun(@times, weights, speed(:,1).'), 2);
           speed_y = sum(bsxfun(@times, weights, speed(:,2).'), 2);
-%          speed_x = sum(bsxfun(@times, weights.*scaling, speed(:,1).'), 2);
-%          speed_y = sum(bsxfun(@times, weights.*scaling, speed(:,2).'), 2);
 
           movement = [speed_x, speed_y];
         case 'range'

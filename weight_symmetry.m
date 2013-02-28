@@ -48,8 +48,10 @@ function weight = weight_symmetry(img, params)
   %bias = bias_y * bias_x;
 
   %ruffles = imnorm(ruffles, [], 0.1);
-  vals = prctile(ruffles(:), [40 90]);
-  ruffles = imnorm(ruffles, 0, vals(2));
+
+  %vals = prctile(ruffles(:), [40 90]);
+  %ruffles = imnorm(ruffles, 0, vals(2));
+  ruffles = imnorm(ruffles, 0, 0.075);
 
   weight = alpha*(invags*delta + (1-delta)*ruffles) + (1-alpha)*corrs;
   %weight = alpha*(delta*invags + (1-delta)*ruffles) + (1-alpha)*bias;

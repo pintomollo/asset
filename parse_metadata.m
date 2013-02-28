@@ -101,6 +101,8 @@ function [metadata, opts] = parse_metadata(fname, base_dir, opts)
     block_level = 0;
     obj_level = 0;
 
+    said_it = false;
+
     if (any(line == '{'))
       % uManager metadata file
 
@@ -122,7 +124,10 @@ function [metadata, opts] = parse_metadata(fname, base_dir, opts)
               elseif (strncmp(tokens{1}, 'FrameKey', 8))
                 tmp_tokens = regexp(tokens{1}, 'FrameKey-(\d+)-\d+-\d+','tokens');
                 if (~isempty(tmp_tokens) & str2double(tmp_tokens{1}{1}) >= nframes)
-                  warning(['Metadata describes a plane (' tmp_tokens{1}{1}{1} ') that is out of the range of the actual recordings (' num2str(nframes-1) '), ignoring this infromation.']);
+                  if (~said_it)
+                    warning(['Metadata describes a plane (' tmp_tokens{1}{1}{1} ') that is out of the range of the actual recordings (' num2str(nframes-1) '), ignoring this infromation.']);
+                    said_it = true;
+                  end
 
                   state = 'ignore';
                   obj_level = block_level;

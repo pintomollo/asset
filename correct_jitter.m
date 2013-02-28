@@ -10,6 +10,8 @@ function mymovie = correct_jitter(mymovie, opts)
     return;
   end
 
+  mymovie.(type) = align_orientations(mymovie.(type));
+
   orientations = mymovie.(type).orientations;
   axes_length = mymovie.(type).axes_length;
 
