@@ -61,11 +61,7 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
 
   for i=1:nstart
     if (has_intuition)
-        try
       [params_c, fval, ncoutns, stopflag, out, bests] = cmaes(@error_function, centers(:) ./ sizes(:,1), 0.5 / i, opt); 
-        catch
-            keyboard
-        end
     else
       init = rand(length(centers), 1);
       [params_c, fval, ncoutns, stopflag, out, bests] = cmaes(@error_function, init, 0.5, opt); 
@@ -159,7 +155,7 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
       goods = ~isnan(variance);
       %err = -(sum(variance(goods)) + log(sum(goods(:))/ntotal));
       err(n) = sum(variance(goods)) + penalty*(sum(~goods(:)));
-      err(n) = err(n)*mean(2 - p(:)./sizes(:,1));
+      err(n) = err(n)*mean(1 + p(:)./sizes(:,1));
 
       if (~any(goods))
         err(n) = NaN;

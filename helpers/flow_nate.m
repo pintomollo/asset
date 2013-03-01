@@ -1,5 +1,6 @@
 function flow_nate(niter, use_timing)
 
+  aligned_times = [];
   if (nargin == 0)
     niter = 1;
     use_timing = false;
@@ -10,6 +11,9 @@ function flow_nate(niter, use_timing)
     else
       use_timing = false;
     end
+  elseif (isnumeric(use_timing) && numel(use_timing)>1)
+    aligned_times = use_timing;
+    use_timing = true;
   end
 
   files = dir('749-*_.mat');
@@ -38,6 +42,10 @@ function flow_nate(niter, use_timing)
     %print('-dpng', ['PNG/' mymovie.experiment 'flow.png']);
 
     signals{i} = tmp;
+  end
+
+  if (use_timing && ~isempty(aligned_times))
+    times = aligned_times;
   end
 
   for i=1:niter
