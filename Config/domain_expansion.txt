@@ -14,8 +14,8 @@ force_circularity false
 dp_method 'normal'
 init 1
 nhood 15
-alpha 0.55
+alpha 0.5
 beta 0.85
 gamma 0.8
 prohibit 'horiz'
-spawn_percentile 0.095
+spawn_percentile 0.09

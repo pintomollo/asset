@@ -157,9 +157,9 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
       %err = -(sum(variance(goods)) + log(sum(goods(:))/ntotal));
       err(n) = sum(variance(goods)) + penalty*(sum(~goods(:)));
 
-      err(n) = err(n)*mean(1 + p(:)./sizes(:,1));
-
+      %err(n) = err(n)*mean(1 + p(:)./sizes(:,1));
       %[sum(variance(goods)) penalty*(sum(~goods(:))) mean(1 + p(:)./sizes(:,1)) err(n)]
+
       if (~any(goods))
         err(n) = NaN;
       end
