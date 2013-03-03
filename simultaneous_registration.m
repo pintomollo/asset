@@ -22,23 +22,24 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
   nimgs = length(imgs);
 
   window_size = min(sizes, [], 1);
+  half = window_size(1);
+  window_size(1) = window_size(1)*2;
   window = NaN([window_size nimgs]);
   ntotal = numel(window);
   min_counts = 3;
 
   centered = imgs;
-  vars = NaN(nimgs, 1);
   dw = round((sizes(:,2) - window_size(2))/2);
   for i=1:nimgs
     centered{i} = imgs{i}(:,dw(i)+1:dw(i)+window_size(2));
-    vars(i) = var(centered{i}(~isnan(centered{i})));
   end
 
   min_counts = min(min_counts, nimgs);
 
-  penalty = max(vars);
+  penalty = 0;
   [err, vars] = error_function(zeros(nimgs, 1));
-  penalty = (mean(vars(isfinite(vars))) + median(vars(isfinite(vars)))) / 2;
+  %penalty = (mean(vars(isfinite(vars))) + median(vars(isfinite(vars)))) / 2;
+  penalty = mean(vars(isfinite(vars))) + std(vars(isfinite(vars)));
   %[err, vars] = error_function(centers ./ sizes(:,1));
 
   opt = cmaes('defaults');
@@ -143,7 +144,7 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
 
       window(:) = NaN;
       for j=1:nimgs
-        window(1:min((sizes(j, 1)-p(j)+1), end),:,j) = centered{j}(p(j):min(p(j)+window_size(1)-1,end),:);
+        window(max(half-p(j)+2, 1):min(half+(sizes(j, 1)-p(j)+1), end),:,j) = centered{j}(max(p(j)-half, 1):min(p(j)+half-1,end),:);
       end
 
       %avg = mymean(window, 3);
@@ -155,8 +156,10 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
       goods = ~isnan(variance);
       %err = -(sum(variance(goods)) + log(sum(goods(:))/ntotal));
       err(n) = sum(variance(goods)) + penalty*(sum(~goods(:)));
+
       err(n) = err(n)*mean(1 + p(:)./sizes(:,1));
 
+      %[sum(variance(goods)) penalty*(sum(~goods(:))) mean(1 + p(:)./sizes(:,1)) err(n)]
       if (~any(goods))
         err(n) = NaN;
       end
