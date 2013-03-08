@@ -240,6 +240,8 @@ function export_movie(mymovie, opts)
 
       nframes = length(frames);
 
+      set(gca, 'position', [0 0 1 1], 'visible', 'off')
+
       for p = 1:nframes
 
         % Load an image and convert it to the BufferedImage type of LOCI
@@ -252,10 +254,40 @@ function export_movie(mymovie, opts)
         %keyboard
 
         if (crop_export)
-          img = imalign(img, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
+          img = realign(img, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
         end
 
         save_data(new_file, img);
+        
+
+        %{
+        hold off;
+        imshow(imnorm(img));
+        hold on;
+
+        switch field
+          case 'dic'
+            egg = realign(mymovie.(lookup_field)(lookup_indx).eggshell(frames(p)).carth, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
+            cortex = realign(mymovie.(lookup_field)(lookup_indx).cortex(frames(p)).carth, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
+
+            plot(egg(:,1), egg(:,2), 'Color', [93 255 107]/255, 'LineWidth', 1.6);
+            plot(cortex(:,1), cortex(:,2), 'Color', [255 93 93]/255, 'LineWidth', 1.6);
+          case 'cortex'
+            cortex = insert_ruffles(mymovie.data.cortex(frames(p)).carth, mymovie.data.ruffles(frames(p)).paths);
+            cortex = realign(cortex, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
+            ruffles = realign(mymovie.data.ruffles(frames(p)).carth, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
+
+            plot(cortex(:,1), cortex(:,2), 'Color', [255 93 93]/255, 'LineWidth', 1.6);
+            scatter(ruffles(:,1), ruffles(:,2), 'MarkerEdgeColor', [93 101 255]/255, 'LineWidth', 1.5, 'SizeData', 16^2);
+          case 'data'
+            cortex = realign(mymovie.data.quantification(frames(p)).carth, crop_size, mymovie.(lookup_field)(lookup_indx).centers(:, frames(p)), mymovie.(lookup_field)(lookup_indx).orientations(1, frames(p)));
+
+            plot(cortex(:,1), cortex(:,2), 'Color', [255 93 93]/255, 'LineWidth', 1.6);
+        end
+
+        print('-painters', '-dpng', ['PNG/' mymovie.experiment field '-' num2str(frames(p))  '.png']);
+        %}
+
         %imwrite(img, new_file, 'TIFF', 'WriteMode', 'append');
         %new_file = save_data(new_file, img, nframes);
 

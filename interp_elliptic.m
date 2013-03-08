@@ -25,7 +25,7 @@ function [new_angles, path] = interp_elliptic(varargin)
   [orig_angles, orig_values, new_angles, angle_range, is_resampling] = parse_input(varargin{:});
 
   if (all(isnan(orig_angles)))
-    path = NaN(size(new_angles));
+    path = NaN(size(new_angles,1), size(orig_values,2));
     if (nargout==1)
       new_angles = [new_angles path];
       path = [];
@@ -122,6 +122,8 @@ function [new_angles, path] = interp_elliptic(varargin)
     % If we have only one output, combine both
     if (nargout == 1)
       new_angles = [new_angles NaN(size(new_angles))];
+    else
+      path = NaN(size(new_angles,1), size(orig_values,2));
     end
 
     return;

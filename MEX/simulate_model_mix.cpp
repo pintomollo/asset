@@ -342,7 +342,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   double *tmp_vect_dbl;
   float *x, *fx, *x0, *simulation, *curr_sim, *timing, *tmp_simul;
   float tmax, output_rate, dt, current_dt, t = 0, time_count = 0;
-  float relerr, abserr;
+  float relerr, abserr, currerr;
   int ntimes, count = 1, page_size = 500, i, j, niter, ntotal, ndata;
   int flag, prev_flag;
   bool saved = false;
@@ -439,20 +439,30 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     abserr = sqrt(r8_epsilon());
     relerr = sqrt(r8_epsilon());
+    currerr = abserr;
 
     prev_flag = -1;
     for (j = 0; j < niter; ++j) {
       saved = false;
       current_dt = dt;
 
-      flag = r4_rkf45(goehring_step, ntotal, x, fx, &t, tmax, &relerr, abserr, prev_flag);
+      flag = r4_rkf45(goehring_step, ntotal, x, fx, &t, tmax, &relerr, currerr, prev_flag);
 
       if (flag == 666) {
-        char buffer[25];
-        sprintf(buffer, "Error due to flag %d\n", prev_flag);
-        mexWarnMsgTxt(buffer);
-        break;
+        if (prev_flag == 6) {
+          currerr = currerr * 2;
+          prev_flag = -2;
+        } else {
+          char buffer[25];
+          sprintf(buffer, "Error due to flag %d\n", prev_flag);
+          mexWarnMsgTxt(buffer);
+          break;
+        }
+      } else if (flag == 6) {
+        currerr = currerr * 2;
+        prev_flag = -2;
       } else {
+        currerr = abserr;
         prev_flag = flag;
       }
 

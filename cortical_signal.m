@@ -68,17 +68,22 @@ function mymovie = cortical_signal(mymovie, opts)
   ninit = 10;
 
   priors = NaN(ninit, 2);
+%  egg_priors = NaN(ninit, 2);
   for i=1:ninit
     nimg = randi(nframes);
     ph = double(load_data(mymovie.cortex, nimg));
+%    data = double(load_data(mymovie.data, nimg));
     cortex = mymovie.data.cortex(nimg).carth;
 
     if (~isempty(cortex))
-      [priors(i,:)] = estimate_peak(ph, cortex, opts);
+      [priors(i,:)] = estimate_peak(ph, cortex, [], true, opts);
+%      [egg_priors(i,:)] = estimate_peak(data, mymovie.data.eggshell(nimg).carth, [0 priors(i,2)], true, opts);
     end
   end
   
   priors = median(priors, 1);
+%  egg_priors = median(egg_priors, 1);
+  egg_stats = NaN(nframes, 2);
 
   for i=1:nframes
     %bounds = [-Inf bin_step 0 0 -Inf 0 0; ...
@@ -126,6 +131,8 @@ function mymovie = cortical_signal(mymovie, opts)
       img = bsxfun(@minus, img, horizontal_bkg);
       img(img < 0) = 0;
 
+      egg = mymovie.data.eggshell(nimg).carth;
+      egg_dist = min(sqrt(bsxfun(@minus, egg(:,1), cortex(:,1).').^2 + bsxfun(@minus, egg(:,2), cortex(:,2).').^2), [], 2);
       %egg = mymovie.markers.eggshell(nimg).carth;
       %if (nimg>1)
       %  if (prev_width > 0)
@@ -149,7 +156,7 @@ function mymovie = cortical_signal(mymovie, opts)
       %peak_prior(1) = 0.9*priors(1) + 0.1*curr_prior(1)
 
       %[gs] = estimate_signal(img, cortex, dperp, dpos, peak_prior, opts);
-      pos = estimate_peak(ph, cortex, priors, opts);
+      pos = estimate_peak(ph, cortex, priors, false, opts);
       imf = emdc([], pos(:,1), true, 4);
       %if (size(imf, 1) > 4)
       %  pos = sum(imf(end-3:end, :), 1).';
@@ -158,7 +165,25 @@ function mymovie = cortical_signal(mymovie, opts)
       %end
       pos = imf(end, :).';
 
+      goods = (egg_dist >= 3*priors(2));
       [gs, dperp] = estimate_signal(img, cortex, pos, priors(2), opts);
+
+      if (any(goods))
+        egg_pos = estimate_peak(img, egg, [0 priors(2)/2], false, opts);
+      
+        %%%%%%%%%%%% USEFEUL TO TRY MEAN AS WELL
+        %egg_width = nanmean(egg_pos(goods, 2));
+
+        indxs = [1:size(egg_pos, 1)].';
+
+        imf = emdc(indxs(goods), egg_pos(goods,1), true, 4);
+        egg_pos = NaN(size(indxs));
+        egg_pos(goods) = imf(end, :).';
+
+        %[egg_gs] = estimate_signal(img, egg, egg_pos, priors(2), opts);
+        [egg_gs] = estimate_signal(img, egg, egg_pos, egg_width, opts);
+        egg_stats(nimg, :) = nanmean(egg_gs(:, [1 3]));
+      end
 
 %      [gs, dperp] = new_estimate(img, ph, cortex, egg, prev_width, opts);
 
@@ -270,6 +295,12 @@ function mymovie = cortical_signal(mymovie, opts)
     end
   end
 
+  egg_stats = median(egg_stats(~isnan(egg_stats(:,1)), :));
+
+  for i=1:nframes
+    mymovie.data.quantification(i).eggshell = egg_stats;
+  end
+
   if (opts.recompute|~isfield(mymovie.data, 'domain')|isempty(mymovie.data.domain))
     mymovie = carth2normalized(mymovie, opts);
 
@@ -358,17 +389,23 @@ function [sigma, ks] = normality_test(x, y, factor)
   return;
 end
 
-function [peak_params, dperp, dpos] = estimate_peak(ph, cortex, priors, opts)
+function [peak_params, dperp, dpos] = estimate_peak(ph, cortex, priors, do_avg, opts)
 
-  if (nargin == 3)
-    opts = priors;
-    priors = [];
+%  if (nargin == 3)
+%    opts = priors;
+%    priors = [];
+  if (isempty(priors))
     ph = gaussian_mex(ph, 1.5);
     [ph_values, dperp, dpos] = perpendicular_sampling(ph, cortex, opts);
-    values = nanmean(ph_values, 1);
   else
     ph = gaussian_mex(ph, priors(2)/2);
-    [values, dperp, dpos] = perpendicular_sampling(ph, cortex, opts);
+    [ph_values, dperp, dpos] = perpendicular_sampling(ph, cortex, opts);
+  end
+
+  if (do_avg)
+    values = nanmean(ph_values, 1);
+  else
+    values = ph_values;
   end
 
   nrows = size(values, 1);
@@ -409,6 +446,12 @@ function [peak_params, dperp, dpos] = estimate_peak(ph, cortex, priors, opts)
 %      peak_params(n, :) = [x(maxs(indx)) ks(indx, 1)];
 
       peak_params(n, :) = normality_test_mex(x, y, maxs);
+
+      %hold off;
+      %plot(x,y);
+      %hold on;
+      %scatter(x(x==peak_params(n,1)),y(x==peak_params(n,1)), 'r');
+      %keyboard
     end
   end
 
@@ -422,11 +465,16 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   halfed = gaussian_mex(img, peak_width/2);
   [halfed] = perpendicular_sampling(halfed, cortex, dperp, dpos, opts);
 
+  goods = ~isnan(pos);
+
   coef = 5;
   peak_dist = coef*peak_width;
 
   gauss3 = (abs(bsxfun(@minus, dpos, pos)) < peak_dist);
-  gauss3 = (mean(gauss3, 1) > 0.5);
+  gauss3 = (nanmean(gauss3, 1) > 0.5*mean(goods));
+  gauss3([1 end]) = false;
+
+  halfed(~goods, :) = NaN;
 
   [X,Y] = meshgrid(dpos, [1:size(values,1)].');
 
@@ -527,6 +575,7 @@ function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coe
   gaussians = params.';
   goods = (gaussians(:,3) ~= -1);
   gaussians(~goods, :) = NaN;
+  gaussians(gaussians(:,1) < 0, 1) = 0;
 %  plot(gaussians(:,1), 'c')
 
 %  keyboard

@@ -7,7 +7,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
   resolution = opts.quantification.resolution;
 
   nframes = size_data(mymovie.data);
-  compute_ruffles = (nargout == 3);
+  compute_ruffles = (nargout > 2);
   dist = NaN(nframes, 2);
 
   switch type
@@ -31,7 +31,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
   end
 
   indexes = [];
-  tmp_pts = cell(nframes, 2 + compute_ruffles);
+  tmp_pts = cell(nframes, 3 + compute_ruffles);
 
   for i=1:nframes
     warper = mymovie.data.warpers(i);
@@ -48,6 +48,9 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
     if (compute_ruffles)
       ruffles_pts = ruffles_distance(cortex, mymovie.data.centers(:, i), mymovie.data.axes_length(:, i), mymovie.data.orientations(i));
     end
+
+    %egg_dist = min(sqrt(bsxfun(@minus, cortex(:,1), mymovie.data.eggshell(i).carth(:,1).').^2 + bsxfun(@minus, cortex(:,2), mymovie.data.eggshell(i).carth(:,2).').^2), [], 2) * opts.pixel_size;
+    egg_dist = min(sqrt(bsxfun(@minus, cortex(:,1), mymovie.data.eggshell(i).carth(:,1).').^2 + bsxfun(@minus, cortex(:,2), mymovie.data.eggshell(i).carth(:,2).').^2), [], 2);
 
     switch type
       case 'elliptic'
@@ -98,6 +101,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
     end
     tmp_pts{i,1} = pts;
     tmp_pts{i,2} = indexes;
+    tmp_pts{i,end} = egg_dist;
 
     if (compute_ruffles)
       tmp_pts{i,3} = ruffles_pts;
@@ -144,10 +148,16 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
       continue;
     end
 
+    egg_dist = tmp_pts{i,end};
+    egg_props = mymovie.data.quantification(end).eggshell;
+    values = mymovie.data.quantification(i).cortex;
+    values = values - egg_props(1)*exp(-egg_dist.^2 ./ (2*egg_props(2)^2));
+    values(values < 0) = 0;
+
     if (isempty(indexes))
-      new_intens = interp_elliptic(pts, mymovie.data.quantification(i).cortex, full_indexes, dist(i,:));
+      new_intens = interp_elliptic(pts, values, full_indexes, dist(i,:));
     else
-      new_intens = interp_elliptic(pts, mymovie.data.quantification(i).cortex(indexes), full_indexes, dist(i,:));
+      new_intens = interp_elliptic(pts, values(indexes), full_indexes, dist(i,:));
     end
     new_intens(full_indexes < dist(i,1) | full_indexes > dist(i,2),:) = NaN;
     datas(i, :) = new_intens(:, 2);

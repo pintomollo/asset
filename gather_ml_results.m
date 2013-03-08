@@ -1,12 +1,12 @@
 function results = gather_ml_results(fname, file_pattern, keep_evolution)
 
   if (nargin == 1)
-    file_pattern = '.*%.4f?_evol\\.dat';
+    file_pattern = 'adr-kymo-%.4f?_evol\\.dat';
     keep_evolution = false;
   elseif (nargin == 2)
     if (islogical(file_pattern))
       keep_evolution = file_pattern;
-      file_pattern = '.*%.4f?_evol\\.dat';
+      file_pattern = 'adr-kymo-%.4f?_evol\\.dat';
     else
       keep_evolution = false;
     end
@@ -17,7 +17,7 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
   end
 
   if (isempty(file_pattern))
-    file_pattern = '.*%.4f?_evol\\.dat';
+    file_pattern = 'adr-kymo-%.4f?_evol\\.dat';
   end
 
   if (~exist(fname, 'file'))
@@ -109,7 +109,7 @@ function results = gather_ml_results(fname, file_pattern, keep_evolution)
 
       if (tmp_res == 1)
         if (isempty(prev_file) | ~strcmp(prev_file, files))
-          data{j, 1} = parse_ml_results(files{1}, Inf, keep_evolution, 'none');
+          [data{j, 1}, data{j,2}] = parse_ml_results(files{1}, Inf, keep_evolution, 'none');
           prev_file = files;
           prev_indx = j;
         else

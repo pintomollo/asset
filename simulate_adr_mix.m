@@ -7,10 +7,12 @@ function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
     else
       opts = get_struct('modeling');
       opts = load_parameters(opts, 'goehring.txt');
+      opts = load_parameters(opts, 'custom_flow.txt');
     end
   elseif (nargin == 0)
     opts = get_struct('modeling');
     opts = load_parameters(opts, 'goehring.txt');
+    opts = load_parameters(opts, 'custom_flow.txt');
     x0 = [];
   end
 

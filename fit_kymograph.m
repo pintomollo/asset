@@ -72,9 +72,10 @@ function uuids = fit_kymograph(fitting, opts)
       error('Data is missing for the fitting !');
     end
 
-    embryo_size = range(fitting.x_pos);
-    opts.reaction_params(end, :) = embryo_size;
-    opts.boundaries = [0 embryo_size];
+    %embryo_size = range(fitting.x_pos);
+    %opts.reaction_params(end, :) = embryo_size;
+    %opts.boundaries = [0 embryo_size];
+    opts.boundaries = [0 opts.reaction_params(end,1)];
     opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
   end
 
@@ -124,6 +125,8 @@ function uuids = fit_kymograph(fitting, opts)
     opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
     [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth(1:end/2, :, :), 3).', mymean(fitting.ground_truth((end/2)+1:end, :, :), 3).', size_data(1)/2, size_data(2), opts_expansion);
     frac_indx = find(f > fitting.fraction, 1, 'first');
+    gfraction = f*frac_width;
+    gfraction(isnan(gfraction)) = 0;
 
     if (strncmp(fitting.scale_type, 'normalize', 10))
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
@@ -236,14 +239,17 @@ function uuids = fit_kymograph(fitting, opts)
       nobs = sum([ns(:,1); ns(:,3)]);
       norm_coeff = sum(linear_goods)/nobs;
     else
-      nobs = sum(linear_goods) / nparams;
+      nobs = [sum(linear_goods) size_data(2)];
       norm_coeff = 1;
     end
 
+    fitting.score_weights = 1/nobs(1);
+    half = opts.boundaries(2);
+
     if (fitting.integrate_sigma)
-      full_error = (0.5*nobs)*log(penalty * size_data(2) * 10);
+      full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
     else
-      full_error = (penalty * size_data(2) * 10) / (2*estim_sigma.^2);
+      full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
     end
 
     if (strncmp(fitting.type, 'simulation', 10))
@@ -277,7 +283,7 @@ function uuids = fit_kymograph(fitting, opts)
         opt.LogPlot = 0;
         opt.LogFilenamePrefix = log_name;
 
-        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.25, opt); 
+        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.125, opt); 
       case 'pso'
         opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 dp 250 NaN 0 0];
         opt(2) = fitting.max_iter;
@@ -398,7 +404,10 @@ function uuids = fit_kymograph(fitting, opts)
         res = interp1q(simul_pos, res, fitting.x_pos.');
       end
       
+      [f, fwidth] = domain_expansion(res.', size(res, 1), size(res,2), opts_expansion);
+      fraction = f*fwidth;
       res = [res; res];
+
       switch fitting.aligning_type
         case 'best'
           if (length(t) < size_data(2))
@@ -419,11 +428,11 @@ function uuids = fit_kymograph(fitting, opts)
             err_all(i) = Inf;
             continue;
           else
-            [f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
 
+            %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
             if (strncmp(fitting.scale_type, 'normalize', 10))
-              %res = normalize_domain(res, f*fwidth, opts_expansion);
-              res = normalize_domain(res, f*fwidth, opts_expansion, false);
+              %res = normalize_domain(res, f*fwidth, opts_expansion, false);
+              res = normalize_domain(res, fraction, opts_expansion, false);
               %res = normalize_domain(res, false);
               normalization_done = true;
             end
@@ -448,6 +457,7 @@ function uuids = fit_kymograph(fitting, opts)
           corr_offset = sindx - rindx;
       end
 
+      fraction(isnan(fraction)) = 0;
       gindxs = [0:size(res, 2)-1];
       goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(2));
 
@@ -455,19 +465,23 @@ function uuids = fit_kymograph(fitting, opts)
         err_all(i) = Inf;
       else
         if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
-          [f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+          %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
           if (~fitting.fit_full)
-            f(:) = 1;
+            fraction(:) = fwidth;
           end
           %res = normalize_domain(res, f*fwidth, opts_expansion);
-          res = normalize_domain(res, f*fwidth, opts_expansion, false);
+          res = normalize_domain(res, fraction, opts_expansion, false);
           %res = normalize_domain(res, false);
           normalization_done = true;
         end
 
+        tmp_fraction = zeros(1, size_data(2));
+        tmp_fraction(corr_offset+gindxs(goods)) = fraction(gindxs(goods) + 1);
+
         tmp = ones(size_data)*res(1, 2);
         tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
 
+        fraction = tmp_fraction(:);
         res = tmp;
         if (multi_data)
           res = repmat(res, [1 1 nlayers]);
@@ -485,7 +499,10 @@ function uuids = fit_kymograph(fitting, opts)
           res = c(1) + c(2)*res;
         end
         
-        tmp_err = (fitting.ground_truth - res).^2 / norm_coeff;
+        tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
+        tmp_frac = ((gfraction - fraction)/half).^2;
+
+        %[sum(tmp_err(linear_goods)) sum(tmp_frac)]
 
         %if (nargout == 2)
         %  tmp_mean = mymean(tmp_err(:));
@@ -495,26 +512,27 @@ function uuids = fit_kymograph(fitting, opts)
 
         if (fitting.integrate_sigma)
           % Integrated the sigma out from the gaussian error function
-          err_all(i) = (0.5*nobs)*log(sum(tmp_err(linear_goods)));
+          err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
         else
           if (fitting.fit_sigma)
-            err_all(i) = sum(tmp_err(linear_goods)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
+            err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
           else
-            err_all(i) = sum(tmp_err(linear_goods)) / (2*estim_sigma.^2);
+            err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2);
           end
         end
         % Standard log likelihood with gaussian prob
         %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
 
         %figure;
-%        subplot(1,2,1);
-%        imagesc(mymean(res, 3));
-%        subplot(1,2,2);
-%        imagesc(mymean(tmp_err, 3));
-%        title([num2str(err_all(i)) ' ' num2str(p_all(:,i).')]);
+        %subplot(1,2,1);
+        %imagesc(mymean(res, 3));
+        %title([num2str(err_all(i)) ' : ' num2str(sum(tmp_err(linear_goods))) ', ' num2str(sum(tmp_frac))]);
+        %subplot(1,2,2);
+        %imagesc(mymean(tmp_err, 3));
+        %title([num2str(p_all(:,i).')]);
 
 %        keyboard
-        drawnow
+        %drawnow
       end
     end
 

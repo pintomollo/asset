@@ -51,8 +51,12 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
 
           %keyboard
 
+          try
           corr = interp_elliptic(warper.warp, ordered);
           ell_pts(:,2) = ell_pts(:,2) ./ corr(index,2);
+          catch
+            beep;keyboard;
+          end
 
           warped = elliptic2carth(ell_pts, warper.reference.centers, warper.reference.axes_length, warper.reference.orientations, opts.warp_type);
         end
@@ -96,13 +100,17 @@ function mymovie = convert_struct(mymovie, opts)
               %first = false;
             end
 
-            mymovie.(field).(subfield)(j).warped = carth2normalized(mymovie.(field).(subfield)(j).carth, warpers(j), opts); 
+            if (any(~isfinite(warpers(j).original.axes_length)))
+              mymovie.(field).(subfield)(j).warped = [];
+            else
+              mymovie.(field).(subfield)(j).warped = carth2normalized(mymovie.(field).(subfield)(j).carth, warpers(j), opts); 
 
-            if (dv_inversion)
-              mymovie.(field).(subfield)(j).warped(:,2) = -mymovie.(field).(subfield)(j).warped(:,2);
+              if (dv_inversion)
+                mymovie.(field).(subfield)(j).warped(:,2) = -mymovie.(field).(subfield)(j).warped(:,2);
 
-              if (strncmp(subfield, 'cortex', 6))
-                mymovie.(field).(subfield)(j).warped = mymovie.(field).(subfield)(j).warped(end:-1:1,:);
+                if (strncmp(subfield, 'cortex', 6))
+                  mymovie.(field).(subfield)(j).warped = mymovie.(field).(subfield)(j).warped(end:-1:1,:);
+                end
               end
             end
           end

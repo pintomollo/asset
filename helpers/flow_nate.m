@@ -1,5 +1,10 @@
 function flow_nate(niter, use_timing)
 
+% Optimized alignement of flow measurements:
+% p = [260; 337; 77; 337; 1; 337]
+
+
+
   aligned_times = [];
   if (nargin == 0)
     niter = 1;
@@ -48,7 +53,6 @@ function flow_nate(niter, use_timing)
 
   if (use_timing && ~isempty(aligned_times))
     times = aligned_times;
-  end
 
   for j=1:3
   for i=1:niter
@@ -57,13 +61,18 @@ function flow_nate(niter, use_timing)
     else
       [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals);
     end
+
+    uuid = num2str(now + cputime);
+    save(['aligned_flow_' num2str(use_timing) '_' uuid '.mat'], 'signals_full', 'signals');
+
+    vals = cat(1, signals_full{:,3});
+    [v, indx] = min(vals);
+
+    signals_full = signals_full{indx, 1};
   end
 
-  uuid = num2str(now + cputime);
-  save(['aligned_flow_' num2str(use_timing) '_' uuid '.mat'], 'signals_full', 'signals');
+  %return;
   end
-
-  return;
 
 %  signals2 = simultaneous_registration(signals2);
   signals = (signals_full(:,(end/2)+1:end,:) - signals_full(:,end/2:-1:1,:)) / 2;
@@ -225,12 +234,17 @@ function flow_nate(niter, use_timing)
   keyboard
 
   flow = fliplr(flow_full);
+  flow2 = gaussian_mex(flow, 0.67);
+  flow3 = gaussian_mex(flow2, 0.67);
+
   flow_step = 1;
-  save('cyto_flow', 'flow', 'flow_step');
+  save('cyto_flow', 'flow', 'flow2', 'flow3', 'flow_step');
 
   flow = fliplr(flow_small);
+  flow2 = gaussian_mex(flow, 0.67);
+  flow3 = gaussian_mex(flow2, 0.67);
   flow_step = 15;
-  save('cyto_flow_small', 'flow', 'flow_step');
+  save('cyto_flow_small', 'flow', 'flow2', 'flow3', 'flow_step');
 
   %set(gca, 'XTickLabel', res{end,3}(get(gca, 'XTick')));
   %  colorbar;
@@ -243,6 +257,8 @@ function flow_nate(niter, use_timing)
   %  colorbar;
   %print('-dpng', '-r450', ['PNG/flow_avg_half_2.png']);
   %subplot(2,2,4);
+
+  return;
 
   keyboard
 

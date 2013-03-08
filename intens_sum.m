@@ -23,8 +23,8 @@ function weight = intens_sum(img, params)
   weight = 1 - (weight ./ repmat(weight(:,end),1,npts));
 
   %figure;implot(weight-beta)
-  %figure;imagesc(abs(weight-beta))
-  %figure;imagesc(abs(img - gamma))
+  figure;imagesc(abs(weight-beta))
+  figure;imagesc(abs(img - gamma))
 
   %keyboard
 
@@ -33,6 +33,8 @@ function weight = intens_sum(img, params)
   weight(outside) = Inf;
   weight(isnan(weight)) = Inf;
   weight(isnan(img)) = Inf;
+
+  figure;imagesc(weight);
 
   %weight = weight.^0.1;
 

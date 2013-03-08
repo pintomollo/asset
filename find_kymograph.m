@@ -29,6 +29,10 @@ function find_kymograph(varargin)
           times = get_manual_timing(kymo.mymovie, kymo.opts);
           ground_truth = domain(1:times(end), :);
 
+          opts.axes_length = kymo.mymovie.metadata.axes_length_3d;
+          opts.reaction_params(end-1,:) = surface2volume(opts.axes_length);
+          opts.reaction_params(end, :) = 0.5*ellipse_circum(opts.axes_length);
+
           kymo_name = kymo.mymovie.experiment;
         elseif (isfield(kymo, 'ground_truth') & isfield(kymo, 'pos'))
           ground_truth = kymo.ground_truth;
@@ -42,6 +46,12 @@ function find_kymograph(varargin)
           kymo_name = kymos(j).name(1:end-4);
         else
           error('No suitable data for performing the fitting procedure');
+        end
+
+        outside = (abs(pos) > opts.reaction_params(end, 1));
+        if (any(outside))
+          pos = pos(~outside);
+          ground_truth = ground_truth(:, ~outside);
         end
 
         if (fitting.fit_relative)
