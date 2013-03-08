@@ -28,8 +28,10 @@ function flow_nate(niter, use_timing)
     display(mymovie.experiment);
 
     %opts.spot_tracking.projection_bin_size = 2;
-    %mymovie = measure_flow(mymovie, opts);
-
+    
+    opts.spot_tracking.projection_args = 2.49;
+    opts.spot_tracking.projection_dist = 2.49;
+    mymovie = measure_flow(mymovie, opts);
     time = get_manual_timing(mymovie, opts);
     [tmp, pos] = display_flow(mymovie, opts);
     tmp = tmp.';
@@ -48,6 +50,7 @@ function flow_nate(niter, use_timing)
     times = aligned_times;
   end
 
+  for j=1:3
   for i=1:niter
     if (use_timing)
       [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals, times - min(times) + 1);
@@ -58,6 +61,7 @@ function flow_nate(niter, use_timing)
 
   uuid = num2str(now + cputime);
   save(['aligned_flow_' num2str(use_timing) '_' uuid '.mat'], 'signals_full', 'signals');
+  end
 
   return;
 
