@@ -243,12 +243,15 @@ function uuids = fit_kymograph(fitting, opts)
       norm_coeff = 1;
     end
 
-    fitting.score_weights = 1/nobs(1);
+    %fitting.score_weights = 1/nobs(1);
+    fitting.score_weights = 0.25*length(gfraction)/nobs(1);
     half = opts.boundaries(2);
 
     if (fitting.integrate_sigma)
-      full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
+      %full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
+      full_error = fitting.score_weights * (0.5*nobs(1))*log(penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
     else
+      %full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
       full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
     end
 
@@ -283,7 +286,7 @@ function uuids = fit_kymograph(fitting, opts)
         opt.LogPlot = 0;
         opt.LogFilenamePrefix = log_name;
 
-        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.125, opt); 
+        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.25, opt); 
       case 'pso'
         opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 dp 250 NaN 0 0];
         opt(2) = fitting.max_iter;
@@ -475,11 +478,13 @@ function uuids = fit_kymograph(fitting, opts)
           normalization_done = true;
         end
 
+        indxs = corr_offset+gindxs(goods);
         tmp_fraction = zeros(1, size_data(2));
-        tmp_fraction(corr_offset+gindxs(goods)) = fraction(gindxs(goods) + 1);
+        tmp_fraction(indxs) = fraction(gindxs(goods) + 1);
+        %tmp_fraction(indxs(end)+1:end) = tmp_fraction(indxs(end));
 
         tmp = ones(size_data)*res(1, 2);
-        tmp(:, corr_offset+gindxs(goods)) = res(:, gindxs(goods) + 1);
+        tmp(:, indxs) = res(:, gindxs(goods) + 1);
 
         fraction = tmp_fraction(:);
         res = tmp;
@@ -499,7 +504,8 @@ function uuids = fit_kymograph(fitting, opts)
           res = c(1) + c(2)*res;
         end
         
-        tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
+        %tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
+        tmp_err = (fitting.ground_truth - res).^2 / norm_coeff;
         tmp_frac = ((gfraction - fraction)/half).^2;
 
         %[sum(tmp_err(linear_goods)) sum(tmp_frac)]
@@ -512,27 +518,36 @@ function uuids = fit_kymograph(fitting, opts)
 
         if (fitting.integrate_sigma)
           % Integrated the sigma out from the gaussian error function
-          err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
+          %err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
+          err_all(i) = fitting.score_weights*(0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
         else
           if (fitting.fit_sigma)
-            err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
+            %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
+            err_all(i) = (fitting.score_weights*sum(tmp_err(linear_goods)) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
           else
-            err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2);
+            %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2);
+            err_all(i) = (fitting.score_weights*sum(tmp_err(linear_goods)) + sum(tmp_frac)) / (2*estim_sigma.^2);
           end
         end
         % Standard log likelihood with gaussian prob
         %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
 
+        %{
         %figure;
-        %subplot(1,2,1);
-        %imagesc(mymean(res, 3));
-        %title([num2str(err_all(i)) ' : ' num2str(sum(tmp_err(linear_goods))) ', ' num2str(sum(tmp_frac))]);
-        %subplot(1,2,2);
-        %imagesc(mymean(tmp_err, 3));
-        %title([num2str(p_all(:,i).')]);
+        subplot(1,2,1);
+        imagesc(mymean(res, 3));
+        title([num2str(err_all(i)) ' : ' num2str(sum(tmp_err(linear_goods))) ', ' num2str(sum(tmp_frac))]);
+        subplot(1,2,2);
+        hold off;
+        imagesc(mymean(tmp_err, 3));
+        hold on;
+        plot(size(tmp_err, 1)-2*gfraction, 'k');
+        plot(size(tmp_err, 1)-2*fraction, 'w');
+        title([num2str(p_all(:,i).')]);
 
-%        keyboard
-        %drawnow
+        %keyboard
+        drawnow
+        %}
       end
     end
 

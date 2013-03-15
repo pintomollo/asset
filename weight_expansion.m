@@ -22,6 +22,7 @@ function weight = weight_expansion(img, params)
   pos = imnorm(bsxfun(@minus, pos(:, end), pos));
   thresh = graythresh(pos([end-5:end], :));
   inners = any(pos(end-5:end, :) > thresh, 1);
+  inners(end) = false;
 
   thresh = graythresh(img([end-5:end], :));
   intens = imnorm(abs(img - beta*thresh));
@@ -35,7 +36,7 @@ function weight = weight_expansion(img, params)
 
   weight = alpha*(gamma*intens + (1-gamma)*pos) + (1-alpha)*slope;
   weight(bads) = Inf;
-  weight(end, inners) = Inf;
+  weight(end-5:end, inners) = Inf;
 
   %figure;imagesc(weight)
   %keyboard

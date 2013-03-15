@@ -51,7 +51,7 @@ function find_kymograph(varargin)
         outside = (abs(pos) > opts.reaction_params(end, 1));
         if (any(outside))
           pos = pos(~outside);
-          ground_truth = ground_truth(:, ~outside);
+          ground_truth = ground_truth(:, ~outside, :);
         end
 
         if (fitting.fit_relative)

@@ -1,4 +1,4 @@
-function [all_x, t] = simulate_adr(x0, opts)
+function [all_x, t] = simulate_adr_mex(x0, opts)
 
   %%%% Adapt volume to surface ratio to real embryos
 

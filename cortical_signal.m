@@ -94,8 +94,8 @@ function mymovie = cortical_signal(mymovie, opts)
 
     nimg = i;
     %nimg = randi(nframes)
-    %nimg = i + 213
-    %nimg = 27
+    %nimg = i + 30
+    %nimg = 30
 
     cortex = mymovie.data.cortex(nimg).carth;
 
@@ -173,6 +173,7 @@ function mymovie = cortical_signal(mymovie, opts)
       
         %%%%%%%%%%%% USEFEUL TO TRY MEAN AS WELL
         %egg_width = nanmean(egg_pos(goods, 2));
+        egg_width = priors(2);
 
         indxs = [1:size(egg_pos, 1)].';
 
@@ -280,7 +281,6 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).bkg = {vertical_bkg, horizontal_bkg};
       mymovie.data.quantification(nimg).ruffles = rescale;
       mymovie.data.quantification(nimg).carth = cortex;
-
     else
 
       [dperp, dpos] = perpendicular_sampling(cortex, opts);
@@ -515,6 +515,20 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   ubound = [max(halfed(:))*tmp 2*peak_width+pos peak_width*1.05*tmp];
 
   gaussians = perform_fit(p0, lbound, ubound, dpos, values, halfed, coef);
+
+  if (opts.verbosity == 3)
+%    figure;
+%    imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));
+%    hold on;
+%    myplot(realign(carths,[388 591],centers(:,nimg),orientations(1,nimg)),'g');
+
+    half = round(size(values, 1)/2);
+    figure;imagesc(values([half+1:end, 1:half], :));
+
+    p = bsxfun(@minus, dpos, gaussians(:,2));
+    signal = bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
+    figure;imagesc(signal([half+1:end, 1:half], :));
+  end
 
   %p = bsxfun(@minus, dpos, gaussians(:,2));
   %gauss = logical(median(double(bsxfun(@lt, abs(p), gaussians(:,3)*coef)), 1));

@@ -19,6 +19,7 @@ function mymovie = align_embryo(mymovie, opts)
   opts.segmentation_type = type;
 
   mymovie.(type) = align_orientations(mymovie.(type));
+  opts.recompute = false;
   mymovie = find_ruffles(mymovie, opts);
 
   if (isfield(mymovie.(type), 'inverted'))
@@ -204,7 +205,7 @@ function mymovie = align_embryo(mymovie, opts)
     end
 
     accept_detection = true;
-    if (actu_inverted)
+    if (actu_invert)
       if (opts.verbosity > 2)
         answer = questdlg('The orientation of this embryo was previously set manually, revert to the detected one instead ?', 'ASSET');
       elseif (opts.verbosity > 0)
