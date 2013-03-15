@@ -5,3 +5,4 @@ ndelays 5
 %init_pos [0.0992 2.1085 2.8936 2.5281]
 step_size 1e-5
 nfits 5
+cross_measure true
