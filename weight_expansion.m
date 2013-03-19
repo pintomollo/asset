@@ -17,15 +17,27 @@ function weight = weight_expansion(img, params)
   alpha = params.alpha;
   beta = 2*params.beta;
   gamma = params.gamma;
+  delta = params.delta;
+
+  di = img(end-5:end, :);
+  di = range(di(:));
 
   pos = cumsum(img, 2);
   pos = imnorm(bsxfun(@minus, pos(:, end), pos));
-  thresh = graythresh(pos([end-5:end], :));
-  inners = any(pos(end-5:end, :) > thresh, 1);
-  inners(end) = false;
 
-  thresh = graythresh(img([end-5:end], :));
-  intens = imnorm(abs(img - beta*thresh));
+  if (di < delta)
+    thresh = 0;
+    inners = any(pos(end-5:end, :) > thresh, 1);
+    inners(end) = false;
+    intens = imnorm(abs(img - beta*thresh));
+  else
+    thresh = graythresh(pos([end-5:end], :));
+    inners = any(pos(end-5:end, :) > thresh, 1);
+    inners(end) = false;
+
+    thresh = graythresh(img([end-5:end], :));
+    intens = imnorm(abs(img - beta*thresh));
+  end
 
   %pos = cumsum(1-imnorm(img), 2);
   %pos = bsxfun(@rdivide, pos, pos(:, end));

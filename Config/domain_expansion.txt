@@ -8,6 +8,7 @@ scoring_func @weight_expansion
 alpha 0.63
 beta 0.75
 gamma 0.92
+delta 0.1
 
 #segmentation_parameters.domain_expansion.cortex_params
 force_circularity false
