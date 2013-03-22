@@ -95,6 +95,7 @@ function mymovie = measure_flow(mymovie, opts)
   prev_pts = mymovie.data.spots(1).carth;
   for i=2:nframes
     nimg = i;
+    %nimg = 450
 
     all_pts = mymovie.data.spots(nimg).carth;
     links = mymovie.data.spots(nimg).cluster;
@@ -295,6 +296,7 @@ function mymovie = measure_flow(mymovie, opts)
           weights(:, close_ones) = 0;
           good_ones = any(weights, 1);
           weights = bsxfun(@rdivide, weights, sum(weights, 2));
+          %weights(isnan(weights)) = 0;
 
 %          hold off;
 %          plot(cortex(:,1), cortex(:,2), 'k');

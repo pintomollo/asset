@@ -48,13 +48,14 @@ function [flows, dist] = flow_properties(mymovie, opts, data_only)
     min_dist = [0 dist(1:end-1)];
   else
     if (exist([mymovie.experiment 'flows.mat'], 'file'))
+      display('Loading previously computed data');
       load([mymovie.experiment 'flows.mat']);
 
-      dist = thresh;
       min_dist = [0 dist(1:end-1)];
       ndists = length(dist);
     else
-      dist = [0.125 0.25 0.5 1 1.25 1.5 1.75 2 3 5 10];
+      %dist = [0.125 0.25 0.5 1 1.25 1.5 1.75 2 3 5 10];
+      dist = [0.5 1 1.5 2 2.5 3 4 5 10 15];
       min_dist = [0 dist(1:end-1)];
       ndists = length(dist);
       flows = cell(ndists, 1);
@@ -67,6 +68,8 @@ function [flows, dist] = flow_properties(mymovie, opts, data_only)
         mymovie = measure_flow(mymovie, opts);
         flows{i} = display_flow(mymovie, opts);
       end
+
+      save([mymovie.experiment 'flows.mat'], 'flows', 'dist');
     end
 
     t = get_manual_timing(mymovie, opts);
@@ -91,12 +94,21 @@ function [flows, dist] = flow_properties(mymovie, opts, data_only)
 
     avg = nanmean(all_data, 3);
     indx = find(all(isnan(avg), 1), 1, 'last') + 1;
+
+    if (isempty(indx))
+      indx = 1;
+    end
+
     all_data = all_data(:, indx:end, :);
     all_x = all_x(:, indx:end, :);
     all_avg = all_avg(:, indx:end, :);
 
     avg = nanmean(all_data, 3);
     indx = find(any(isnan(avg), 2), 1, 'first') - 1;
+
+    if (isempty(indx))
+      indx = size(all_data, 1);
+    end
 
     all_data = all_data(1:indx, :, :);
     all_x = all_x(1:indx, :, :);

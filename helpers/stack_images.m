@@ -1,4 +1,4 @@
-function [window, params] = stack_images(varargin)
+function [window, shift] = stack_images(varargin)
 
   imgs = cell(0,1);
   for i=1:nargin-1

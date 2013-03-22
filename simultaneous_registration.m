@@ -56,6 +56,7 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
   opt.StopOnWarnings = false;
   opt.WarnOnEqualFunctionValues = false;
   opt.PopSize = 5*nimgs;
+  opt.LogModulo = 0;
 
   nstart = 5;
   params = NaN(nstart, length(centers)+1);
