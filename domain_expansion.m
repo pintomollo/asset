@@ -89,7 +89,7 @@ function [fraction, max_width, cell_width, raw_domain, pos] = domain_expansion(d
   %imagesc(domain);hold on;
   %plot(path, 1:length(path), 'k');figure;
 
-  cell_width = median(2*sum(~isnan(domain(end-5:end, :)), 2) - 1) * opts.quantification.resolution;
+  cell_width = median(2*sum(~isnan(domain(max(end-5, 1):end, :)), 2) - 1) * opts.quantification.resolution;
   max_width = max(path(end-5:end));
   fraction = path / max_width;
 
