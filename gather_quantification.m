@@ -151,7 +151,9 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
     egg_dist = tmp_pts{i,end};
     egg_props = mymovie.data.quantification(end).eggshell;
     values = mymovie.data.quantification(i).cortex;
-    values = values - egg_props(1)*exp(-egg_dist.^2 ./ (2*egg_props(2)^2));
+    if (~any(isnan(egg_props)))
+      values = values - egg_props(1)*exp(-egg_dist.^2 ./ (2*egg_props(2)^2));
+    end
     values(values < 0) = 0;
 
     if (isempty(indexes))
@@ -177,9 +179,9 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
 
   theta = full_indexes;
 
-  goods = ~all(isnan(datas), 2);
+  goods = ~any(isnan(datas), 2);
 
-  if (any(~goods))
+  if (any(~goods) && any(goods))
     first = find(goods, 1, 'first');
     last = find(goods, 1, 'last');
     goods([1:first last:end]) = true;

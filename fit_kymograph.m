@@ -312,14 +312,15 @@ function uuids = fit_kymograph(fitting, opts)
         model.ssfun    = @error_function;
 
         params.par0    = p0(:); % initial parameter values
-        params.n       = nobs;
+%        params.n       = nobs;
 %        params.n0      = params.n;  % prior for error variance sigma^2
 %        params.sigma2  = estim_sigma2;  % prior accuracy for sigma^2
 
         options.nsimu    = fitting.max_iter;               % size of the chain
         options.adaptint = adaptint;            % adaptation interval
         options.drscale  = drscale;
-        options.qcov     = fitting.step_size*eye(nparams).*2.4^2./nparams;      % initial proposal covariance 
+        options.qcov     = fitting.step_size*eye(nparams); % initial proposal covariance 
+        %options.qcov     = fitting.step_size*eye(nparams).*2.4^2./nparams;      % initial proposal covariance 
         options.ndelays  = fitting.ndelays;
         options.stall_thresh = fitting.stall_thresh;
         options.log_file = [log_name 'evol'];

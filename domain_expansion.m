@@ -1,4 +1,4 @@
-function [fraction, max_width, cell_width, raw_domain, pos] = domain_expansion(domain, center, cytok, opts, domain_half)
+function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domain_expansion(domain, center, cytok, opts, domain_half)
 
   mymovie = [];
   if (nargin < 2)
@@ -14,9 +14,9 @@ function [fraction, max_width, cell_width, raw_domain, pos] = domain_expansion(d
     opts.quantification.params.init = (1-exp(-theta.^2/(2*(opts.quantification.params.spawn_percentile(1)/10)^2)));
     params = opts.quantification;
 
-    path = dynamic_programming(domain, opts.quantification.params, opts.quantification.scoring_func, opts.quantification.weights, opts);
+    path_center = dynamic_programming(domain, opts.quantification.params, opts.quantification.scoring_func, opts.quantification.weights, opts);
 
-    [domain, ruffles, pos, indx] = align_domain(domain, ruffles, path, opts);
+    [domain, ruffles, pos, indx] = align_domain(domain, ruffles, path_center, opts);
     [domain, boundary] = crop_domain(domain, indx);
     pos = pos([-boundary:boundary]+indx);
 

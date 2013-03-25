@@ -1,4 +1,4 @@
-function [acc_ratio, Ns, Ds] = dr_acceptance(scores, params, iR, Ns, Ds, ntrials, n)
+function [acc_ratio, Ns, Ds] = dr_acceptance(scores, params, iR, Ns, Ds, ntrials)
 
   %%%% Assuming gaussian distributions and integrating variance out !!!
   dist = -0.5*norm((params(ntrials+1,:) - params(ntrials,:))*iR{1})^2;

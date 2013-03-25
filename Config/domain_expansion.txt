@@ -6,7 +6,8 @@ scoring_func @weight_expansion
 
 #segmentation_parameters.domain_expansion.cortex_weights
 alpha 0.63
-beta 0.75
+%beta 0.75
+beta 0.5
 gamma 0.92
 delta 0.1
 

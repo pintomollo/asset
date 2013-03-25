@@ -90,7 +90,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   %n0  = getpar(params,'n0',-1);
   % number of observations (needed for sigma2 update)
   %if (n0>=0)
-  n = getpar(params,'n');
+  %n = getpar(params,'n');
   %end
 
   qcov = getpar(options,'qcov'); % proposal covariance
@@ -183,7 +183,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
         scores(dr+1)  = feval(ssfun,pars(dr+1,:),data);   % sum-of-squares
 
         %[alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr, sigma2);
-        [alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr, n);
+        [alpha, Ns, Ds] = dr_acceptance(scores, pars, iRs, Ns, Ds, dr);
 
         if (log(rand) <= alpha) % we accept
           acce     = acce+1;

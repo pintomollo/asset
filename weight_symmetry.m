@@ -9,7 +9,7 @@ function weight = weight_symmetry(img, params)
   if (beta < 1)
     beta = 1;
   end
-  gamma = params.gamma;
+  gamma = 200*params.gamma;
   delta = params.delta;
 
   depth = params.filt;
@@ -22,19 +22,31 @@ function weight = weight_symmetry(img, params)
   %  error('Missing cortical position data for domain centration');
   %end
 
+  lengths = repmat(nanstd(img, [], 2), 1, size(img,2));
+
   outside = (~isfinite(depth) | ~isfinite(img));
 
   depth(outside) = 0;
   img(outside) = 0;
 
-  ruffles = imfilter(depth, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
-  ruffles = imfilter(ruffles, fspecial('gaussian', [ceil(beta) 1], 0.5*beta), 'symmetric');
+  %ruffles = imfilter(depth, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
+  %ruffles = imfilter(ruffles, fspecial('gaussian', [ceil(beta) 1], 0.5*beta), 'symmetric');
+  ruffles = median_mex(depth, ceil(beta));
+  ruffles = imfilter(ruffles, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
 
-  domain = imfilter(img, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
-  domain = imfilter(domain, fspecial('gaussian', [ceil(beta) 1], 0.5*beta), 'symmetric');
+  %domain = imfilter(img, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
+  %domain = imfilter(domain, fspecial('gaussian', [ceil(beta) 1], 0.5*beta), 'symmetric');
+  domain = median_mex(img, ceil(beta));
+  domain = imfilter(domain, fspecial('gaussian', [1 ceil(4*beta)], 2*beta), 'symmetric');
 
-  corrs = symmetric_corrcoef_mex(domain.', gamma*size(img,2)).';
-  invags = symmetric_corrcoef_mex(ruffles.', gamma*size(img, 2)).';
+  %lengths = gamma*size(img,2);
+  lengths = gamma;
+
+  %lengths = (imnorm(lengths)*0.5 + 0.5)*gamma*size(img,2);
+  %lengths = ((1-imnorm(lengths))*0.25 + 0.75)*gamma*size(img,2);
+
+  corrs = symmetric_corrcoef_mex(domain.', lengths.').';
+  invags = symmetric_corrcoef_mex(ruffles.', lengths.').';
 
   corrs = (corrs + 1) / 2;
   invags = (invags + 1) / 2;
@@ -56,6 +68,7 @@ function weight = weight_symmetry(img, params)
   weight = alpha*(invags*delta + (1-delta)*ruffles) + (1-alpha)*corrs;
   %weight = alpha*(delta*invags + (1-delta)*ruffles) + (1-alpha)*bias;
   %weight = alpha*(gamma*invags + (1-gamma)*ruffles) + (1-alpha)*(delta*corrs + (1-delta)*bias);
+  weight = bsxfun(@times, weight, imnorm(1-nanmean(domain, 2))/2 + 0.5);
   weight(isnan(weight) | outside) = Inf;
   %weight(end, ~inners) = Inf;
 
