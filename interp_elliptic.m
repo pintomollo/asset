@@ -188,9 +188,9 @@ function [orig_angles, orig_values, new_angles, angle_range, is_resampling] = pa
 
     % We assign them in a specific order, checking whether they've been assigned,
     % first the original values, then the new positions
-    if (all(isnan(orig_values)) && numel(orig_values)==1)
+    if (all(isnan(orig_values(:))) && numel(orig_values)==1)
       orig_values = varargin{i};
-    elseif (all(isnan(new_angles)) && numel(new_angles)==1)
+    elseif (all(isnan(new_angles(:))) && numel(new_angles)==1)
       new_angles = varargin{i};
 
     % Here it becomes more complicated as this can mean several things !

@@ -1,8 +1,9 @@
 fit_relative true
 fitting_type 'cmaes'
-init_noise 0
+init_noise 0.01
 ndelays 5
-%init_pos [0.0992 2.1085 2.8936 2.5281]
-step_size 1e-5
-nfits 5
-cross_measure true
+init_pos [0.0895 1.1211 4.4714 2.2011]
+step_size 0.05
+nfits 3
+skip_file 'artifacts.txt'
+tolerance 1e-3

@@ -12,15 +12,7 @@ force_circularity false
 dp_method 'inverted'
 nhood 21
 
-%alpha 0.65
-%beta 0.885
-%gamma 0.06
-%delta 0
-%spawn_percentile 0.03
-%spawn_type 'end'
-
-alpha 0.6
-%beta 0.885
+alpha 0.25
 beta 0.85
 gamma 0.2
 delta 0
@@ -28,12 +20,7 @@ spawn_percentile [25/opts.quantification.resolution 0.5]
 spawn_type 'best'
 
 #quantification.weights
-%alpha 0.6
 alpha 0.4
-%beta 0.35
-beta 0.3
-%gamma 0.235
-%gamma 0.24
-gamma 0.34
-%delta 0.875
+beta 0.31
+gamma 0.43
 delta 0.22

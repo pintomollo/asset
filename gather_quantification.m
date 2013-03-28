@@ -31,7 +31,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
   end
 
   indexes = [];
-  tmp_pts = cell(nframes, 3 + compute_ruffles);
+  tmp_pts = cell(nframes, 2 + compute_ruffles);
 
   for i=1:nframes
     warper = mymovie.data.warpers(i);
@@ -50,7 +50,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
     end
 
     %egg_dist = min(sqrt(bsxfun(@minus, cortex(:,1), mymovie.data.eggshell(i).carth(:,1).').^2 + bsxfun(@minus, cortex(:,2), mymovie.data.eggshell(i).carth(:,2).').^2), [], 2) * opts.pixel_size;
-    egg_dist = min(sqrt(bsxfun(@minus, cortex(:,1), mymovie.data.eggshell(i).carth(:,1).').^2 + bsxfun(@minus, cortex(:,2), mymovie.data.eggshell(i).carth(:,2).').^2), [], 2);
+%    egg_dist = min(sqrt(bsxfun(@minus, cortex(:,1), mymovie.data.eggshell(i).carth(:,1).').^2 + bsxfun(@minus, cortex(:,2), mymovie.data.eggshell(i).carth(:,2).').^2), [], 2);
 
     switch type
       case 'elliptic'
@@ -101,7 +101,7 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
     end
     tmp_pts{i,1} = pts;
     tmp_pts{i,2} = indexes;
-    tmp_pts{i,end} = egg_dist;
+%    tmp_pts{i,end} = egg_dist;
 
     if (compute_ruffles)
       tmp_pts{i,3} = ruffles_pts;
@@ -148,12 +148,14 @@ function [datas, theta, ruffles] = gather_quantification(mymovie, opts)
       continue;
     end
 
-    egg_dist = tmp_pts{i,end};
-    egg_props = mymovie.data.quantification(end).eggshell;
-    values = mymovie.data.quantification(i).cortex;
-    if (~any(isnan(egg_props)))
-      values = values - egg_props(1)*exp(-egg_dist.^2 ./ (2*egg_props(2)^2));
-    end
+%    egg_dist = tmp_pts{i,end};
+%    egg_props = mymovie.data.quantification(end).eggshell;
+%    values = mymovie.data.quantification(i).cortex;
+%    if (~any(isnan(egg_props)))
+%      values = values - egg_props(1)*exp(-egg_dist.^2 ./ (2*egg_props(2)^2));
+%    end
+
+    values = mymovie.data.quantification(i).cortex - mymovie.data.quantification(i).autofluorescence;
     values(values < 0) = 0;
 
     if (isempty(indexes))

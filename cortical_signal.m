@@ -53,7 +53,7 @@ function mymovie = cortical_signal(mymovie, opts)
 
   if ((opts.recompute & opts.segment) | ~isfield(mymovie.data, 'eggshell') | isempty(mymovie.data.eggshell))
     mymovie = duplicate_segmentation(mymovie, 'data', opts);
-    mymovie.data = smooth_segmentation(mymovie.data, opts);
+    mymovie = smooth_segmentation(mymovie, 'data', opts);
   end
 
   % Progress bar

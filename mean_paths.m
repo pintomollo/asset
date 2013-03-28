@@ -102,7 +102,7 @@ function [mean_path] = mean_paths(paths, varargin)
 
         switch type
           case 'radial'
-            tmp_path = carth2elliptic(tmp_path, squeeze(center(t,f,1,:)), squeeze(axes_length(t,f,1,:)), orientation(t,f,1,1));
+            tmp_path = carth2elliptic(tmp_path, squeeze(center(t,f,1,:)), squeeze(axes_length(t,f,1,:)), orientation(t,f,1,1), 'radial');
 
             try
             pts = interp_elliptic(tmp_path, pts_pos);
@@ -148,8 +148,8 @@ function [mean_path] = mean_paths(paths, varargin)
 
       switch type
         case 'radial'
-          mean_pts = elliptic2carth(mean_pts, center(t,f,1,:), axes_length(t,f,1,:), orientation(t,f,1,1));
-          std_pts = elliptic2carth(std_pts, [0; 0], axes_length(t,f,:), orientation(t,f,1,1));
+          mean_pts = elliptic2carth(mean_pts, center(t,f,1,:), axes_length(t,f,1,:), orientation(t,f,1,1), 'radial');
+          std_pts = elliptic2carth(std_pts, [0; 0], axes_length(t,f,:), orientation(t,f,1,1), 'radial');
 
         case 'linear'
           mean_pts = mean_pts(:,2:end);

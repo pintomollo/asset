@@ -62,8 +62,14 @@ function load_data
       [domain, ruffles, theta] = gather_quantification(kymo.mymovie, kymo.opts);
   %    domain = imnorm(domain);
   %    domain = imadjust(domain);
-  minmax = prctile(domain(isfinite(domain)), [0.1 99.9]);
-  domain = imnorm(domain, minmax(1), minmax(2));
+%  minmax = prctile(domain(isfinite(domain)), [0.1 99.9]);
+%  domain = imnorm(domain, minmax(1), minmax(2));
+
+  bads = isnan(domain);
+  domain = inpaint_nans(domain);
+  domain = gaussian_mex(domain, 0.67);
+  domain(bads) = NaN;
+  domain = imnorm(domain);
 
       if (~isempty(params))
         params.weights.filt = ruffles;
@@ -78,6 +84,8 @@ function load_data
 
       kymo.opts = load_parameters(kymo.opts, 'domain_center.txt');
       kymo.opts.recompute = false;
+      
+      %{
       [domain, ruffles, theta] = gather_quantification(kymo.mymovie, kymo.opts);
       domain = imnorm(domain);
       kymo.opts.quantification.weights.filt = ruffles;
@@ -95,6 +103,24 @@ function load_data
       boundary = (size(domain, 2)-1)/2;
       domain = domain(:,[boundary+1:end]) + domain(:,[boundary+1:-1:1]);
       domain = imnorm(domain);
+      %}
+
+      kymo.opts = load_parameters(kymo.opts, 'domain_expansion.txt');
+      time = get_manual_timing(kymo.mymovie, kymo.opts);
+      [fraction, max_width, cell_width, domain, pos, path_center] = domain_expansion(kymo.mymovie, kymo.opts);
+      center = ((size(domain, 2) - 1)/2)+1;
+      %domain = inpaint_nans(domain);
+      %domain = nanmean(cat(3, domain(:, center:end), domain(:,center:-1:1)), 3);
+      %domain = gaussian_mex(domain, 0.67);
+
+      %bads = isnan(domain);
+      %domain = inpaint_nans(domain);
+      %domain = gaussian_mex(domain, 0.67);
+      %domain(bads) = NaN;
+
+      %domain = domain(:, center:end) + domain(:,center:-1:1);
+      domain = nanmean(cat(3, domain(:, center:end), domain(:,center:-1:1)), 3);
+      domain = imnorm(domain(1:time(end), :));
 
       if (isempty(params))
         params = kymo.opts.segmentation_parameters.domain_expansion;

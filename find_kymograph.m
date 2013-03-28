@@ -6,20 +6,40 @@ function find_kymograph(varargin)
     mymovie = mymovies{i};
 
     if (ischar(mymovie))
-      kymos = dir(mymovie);
+      if (strncmp(mymovie(end-2:end), 'txt', 3))
+        kymos = textread(mymovie, '%s');
+      else
+        kymos = dir(mymovie);
+        fields = fieldnames(kymos);
+        kymos = struct2cell(kymos);
+        kymos = kymos(ismember(fields, 'name'), :);
+        kymos = kymos(:);
+      end
     elseif (isfield(mymovie, 'mymovie'))
       kymos = mymovie;
     else
       kymos = struct('mymovie', mymovie, 'opts', get_struct('ASSET'));
     end
 
+    if (exist(fitting.skip_file, 'file') == 2 && iscell(kymos))
+      skip_files = textread(fitting.skip_file, '%s');
+      kymos = kymos(~ismember(kymos, skip_files));
+    end
+
     for j=1:length(kymos)
-      if (isfield(kymos(j), 'mymovie'))
+      if (iscell(kymos))
+        kymo_name = kymos{j};
+        kymo = load(kymo_name);
+        kymo_name = kymo_name(1:end-4);
+      elseif (isstruct(kymos))
         kymo = kymos(j);
-        kymo_name = kymo.mymovie.experiment
+        if (isfield(kymo, 'mymovie'))
+          kymo_name = kymo.mymovie.experiment;
+        else
+          kymo_name = 'Provided_data';
+        end
       else
-        kymo = load(kymos(j).name);
-        kymo_name = kymos(j).name;
+        error('Unknow object proposed for fitting');
       end
 
       try
@@ -42,8 +62,6 @@ function find_kymograph(varargin)
           else
             times = NaN(1,3);
           end
-
-          kymo_name = kymos(j).name(1:end-4);
         else
           error('No suitable data for performing the fitting procedure');
         end

@@ -54,7 +54,6 @@ function uuids = fit_kymograph(fitting, opts)
 
   rng(now + cputime, 'twister');
   uuids = cell(fitting.nfits, 1);
-  dp = 1e-3;
 
   %tail_coeff = 0.25;
   %stable_coeff = 2;
@@ -279,16 +278,20 @@ function uuids = fit_kymograph(fitting, opts)
 
         opt = cmaes('defaults');
         opt.MaxFunEvals = fitting.max_iter;
-        opt.TolFun = dp;
+        opt.TolFun = fitting.tolerance;
+        opt.TolX = fitting.tolerance/10;
         opt.SaveFilename = '';
         opt.SaveVariables = 'off';
         opt.EvalParallel = 'yes';
         opt.LogPlot = 0;
         opt.LogFilenamePrefix = log_name;
+        opt.StopOnWarnings = false;
+        opt.WarnOnEqualFunctionValues = false;
+        opt.PopSize = 5*numel(p0);
 
-        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), 0.25, opt); 
+        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
       case 'pso'
-        opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 dp 250 NaN 0 0];
+        opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 fitting.tolerance 250 NaN 0 0];
         opt(2) = fitting.max_iter;
         opt(9) = 1e-10;
         opt(12) = 1;
@@ -299,7 +302,7 @@ function uuids = fit_kymograph(fitting, opts)
         [pbest, tr, te] = pso_Trelea_vectorized(@error_function, nparams, NaN, bounds, 0, opt, '', p0.', [log_name 'evol']);
         p = pbest(1:end-1);
       case 'godlike'
-        opt = set_options('Display', 'on', 'MaxIters', fitting.max_iter, 'TolFun', dp, 'LogFile', [log_name 'evol']);
+        opt = set_options('Display', 'on', 'MaxIters', fitting.max_iter, 'TolFun', fitting.tolerance, 'LogFile', [log_name 'evol']);
         which_algos = {'DE';'GA';'PSO';'ASA'};
         which_algos = which_algos(randperm(4));
         [p, fval] = GODLIKE(@error_function, 20, zeros(nparams,1), ones(nparams,1) * 10, which_algos, opt);

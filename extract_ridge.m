@@ -11,6 +11,13 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
       %nimg = 14 + i
 
       cortex = mymovie.data.quantification(nimg).carth;
+      egg_dist = min(sqrt(bsxfun(@minus, cortex(:,1), mymovie.data.eggshell(nimg).carth(:,1).').^2 + bsxfun(@minus, cortex(:,2), mymovie.data.eggshell(nimg).carth(:,2).').^2), [], 2);
+      egg_props = mymovie.data.quantification(nimg).eggshell;
+      if (~any(isnan(egg_props)))
+        autofluo = egg_props(1)*exp(-egg_dist.^2 ./ (2*egg_props(2)^2));
+      else
+        autofluo = zeros(size(egg_dist));
+      end
       %if (opts.quantification.use_ruffles)
       %  [ cortex, rescale] = insert_ruffles(cortex, mymovie.data.ruffles(nimg).paths);
       %else
@@ -26,6 +33,7 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
       rescale = mymovie.data.quantification(nimg).ruffles;
 
       mymovie.data.quantification(nimg).cortex = extract_ridge(mymovie.data.quantification(nimg).front, cortex, dperp, rescale, opts);
+      mymovie.data.quantification(nimg).autofluorescence = autofluo;
 
       %pts = mymovie.data.quantification(nimg).front;
 
