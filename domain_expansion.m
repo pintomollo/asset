@@ -48,6 +48,12 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
 %    raw_domain = (domain + domain_half) ./ (goods + goods_half);
   
     domain = nanmean(cat(3, domain, domain_half), 3);
+
+    if (center == size(domain,2))
+      domain = domain(:,end:-1:1);
+    elseif (center ~= 1)
+      domain = nanmean(cat(3, domain(:, center:end), domain(:,center:-1:1)), 3);
+    end
   else
     if (center == size(domain,2))
       domain = domain(:,end:-1:1);
@@ -121,8 +127,9 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
   try
   max_width = max(path(max(end-5, 1):end));
   catch ME
+    warning('Weird stuff happening again!');
     size(path)
-    keyboard
+    max_width = 1;
   end
   fraction = path / max_width;
 
