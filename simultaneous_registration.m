@@ -2,17 +2,15 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
 
   nimgs = length(imgs);
   has_intuition = (nargin==2);
-  if (~has_intuition)
+  if (~has_intuition || numel(centers) ~= nimgs)
     centers = ones(nimgs, 1);
   end
-
-  if (numel(centers) ~= nimgs)
-      keyboard
-  end
   
-  sizes = NaN(nimgs, 2);
+  sizes = NaN(nimgs, 3);
   for i=1:nimgs
-    sizes(i,:) = size(imgs{i});
+    sizes(i,1) = size(imgs{i},1);
+    sizes(i,2) = size(imgs{i},2);
+    sizes(i,3) = size(imgs{i},3);
   end
   
   goods = all(sizes > 0, 2);
@@ -21,20 +19,20 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
   centers = centers(goods);
   nimgs = length(imgs);
 
-  window_size = min(sizes, [], 1);
+  window_size = min(sizes(:,1:2), [], 1);
   half = window_size(1);
   window_size(1) = window_size(1)*2;
-  window = NaN([window_size nimgs]);
+  window = NaN([window_size sum(sizes(:,3))]);
   ntotal = numel(window);
   min_counts = 3;
 
   centered = imgs;
   dw = round((sizes(:,2) - window_size(2))/2);
   for i=1:nimgs
-    centered{i} = imgs{i}(:,dw(i)+1:dw(i)+window_size(2));
+    centered{i} = imgs{i}(:,dw(i)+1:dw(i)+window_size(2),:);
   end
 
-  min_counts = min(min_counts, nimgs);
+  min_counts = min(min_counts, sum(sizes(:,3)));
 
   penalty = 0;
   [err, vars] = error_function(zeros(nimgs, 1));
@@ -144,8 +142,10 @@ function [window, params, score] = simultaneous_registration(imgs, centers)
       p = p_all(:,n);
 
       window(:) = NaN;
+      count = 1;
       for j=1:nimgs
-        window(max(half-p(j)+2, 1):min(half+(sizes(j, 1)-p(j)+1), end),:,j) = centered{j}(max(p(j)-half, 1):min(p(j)+half-1,end),:);
+        window(max(half-p(j)+2, 1):min(half+(sizes(j, 1)-p(j)+1), end),:,count:count+sizes(j,3)-1) = centered{j}(max(p(j)-half, 1):min(p(j)+half-1,end),:,:);
+        count = count + sizes(j,3);
       end
 
       %avg = mymean(window, 3);

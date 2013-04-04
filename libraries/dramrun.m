@@ -76,8 +76,6 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   drscale  = getpar(options,'drscale',3);
   % scale for adapting the propsal
   adascale = getpar(options,'adascale',2.4/sqrt(npar));
-  % blow factor for covariace update
-  qcovadj  = getpar(options,'qcovadj',1e-5);
   % number of trials
   ndelays  = getpar(options,'ndelays',2);
   % log file
@@ -94,6 +92,9 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   %end
 
   qcov = getpar(options,'qcov'); % proposal covariance
+
+  % blow factor for covariace update
+  qcovadj  = getpar(options,'qcovadj',1e-5*min(qcov(qcov~=0)));
 
   % to DR or not to DR
   dodr = ~(drscale<=0);

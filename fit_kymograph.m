@@ -63,7 +63,8 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (strncmp(fitting.fitting_type, 'dram', 4))
     drscale  = 10; 
-    adaptint = 500;
+    %adaptint = 500;
+    adaptint = 0;
   end
 
   if (~strncmp(fitting.type, 'simulation', 10))
@@ -327,6 +328,7 @@ function uuids = fit_kymograph(fitting, opts)
         options.ndelays  = fitting.ndelays;
         options.stall_thresh = fitting.stall_thresh;
         options.log_file = [log_name 'evol'];
+        options.printint = 10;
 
         % run the chain
         results = dramrun(model,[],params,options);

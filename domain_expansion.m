@@ -33,7 +33,7 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
     cytok = time(end);
     center = boundary + 1;
 
-    raw_domain = domain;
+    raw_domain = domain(1:cytok, :);
     domain = nanmean(cat(3, domain(:, center:end), domain(:,center:-1:1)), 3);
 
   elseif (nargin == 5)
@@ -118,7 +118,12 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
   %plot(path, 1:length(path), 'k');figure;
 
   cell_width = median(2*sum(~isnan(domain(max(end-5, 1):end, :)), 2) - 1) * opts.quantification.resolution;
-  max_width = max(path(end-5:end));
+  try
+  max_width = max(path(max(end-5, 1):end));
+  catch ME
+    size(path)
+    keyboard
+  end
   fraction = path / max_width;
 
   if (opts.quantification.resolution > 0)

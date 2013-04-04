@@ -1,5 +1,48 @@
 function [signals, full_pos, shuffle] = combine_domains(mymovies, sync_type, sync_param, min_counts)
 
+  %{
+  %% The code I acutally used to get the averages
+
+  news = textread(['good_' num2str(num) '.txt'], '%s');
+
+  imgs = cell(length(news), 1);
+  signals = cell(length(news), 1);
+  times = NaN(length(news), 1);
+
+  for i=1:length(news)
+    load(news{i});
+
+    [fraction, max_width, cell_width, img] = domain_expansion(mymovie, opts);
+    pos = [1:size(img,1)].';
+    center = (size(img,2)-1)/2+1;
+    indx = find(isnan(fraction), 1, 'last');
+    if (isempty(indx))
+      indx = 1;
+    else
+      fraction(indx) = 0;
+    end
+    poly = [[center-2*max_width*fraction(indx:end) pos(indx:end)]; [center+2*max_width*fraction(end:-1:indx) pos(end:-1:indx)]];
+    mask = roipoly(size(img,1),size(img,2), poly(:,1), poly(:,2));
+    weight = exp(-bwdist(mask)/(2*5^2));
+
+    img2 = img.*weight;
+
+    t = get_manual_timing(mymovie, opts);
+
+    signals{i} = img;
+    imgs{i} = img2;
+    times(i) = t(1);
+  end
+
+  uuid = num2str(now+cputime);
+
+  signals_full = cell(10,3);
+  for i=1:10
+    [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(imgs, times);
+    save(['aligned_domains_' num2str(num) '-' uuid '.mat'], 'signals_full', 'imgs', 'signals');
+  end
+  %}
+
   if (nargin == 1)
     sync_type = 'lsr';
     sync_param = [];
