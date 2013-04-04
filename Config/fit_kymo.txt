@@ -7,3 +7,4 @@ step_size 0.05
 nfits 3
 skip_file 'artifacts.txt'
 tolerance 1e-3
+normalize_smooth false

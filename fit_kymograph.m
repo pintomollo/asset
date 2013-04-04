@@ -130,7 +130,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (strncmp(fitting.scale_type, 'normalize', 10))
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-      fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion, true);
+      fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
 
       normalization_done = true;
@@ -144,7 +144,7 @@ function uuids = fit_kymograph(fitting, opts)
       f(:) = 1;
     end
     %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-    fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion, true);
+    fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
     %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
     normalization_done = true;
   end
@@ -441,7 +441,7 @@ function uuids = fit_kymograph(fitting, opts)
             %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
             if (strncmp(fitting.scale_type, 'normalize', 10))
               %res = normalize_domain(res, f*fwidth, opts_expansion, false);
-              res = normalize_domain(res, fraction, opts_expansion, false);
+              res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
               %res = normalize_domain(res, false);
               normalization_done = true;
             end
@@ -479,7 +479,7 @@ function uuids = fit_kymograph(fitting, opts)
             fraction(:) = fwidth;
           end
           %res = normalize_domain(res, f*fwidth, opts_expansion);
-          res = normalize_domain(res, fraction, opts_expansion, false);
+          res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
           %res = normalize_domain(res, false);
           normalization_done = true;
         end
@@ -572,7 +572,7 @@ function uuids = fit_kymograph(fitting, opts)
   end
 end
 
-function domain = normalize_domain(domain, path, opts, has_noise)
+function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
 %function domain = normalize_domain(domain, has_noise)
 
   prct_thresh = 0.1;
@@ -588,7 +588,9 @@ function domain = normalize_domain(domain, path, opts, has_noise)
   nplanes = size(domain, 3);
   noise = estimate_noise(domain);
 
-  domain = min_max_domain(domain, path, noise(2));
+  if (do_min_max)
+    domain = min_max_domain(domain, path, noise(2));
+  end
 
   for i=1:nplanes
     img = domain(:,:,i);
