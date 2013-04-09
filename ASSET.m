@@ -264,12 +264,13 @@ function [mymovie,trackings] = ASSET(varargin)
 
   % Catch the error overall
   catch
+    err = lasterror();
     if (exist('mymovie', 'var') & isfield(mymovie, 'experiment') & ~isempty(mymovie.experiment))
       warning(['Error during the analysis of ' mymovie.experiment ':']);
     else
       warning(['Error during the analysis:']);
     end
-    print_all(lasterror());
+    print_all(err);
     working = false;
 
     close all hidden force;

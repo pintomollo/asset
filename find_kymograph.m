@@ -66,6 +66,32 @@ function find_kymograph(varargin)
           error('No suitable data for performing the fitting procedure');
         end
 
+        if (fitting.start_with_best)
+          fields = fieldnames(fitting);
+          values = struct2cell(fitting);
+          filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set'};
+
+          good_fields = ismember(fields, filters);
+
+          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]]);
+
+          if (~isempty(prev_values))
+            best_score = Inf;
+            best_pos = fitting.init_pos;
+
+            for k=1:size(prev_values{1,2}, 1)
+              if (prev_values{1,2}{k,2}(end).score < best_score)
+                best_score = prev_values{1,2}{k,2}(end).score;
+                best_pos = prev_values{1,2}{k,2}(end).params;
+
+                best_pos = best_pos.^2 .* prev_values{1,1}{1}.rescale_factor;
+              end
+            end
+
+            fitting.init_pos = best_pos;
+          end
+        end
+
         outside = (abs(pos) > opts.reaction_params(end, 1));
         if (any(outside))
           pos = pos(~outside);

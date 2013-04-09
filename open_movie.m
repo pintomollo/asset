@@ -133,11 +133,11 @@ function [mymovie] = open_movie(mymovie, opts)
     % Use the movie name as the name for the entire experiment
     mymovie.experiment = name;
 
-    % Load the metadata if they exist
-    mymovie = parse_metadata(mymovie, base_dir, opts);
-
     % Rescale the channels (including some filtering)
     mymovie = rescale_movie(mymovie, opts);
+
+    % Load the metadata if they exist
+    mymovie = parse_metadata(mymovie, base_dir, opts);
   end
 
   return;

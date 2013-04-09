@@ -15,7 +15,7 @@ function p = display_ml_results(varargin)
       pts = [];
       for j=1:size(data, 1)
         s = data{j,1}(end);
-        if (isstruct(s))
+        if (isstruct(s) & ~isempty(s.params))
           pts = [pts; [s.params s.score]];
 
           if (show_evolution)
@@ -56,7 +56,7 @@ function p = display_ml_results(varargin)
         scatter(all_pts(:,q), all_pts(:,r), [], colors);
         hold on
         scatter(avg_pts(:,q), avg_pts(:,r), 'r');
-        colormap(cmap)
+        %colormap(cmap)
         ax = colorbar;
         set(ax, 'YTickLabel', labels);
 
@@ -100,11 +100,12 @@ function p = display_ml_results(varargin)
         else
           hold off;
         end
-        colormap(cmap)
+        %colormap(cmap)
         ax = colorbar;
         set(ax, 'YTickLabel', labels);
         for j=1:length(evols)
-          plot(1-size(evols{j},1):0, evols{j}(:,i), 'Color', colors(j,:));
+          %plot(1-size(evols{j},1):0, evols{j}(:,i), 'Color', colors(j,:));
+          plot(1-size(evols{j},1):0, evols{j}(:,i));
           hold on;
         end
         xlabel(num2str(i))

@@ -323,7 +323,15 @@ function uuids = fit_kymograph(fitting, opts)
         options.nsimu    = fitting.max_iter;               % size of the chain
         options.adaptint = adaptint;            % adaptation interval
         options.drscale  = drscale;
-        options.qcov     = fitting.step_size*eye(nparams); % initial proposal covariance 
+
+        if (numel(fitting.step_size)==nparams)
+          options.qcov     = diag(fitting.step_size); % initial proposal covariance 
+        elseif (numel(fitting.step_size)==(nparams^2))
+          options.qcov     = fitting.step_size; % initial proposal covariance 
+        else
+          options.qcov     = fitting.step_size(1)*eye(nparams); % initial proposal covariance 
+        end
+        options.qcov = options.qcov.^2;
         %options.qcov     = fitting.step_size*eye(nparams).*2.4^2./nparams;      % initial proposal covariance 
         options.ndelays  = fitting.ndelays;
         options.stall_thresh = fitting.stall_thresh;
@@ -586,9 +594,9 @@ function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
 %  path = round(path);
 
   nplanes = size(domain, 3);
-  noise = estimate_noise(domain);
 
   if (do_min_max)
+    noise = estimate_noise(domain);
     domain = min_max_domain(domain, path, noise(2));
   end
 

@@ -29,7 +29,7 @@ function [mymovie, updated] = reconstruct_egg(mymovie, opts)
   end
 
   [nframes, imgsize] = size_data(mymovie.dic);
-  mymovie = parse_metadata(mymovie, opts);
+  %mymovie = parse_metadata(mymovie, opts);
   real_z = mymovie.metadata.z_position;
 
   pts = cell(nframes, 1);
@@ -159,23 +159,27 @@ function [relative_z, centers, orient] = relative_position(pts, z, centers, axes
         goods = filter_goods(goods, 15);
 
         [tmp_c, tmp_a, tmp_o] = fit_ellipse(pts{i}(goods, 1:2));
-        ell_coords = carth2elliptic(pts{i}(goods, 1:2), tmp_c, axes_length(1:2), tmp_o, 'radial');
-        dist = mymean(ell_coords(:,2));
-        z_pos = axes_length(3)*sqrt(1 - dist.^2);
 
-        if (~imag(z_pos))
-          bounding_box = [min(pts{i}(:,1:2)) max(pts{i}(:,1:2))];
-          bb_center = [(bounding_box(1:2) + bounding_box(3:4))/2].';
-          dist_thresh = [(bounding_box(3:4) - bounding_box(1:2))/4].';
+        if (~isnan(tmp_o))
 
-          % Simple verification that the estimation did not fall completly off
-          if (all(tmp_c >= bb_center - dist_thresh) && all(tmp_c <= bb_center + dist_thresh))
+          ell_coords = carth2elliptic(pts{i}(goods, 1:2), tmp_c, axes_length(1:2), tmp_o, 'radial');
+          dist = mymean(ell_coords(:,2));
+          z_pos = axes_length(3)*sqrt(1 - dist.^2);
 
-            relative_z(i) = z_pos;
-            centers(1:2, i) = tmp_c;
-            orient(i) = tmp_o;
-          else
-            display(['Weird estimation in frame ' num2str(i)])
+          if (~imag(z_pos))
+            bounding_box = [min(pts{i}(:,1:2)) max(pts{i}(:,1:2))];
+            bb_center = [(bounding_box(1:2) + bounding_box(3:4))/2].';
+            dist_thresh = [(bounding_box(3:4) - bounding_box(1:2))/4].';
+
+            % Simple verification that the estimation did not fall completly off
+            if (all(tmp_c >= bb_center - dist_thresh) && all(tmp_c <= bb_center + dist_thresh))
+
+              relative_z(i) = z_pos;
+              centers(1:2, i) = tmp_c;
+              orient(i) = tmp_o;
+            else
+              display(['Weird estimation in frame ' num2str(i)])
+            end
           end
         end
       else

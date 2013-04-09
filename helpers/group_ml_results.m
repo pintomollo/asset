@@ -70,7 +70,7 @@ function datas = group_ml_results(fnames, groups, filters)
         datas{found, 2} = {fname};
         nstored = nstored + 1;
       else
-        datas{found, 2} = [datas{found, 2}, fname];
+        datas{found, 2} = [datas{found, 2}; fname];
       end
 
       display(files(i).name)
@@ -83,7 +83,7 @@ function datas = group_ml_results(fnames, groups, filters)
     files = datas{i, 2};
     for j=1:length(files)
       display(files{j});
-      datas{i, 2}{j} = parse_ml_results(files{j}, Inf, true, 'none');
+      datas{i, 2}{j,2} = parse_ml_results(files{j}, Inf, true, 'none');
     end
   end
 

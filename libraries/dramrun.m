@@ -114,6 +114,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   pars = NaN(ndelays+1, npar);
 
   R       = chol(qcov); % *adascale; % Cholesky factor of proposal covariance
+
   for i=1:ndelays
     Rs{i} = R./(drscale^(i-1)); % second proposal for DR try
     iRs{i} = inv(Rs{i});
@@ -160,6 +161,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     stall_thresh = nsimu*stall_thresh;
   end
   newi = 0;
+  ntot = 0;
 
   %%% the simulation loop
   for isimu=2:nsimu
@@ -167,8 +169,8 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
 
 
     if (isimu/printint == fix(isimu/printint)) % info on every printint iteration
-      fprintf('isimu=%d, %d%% done, accepted: %d%%\n',...
-              isimu,fix(isimu/nsimu*100),fix((acce/isimu)*100));
+      fprintf('isimu=%d, %d%% done, accepted: %d%%(%d%%)\n',...
+              isimu,fix(isimu/nsimu*100),fix((acce/isimu)*100), fix((acce/(isimu+ntot))*100));
     end
 
     pars(1,:) = oldpar;
@@ -191,6 +193,7 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
           oldpar   = pars(dr+1,:);
           oldss    = scores(dr+1,:);
           newi     = isimu;
+          ntot     = ntot + dr - 1;
           %oldprior = newprior;
           break;
         end

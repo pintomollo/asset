@@ -15,6 +15,10 @@ function mymovie = correct_jitter(mymovie, opts)
   orientations = mymovie.(type).orientations;
   axes_length = mymovie.(type).axes_length;
 
+  valids = all(isfinite([orientations; axes_length]), 1);
+  orientations = orientations(valids);
+  axes_length = axes_length(:, valids);
+
   eccentricity = sqrt(1 - (axes_length(2,:).^2) ./ (axes_length(1,:).^2));
   %confidence = eccentricity;
   confidence = (erf(5*(eccentricity - 0.5)) + 1) / 2;
@@ -28,12 +32,15 @@ function mymovie = correct_jitter(mymovie, opts)
   dorient = dorient .* confidence;
   orientations = aim + dorient;
 
-  mymovie.(type).orientations = orientations;
+  mymovie.(type).orientations(valids) = orientations;
 
   if (isfield(mymovie, 'metadata') && isfield(mymovie.metadata, 'orientation_3d'))
 
     orientations = mymovie.metadata.orientation_3d;
     axes_length = mymovie.metadata.axes_length_3d;
+
+    valids = isfinite(orientations);
+    orientations = orientations(valids);
 
     eccentricity = sqrt(1 - (axes_length(2).^2) ./ (axes_length(1).^2));
     confidence = (erf(5*(eccentricity - 0.5)) + 1) / 2;
@@ -44,7 +51,7 @@ function mymovie = correct_jitter(mymovie, opts)
     dorient = dorient .* confidence;
     orientations = aim + dorient;
 
-    mymovie.metadata.orientation_3d = orientations;
+    mymovie.metadata.orientation_3d(valids) = orientations;
   end
 
   return;

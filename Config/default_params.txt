@@ -1,6 +1,6 @@
 % Add here the default values of your parameters
-application 'quantification'
-segmentation_type 'markers'
+%application 'quantification'
+%segmentation_type 'markers'
 
 %%% NOT SURE ACTUALLY BETTER...
 
