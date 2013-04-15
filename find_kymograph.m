@@ -42,6 +42,8 @@ function find_kymograph(varargin)
         error('Unknow object proposed for fitting');
       end
 
+      temps = [];
+
       try
         if (isfield(kymo, 'mymovie'))
           kymo.opts.recompute = false;
@@ -62,9 +64,18 @@ function find_kymograph(varargin)
           else
             times = NaN(1,3);
           end
+          if (isfield(kymo, 'temperatures'))
+            fitting.temperature = kymo.temperatures;
+          end
         else
           error('No suitable data for performing the fitting procedure');
         end
+
+        if (~iscell(ground_truth))
+          ground_truth = {ground_truth};
+          pos = {pos};
+        end
+        ngroups = length(ground_truth);
 
         if (fitting.start_with_best)
           fields = fieldnames(fitting);
@@ -92,10 +103,12 @@ function find_kymograph(varargin)
           end
         end
 
-        outside = (abs(pos) > opts.reaction_params(end, 1));
-        if (any(outside))
-          pos = pos(~outside);
-          ground_truth = ground_truth(:, ~outside, :);
+        for g=1:ngroups
+          outside = (abs(pos{g}) > opts.reaction_params(end, 1));
+          if (any(outside))
+            pos{g} = pos{g}(~outside);
+            ground_truth{g} = ground_truth{g}(:, ~outside, :);
+          end
         end
 
         if (fitting.fit_relative)
@@ -106,30 +119,35 @@ function find_kymograph(varargin)
         fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo_name, fitting.parameter_set);
         fclose(fid);
 
-        boundary = (length(pos)-1)/2;
-        fitting.ground_truth = permute([ground_truth(:, 1:boundary+1, :), ground_truth(:,end:-1:boundary+1, :)], [2 1 3]);
-        fitting.x_pos = pos(boundary+1:end);
-        fitting.t_pos = [0:size(ground_truth, 1)-1]*10;
+        fitting.ground_truth = ground_truth;
+        fitting.x_pos = pos;
+        fitting.t_pos = pos;
         fitting.type = kymo_name;
+        for g=1:ngroups
+          boundary = (length(pos{g})-1)/2;
+          fitting.ground_truth{g} = permute([ground_truth{g}(:, 1:boundary+1, :), ground_truth{g}(:,end:-1:boundary+1, :)], [2 1 3]);
+          fitting.x_pos{g} = pos{g}(boundary+1:end);
+          fitting.t_pos{g} = [0:size(ground_truth{g}, 1)-1]*10;
 
-        if (~fitting.fit_full)
-          for k=1:size(fitting.ground_truth, 3)
-            tmp = fitting.ground_truth(:,:,k);
-            tmp = tmp(any(~isnan(tmp), 2), :);
-            fitting.ground_truth(end-size(tmp,1)+1:end,:,k) = tmp;
-          end
-
-          if (isnan(times(2)))
-            if (isnan(times(1)))
-              time = 10;
-            else
-              time = round((times(end) - times(1)) * 0.5);
+          if (~fitting.fit_full)
+            for k=1:size(fitting.ground_truth{g}, 3)
+              tmp = fitting.ground_truth{g}(:,:,k);
+              tmp = tmp(any(~isnan(tmp), 2), :);
+              fitting.ground_truth{g}(end-size(tmp,1)+1:end,:,k) = tmp;
             end
-            fitting.ground_truth = fitting.ground_truth(:, end-time:end, :);
-            fitting.t_pos = fitting.t_pos(:, end-time:end);
-          else
-            fitting.ground_truth = fitting.ground_truth(:, times(2):end, :);
-            fitting.t_pos = fitting.t_pos(:, times(2):end);
+
+            if (isnan(times(2)))
+              if (isnan(times(1)))
+                time = 10;
+              else
+                time = round((times(end) - times(1)) * 0.5);
+              end
+              fitting.ground_truth{g} = fitting.ground_truth{g}(:, end-time:end, :);
+              fitting.t_pos{g} = fitting.t_pos{g}(:, end-time:end);
+            else
+              fitting.ground_truth{g} = fitting.ground_truth{g}(:, times(2):end, :);
+              fitting.t_pos{g} = fitting.t_pos{g}(:, times(2):end);
+            end
           end
         end
 

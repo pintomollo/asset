@@ -13,3 +13,5 @@ output_rate 10
 tmax 3500
 time_step 0.05
 user_data getfield(load('cortical_flow_wt.mat', 'flow_step'), 'flow_step')
+reaction_temperature 20
+flow_temperature getfield(load('cortical_flow_wt.mat', 'flow_temp'), 'flow_temp')

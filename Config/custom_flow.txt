@@ -17,3 +17,5 @@ time_step 0.05
 %user_data getfield(load('cortical_flow_wt.mat', 'flow_step'), 'flow_step')
 %user_data getfield(load('cyto_flow_small.mat', 'flow_step'), 'flow_step')
 user_data getfield(load('cyto_flow.mat', 'flow_step'), 'flow_step')
+reaction_temperature 20
+flow_temperature getfield(load('cyto_flow.mat', 'flow_temp'), 'flow_temp')

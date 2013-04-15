@@ -1,13 +1,12 @@
 fit_relative true
-fitting_type 'dram'
+fitting_type 'cmaes'
 init_noise 0
-start_with_best true
+start_with_best false
 ndelays 5
 init_pos [0.0895 1.1211 4.4714 2.2011]
-step_size [1e-2 1e-3 1e-2 1e-3]
-nfits 1
+step_size 1e-3
+nfits 2
 skip_file 'artifacts.txt'
 tolerance 1e-3
 normalize_smooth false
-max_iter 50000
-score_weights 1
+parameter_set 12

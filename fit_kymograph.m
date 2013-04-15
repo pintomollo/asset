@@ -37,9 +37,16 @@ function uuids = fit_kymograph(fitting, opts)
     opts.reaction_params(5,:) = 1;
   end
 
+  ngroups = length(fitting.ground_truth);
+
+  fit_temperatures = false;
+
   switch fitting.parameter_set
     case 2
       fit_params = [4 5 12 13];
+    case 12
+      fit_params = [4 5 12 13];
+      fit_temperatures = true;
     case 3
       fit_params = [4 5 6 12 13];
     case 4
@@ -97,79 +104,103 @@ function uuids = fit_kymograph(fitting, opts)
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
 
-  if (strncmp(fitting.type, 'simulation', 10))
-    [fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
-    fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
-    fitting.ground_truth = [fitting.ground_truth; fitting.ground_truth];
-    fitting.x_pos = [0:opts.nparticles-1] * opts.x_step;
-  elseif (~isempty(fitting.t_pos))
-    if (numel(fitting.t_pos) == 1)
-      opts.output_rate = fitting.t_pos;
-    else
-      opts.output_rate = median(diff(fitting.t_pos));
+  for g=1:ngroups
+    if (strncmp(fitting.type, 'simulation', 10))
+      [fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+      fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
+      fitting.ground_truth = {[fitting.ground_truth; fitting.ground_truth]};
+      fitting.x_pos = {[0:opts.nparticles-1] * opts.x_step};
+    elseif (~isempty(fitting.t_pos))
+      if (numel(fitting.t_pos{g}) == 1)
+        opts.output_rate(g) = fitting.t_pos{g};
+      else
+        opts.output_rate(g) = median(diff(fitting.t_pos{g}));
+      end
     end
-  end
 
-  if (~fitting.fit_full)
-    nmaintenance = min(size(fitting.ground_truth, 2), 50) - 1;
-    fitting.ground_truth = fitting.ground_truth(:, end-nmaintenance:end, :);
-    fitting.t_pos = fitting.t_pos(end-nmaintenance:end);
-    fitting.aligning_type = 'end';
-    fitting.fit_flow = false;
-  end
+    if (~fitting.fit_full)
+      nmaintenance = min(size(fitting.ground_truth{g}, 2), 50) - 1;
+      fitting.ground_truth{g} = fitting.ground_truth{g}(:, end-nmaintenance:end, :);
+      fitting.t_pos{g} = fitting.t_pos{g}(end-nmaintenance:end);
+      fitting.aligning_type = 'end';
+      fitting.fit_flow = false;
+    end
 
-  [n,m,o] = size(fitting.ground_truth);
-  size_data = [n,m,o];
+    [n,m,o] = size(fitting.ground_truth{g});
+    size_data(g,1:3) = [n,m,o];
 
-  if (strncmp(fitting.aligning_type, 'domain', 6))
-    opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
-    [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth(1:end/2, :, :), 3).', mymean(fitting.ground_truth((end/2)+1:end, :, :), 3).', size_data(1)/2, size_data(2), opts_expansion);
-    frac_indx = find(f > fitting.fraction, 1, 'first');
-    gfraction = f*frac_width;
-    gfraction(isnan(gfraction)) = 0;
+    if (strncmp(fitting.aligning_type, 'domain', 6))
+      opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
+      [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth{g}(1:end/2, :, :), 3).', mymean(fitting.ground_truth{g}((end/2)+1:end, :, :), 3).', size_data(g,1)/2, size_data(g,2), opts_expansion);
+      frac_indx = find(f > fitting.fraction, 1, 'first');
+      tmp_gfrac = f*frac_width;
+      tmp_gfrac(isnan(tmp_gfrac)) = 0;
+      gfraction{g} = tmp_gfrac;
 
-    if (strncmp(fitting.scale_type, 'normalize', 10))
+      if (strncmp(fitting.scale_type, 'normalize', 10))
+        %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
+        fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
+        %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
+
+        normalization_done = true;
+      end
+    end
+
+    if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
+      opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
+      [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth{g}(1:end/2, :, :), 3).', mymean(fitting.ground_truth{g}((end/2)+1:end, :, :), 3).', size_data(g,1)/2, size_data(g,2), opts_expansion);
+      if (~fitting.fit_full)
+        f(:) = 1;
+      end
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-      fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
+      fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
-
       normalization_done = true;
     end
-  end
 
-  if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
-    opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
-    [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth(1:end/2, :, :), 3).', mymean(fitting.ground_truth((end/2)+1:end, :, :), 3).', size_data(1)/2, size_data(2), opts_expansion);
-    if (~fitting.fit_full)
-      f(:) = 1;
+    if (strncmp(fitting.aligning_type, 'lsr', 3))
+      sindx(g) = round(size(fitting.ground_truth{g}, 2) / 2);
+      mean_ground_truth{g} = nanmean(fitting.ground_truth{g}, 3);
     end
-    %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-    fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
-    %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
-    normalization_done = true;
-  end
 
-  if (strncmp(fitting.aligning_type, 'lsr', 3))
-    sindx = round(size(fitting.ground_truth, 2) / 2);
-    mean_ground_truth = mymean(fitting.ground_truth, 3);
-  end
+    multi_data(g) = (size_data(g,3) > 1);
+    if (multi_data(g))
+      nlayers(g) = size_data(g,3);
+    end
 
-  multi_data = (numel(size_data) > 2 & size_data(3) > 1);
-  if (multi_data)
-    nlayers = size_data(3);
-    size_data = size_data(1:2);
-  end
+    if (~fitting.integrate_sigma)
+      noise = estimate_noise(fitting.ground_truth{g});
+      estim_sigma(g) = mymean(noise(:,2));
+    end
 
-  if (~fitting.integrate_sigma)
-    noise = estimate_noise(fitting.ground_truth);
-    estim_sigma = mymean(noise(:,2));
-  end
+    linear_truth{g} = fitting.ground_truth{g}(:);
+    linear_goods{g} = isfinite(linear_truth{g});
+    simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
+    penalty(g) = ((max(linear_truth{g}(linear_goods{g})))^2)*opts.nparticles;
+    ndata(g) = length(fitting.x_pos{g});
 
-  linear_truth = fitting.ground_truth(:);
-  linear_goods = isfinite(linear_truth);
-  simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
-  penalty = ((max(linear_truth(linear_goods)))^2)*opts.nparticles;
-  ndata = length(fitting.x_pos);
+    if (fit_temperatures)
+      kB = 8.6173324e-5;
+      E = 0.65;
+      C2K = 273.15;
+      ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
+      temp_scale{g} = [ones(4,2)*ratio; ones(4,2)];
+      flow_scale(g) = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+    end
+  end
+  
+  %{
+  if (~fit_temperatures)
+    linear_goods = linear_goods{1};
+    if (strncmp(fitting.aligning_type, 'lsr', 3))
+      mean_ground_truth{g} = mean_ground_truth{g};
+    end
+    fitting.ground_truth = fitting.ground_truth{1};
+    fitting.x_pos = fitting.x_pos{1};
+    fitting.t_pos = fitting.t_pos{1};
+    gfraction = gfraction{1};
+  end
+  %}
 
   rescaling = orig_scaling;
   %rescaling = 10.^(floor(log10(ml_params)));
@@ -178,7 +209,9 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (strncmp(fitting.type, 'simulation', 10))
     noiseless = fitting.ground_truth;
-    range_data = fitting.data_noise * range(linear_truth);
+    for g=1:ngroups
+      range_data(g) = fitting.data_noise * range(linear_truth{g});
+    end
   end
 
   if (~isempty(fitting.init_pos) & numel(fit_params) ~= numel(fitting.init_pos))
@@ -199,16 +232,18 @@ function uuids = fit_kymograph(fitting, opts)
   for f = 1:fitting.nfits
     if (fitting.cross_measure)
       fitting = orig_fit;
-      if (mod(f, 2) == 1)
-        selection = randperm(size(fitting.ground_truth, 3));
-        nlayers = round(length(selection)/2);
-        fitting.ground_truth = fitting.ground_truth(:,:,selection(1:nlayers));
-      else
-        fitting.ground_truth = fitting.ground_truth(:,:,selection(nlayers+1:end));
-        nlayers = length(selection) - nlayers;
+      for g=1:ngroups
+        if (mod(f, 2) == 1)
+          selection = randperm(size(fitting.ground_truth{g}, 3));
+          nlayers(g) = round(length(selection)/2);
+          fitting.ground_truth{g} = fitting.ground_truth{g}(:,:,selection(1:nlayers(g)));
+        else
+          fitting.ground_truth{g} = fitting.ground_truth{g}(:,:,selection(nlayers(g)+1:end));
+          nlayers(g) = length(selection) - nlayers(g);
+        end
+        linear_truth{g} = fitting.ground_truth(:);
+        linear_goods = isfinite(linear_truth{g});
       end
-      linear_truth = fitting.ground_truth(:);
-      linear_goods = isfinite(linear_truth);
     end
 
     uuids{f} = num2str(now + cputime);
@@ -222,10 +257,12 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = fitting.init_pos;
     end
 
+    if (~fit_temperatures)
+      flow_scale = 1;
+    end
+
     if (fitting.fit_flow)
       p0 = [p0 1];
-    else
-      flow_scale = 1;
     end
 
     if (fitting.fit_sigma)
@@ -234,30 +271,33 @@ function uuids = fit_kymograph(fitting, opts)
 
     p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     nparams = length(p0);
-    if (fitting.estimate_n)
-      ns = identify_n(fitting.ground_truth);
-      nobs = sum([ns(:,1); ns(:,3)]);
-      norm_coeff = sum(linear_goods)/nobs;
-    else
-      nobs = [sum(linear_goods) size_data(2)];
-      norm_coeff = 1;
-    end
+    for g=1:ngroups
+      if (fitting.estimate_n)
+        ns = identify_n(fitting.ground_truth{g});
+        nobs(g) = sum([ns(:,1); ns(:,3)]);
+        norm_coeff(g) = sum(linear_goods{g})/nobs(g);
+      else
+        nobs(g, 1:2) = [sum(linear_goods{g}) size_data(g,2)];
+        norm_coeff(g) = 1;
+      end
 
-    %fitting.score_weights = 1/nobs(1);
-    fitting.score_weights = 0.25*length(gfraction)/nobs(1);
-    half = opts.boundaries(2);
+      %fitting.score_weights = 1/nobs(1);
+      curr_score_weights(g) = fitting.score_weights*length(gfraction{g})/nobs(g,1);
+      half = opts.boundaries(2);
 
-    if (fitting.integrate_sigma)
-      %full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
-      full_error = fitting.score_weights * (0.5*nobs(1))*log(penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
-    else
-      %full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
-      full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
-    end
+      if (fitting.integrate_sigma)
+        %full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
+        full_error(g) = curr_score_weights(g) * (0.5*nobs(g,1))*log(penalty(g) * size_data(g,2) * 10) + (0.5*nobs(g,2))*log(size_data(g,2)*10);
+      else
+        %full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
+        full_error(g) = (curr_score_weights(g) * penalty(g) * size_data(g,2) * 10 + prod(size_data(g,1:2))) / (2*estim_sigma(g).^2);
+      end
 
-    if (strncmp(fitting.type, 'simulation', 10))
-      fitting.ground_truth = noiseless + range_data*randn(size_data);
+      if (strncmp(fitting.type, 'simulation', 10))
+        fitting.ground_truth{g} = noiseless{g} + range_data(g)*randn(size_data(g,:));
+      end
     end
+    full_error = sum(full_error);
 
     if (fitting.fit_flow)
       display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) ' & flow):']);
@@ -369,203 +409,212 @@ function uuids = fit_kymograph(fitting, opts)
       p_all = p_all.';
       nevals = curr_nparams; 
     end
-    err_all = NaN(1, nevals);
+    err_all = NaN(ngroups, nevals);
 
     p_all = p_all.^2;
 
     for i = 1:nevals
       correct = true;
 
-      curr_p = p_all(:,i);
-    
-      if (fitting.fit_sigma)
-        estim_sigma = curr_p(end);
-        curr_p = curr_p(1:end-1);
-      end
-
-      if (fitting.fit_flow)
-        flow_scale = curr_p(end);
-        tmp_params(fit_params) = curr_p(1:end-1);
-      else
-        tmp_params(fit_params) = curr_p;
-      end
-
-      if (restart)
-        opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
-        [x0, correct] = opts.init_func(opts);
-
-        if (~correct)
-          err_all(i) = Inf;
-          continue;
-        end
-      end
-
-      normalization_done = false;
-      if (fitting.fit_relative)
-        [res, t] = simulate_model_rel(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
-      else
-        [res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * flow_scale, opts.user_data, opts.max_iter);
-      end
+      for g=1:ngroups
+        curr_p = p_all(:,i);
       
-     % if (~isempty(useful_data))
-     %   figure;imagesc(useful_data - res);
-     % end
-     % useful_data = res;
-      %if (t(end) < opts.tmax)
-      %  err_all(i) = Inf;
-      %  continue;
-      %end
-      
-      res = res((end/2)+1:end, :);
-      if (opts.nparticles ~= ndata)
-        res = interp1q(simul_pos, res, fitting.x_pos.');
-      end
-      
-      [f, fwidth] = domain_expansion(res.', size(res, 1), size(res,2), opts_expansion);
-      fraction = f*fwidth;
-      res = [res; res];
-
-      switch fitting.aligning_type
-        case 'best'
-          if (length(t) < size_data(2))
-            cc = normxcorr2(res, mymean(fitting.ground_truth, 3)); 
-
-            [max_cc, imax] = max(cc(size(res, 1), :));
-            corr_offset = -(imax-size(res, 2));
-          elseif (all(isfinite(res)))
-            cc = normxcorr2(mymean(fitting.ground_truth, 3), res); 
-
-            [max_cc, imax] = max(cc(size_data(1), :));
-            corr_offset = -(imax-size_data(2));
-          else
-            corr_offset = 0;
-          end
-        case 'domain'
-          if (size(res,2) <= 10)
-            err_all(i) = Inf;
-            continue;
-          else
-
-            %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
-            if (strncmp(fitting.scale_type, 'normalize', 10))
-              %res = normalize_domain(res, f*fwidth, opts_expansion, false);
-              res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
-              %res = normalize_domain(res, false);
-              normalization_done = true;
-            end
-          end
-
-          if (isnan(f(end)))
-            err_all(i) = Inf;
-            continue;
-          end
-          findx = find(f > fitting.fraction, 1, 'first');
-          corr_offset = frac_indx - findx + 1;
-          
-          if (isempty(corr_offset))
-            corr_offset = NaN;
-          end
-        case 'end'
-          corr_offset = size_data(2) - size(res, 2) + 1;
-        case 'lsr'
-          rindx = min(sindx, size(res, 2));
-
-          [junk, junk2, rindx] = find_min_residue(mean_ground_truth, sindx, res, rindx, 0.95);
-          corr_offset = sindx - rindx;
-      end
-
-      fraction(isnan(fraction)) = 0;
-      gindxs = [0:size(res, 2)-1];
-      goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(2));
-
-      if (sum(goods) < 10)
-        err_all(i) = Inf;
-      else
-        if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
-          %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
-          if (~fitting.fit_full)
-            fraction(:) = fwidth;
-          end
-          %res = normalize_domain(res, f*fwidth, opts_expansion);
-          res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
-          %res = normalize_domain(res, false);
-          normalization_done = true;
+        if (fitting.fit_sigma)
+          estim_sigma = curr_p(end);
+          curr_p = curr_p(1:end-1);
         end
 
-        indxs = corr_offset+gindxs(goods);
-        tmp_fraction = zeros(1, size_data(2));
-        tmp_fraction(indxs) = fraction(gindxs(goods) + 1);
-        %tmp_fraction(indxs(end)+1:end) = tmp_fraction(indxs(end));
-
-        tmp = ones(size_data)*res(1, 2);
-        tmp(:, indxs) = res(:, gindxs(goods) + 1);
-
-        fraction = tmp_fraction(:);
-        res = tmp;
-        if (multi_data)
-          res = repmat(res, [1 1 nlayers]);
+        if (fitting.fit_flow)
+          curr_flow_scale = curr_p(end);
+          tmp_params(fit_params) = curr_p(1:end-1);
+        else
+          tmp_params(fit_params) = curr_p;
+          curr_flow_scale = 1;
         end
 
-        if (~normalization_done & strncmp(fitting.scale_type, 'best', 4))
-          gres = ~isnan(res(:)) & linear_goods;
-          c = [ones(sum(gres), 1), res(gres)] \ linear_truth(gres);
-          
-          if (c(2) <= 0)
-            err_all(i) = Inf;
+        if (fit_temperatures)
+          tmp_params = tmp_params .* temp_scale{g};
+          curr_flow_scale = curr_flow_scale * flow_scale(g);
+        end
+
+        if (restart)
+          opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
+          [x0, correct] = opts.init_func(opts);
+
+          if (~correct)
+            err_all(g,i) = Inf;
             continue;
           end
+        end
 
-          res = c(1) + c(2)*res;
+        normalization_done = false;
+        if (fitting.fit_relative)
+          [res, t] = simulate_model_rel(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * curr_flow_scale, opts.user_data, opts.max_iter);
+        else
+          [res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * curr_flow_scale, opts.user_data, opts.max_iter);
         end
         
-        %tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
-        tmp_err = (fitting.ground_truth - res).^2 / norm_coeff;
-        tmp_frac = ((gfraction - fraction)/half).^2;
-
-        %[sum(tmp_err(linear_goods)) sum(tmp_frac)]
-
-        %if (nargout == 2)
-        %  tmp_mean = mymean(tmp_err(:));
-        %  sigma2 = mymean((tmp_err(:) - tmp_mean).^2);
+       % if (~isempty(useful_data))
+       %   figure;imagesc(useful_data - res);
+       % end
+       % useful_data = res;
+        %if (t(end) < opts.tmax)
+        %  err_all(i) = Inf;
+        %  continue;
         %end
-        %tmp_err(~linear_goods) = 0;
-
-        if (fitting.integrate_sigma)
-          % Integrated the sigma out from the gaussian error function
-          %err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
-          err_all(i) = fitting.score_weights*(0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
-        else
-          if (fitting.fit_sigma)
-            %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
-            err_all(i) = (fitting.score_weights*sum(tmp_err(linear_goods)) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
-          else
-            %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2);
-            err_all(i) = (fitting.score_weights*sum(tmp_err(linear_goods)) + sum(tmp_frac)) / (2*estim_sigma.^2);
-          end
+        
+        res = res((end/2)+1:end, :);
+        if (opts.nparticles ~= ndata)
+          res = interp1q(simul_pos, res, fitting.x_pos{g}.');
         end
-        % Standard log likelihood with gaussian prob
-        %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
+        
+        [f, fwidth] = domain_expansion(res.', size(res, 1), size(res,2), opts_expansion);
+        fraction = f*fwidth;
+        res = [res; res];
 
-        %{
-        %figure;
-        subplot(1,2,1);
-        imagesc(mymean(res, 3));
-        title([num2str(err_all(i)) ' : ' num2str(sum(tmp_err(linear_goods))) ', ' num2str(sum(tmp_frac))]);
-        subplot(1,2,2);
-        hold off;
-        imagesc(mymean(tmp_err, 3));
-        hold on;
-        plot(size(tmp_err, 1)-2*gfraction, 'k');
-        plot(size(tmp_err, 1)-2*fraction, 'w');
-        title([num2str(p_all(:,i).')]);
+        switch fitting.aligning_type
+          case 'best'
+            if (length(t) < size_data(g,2))
+              cc = normxcorr2(res, mymean(fitting.ground_truth{g}, 3)); 
 
-        %keyboard
-        drawnow
-        %}
+              [max_cc, imax] = max(cc(size(res, 1), :));
+              corr_offset = -(imax-size(res, 2));
+            elseif (all(isfinite(res)))
+              cc = normxcorr2(mymean(fitting.ground_truth{g}, 3), res); 
+
+              [max_cc, imax] = max(cc(size_data(g,1), :));
+              corr_offset = -(imax-size_data(g,2));
+            else
+              corr_offset = 0;
+            end
+          case 'domain'
+            if (size(res,2) <= 10)
+              err_all(g,i) = Inf;
+              continue;
+            else
+
+              %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+              if (strncmp(fitting.scale_type, 'normalize', 10))
+                %res = normalize_domain(res, f*fwidth, opts_expansion, false);
+                res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
+                %res = normalize_domain(res, false);
+                normalization_done = true;
+              end
+            end
+
+            if (isnan(f(end)))
+              err_all(g,i) = Inf;
+              continue;
+            end
+            findx = find(f > fitting.fraction, 1, 'first');
+            corr_offset = frac_indx - findx + 1;
+            
+            if (isempty(corr_offset))
+              corr_offset = NaN;
+            end
+          case 'end'
+            corr_offset = size_data(g,2) - size(res, 2) + 1;
+          case 'lsr'
+            rindx = min(sindx(g), size(res, 2));
+
+            [junk, junk2, rindx] = find_min_residue(mean_ground_truth{g}, sindx(g), res, rindx, 0.95);
+            corr_offset = sindx(g) - rindx;
+        end
+
+        fraction(isnan(fraction)) = 0;
+        gindxs = [0:size(res, 2)-1];
+        goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(g,2));
+
+        if (sum(goods) < 10)
+          err_all(g,i) = Inf;
+        else
+          if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
+            %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+            if (~fitting.fit_full)
+              fraction(:) = fwidth;
+            end
+            %res = normalize_domain(res, f*fwidth, opts_expansion);
+            res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
+            %res = normalize_domain(res, false);
+            normalization_done = true;
+          end
+
+          indxs = corr_offset+gindxs(goods);
+          tmp_fraction = zeros(1, size_data(g,2));
+          tmp_fraction(indxs) = fraction(gindxs(goods) + 1);
+          %tmp_fraction(indxs(end)+1:end) = tmp_fraction(indxs(end));
+
+          tmp = ones(size_data(g,1:2))*res(1, 2);
+          tmp(:, indxs) = res(:, gindxs(goods) + 1);
+
+          fraction = tmp_fraction(:);
+          res = tmp;
+          if (multi_data)
+            res = repmat(res, [1 1 nlayers(g)]);
+          end
+
+          if (~normalization_done & strncmp(fitting.scale_type, 'best', 4))
+            gres = ~isnan(res(:)) & linear_goods{g};
+            c = [ones(sum(gres), 1), res(gres)] \ linear_truth{g}(gres);
+            
+            if (c(2) <= 0)
+              err_all(g,i) = Inf;
+              continue;
+            end
+
+            res = c(1) + c(2)*res;
+          end
+          
+          %tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
+          tmp_err = (fitting.ground_truth{g} - res).^2 / norm_coeff(g);
+          tmp_frac = ((gfraction{g} - fraction)/half).^2;
+
+          %[sum(tmp_err(linear_goods)) sum(tmp_frac)]
+
+          %if (nargout == 2)
+          %  tmp_mean = mymean(tmp_err(:));
+          %  sigma2 = mymean((tmp_err(:) - tmp_mean).^2);
+          %end
+          %tmp_err(~linear_goods) = 0;
+
+          if (fitting.integrate_sigma)
+            % Integrated the sigma out from the gaussian error function
+            %err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
+            err_all(g,i) = curr_score_weights(g)*(0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g}))) + (0.5*nobs(g,2))*log(sum(tmp_frac));
+          else
+            if (fitting.fit_sigma)
+              %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
+              err_all(g,i) = (curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac)) / (2*estim_sigma(g).^2) + nobs(g)*log(estim_sigma) ;
+            else
+              %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2);
+              err_all(g,i) = (curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac)) / (2*estim_sigma(g).^2);
+            end
+          end
+          % Standard log likelihood with gaussian prob
+          %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
+
+          %{
+          %figure;
+          subplot(1,2,1);
+          imagesc(mymean(res, 3));
+          title([num2str(err_all(i)) ' : ' num2str(sum(tmp_err(linear_goods))) ', ' num2str(sum(tmp_frac))]);
+          subplot(1,2,2);
+          hold off;
+          imagesc(mymean(tmp_err, 3));
+          hold on;
+          plot(size(tmp_err, 1)-2*gfraction, 'k');
+          plot(size(tmp_err, 1)-2*fraction, 'w');
+          title([num2str(p_all(:,i).')]);
+
+          %keyboard
+          drawnow
+          %}
+        end
       end
     end
 
     err_all(isnan(err_all)) = Inf;
+    err_all = sum(err_all, 1);
 
     if (flip)
       err_all = err_all.';
