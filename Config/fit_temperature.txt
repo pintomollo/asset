@@ -4,7 +4,7 @@ init_noise 0
 start_with_best false
 ndelays 5
 init_pos [0.0895 1.1211 4.4714 2.2011]
-step_size 1e-3
+step_size 1e-5
 nfits 2
 skip_file 'artifacts.txt'
 tolerance 1e-3
