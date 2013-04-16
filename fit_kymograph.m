@@ -330,6 +330,10 @@ function uuids = fit_kymograph(fitting, opts)
         opt.WarnOnEqualFunctionValues = false;
         opt.PopSize = 5*numel(p0);
 
+        if (fit_temperatures)
+          opt.PopSize = opt.PopSize*ngroups;
+        end
+
         [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
       case 'pso'
         opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 fitting.tolerance 250 NaN 0 0];
