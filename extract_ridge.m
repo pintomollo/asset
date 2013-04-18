@@ -24,6 +24,8 @@ function values = extract_ridge(params, pos, dperp, rescale, opts)
 %        rescale = false(size(cortex, 1), 1);
       %end
 
+        autofluo = zeros(size(egg_dist));
+
       [dperp, dpos] = perpendicular_sampling(cortex, opts);
 
       if (size(mymovie.data.quantification(nimg).front, 1) ~= size(cortex, 1))

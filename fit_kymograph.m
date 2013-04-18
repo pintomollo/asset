@@ -19,8 +19,9 @@ function uuids = fit_kymograph(fitting, opts)
       end
     end
   else
-    orig_opts = get_struct('modeling');
-    orig_opts = load_parameters(orig_opts, 'goehring.txt');
+    %orig_opts = get_struct('modeling');
+    %orig_opts = load_parameters(orig_opts, 'goehring.txt');
+    orig_opts = opts;
     if (fitting.fit_relative)
       orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* (orig_opts.reaction_params(5,[2 1]).^(orig_opts.reaction_params(4,:))) ./ orig_opts.reaction_params(4,[2 1]);
       orig_opts.reaction_params(5,:) = 1;
@@ -597,22 +598,22 @@ function uuids = fit_kymograph(fitting, opts)
           % Standard log likelihood with gaussian prob
           %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
 
-          %{
-          %figure;
-          subplot(1,2,1);
-          imagesc(mymean(res, 3));
-          title([num2str(err_all(i)) ' : ' num2str(sum(tmp_err(linear_goods))) ', ' num2str(sum(tmp_frac))]);
-          subplot(1,2,2);
-          hold off;
-          imagesc(mymean(tmp_err, 3));
-          hold on;
-          plot(size(tmp_err, 1)-2*gfraction, 'k');
-          plot(size(tmp_err, 1)-2*fraction, 'w');
-          title([num2str(p_all(:,i).')]);
+          if (fitting.display)
+            %figure;
+            subplot(1,2,1);
+            imagesc(mymean(res, 3));
+            title([num2str(err_all(g,i)) ' : ' num2str(sum(tmp_err(linear_goods{g}))) ', ' num2str(sum(tmp_frac))]);
+            subplot(1,2,2);
+            hold off;
+            imagesc(mymean(tmp_err, 3));
+            hold on;
+            plot(size(tmp_err, 1)-2*gfraction{g}, 'k');
+            plot(size(tmp_err, 1)-2*fraction, 'w');
+            title([num2str(p_all(:,i).')]);
 
-          %keyboard
-          drawnow
-          %}
+            %keyboard
+            drawnow
+          end
         end
       end
     end
