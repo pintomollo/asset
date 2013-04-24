@@ -149,7 +149,6 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     fprintf(fid, [uuid '1 : %e |'], oldss);
     fprintf(fid, ' %f',oldpar);
     fprintf(fid, '\n');
-    fclose(fid);
   end
 
   % covariance update uses these to store previous values
@@ -227,11 +226,9 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
     end
 
     if (do_log)
-      [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
       fprintf(fid, [uuid '%ld : %e |'], isimu, oldss);
       fprintf(fid, ' %f',oldpar);
       fprintf(fid, '\n');
-      fclose(fid);
     end
 
     if (stall_thresh > 0 & isimu-newi > stall_thresh)
@@ -257,6 +254,10 @@ function [results,chain,s2chain]=dramrun(model,data,params,options)
   results.drscale = drscale;
   results.adascale = adascale;
   results.adaptint = adaptint;
+
+  if (do_log)
+    fclose(fid);
+  end
 
   return;
 end

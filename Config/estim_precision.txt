@@ -4,7 +4,14 @@ init_noise 0
 start_with_best true
 ndelays 5
 init_pos [0.0895 1.1211 4.4714 2.2011]
-step_size [1e-2 1e-3 1e-2 1e-3]
+%step_size [1e-2 1e-3 1e-2 1e-3]
+% the interaction matrix [5e-2 0 5e-2 0; 0 5e-3 -5e-2 0; 0 0 5e-2 0; 0 0 0 5e-3];
+% and the corresponding correlation matrix
+%step_size [2.5e-3 0 2.5e-3 0; 0 2.5e-5 -2.5e-4 0; 2.5e-3 -2.5e-4 7.5e-3 0; 0 0 0 2.5e-5]
+%% the new one with score_weight 1
+% [2.5e-3 0 2.5e-3 0; 0 2.5e-4 -2.5e-3 0; 0 0 1e-4 0; 0 0 0 2.5e-4]
+%step_size [6.25e-6 0 6.25e-6 0; 0 6.25e-8 -6.25e-7 0; 6.25e-7 -6.25e-7 1.251e-5 0; 0 0 0 6.25e-8]
+step_size [6.25e-6 0 6.25e-6 0; 0 6.25e-8 -6.25e-7 0; 6.25e-7 -6.25e-7 1.251e-5 0; 0 0 0 6.25e-8]*200
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-3

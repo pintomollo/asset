@@ -1,5 +1,7 @@
-function display_mcmc_results(fname, merge, varying)
+%function display_mcmc_results(fname, merge, varying)
+function display_mcmc_results(data, func)
 
+  %{
   if (nargin == 1)
     merge = false;
   end
@@ -63,8 +65,19 @@ function display_mcmc_results(fname, merge, varying)
   else
     return;
   end
+  %}
 
-  nparams = sum(varying);
+  if (nargin == 1)
+    func = @mean;
+  end
+
+  header = data(:,1);
+  data = data(:,2:end);
+
+  %varying = true(1, size(data,2));
+  merge = false;
+  %nparams = sum(varying);
+  nparams = size(data,2);
 
   if (size(header, 2) == 4)
     valids = (header(:, 4) ~= 1);
@@ -75,9 +88,10 @@ function display_mcmc_results(fname, merge, varying)
     data = data(valids, :);
   end
 
-  best = data(1,varying);
-  data = data(2:end, varying);
-  header = header(2:end, :);
+  %best = data(1,varying);
+  %data = data(2:end, varying);
+  %data = data(2:end, varying);
+  %%header = header(2:end, :);
   ndims = size(data, 2);
 
   nbins = 32;
@@ -86,8 +100,8 @@ function display_mcmc_results(fname, merge, varying)
   gaps_index = find(gaps).';
 
   tmp_data = data(~gaps, :);
-  edges = sort(tmp_data);
-  edges = edges([1:ceil(end/nbins):end end],:);
+  %edges = sort(tmp_data);
+  %edges = edges([1:ceil(end/nbins):end end],:);
 
   %discards = (diff(header(:,3)) == 1);
   %path = data(~discards, :);
@@ -98,8 +112,18 @@ function display_mcmc_results(fname, merge, varying)
   for n=1:ndims
     for m=n+1:ndims
 
-      x = unique(edges(:, n));
-      y = unique(edges(:, m));
+      x = unique(data(:, n));
+      y = unique(data(:, m));
+
+      last_x = x(end);
+      last_y = y(end);
+
+      x = x([1:ceil(end/nbins):end end],:);
+      y = y([1:ceil(end/nbins):end end],:);
+
+      x(end) = x(end) + 1e-6;
+      y(end) = y(end) + 1e-6;
+
       %dx = min(diff(x));
       %dy = min(diff(y));
 
@@ -119,7 +143,7 @@ function display_mcmc_results(fname, merge, varying)
       [map, pos_edges, xs, pos] = histcn(data(:, [n m]), x, y);
       [coords, junk, index] = unique(pos, 'rows');
 
-      score_map = NaN(size(map));
+      score_map = NaN(size(map)+1);
       params_map = cell(size(map));
       centers = NaN(size(coords));
 
@@ -132,25 +156,28 @@ function display_mcmc_results(fname, merge, varying)
 
         tmp_score = header(currents, 1);
         %[min_val, min_indx] = min(tmp_score);
-        [min_val, min_indx] = max(tmp_score);
-        score_map(coords(i, 1), coords(i, 2)) = min_val;
+        %%[min_val, min_indx] = func(tmp_score);
+        %%score_map(coords(i, 1), coords(i, 2)) = min_val;
+        score_map(coords(i, 1), coords(i, 2)) = func(tmp_score);
         %score_map(coords(i, 1)==areas(:,1) & coords(i, 2) == areas(:,2)) = min_val;
 
-        tmp_params = data(currents, :);
-        params_map{coords(i, 1), coords(i, 2)} = tmp_params(min_indx, :);
-        centers(i,:) = tmp_params(min_indx, [n m]);
+        %%tmp_params = data(currents, :);
+        %%params_map{coords(i, 1), coords(i, 2)} = tmp_params(min_indx, :);
+        %%centers(i,:) = tmp_params(min_indx, [n m]);
       end
 
       %pcolor(x,y,[[exp(score_map.') zeros(length(y)-1, 1)]; zeros(1,length(x))]);
-      pcolor(x,y,exp(score_map.'));
+      %pcolor(x,y,exp(score_map.'));
+      pcolor(x,y,score_map.');
+
       whitebg('k');
-      scatter(errs(:, n), errs(:, m), '+b');
+%      scatter(errs(:, n), errs(:, m), '+b');
       %pcolor(xs{:}, exp(score_map));
       %imagesc(exp(score_map));
-      plot(path(:, n), path(:, m), 'w');
-      scatter(centers(:, 1), centers(:, 2), 'xk');
-      scatter(data([1 gaps_index+1], n), data([1 gaps_index+1], m), '^g');
-      scatter(best(1, n), best(1, m), 'oy', 'filled');
+%      plot(path(:, n), path(:, m), 'w');
+      %%scatter(centers(:, 1), centers(:, 2), 'xk');
+      %%scatter(data([1 gaps_index+1], n), data([1 gaps_index+1], m), '^g');
+      %%scatter(best(1, n), best(1, m), 'oy', 'filled');
       %axis equal;
       axis([x([1 end]); y([1 end])].');
       mtit(num2str(ndims));

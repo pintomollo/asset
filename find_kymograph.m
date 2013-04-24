@@ -78,6 +78,7 @@ function find_kymograph(varargin)
         ngroups = length(ground_truth);
 
         if (fitting.start_with_best)
+
           fields = fieldnames(fitting);
           values = struct2cell(fitting);
           filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set'};

@@ -38,7 +38,6 @@ function [flows, flows_small, pnm] = average_flow(signals, alignment, proj_bin_s
   [signals, shift] = stack_images(signals, alignment);
   half = size(signals, 2) / 2;
 
-
   avg = nanmean(signals, 3);
   clim = [min(avg(:)) max(avg(:))];
   for i=1:nfiles

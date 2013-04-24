@@ -70,7 +70,7 @@ function uuids = fit_kymograph(fitting, opts)
   normalization_done = false;
 
   if (strncmp(fitting.fitting_type, 'dram', 4))
-    drscale  = 10; 
+    drscale  = 2; 
     %adaptint = 500;
     adaptint = 0;
   end
@@ -386,6 +386,13 @@ function uuids = fit_kymograph(fitting, opts)
         % run the chain
         results = dramrun(model,[],params,options);
         p = results.mean;
+      case 'sample'
+        options.range_size  = fitting.step_size;
+        options.max_iter    = fitting.max_iter;
+        options.log_file = [log_name 'evol'];
+        options.printint = 10;
+
+        p = exhaustive_sampler(@error_function, p0(:), options);
       otherwise
         error [opts.do_ml ' machine learning algorithm is not implemented'];
 
