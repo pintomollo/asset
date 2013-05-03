@@ -1,5 +1,9 @@
 function [new_spots] = lidke_fit(img, opts, nimg)
 
+  if (opts.verbosity == 3)
+    global mymovie nimg
+  end
+
   if (isstruct(img) & isfield(img, 'experiment'))
 
     mymovie = img;
@@ -31,7 +35,7 @@ function [new_spots] = lidke_fit(img, opts, nimg)
     for i=1:nframes
       nimg = i;
       %nimg = indxs(i);
-      %nimg = 4
+      %nimg = 290
       img = load_data(mymovie.data, nimg);
       pts = lidke_fit(double(img), opts, nimg);
 
@@ -145,16 +149,38 @@ function [new_spots] = lidke_fit(img, opts, nimg)
     indexes = [indexes; ones(size(pos, 1), 1)*i];
   end
 
-%  figure;imagesc(img);
-%  hold on;
-%  scatter(cand_x, cand_y, 'k')
-%  scatter(new_spots(:,1), new_spots(:,2), 'w');
+  if (opts.verbosity == 3)
+    img_size = [330 450]
+
+    pts = (realign([cand_x(:) cand_y(:)], img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+
+    figure;imagesc(realign(img, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+    hold on;
+    scatter(pts(:,1), pts(:,2), 'k')
+
+%    scatter(cand_x, cand_y, 'k')
+%    scatter(new_spots(:,1), new_spots(:,2), 'w');
+
+    pts = (realign(new_spots(:,1:2), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+
+    figure;imagesc(realign(img, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+    hold on;
+    scatter(pts(:,1), pts(:,2), 'w')
+  end
 
   goods = (new_spots(:,4) > intens_thresh*params(2));
   new_spots = fuse_spots(new_spots(goods, :), [cand_x(indexes(goods)) cand_y(indexes(goods))], fusion_thresh);
   nspots = size(new_spots, 1);
 
-%  scatter(new_spots(:,1), new_spots(:,2), 'b');
+  if (opts.verbosity == 3)
+    %scatter(new_spots(:,1), new_spots(:,2), 'b');
+
+    pts = (realign(new_spots(:,1:2), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+
+    figure;imagesc(realign(img, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+    hold on;
+    scatter(pts(:,1), pts(:,2), 'b')
+  end
 
   dist = sqrt(bsxfun(@minus, new_spots(:,1), new_spots(:,1).').^2 + bsxfun(@minus, new_spots(:,2), new_spots(:,2).').^2);
   rads = new_spots(:,3);
@@ -196,9 +222,17 @@ function [new_spots] = lidke_fit(img, opts, nimg)
   goods = (new_spots(:,4) > intens_thresh*params(2));
   new_spots = fuse_spots(new_spots(goods, :), [cand_x(indexes(goods)) cand_y(indexes(goods))], fusion_thresh);
 
-%  estimated_img = draw_spots(new_spots, img);
-%  scatter(new_spots(:,1), new_spots(:,2), 'm');
-%  keyboard
+  if (opts.verbosity == 3)
+  %  estimated_img = draw_spots(new_spots, img);
+%    scatter(new_spots(:,1), new_spots(:,2), 'm');
+
+    pts = (realign(new_spots(:,1:2), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+
+    figure;imagesc(realign(img, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+    hold on;
+    scatter(pts(:,1), pts(:,2), 'm')
+    keyboard
+  end
 
   return;
 end

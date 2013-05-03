@@ -92,12 +92,18 @@ function [newfile, policy] = bftools_convert(fname, policy, opts)
     return;
   end
 
+%  if (is_rgb)
+%    warning('ASSET:RGB', ['ASSET does not support RGB recordings, thus only the first channel of ' printname ' will be kept.\nIf it is not a grayscale recording, data might be lost !']);
+%  end
   if (is_rgb)
-    warning('ASSET:RGB', ['ASSET does not support RGB recordings, thus only the first channel of ' printname ' will be kept.\nIf it is not a grayscale recording, data might be lost !']);
+    % We create an OME-TIFF file
+    %%newname = [name '_%c.ome.tiff'];
+    disp('Should handle RGB here')
+    newname = [name '.ome.tiff'];
+  else
+    % We create an OME-TIFF file
+    newname = [name '.ome.tiff'];
   end
-
-   % We create an OME-TIFF file
-  newname = [name '.ome.tiff'];
 
   % If the file already exists, we have several possibilities (c.f. help section)
   if(exist(newname,'file'))
@@ -150,10 +156,10 @@ function [newfile, policy] = bftools_convert(fname, policy, opts)
   
   if (ispc)
     cmd_newname = ['"' newname '"'];
-    [res, infos] = system(['bfconvert.bat -separate -channel 0 ' cmd_name ' ' cmd_newname]);
+    [res, infos] = system(['bfconvert.bat -separate ' cmd_name ' ' cmd_newname]);
   else
     cmd_newname = strrep(newname,' ','\ ');
-    [res, infos] = system(['./bfconvert -separate -channel 0 ' cmd_name ' ' cmd_newname]);
+    [res, infos] = system(['./bfconvert -separate ' cmd_name ' ' cmd_newname]);
   end
   if (res ~= 0)
     cd(curdir);

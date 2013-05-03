@@ -56,8 +56,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
   mymovie.dic.parameters = parameters;
 
   img = [];
-  global rescale_size;
-  rescale_size = [388 591]*1;
+  rescale_size = [370 570];
 
   if (length(eggshell) < nimg | empty_struct(eggshell(nimg), 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
     update(1,nimg) = true;
@@ -94,7 +93,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     end
 
     img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
-    %orientations(1,nimg) = orientations(1,nimg) + pi;
+    orientations(1,nimg) = orientations(1,nimg) + pi;
 
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
 
@@ -152,6 +151,8 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       old_orient = orientations(1,nimg);
 
       figure;imshow(imadm_mex(polar_img));
+
+      figure;imagesc(parameters.scoring_func{1}(polar_img,parameters.eggshell_weights));
     end
 
     ell_egg = pixels2elliptic(egg_path,size(polar_img),axes_length(:,nimg),parameters.safety);
@@ -160,6 +161,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     cart_egg = cart_egg(all(cart_egg >= 1 & bsxfun(@le, cart_egg , fliplr(size(img))), 2), :);
 
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(cart_egg);
+    %orientations(1,nimg) = orientations(1,nimg) + pi
     %plot(cart_egg(:,1), cart_egg(:,2), 'g');
     %draw_ellipse(centers(:, nimg), axes_length(:,nimg), orientations(1,nimg), 'r');
 
@@ -282,6 +284,8 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       myplot(realign(carths,rescale_size,centers(:,nimg),orientations(1,nimg)),'Color',[1 0.5 0]);
       myplot(realign(eggshell(nimg).carth,rescale_size,centers(:,nimg),orientations(1,nimg)),'g');
       myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),rescale_size,centers(:,nimg), orientations(1,nimg)),'m');
+
+      figure;imagesc(parameters.scoring_func{2}(polar_cortex,parameters.cortex_weights));
     end
 
     mymovie.dic.cortex = cortex;

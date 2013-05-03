@@ -86,7 +86,8 @@ function mymovie = dp_data(mymovie, nimg, opts)
       %img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
 
     if (opts.verbosity == 3)
-      figure;imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));
+      img_size = [330 450];
+      figure;imshow(realign(imnorm(double(img)),img_size,centers(:,nimg),orientations(1,nimg)));
     end
   
 
@@ -190,16 +191,19 @@ function mymovie = dp_data(mymovie, nimg, opts)
     end
 
     if (opts.verbosity == 3)
+
+      figure;imagesc(parameters.scoring_func{2}(polar_img, parameters.cortex_weights))
+
       figure;imshow(polar_img);
       hold on;plot(cortex_path,[1:length(cortex_path)],'Color',[1 0.5 0]);
       %plot(egg_path,[1:length(cortex_path)],'g');
 
       figure;
-      imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));
+      imshow(realign(img,img_size,centers(:,nimg),orientations(1,nimg)));
       hold on;
-      myplot(realign(carths,[388 591],centers(:,nimg),orientations(1,nimg)),'Color',[1 0.5 0]);
-      %myplot(realign(eggshell(nimg).carth,[388 591],centers(:,nimg),orientations(1,nimg)),'g');
-      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),[388 591],centers(:,nimg), orientations(1,nimg)),'m');
+      myplot(realign(carths,img_size,centers(:,nimg),orientations(1,nimg)),'Color',[1 0.5 0]);
+      %myplot(realign(eggshell(nimg).carth,img_size,centers(:,nimg),orientations(1,nimg)),'g');
+      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),img_size,centers(:,nimg), orientations(1,nimg)),'m');
 
     end
 

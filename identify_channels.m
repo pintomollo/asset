@@ -15,6 +15,7 @@ function mymovie = identify_channels(channels, opts)
   % Get the number of channels and loop over each of them to make an initial guess
   nchannels = length(channels);
   for i=1:nchannels
+    disp('Need to handle multiple RGB channels that would be manually selected');
     
     % Basic idea is based on my data: mCherry-PH & GFP-anything_else.
     % Consequently the mCherry channel is supposedly the cortex. 
@@ -33,6 +34,7 @@ function mymovie = identify_channels(channels, opts)
   mymovie = get_struct('mymovie', 1);
 
   % In case the verbosity is null, do not prompt for confirmation, useful for batch processing
+  disp('Need to ask the user if multiple channels have the same type');
   if (opts.verbosity > 1)
     display('[Identify the channels]');
     channels = input_channels(channels);

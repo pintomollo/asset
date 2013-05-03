@@ -18,10 +18,15 @@ function aligned = realign(original, new_size, center, orientation)
     aligned = fncmb(aligned, '+', new_center);
   else
     [n,m] = size(original);
-    if (n == 2 & m > 2)
+    if (n == 2 && m > 2)
       aligned = original - repmat(center(:), 1, m);
       aligned = (aligned.' * rotmat).';
       aligned = aligned + repmat(new_center, 1, m);
+    elseif (m == 4)
+      aligned(:,1:2) = original(:,1:2) - repmat(center(:).', n, 1);
+      aligned = (aligned * rotmat);
+      aligned = aligned + repmat(new_center.', n, 1);
+      aligned(:,3:4) = (original(:,3:4) * rotmat);
     elseif (m == 2)
       aligned = original - repmat(center(:).', n, 1);
       aligned = (aligned * rotmat);

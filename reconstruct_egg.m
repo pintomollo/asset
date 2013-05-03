@@ -99,6 +99,10 @@ function [mymovie, updated] = reconstruct_egg(mymovie, opts)
     end
   end
 
+  %figure;plot_3d_ellipse(all_pts(currents));
+  %hold on
+  %plot_3d_ellipse(centers(:,i), axes_length(:,i),orient(1,i));
+
   centers = centers(:, indexes);
   axes_length = axes_length(:, indexes);
   orient = orient(:, indexes);
@@ -107,14 +111,19 @@ function [mymovie, updated] = reconstruct_egg(mymovie, opts)
     axes_length = mymean(axes_length, 2);
   else
     mid_plane = folded_distribution(axes_length, sharpness, 2);
-    z_coefs = get_struct('z-correlation');
-    z_size = z_coefs.bkg + z_coefs.long_axis * mid_plane(1) + z_coefs.short_axis * mid_plane(2);
+    %z_coefs = get_struct('z-correlation');
+    %z_size = z_coefs.bkg + z_coefs.long_axis * mid_plane(1) + z_coefs.short_axis * mid_plane(2);
 
-    axes_length = [mid_plane(1:2,1); z_size];
+    %axes_length = [mid_plane(1:2,1); z_size];
+    axes_length = [mid_plane(1:2,1); NaN];
   end
 
   orient = align_orientations(orient);
   [axes_length, relative_z] = fit_relative_ellipse(all_pts, centers, axes_length, orient);
+
+  %figure;plot_3d_ellipse(all_pts(currents));
+  %hold on
+  %plot_3d_ellipse(mymean(centers,2), axes_length,mymean(orient));
 
   centers = centers(:, indexes);
   orient = orient(1, indexes);
@@ -129,6 +138,8 @@ function [mymovie, updated] = reconstruct_egg(mymovie, opts)
       orient = orient - 2*pi;
     end
   end
+
+  orient = align_orientations(orient);
 
   mymovie.metadata.center_3d = centers;
   mymovie.metadata.axes_length_3d = axes_length;
@@ -218,7 +229,8 @@ function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, cente
 
   unknowns = isnan(z_pos);
 
-  w = 4;
+  %w = 4;
+  w = 2;
   sharpness(sharpness < thresh) = sharpness(sharpness < thresh).^w;
   sharpness(sharpness >= thresh) = sharpness(sharpness >= thresh).^(1/w);
 
@@ -236,7 +248,11 @@ function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, cente
 
   optims = optimset('Display', 'off', 'Algorithm', 'levenberg-marquardt', 'TolFun', 1e-6, 'TolX', 1e-4);
 
-  p0 = sqrt(axes_length(1:2)*1.125);
+  if (isnan(axes_length(3)))
+    p0 = sqrt(axes_length(1:2)*1.125);
+  else
+    p0 = sqrt(axes_length*1.125);
+  end
   bests = lsqnonlin(@fit_z, p0, [], [], optims);
 
   bests = bests.^2;
@@ -244,7 +260,10 @@ function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, cente
     [bests(1), bests(2)] = deal(bests(2), bests(1));
   end
 
-  bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
+  if (numel(bests) == 2)
+    bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
+  end
+
   axes_length = bests(1:3);
 
   [errs, rel_z] = fit_z(sqrt(axes_length));
@@ -263,8 +282,10 @@ function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, cente
       [ax(1), ax(2)] = deal(ax(2), ax(1));
     end
 
-    z_pred = z_coefs.bkg + z_coefs.long_axis * ax(1) + z_coefs.short_axis * ax(2);
-    ax(3) = z_pred;
+    if (numel(ax) == 2)
+      z_pred = z_coefs.bkg + z_coefs.long_axis * ax(1) + z_coefs.short_axis * ax(2);
+      ax(3) = z_pred;
+    end
 
     z_err = all_errs;
     tmp_z = dist;
@@ -317,7 +338,7 @@ function [axes_length, relative_z, all_coords] = fit_relative_ellipse(pts, cente
     end
 
     if (any(unknowns))
-      z_err = mean(z_err) + 2*(sum(isnan(tmp_z))/nframes) + mymean(abs(tmp_z(unknowns)))/ax(3);
+      z_err = mean(z_err) + 2*(sum(isnan(tmp_z))/nframes) + 2*mymean(abs(tmp_z(unknowns)))/ax(3);
     else
       z_err = mean(z_err) + (sum(isnan(tmp_z))/nframes);
     end
@@ -350,7 +371,13 @@ function [z_center, axes_length, pts] = fit_absolute_ellipse(pts, center, axes_l
   [c, a, o] = fit_ellipse(all_coords(:, 3), ell_coords(:, 2) .* sign(ell_coords(:, 1)));
   z_center = c(1);
 
-  w = 4;
+  %orig_sharp = sharpness;
+
+  %for w=0.5:0.5:2
+  %  sharpness = orig_sharp;
+  w = 2;
+
+  %w = 4;
   sharpness(sharpness < thresh) = sharpness(sharpness < thresh).^w;
   sharpness(sharpness >= thresh) = sharpness(sharpness >= thresh).^(1/w);
 
@@ -368,32 +395,42 @@ function [z_center, axes_length, pts] = fit_absolute_ellipse(pts, center, axes_l
 
   optims = optimset('Display', 'off', 'Algorithm', 'levenberg-marquardt', 'TolFun', 1e-6, 'TolX', 1e-4);
 
-  p0 = [sqrt(axes_length(1:2)*1.125); z_center];
+  p0 = [sqrt([axes_length(1:2); a(1)]*1.125); z_center];
   bests = lsqnonlin(@fit_a, p0, [], [], optims);
 
-  z_center = bests(3);
+  z_center = bests(end);
 
   bests = bests.^2;
   if (bests(1) < bests(2))
     [bests(1), bests(2)] = deal(bests(2), bests(1));
   end
+  
+  %figure;plot_3d_ellipse(pts)
+  %hold on;plot_3d_ellipse([center(1:2);sqrt(bests(4))], bests(1:3), orient);
+  %title(num2str(w));drawnow;
 
-  bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
+  %end
+
+  if (length(bests) == 3)
+    bests(3) = z_coefs.bkg + z_coefs.long_axis * bests(1) + z_coefs.short_axis * bests(2);
+  end
   axes_length = bests(1:3);
 
   return;
 
   function [z_err] = fit_a(ax)  
 
-    c_z = z_pos - ax(3);
+    c_z = z_pos - ax(end);
     ax = ax.^2;
 
     if (ax(1) < ax(2))
       [ax(1), ax(2)] = deal(ax(2), ax(1));
     end
 
-    z_pred = z_coefs.bkg + z_coefs.long_axis * ax(1) + z_coefs.short_axis * ax(2);
-    ax(3) = z_pred;
+    if (length(ax)==3)
+      z_pred = z_coefs.bkg + z_coefs.long_axis * ax(1) + z_coefs.short_axis * ax(2);
+      ax(3) = z_pred;
+    end
 
     z_err = all_errs;
     z_std = dist;
@@ -434,7 +471,7 @@ function [z_center, axes_length, pts] = fit_absolute_ellipse(pts, center, axes_l
       z_err(bads) = z_err(bads) .* mymean(sharpness(all_bads), 1, indexes(all_bads));
     end
 
-    z_err = mean(z_err) + (sum(isnan(z_target))/nplanes);
+    z_err = mean(z_err) + (sum(isnan(z_target))/nplanes) + mymean(abs(z_target))/2;
     
     return;
   end
@@ -471,7 +508,6 @@ function goods = filter_goods(goods, thresh)
   return;
 end
 
-%{
 function plot_3d_ellipse(pts, axes, orient)
   
   hold on;
@@ -515,4 +551,3 @@ function plot_3d_ellipse(pts, axes, orient)
 
   return;
 end
-%}

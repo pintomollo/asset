@@ -29,6 +29,8 @@ function mymovie = cortical_signal(mymovie, opts)
     window_shape = window_shape / sum(window_shape(:));
   end
 
+  rescale_size = [370 570];
+
   if (opts.quantification.use_ruffles)
     if ((opts.recompute & opts.segment) | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
     %if (~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
@@ -67,6 +69,9 @@ function mymovie = cortical_signal(mymovie, opts)
   prev_width = NaN;
   ninit = 10;
 
+  tmp_opts = opts;
+  tmp_opts.verbosity = 0;
+
   priors = NaN(ninit, 2);
 %  egg_priors = NaN(ninit, 2);
   for i=1:ninit
@@ -76,7 +81,7 @@ function mymovie = cortical_signal(mymovie, opts)
     cortex = mymovie.data.cortex(nimg).carth;
 
     if (~isempty(cortex))
-      [priors(i,:)] = estimate_peak(ph, cortex, [], true, opts);
+      [priors(i,:)] = estimate_peak(ph, cortex, [], true, tmp_opts);
 %      [egg_priors(i,:)] = estimate_peak(data, mymovie.data.eggshell(nimg).carth, [0 priors(i,2)], true, opts);
     end
   end
@@ -133,6 +138,7 @@ function mymovie = cortical_signal(mymovie, opts)
 
       egg = mymovie.data.eggshell(nimg).carth;
       egg_dist = min(sqrt(bsxfun(@minus, egg(:,1), cortex(:,1).').^2 + bsxfun(@minus, egg(:,2), cortex(:,2).').^2), [], 2);
+      cortex_dist = min(sqrt(bsxfun(@minus, cortex(:,1), egg(:,1).').^2 + bsxfun(@minus, cortex(:,2), egg(:,2).').^2), [], 2);
       %egg = mymovie.markers.eggshell(nimg).carth;
       %if (nimg>1)
       %  if (prev_width > 0)
@@ -157,6 +163,23 @@ function mymovie = cortical_signal(mymovie, opts)
 
       %[gs] = estimate_signal(img, cortex, dperp, dpos, peak_prior, opts);
       pos = estimate_peak(ph, cortex, priors, false, opts);
+
+      if (opts.verbosity == 3)
+        npts = size(pos, 1);
+        half = round(npts/2);
+        figure;
+        subplot(1,3,1);
+        title('A')
+        subplot(1,3,2);
+        plot(pos([half+1:end 1:half],1), 'k')
+        xlim([1 npts])
+        title('\mu')
+        subplot(1,3,3);
+        plot(pos([half+1:end 1:half],2), 'k')
+        xlim([1 npts])
+        title('\sigma')
+      end
+
       imf = emdc([], pos(:,1), true, 4);
       %if (size(imf, 1) > 4)
       %  pos = sum(imf(end-3:end, :), 1).';
@@ -167,6 +190,20 @@ function mymovie = cortical_signal(mymovie, opts)
 
       goods = (egg_dist >= 3*priors(2));
       [gs, dperp] = estimate_signal(img, cortex, pos, priors(2), opts);
+
+      if (opts.verbosity == 3)
+
+        figure;imshow(realign(imnorm(img),rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)));
+        hold on;
+        myplot(realign(mymovie.markers.eggshell(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)), 'g')
+        myplot(realign(mymovie.markers.cortex(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)), 'r')
+        myplot(realign(mymovie.data.eggshell(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)),'Color',[0.5 1 0]);
+        myplot(realign(mymovie.data.cortex(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)),'Color',[1 0.5 0]);
+
+        figure;
+        estimate_peak(ph, cortex, [], true, opts);
+        estimate_peak(img, cortex, priors, true, opts);
+      end
 
       if (any(goods))
         egg_pos = estimate_peak(img, egg, [0 priors(2)/2], false, opts);
@@ -281,6 +318,7 @@ function mymovie = cortical_signal(mymovie, opts)
       mymovie.data.quantification(nimg).bkg = {vertical_bkg, horizontal_bkg};
       mymovie.data.quantification(nimg).ruffles = rescale;
       mymovie.data.quantification(nimg).carth = cortex;
+      mymovie.data.quantification(nimg).autofluorescence = cortex_dist;
     else
 
       [dperp, dpos] = perpendicular_sampling(cortex, opts);
@@ -299,6 +337,7 @@ function mymovie = cortical_signal(mymovie, opts)
 
   for i=1:nframes
     mymovie.data.quantification(i).eggshell = egg_stats;
+    mymovie.data.quantification(i).autofluorescence = egg_stats(1)*exp(-mymovie.data.quantification(i).autofluorescence.^2 ./ (2*egg_stats(2)^2));
   end
 
   if (opts.recompute|~isfield(mymovie.data, 'domain')|isempty(mymovie.data.domain))
@@ -455,6 +494,17 @@ function [peak_params, dperp, dpos] = estimate_peak(ph, cortex, priors, do_avg, 
     end
   end
 
+  if (nrows == 1 && opts.verbosity == 3)
+    goods = ismember(x, maxs);
+    My = max(y);
+    my = min(y);
+
+    plot(x, y, 'k');
+    hold on
+    scatter(x(goods), y(goods), 'b');
+    plot(peak_params(1)+peak_params(2)*[-1 0 1; -1 0 1], [my my my; My My My], 'r');
+  end
+
   return;
 end
 
@@ -484,13 +534,21 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   s = halfed - bkg;
   [maxs, indxs] = max(s(:, gauss3), [], 2);
   avgs = mymean(s(:, gauss3), 2);
-  % Average over [-3 3]*sigma of a gaussian is ~0.42*ampl
-  ampls = (maxs-avgs)/0.58;
+  % Average over [-N N]*sigma of a gaussian is integral (A/C)*sqrt(pi/2)*erf(C/sqrt(2))
+
+  ampls = (maxs-avgs)/(1 - (sqrt(pi/2)*erf(coef/sqrt(2))/coef));
   goods = ~isnan(ampls);
 
   if (~all(goods))
     tmp_pos = [1:length(ampls)].';
     [junk, ampls] = interp_elliptic(tmp_pos(goods), ampls(goods), tmp_pos, tmp_pos([1 end]));
+  end
+
+  if (opts.verbosity == 3)
+    half = round(length(ampls)/2);
+    subplot(1,3,1);
+    plot(ampls([half+1:end 1:half]), 'k')
+    xlim([1 length(ampls)])
   end
 
   imf = emdc([], ampls, true, 3);
@@ -499,6 +557,15 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   %else
     ampls = imf(end, :);
   %end
+
+  if (opts.verbosity == 3)
+    subplot(1,3,1);hold on;
+    plot(ampls([half+1:end 1:half]), 'b')
+    subplot(1,3,2);hold on;
+    plot(pos([half+1:end 1:half]), 'b')
+    subplot(1,3,3);hold on;
+    plot([1 length(ampls)], [peak_width peak_width], 'b')
+  end
 
   %bkg = halfed;
   %bkg(:,gauss3) = interp2(X(:,~gauss3), Y(:,~gauss3), bkg(:,~gauss3), X(:,gauss3), Y(:, gauss3), 'linear');
@@ -514,7 +581,7 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   lbound = [0*tmp -2*peak_width+pos peak_width*0.95*tmp];
   ubound = [max(halfed(:))*tmp 2*peak_width+pos peak_width*1.05*tmp];
 
-  gaussians = perform_fit(p0, lbound, ubound, dpos, values, halfed, coef);
+  gaussians = perform_fit(p0, lbound, ubound, dpos, values, halfed, coef, opts);
 
   if (opts.verbosity == 3)
 %    figure;
@@ -522,12 +589,28 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
 %    hold on;
 %    myplot(realign(carths,[388 591],centers(:,nimg),orientations(1,nimg)),'g');
 
-    half = round(size(values, 1)/2);
-    figure;imagesc(values([half+1:end, 1:half], :));
-
     p = bsxfun(@minus, dpos, gaussians(:,2));
+    half = round(size(values, 1)/2);
+    gauss = bsxfun(@lt, abs(p), gaussians(:,3)*coef);
+    bkg = halfed;
+
+    for j=1:size(bkg,1)
+      bkg(j,gauss(j,:)) = interp1(dpos(~gauss(j,:)), bkg(j,~gauss(j,:)), dpos(:,gauss(j,:)), 'linear');
+  %final3 = bkg + bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
+    end
+
     signal = bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
-    figure;imagesc(signal([half+1:end, 1:half], :));
+    final = signal + bkg;
+
+    mval = min(values(:));
+    Mval = max(values(:));
+
+    figure;imagesc(values([half+1:end, 1:half], :));caxis([mval Mval]);
+    figure;imagesc(halfed([half+1:end, 1:half], :));caxis([mval Mval]);
+    figure;imagesc(bkg([half+1:end, 1:half], :));caxis([mval Mval]);
+    figure;imagesc(signal([half+1:end, 1:half], :));caxis([mval Mval]);
+    figure;imagesc(final([half+1:end, 1:half], :));caxis([mval Mval]);
+    figure;imagesc(values([half+1:end, 1:half], :)  - final([half+1:end, 1:half], :));caxis([mval Mval]);
   end
 
   %p = bsxfun(@minus, dpos, gaussians(:,2));
@@ -540,7 +623,7 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
   return;
 end
 
-function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coef)
+function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coef, opts)
 %  [maxs, indxs] = max(smoothed(:, gauss), [], 2);
 %  avgs = mymean(smoothed(:, gauss), 2);
   % Average over [-1.79 1.79]*sigma of a gaussian is ~0.65*ampl
@@ -548,6 +631,16 @@ function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coe
 
   [niter, params] = fit_cminpack_mex(p0.', values.', coef, lbound.', ubound.', dpos, smoothed.');
   params = params.';
+
+  if (opts.verbosity == 3)
+    half = round(size(params, 1)/2);
+    subplot(1,3,1);hold on;
+    plot(params([half+1:end 1:half],1), 'c')
+    subplot(1,3,2);hold on;
+    plot(params([half+1:end 1:half],2), 'c')
+    subplot(1,3,3);hold on;
+    plot(params([half+1:end 1:half],3), 'c')
+  end
 
   goods = (params(:,3) ~= -1);
   if (~all(goods))
@@ -584,6 +677,16 @@ function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coe
   p0(p0(:,1)<0,1)=0;
   lbound(lbound(:,1)<0,1)=0;
 
+  if (opts.verbosity == 3)
+    subplot(1,3,1);hold on;
+    plot(p0([half+1:end 1:half],1), 'm')
+    subplot(1,3,2);hold on;
+    plot(p0([half+1:end 1:half],2), 'm')
+    subplot(1,3,3);hold on;
+    plot(p0([half+1:end 1:half],3), 'm')
+  end
+
+
   [niter, params] = fit_cminpack_mex(p0.', values.', coef, lbound.', ubound.', dpos, smoothed.');
   
   gaussians = params.';
@@ -591,6 +694,16 @@ function gaussians = perform_fit(p0, lbound, ubound, dpos, values, smoothed, coe
   gaussians(~goods, :) = NaN;
   gaussians(gaussians(:,1) < 0, 1) = 0;
 %  plot(gaussians(:,1), 'c')
+
+  if (opts.verbosity == 3)
+    subplot(1,3,1);hold on;
+    plot(gaussians([half+1:end 1:half],1), 'r')
+    subplot(1,3,2);hold on;
+    plot(gaussians([half+1:end 1:half],2), 'r')
+    subplot(1,3,3);hold on;
+    plot(gaussians([half+1:end 1:half],3), 'r')
+  end
+
 
 %  keyboard
 

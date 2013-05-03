@@ -44,6 +44,8 @@ function [flows, flows_small, pnm] = average_flow(signals, alignment, proj_bin_s
     figure;imagesc(signals(:,:,i), clim);
   end
 
+  figure;imagesc(avg);
+
   pos = [-half:half]*proj_bin_size;
   pos = (pos(1:end-1) + pos(2:end)) / 2;
 

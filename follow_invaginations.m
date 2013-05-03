@@ -20,14 +20,15 @@ function mymovie = follow_invaginations(mymovie, opts)
 
   %inner_thresh = 0.02;
   jump_coef = 0.05;
-  coef = 3.5;
   straighten_coef = 0.5;
+  %straighten_coef = 0.999
   bound_thresh = 50;
+  coef = 3.5;
 
   for i = 1:nframes
     nimg = i;
     %nimg = floor(rand(1)*nframes)+1
-    %nimg = 16 + i
+    %nimg = 29 + i
 
     ruffles = mymovie.(type).ruffles(nimg).carth;
     valid_ruffles = all(~isnan(ruffles), 2);
@@ -98,26 +99,42 @@ function mymovie = follow_invaginations(mymovie, opts)
       %ell_bounds(ell_bounds > flipped_size(2)) = ell_bounds(ell_bounds > flipped_size(2)) - flipped_size(2);
 
       parameters.cortex_params.beta = (1 - straighten_coef)*parameters.cortex_params.beta + straighten_coef;
+
+      parameters.cortex_params.alpha = 0.65;
+      %parameters.cortex_params.beta = 
+      %parameters.cortex_params.gamma = 
+
       [junk, map, dist] = dynamic_programming(polar_img, parameters.cortex_params, segment_func, parameters.cortex_weights, opts, true);
 
       dist_path = bilinear_mex(dist, vert_indx, ell_path);
       weight_img = segment_func(polar_img, parameters.cortex_weights);
-      %intens_path = bilinear_mex(weight_img, vert_indx, ell_path);
+      intens_path = bilinear_mex(weight_img, vert_indx, ell_path);
       %intens_bkg = bilinear_mex(weight_img, vert_indx, ell_path/2);
       %intens_path = bilinear_mex(polar_img, vert_indx, ell_path);
 
-      %mean_intens = prctile(intens_path, 50);
+      mean_intens = prctile(intens_path, 50);
       %mean_bkg = prctile(intens_bkg, 50);
       %thresh = mean_intens+ coef*std(intens_path);
+      thresh = mean_intens - std(intens_path);
       %thresh = mean_intens + coef*(mean_bkg - mean_intens);
       %thresh = prctile(weight_img, coef, 2);
-      thresh = prctile(weight_img, 50, 2) - coef*std(weight_img, [], 2);
+%      thresh = prctile(weight_img, 50, 2) - coef*std(weight_img, [], 2);
 
       if (opts.verbosity == 3)
+
+        figure;hist(intens_path(:), [1:100]/100);
+        xlim([0 1]);
+
         figure;subplot(2,1,1);imshow(weight_img);hold on;
+        colormap(redbluemap);
         plot([1:length(ell_path)],ell_path);
-        %subplot(2,1,2);hold on;plot([0 0; polar_size(2) polar_size(2)],[mean_intens thresh; mean_intens thresh])
-        subplot(2,1,2);hold on;plot(thresh, 'r');
+        plot(junk, 1:length(junk), 'c');
+        scatter(ell_ruffles(:,1), ell_ruffles(:,2), 'w')
+        scatter(ell_mins(:,2), ell_mins(:,1), 'b')
+        scatter(ell_maxs(:,2), ell_maxs(:,1), 'r')
+        subplot(2,1,2);hold on;plot([0 0; polar_size(2) polar_size(2)],[mean_intens thresh; mean_intens thresh], 'r')
+        ylim([0 1]);
+        %subplot(2,1,2);hold on;plot(thresh, 'r');
       end
 
       for r=1:nruffles
@@ -168,7 +185,8 @@ function mymovie = follow_invaginations(mymovie, opts)
         inv_path = backtrack(map, round(ell_path(start)), start);
         inv_intens = weight_img(sub2ind(flipped_size, inv_path(:,1), inv_path(:,2)));
 
-        val_test = ([inv_intens(1:end-1); Inf] >= thresh(inv_path(1,1):-1:1));
+        %val_test = ([inv_intens(1:end-1); Inf] >= thresh(inv_path(1,1):-1:1));
+        val_test = ([inv_intens(1:end-1); Inf] >= thresh);
         %transitions = find([2; diff(val_test)]);
         %domains = diff([transitions; size(inv_intens, 1)]);
         %domain_vals = val_test(transitions);
@@ -195,7 +213,8 @@ function mymovie = follow_invaginations(mymovie, opts)
         end
 
         if (worst > 1)
-          indx = find(inv_intens(1:worst) < thresh(worst:-1:1), 1, 'last');
+          %indx = find(inv_intens(1:worst) < thresh(worst:-1:1), 1, 'last');
+          indx = find(inv_intens(1:worst) < thresh, 1, 'last');
           if (isempty(indx))
             indx = 1;
           end
@@ -231,7 +250,7 @@ function mymovie = follow_invaginations(mymovie, opts)
           end
         end
       end
-      mymovie.(type).ruffles(nimg).properties = [mymovie.(type).ruffles(nimg).properties inv_length];
+      mymovie.(type).ruffles(nimg).properties(:,3) = inv_length;
 
       if (opts.verbosity == 3)
         subplot(2,1,1);

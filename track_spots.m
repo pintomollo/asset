@@ -78,6 +78,7 @@ function [links, spots] = track_spots(spots, opts)
     cpb.start();
   end
 
+  nprops = 0;
   for i=1:nframes
 
     prev_pts = pts;
@@ -85,6 +86,10 @@ function [links, spots] = track_spots(spots, opts)
 
     pts = spots{i};
     [npts, tmp] = size(pts);
+
+    if (npts > 0 && nprops == 0)
+      nprops = tmp - 2;
+    end
 
     if (ndim == 0)
       ndim = tmp;
@@ -301,16 +306,16 @@ function [links, spots] = track_spots(spots, opts)
         ninterp = target(end) - reference(end);
         new_pts = bsxfun(@plus, bsxfun(@times, (reference(1:2) - target(1:2)) / ninterp, [1:ninterp-1].'), target(1:2));
 
-        curr_pos = target(4);
+        curr_pos = target(end-1);
         curr_indx = target(end);
         for j=1:ninterp-1
           curr_indx = target(end)-j;
           nprev = size(spots{curr_indx}, 1) + 1;
-          spots{curr_indx} = [spots{curr_indx}; [new_pts(j,:) NaN]];
+          spots{curr_indx} = [spots{curr_indx}; [new_pts(j,:) NaN(1,nprops)]];
           links{curr_indx+1} = [links{curr_indx+1}; [curr_pos nprev curr_indx]];
           curr_pos = nprev;
         end
-        links{curr_indx} = [links{curr_indx}; [curr_pos, reference(4), curr_indx-1]];
+        links{curr_indx} = [links{curr_indx}; [curr_pos, reference(end-1), curr_indx-1]];
       else
         links{target(end)} = [links{target(end)}; [target(end-1), reference(end-1:end)]];
       end

@@ -36,7 +36,7 @@ function mymovie = detect_data_nuclei(mymovie, opts)
 
     for i=1:nframes
       nimg = i;
-      %nimg = i + 100;
+      %nimg = 290;
       %nimg = randi(nframes, 1);
 
       nuclei(nimg).cluster = [];
@@ -46,6 +46,11 @@ function mymovie = detect_data_nuclei(mymovie, opts)
       if (~isnan(mymovie.data.orientations(1,nimg)))
 
         img = double(load_data(mymovie.data, nimg));
+
+        if (opts.verbosity == 3)
+          orig_img = img;
+        end
+
         noise_params = estimate_noise(img);
         vals = range(img(:));
 
@@ -56,7 +61,7 @@ function mymovie = detect_data_nuclei(mymovie, opts)
         img = median_mex(img, parameters.noise.median);
         threshed = (img > noise_params(1) + noise_thresh*noise_params(2));
         bw = imfill(threshed, 'holes');
-        
+
         cc = bwconncomp(bw);
         if (cc.NumObjects > 1)
           sizes = NaN(1, cc.NumObjects);
@@ -77,6 +82,11 @@ function mymovie = detect_data_nuclei(mymovie, opts)
 
         bw = roipoly(bw, y(indx), x(indx));
         bw = imerode(bw, strel('disk', 5));
+
+        if (opts.verbosity == 3)
+          bkg_mask = bw;
+        end
+
         bw = bw & ~threshed;
 
         cc = bwconncomp(bw);
@@ -84,12 +94,15 @@ function mymovie = detect_data_nuclei(mymovie, opts)
 
         %props = regionprops(bw, 'Area', 'Eccentricity', 'Centroid', 'EquivDiameter', 'Solidity');
 
-  %      subplot(1,2,1);
-  %      imagesc(img);
-  %      subplot(1,2,2);
-  %      hold off;
-  %      imagesc(bw);
-  %      hold on;
+        if (opts.verbosity == 3)
+          img_size = [330 450]
+          figure;imagesc(realign(img, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+
+          figure;imagesc(realign(double(bkg_mask + threshed), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+
+          figure;imagesc(realign(bw, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+          hold on;
+        end
 
         for j = 1:cc.NumObjects
           vals = dist(cc.PixelIdxList{j});
@@ -99,7 +112,11 @@ function mymovie = detect_data_nuclei(mymovie, opts)
 
             indx = cc.PixelIdxList{j}(indx(1));
             [y, x] = ind2sub(size(bw), indx);
-  %          rectangle('Position', [x-R y-R 2*R([1 1])], 'Curvature', [1 1], 'EdgeColor', 'w');
+        
+            if (opts.verbosity == 3)
+              tmp_pts = realign([x y], img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi);
+              rectangle('Position', [tmp_pts(1)-R tmp_pts(2)-R 2*R([1 1])], 'Curvature', [1 1], 'EdgeColor', 'w');
+            end
 
             nuclei(nimg).carth = [nuclei(nimg).carth; [x y]];
             nuclei(nimg).properties(end+1, 1) = R;
@@ -122,6 +139,8 @@ function mymovie = detect_data_nuclei(mymovie, opts)
 %      scatter(nuclei(i).carth(:,1), nuclei(i).carth(:,2));
 %    end
 %  end
+  
+
   if (opts.recompute | empty_struct(nuclei, 'cluster'))
     opts.nuclei_tracking.pixel_size = opts.pixel_size;
     nuclei = track_spots(nuclei, opts.nuclei_tracking);
@@ -180,8 +199,6 @@ function mymovie = detect_data_nuclei(mymovie, opts)
       all_pos(first:last, :) = interp1q(indxs(goods), all_pos(goods, :), indxs(first:last));
     end
   end
-
-  keyboard
 
   prev_good = 0;
   for i=1:nframes

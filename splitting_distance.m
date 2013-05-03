@@ -5,7 +5,8 @@ function [dist, weight, alt_weight] = splitting_distance(pts1, pts2, spots, link
   [ninterm, ncols] = size(pts1);
   nstarts = size(pts2, 1);
 
-  int_indx = min(4, ncols-2);
+  int_indx = 3;
+  %int_indx = min(4, ncols-2);
 
   frames = unique(pts1(:, end)).';
   next_intense = NaN(ninterm, 1);
@@ -30,9 +31,9 @@ function [dist, weight, alt_weight] = splitting_distance(pts1, pts2, spots, link
   alt_weight = pts1(:, int_indx) ./ next_intense;
   alt_weight(alt_weight < 1) = alt_weight(alt_weight < 1).^(-2);
   alt_weight(isnan(alt_weight)) = max(alt_weight, [], 1);
+
   alt_weight = diag(alt_weight);
   %alt_weight = repmat(alt_weight, 1, ninterm);
   alt_weight(alt_weight == 0) = Inf;
-
   return;
 end

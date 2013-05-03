@@ -107,7 +107,7 @@ function [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(v
   for i=1:length(varargin)
     %var_type = get_type(varargin{i});
     if (isempty(varargin{i}))
-      if (isempty(pts))
+      if (isempty(ptsx))
         ptsx = NaN(1,2);
       end
     else

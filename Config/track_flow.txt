@@ -12,3 +12,9 @@ iteration_threshold 1e-10
 fusion_thresh 0.5
 noise_thresh 1
 verbosity 2
+min_path_length 5
+projection_frames 10
+projection_dist 0.8333
+projection_bin_size 2
+projection_args Inf
+projection_type 'gaussian'

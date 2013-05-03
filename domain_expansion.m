@@ -22,6 +22,27 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
 
     path_center = dynamic_programming(domain, opts.quantification.params, opts.quantification.scoring_func, opts.quantification.weights, opts);
 
+    if (opts.verbosity == 3)
+
+      center = find(theta == 0);
+      pos_indx = [center:50:size(domain,2)];
+      tmp = [center:-50:1];
+      pos_indx = [tmp(end:-1:2) pos_indx];
+
+      figure;imagesc(ruffles);
+
+      figure;subplot(2,1,1)
+      imagesc(domain);
+      set(gca, 'XTick', pos_indx, 'XTickLabel', theta(pos_indx));
+      hold on;
+      plot(path_center, 1:length(path_center));
+      subplot(2,1,2);
+      plot(opts.quantification.params.init);
+      xlim([1 size(domain, 2)]);
+
+      figure;imagesc(opts.quantification.scoring_func(domain, opts.quantification.weights));
+    end
+
     [domain, ruffles, pos, indx] = align_domain(domain, ruffles, path_center, opts);
     [domain, boundary] = crop_domain(domain, indx);
     pos = pos([-boundary:boundary]+indx);
@@ -119,18 +140,25 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
   domain = imnorm(domain(1:cytok, :));
   path = dynamic_programming(domain, opts.segmentation_parameters.domain_expansion.cortex_params, opts.segmentation_parameters.domain_expansion.scoring_func, opts.segmentation_parameters.domain_expansion.cortex_weights, opts);
 
+    if (opts.verbosity == 3)
+      pos_indx = [0:50:boundary];
+
+      figure;
+      imagesc(raw_domain);
+      set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+center, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+center));
+
+      figure;imagesc(domain);
+      hold on;plot(path, 1:length(path));
+      set(gca, 'XTick', pos_indx+1, 'XTickLabel', pos(pos_indx+center));
+
+      figure;imagesc(opts.segmentation_parameters.domain_expansion.scoring_func(domain, opts.segmentation_parameters.domain_expansion.cortex_weights));
+    end
   %figure;
   %imagesc(domain);hold on;
   %plot(path, 1:length(path), 'k');figure;
 
   cell_width = median(2*sum(~isnan(domain(max(end-5, 1):end, :)), 2) - 1) * opts.quantification.resolution;
-  try
   max_width = max(path(max(end-5, 1):end));
-  catch ME
-    warning('Weird stuff happening again!');
-    size(path)
-    max_width = 1;
-  end
   fraction = path / max_width;
 
   if (opts.quantification.resolution > 0)

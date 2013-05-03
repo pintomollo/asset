@@ -124,6 +124,8 @@ function mymovie = align_embryo(mymovie, opts)
       inverted(3) = (med_angl > pi/2);
     end
 
+  %keyboard
+
     %{
     angl_thresh = 0.2;
     times = get_manual_timing(mymovie, opts);

@@ -71,9 +71,6 @@ function mymovie = find_ruffles(mymovie, opts)
       conv = conv([end:-1:1],:);
     end
 
-    %figure;myplot(pts);hold on;
-    %myplot(conv,'r');
-
     ell_pts = carth2elliptic(pts, center, axes_length, orient, 'radial');
     ell_conv = carth2elliptic(conv, center, axes_length, orient, 'radial');
     indx = find(ell_conv(1:end-1,1) > ell_conv(2:end,1));
@@ -89,10 +86,17 @@ function mymovie = find_ruffles(mymovie, opts)
 
     ell_conv = [ell_pts(:,1) tmp_conv];
 
-    %figure;myplot(ell_pts);hold on;
-    %myplot(ell_conv,'r');
       
     dist = ell_conv(:,2) - ell_pts(:,2);
+
+    if (opts.verbosity == 3)
+    figure;myplot(pts);hold on;
+    myplot(conv,'r');
+    figure;myplot(ell_pts);hold on;
+    myplot(ell_conv,'r');
+    myplot([ell_conv(:,1),dist],'g');
+    end
+
     npts = length(dist);
     dist = [dist; dist(1:ceil(npts/2))];
 
@@ -167,16 +171,21 @@ function mymovie = find_ruffles(mymovie, opts)
 
     pts = [pts(indxs(:,2),:) pts(indxs(:,1),:) pts(indxs(:,3),:)];
 
+    if (opts.verbosity == 3)
+      scatter(ell_pts(indxs(:,1),1), dist(indxs(:,1)), 'b')
+      scatter(ell_pts(indxs(:,2),1), dist(indxs(:,2)), 'r')
+      scatter(ell_pts(indxs(:,3),1), dist(indxs(:,3)), 'g')
+    end
+
     ruffles(i).carth = pts(:,1:2);
     ruffles(i).bounds = pts(:,3:end);
     ruffles(i).properties = dist(indxs(:,2));
+    ruffles(i).path = cell(size(pts,1), 1);
+    ruffles(i).warped = [];
   end
 
   mymovie.(type).ruffles = ruffles;
 
-  %scatter(indxs(:,1), dist(indxs(:,1)), 'b')
-  %scatter(indxs(:,2), dist(indxs(:,2)), 'r')
-  %scatter(indxs(:,3), dist(indxs(:,3)), 'g')
 
   return;
 end

@@ -363,6 +363,32 @@ function mymovie = measure_flow(mymovie, opts)
 
       flow(nimg).speed = [curr_speed, curr_std];
       flow(nimg).position = centers;
+
+      if (nimg == 290 && opts.verbosity == 3)
+        img_size = [330 450]
+        figure;imagesc(realign(double(load_data(mymovie.data, nimg)), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+        hold on;
+        myplot(realign(cortex, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+
+        
+        pts_tmp = (realign(pts(:,1:2), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+        scatter(pts_tmp(:,1), pts_tmp(:,2), 'k')
+
+        prev_tmp = (realign(prev_pts(:,1:2), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+        scatter(prev_tmp(:,1), prev_tmp(:,2), 'y')
+        speed_tmp = pts_tmp(:,1:2) - prev_tmp(:,1:2);
+
+        plot([prev_tmp(:,1) pts_tmp(:,1)].', [prev_tmp(:,2) pts_tmp(:,2)].', 'w');
+
+        quiver(pts_tmp(:,1), pts_tmp(:,2), speed_tmp(:,1), speed_tmp(:,2), 'k');
+
+        curr_avg_flow = (realign([cortex movement], img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+        quiver(curr_avg_flow(:,1), curr_avg_flow(:,2), curr_avg_flow(:,3), curr_avg_flow(:,4), 'r')
+
+        curr_parall_flow = (realign([cortex perp(:, 2).*speed, -perp(:, 1).*speed], img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+        quiver(curr_parall_flow(:,1), curr_parall_flow(:,2), curr_parall_flow(:,3), curr_parall_flow(:,4), 'g')
+        keyboard;
+      end
     else
       flow(nimg).speed = [];
       flow(nimg).position = [];

@@ -5,7 +5,8 @@ function [dist, weight, alt_weight] = merging_distance(pts1, pts2, spots, links)
   [nends, ncols] = size(pts1);
   ninterm = size(pts2, 1);
 
-  int_indx = min(4, ncols-2);
+  int_indx = 3;
+  %int_indx = min(4, ncols-2);
 
   frames = unique(pts2(:, end)).';
   prev_intense = NaN(ninterm, 1);
@@ -23,6 +24,7 @@ function [dist, weight, alt_weight] = merging_distance(pts1, pts2, spots, links)
 
   alt_weight = pts2(:, int_indx) ./ prev_intense;
   alt_weight(alt_weight < 1) = alt_weight(alt_weight < 1).^(-2);
+  alt_weight(isnan(alt_weight)) = max(alt_weight, [], 1);
   alt_weight = diag(alt_weight);
   alt_weight(alt_weight == 0) = Inf;
 

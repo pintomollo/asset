@@ -41,6 +41,7 @@ function uuids = fit_kymograph(fitting, opts)
   ngroups = length(fitting.ground_truth);
 
   fit_temperatures = false;
+  fit_energy = [];
 
   switch fitting.parameter_set
     case 2
@@ -48,6 +49,14 @@ function uuids = fit_kymograph(fitting, opts)
     case 12
       fit_params = [4 5 12 13];
       fit_temperatures = true;
+    case 13
+      fit_params = [4 5 12 13];
+      fit_temperatures = true;
+      fit_energy = 0.65;
+    case 14
+      fit_params = [4 5 12 13];
+      fit_temperatures = true;
+      fit_energy = [0.65 0.65];
     case 3
       fit_params = [4 5 6 12 13];
     case 4
@@ -59,6 +68,7 @@ function uuids = fit_kymograph(fitting, opts)
     otherwise
       fit_params = [4 12];
   end
+  nrates = length(fit_params);
 
   rng(now + cputime, 'twister');
   uuids = cell(fitting.nfits, 1);
@@ -260,10 +270,14 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (~fit_temperatures)
       flow_scale = 1;
+    else
+      p0 = [p0 fit_energy];
     end
 
     if (fitting.fit_flow)
       p0 = [p0 1];
+    else
+      curr_flow_scale = 1;
     end
 
     if (fitting.fit_sigma)
@@ -431,22 +445,39 @@ function uuids = fit_kymograph(fitting, opts)
       for g=1:ngroups
         curr_p = p_all(:,i);
       
+        tmp_params = ml_params;
+        tmp_params(fit_params) = curr_p(1:nrates);
+        more_params = curr_p(nrates+1:end);
+
         if (fitting.fit_sigma)
-          estim_sigma = curr_p(end);
-          curr_p = curr_p(1:end-1);
+          estim_sigma = more_params(end);
+          more_params = more_params(1:end-1);
         end
 
         if (fitting.fit_flow)
-          curr_flow_scale = curr_p(end);
-          tmp_params(fit_params) = curr_p(1:end-1);
+          curr_flow_scale = more_params(end);
+          more_params = more_params(1:end-1);
         else
-          tmp_params(fit_params) = curr_p;
           curr_flow_scale = 1;
         end
 
         if (fit_temperatures)
-          tmp_params = tmp_params .* temp_scale{g};
-          curr_flow_scale = curr_flow_scale * flow_scale(g);
+          if (isempty(fit_energy))
+            tmp_params = tmp_params .* temp_scale{g};
+            curr_flow_scale = curr_flow_scale * flow_scale(g);
+          else
+            if (length(fit_energy) == 1)
+              E = [1 1]*more_params(end);
+              more_params = more_params(1:end-1);
+            else
+              E = more_params(end-1:end);
+              more_params = more_params(1:end-2);
+            end
+
+            ratio = exp(-(E(1)/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
+            tmp_params = tmp_params .* [ones(4,2)*ratio; ones(4,2)];
+            curr_flow_scale = curr_flow_scale * exp(-(E(2)/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+          end
         end
 
         if (restart)
@@ -616,7 +647,7 @@ function uuids = fit_kymograph(fitting, opts)
             hold on;
             plot(size(tmp_err, 1)-2*gfraction{g}, 'k');
             plot(size(tmp_err, 1)-2*fraction, 'w');
-            title([num2str(p_all(:,i).')]);
+            title([num2str([tmp_params(fit_params) E(:).'])]);
 
             %keyboard
             drawnow

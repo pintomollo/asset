@@ -59,6 +59,7 @@ function [warped, ell_pts] = carth2normalized(pts, warper, opts, varargin)
           end
 
           warped = elliptic2carth(ell_pts, warper.reference.centers, warper.reference.axes_length, warper.reference.orientations, opts.warp_type);
+          warped(:,2) = -warped(:,2);
         end
       end
   end

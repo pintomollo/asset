@@ -271,7 +271,7 @@ function mystruct = get_struct(type, nstruct)
 
     % Parameters of the reference embryo (see carth2normalized.m)
     case 'reference'
-      mystruct = struct('axes_length', [27; 15], ...        % Major and minor radii of the ellipse
+      mystruct = struct('axes_length', [28; 18], ...        % Major and minor radii of the ellipse
                         'centers', [0; 0], ...              % Position of the ellipse
                         'orientations', 0, ...              % Tilt (in radians) of the ellipse
                         'index', 0);                        % Identificator for the current ellipse
@@ -529,9 +529,13 @@ function mystruct = get_struct(type, nstruct)
 
     % The structure containing the information to correlate the Z-axis with the others
     case 'z-correlation'
-      mystruct = struct('bkg', 18.3835, ...
-                        'long_axis', 0.0098, ...
-                        'short_axis', -0.2977);
+      %mystruct = struct('bkg', 18.3835, ...
+      %                  'long_axis', 0.0098, ...
+      %                  'short_axis', -0.2977);
+
+      mystruct = struct('bkg', 19.8346, ...
+                        'long_axis', -0.3039, ...
+                        'short_axis', 0.2399);
 
     % If the required type of structure has not been implemented, return an empty one
     otherwise

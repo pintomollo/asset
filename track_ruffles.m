@@ -37,6 +37,41 @@ function mymovie = track_ruffles(mymovie, opts)
   opts.ruffles_tracking.pixel_size = opts.pixel_size;
   mymovie.(type).ruffles = track_spots(mymovie.(type).ruffles, opts.ruffles_tracking);
 
+  if (opts.verbosity == 3)
+    ncolors = 512;
+    depth_max = 0.25;
+    colors = bluemap(ncolors);
+
+    prev_ell = [];
+    figure;hold on;
+    for i=1:nframes
+      ell_pos = carth2elliptic(mymovie.(type).ruffles(i).carth, mymovie.(type).centers(:,i),mymovie.(type).axes_length(:,i),mymovie.(type).orientations(1,i));
+      
+      if (isempty(ell_pos))
+        continue;
+      end
+      ell_pos(ell_pos(:,1) > 1.2*pi,1) = ell_pos(ell_pos(:,1) > 1.2*pi,1) - 2*pi;
+
+      for j=1:size(ell_pos,1)
+        cindx = ceil(mymovie.(type).ruffles(i).properties(j,1)*ncolors/depth_max);
+        if (~isfinite(cindx))
+          cindx = 1;
+        end
+        cindx = min(cindx, ncolors);
+        scatter(ell_pos(j,1), i, 10, colors(cindx,:));
+      end
+    
+      links = mymovie.(type).ruffles(i).cluster;
+      if (i>1 && ~isempty(links) && ~isempty(prev_ell))
+        pts = ell_pos(links(:,1), :);
+        prev_pts = prev_ell(links(:,2), :);
+      
+        plot([prev_pts(:,1) pts(:,1)].', [ones(size(pts,1),1)*i-1 ones(size(pts,1), 1)*i].', 'k');
+      end
+      prev_ell = ell_pos;
+    end
+  end
+
   return;
 
   max_thresh = 35;

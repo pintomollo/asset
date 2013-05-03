@@ -27,6 +27,7 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
 
           return;
         end
+        type = 'eggshell';
         [nframes, imgsize] = size_data(mymovie.eggshell);
       case 'data'
         [nframes, imgsize] = size_data(mymovie.data);
@@ -63,20 +64,34 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
       
       switch type
         case 'dic'
+          if (opts.verbosity == 3)
+            img = double(load_data(mymovie.dic, nimg));
+            figure;imshow(imnorm(img));
+            img = imadm_mex(img);
+            figure;imshow(imnorm(img));
+            thresh = graythresh(img);
+            img = (img > thresh*0.5*(max(img(:))) );
+            figure;imshow(img);
+          end
           img = double(load_data(mymovie.dic, nimg));
           img = imadm_mex(img);
           thresh = graythresh(img);
           img = (img > thresh*0.5*(max(img(:))) );
-        case 'markers'
+        case 'eggshell'
           img = double(load_data(mymovie.eggshell, nimg));
+
+          noise_params = estimate_noise(img);
+
           img = gaussian_mex(img, size250);
           img = median_mex(img, size200, 3);
 
-          thresh = graythresh(img);          
-          if (thresh == 0)
-            warning('Might need to normalize the image to detect the embryos');
-          end
-          img = (img > thresh*(max(img(:))));
+          img = (img < noise_params(1) + noise_params(2));
+
+          %thresh = graythresh(img);          
+          %if (thresh == 0)
+          %  warning('Might need to normalize the image to detect the embryos');
+          %end
+          %img = (img > thresh*(max(img(:))));
         case 'data'
           %img = imnorm(double(load_data(mymovie.data, nimg)));
           img = (double(load_data(mymovie.data, nimg)));
@@ -113,6 +128,10 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
 
     img =  img((size10+1):(size10+imgsize(1)),(size10+1):(size10+imgsize(2)));
 
+    if (opts.verbosity == 3)
+      figure;imshow(img);
+    end
+
     if(~any(img) | (sum(img(:)) / prod(imgsize) > 0.9))
       continue;
     end
@@ -145,19 +164,19 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
 
       ellipses = fit_segments(tmp_estim, indxs(concaves), borders, opts.split_parameters.max_ratio, opts.split_parameters.max_distance, opts.split_parameters.max_score, opts.split_parameters.max_overlap);
 
-      %if (opts.verbosity == 3)
-      %  figure
-      %  imshow(img);
-      %  hold on
-      %  scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
-      %  scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
-      %  scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
+      if (opts.verbosity == 3)
+        figure
+        imshow(img);
+        hold on
+        scatter(tmp_estim(borders, 1), tmp_estim(borders, 2), 'g');
+        scatter(tmp_estim(indxs, 1), tmp_estim(indxs, 2), 'r');
+        scatter(tmp_estim(indxs(concaves), 1), tmp_estim(indxs(concaves), 2), 'y');
 
-      %  hold on;
-      %  for j = 1:size(ellipses, 1)
-      %    draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
-      %  end
-      %end
+        hold on;
+        for j = 1:size(ellipses, 1)
+          draw_ellipse(ellipses(j, 1:2), ellipses(j, 3:4), ellipses(j, 5));
+        end
+      end
 
       if (i == 1)
         all_ellipses{nimg} = ellipses;

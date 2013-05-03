@@ -36,8 +36,14 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     return;
   end
 
-  neighbors = mymovie.markers.neighbors;
+  if (isempty(mymovie.markers) || ~isfield(mymovie.markers, 'neighbors') || isempty(mymovie.markers.neighbors))
+    neighbors = mymovie.eggshell.neighbors;
+  else
+    neighbors = mymovie.markers.neighbors;
+  end
   parameters = opts.segmentation_parameters.markers;
+
+  rescale_size = [320 480];
 
   img = [];
   if (~isempty(mymovie.eggshell) & (length(eggshell) < nimg | empty_struct(eggshell(nimg), 'carth') | opts.recompute | (~strncmp(opts.do_ml,'none',4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3)))))
@@ -47,8 +53,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     img = imnorm(double(load_data(mymovie.eggshell,nimg)));
 
     if (opts.verbosity == 3)
-      figure;
-      imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));
+      orig_img = img;
     end
 
     img = gaussian_mex(img, parameters.noise.gaussian);
@@ -89,7 +94,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
     img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
 
-    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
+    polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety, 'radial');
     polar_img = imnorm(polar_img,[],[],'rows');
 
     if (opts.compute_probabilities)
@@ -109,19 +114,27 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(carths);
 
+    orientations(1,nimg) = orientations(1,nimg) + pi
+
     %eggshell(nimg).raw = egg_path;
     %eggshell(nimg).elliptic = ellpts;
     eggshell(nimg).carth = carths;
 
     if (opts.verbosity == 3)
+      figure;
+      imshow(realign(imnorm(orig_img),rescale_size,centers(:,nimg),orientations(1,nimg)));
+      hold on;
+      myplot(realign(carths,rescale_size,centers(:,nimg),orientations(1,nimg)),'g');
+      myplot(realign(draw_ellipse(old_center, old_axes, old_orient),rescale_size,old_center, old_orient),'m');
+      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),rescale_size,centers(:,nimg), orientations(1,nimg)),'c');
       %hax = gca;
       %image(img, 'Parent', hax);
       figure;
-      imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));
+      imshow(realign(imnorm(img),rescale_size,centers(:,nimg),orientations(1,nimg)));
       hold on;
-      myplot(realign(carths,[388 591],centers(:,nimg),orientations(1,nimg)),'g');
-      myplot(realign(draw_ellipse(old_center, old_axes, old_orient),[388 591],old_center, old_orient),'m');
-      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),[388 591],centers(:,nimg), orientations(1,nimg)),'c');
+      myplot(realign(carths,rescale_size,centers(:,nimg),orientations(1,nimg)),'g');
+      myplot(realign(draw_ellipse(old_center, old_axes, old_orient),rescale_size,old_center, old_orient),'m');
+      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),rescale_size,centers(:,nimg), orientations(1,nimg)),'c');
 
       figure;
       imshow(polar_img);
@@ -130,6 +143,9 @@ function mymovie = dp_markers(mymovie, nimg, opts)
       %ell = elliptic2pixels([0 1; 2*pi 1], size(polar_img), parameters.safety);
       %plot(ell(:,2), [1 length(egg_path)], 'm');
       plot(ones(1,2) * size(polar_img,2) * 5/ 6, [1 length(egg_path)], 'm');
+
+      figure;imagesc(parameters.scoring_func{1}(polar_img, parameters.eggshell_weights));
+      colormap(redbluemap);
     end
 
     if (opts.measure_performances)
@@ -150,7 +166,7 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
 
     if (opts.verbosity == 3)
-      figure;imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));
+      orig_img = img;
     end
 
     mask = roipoly(size(img,1),size(img,2), eggshell(nimg).carth(:,1), eggshell(nimg).carth(:,2));
@@ -207,17 +223,27 @@ function mymovie = dp_markers(mymovie, nimg, opts)
     end
 
     if (opts.verbosity == 3)
+      figure;
+      imshow(realign(orig_img,rescale_size,centers(:,nimg),orientations(1,nimg)));
+      hold on;
+      myplot(realign(carths,rescale_size,centers(:,nimg),orientations(1,nimg)),'Color',[1 0.5 0]);
+      myplot(realign(eggshell(nimg).carth,rescale_size,centers(:,nimg),orientations(1,nimg)),'g');
+      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),rescale_size,centers(:,nimg), orientations(1,nimg)),'m');
+
+
       figure;imshow(polar_img);
       hold on;plot(cortex_path,[1:length(cortex_path)],'Color',[1 0.5 0]);
       plot(egg_path,[1:length(cortex_path)],'g');
 
       figure;
-      imshow(realign(img,[388 591],centers(:,nimg),orientations(1,nimg)));
+      imshow(realign(img,rescale_size,centers(:,nimg),orientations(1,nimg)));
       hold on;
-      myplot(realign(carths,[388 591],centers(:,nimg),orientations(1,nimg)),'Color',[1 0.5 0]);
-      myplot(realign(eggshell(nimg).carth,[388 591],centers(:,nimg),orientations(1,nimg)),'g');
-      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),[388 591],centers(:,nimg), orientations(1,nimg)),'m');
+      myplot(realign(carths,rescale_size,centers(:,nimg),orientations(1,nimg)),'Color',[1 0.5 0]);
+      myplot(realign(eggshell(nimg).carth,rescale_size,centers(:,nimg),orientations(1,nimg)),'g');
+      myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),rescale_size,centers(:,nimg), orientations(1,nimg)),'m');
 
+      figure;imagesc(parameters.scoring_func{2}(polar_img, parameters.cortex_weights));
+      colormap(redbluemap);
     end
 
     %cortex(nimg).raw = cortex_path;
