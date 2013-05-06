@@ -5,7 +5,9 @@ function find_kymograph(varargin)
   for i=1:length(mymovies)
     mymovie = mymovies{i};
 
-    if (ischar(mymovie))
+    if (strncmp(fitting.type, 'simulation', 10))
+      kymos = struct('ground_truth', -1, 'pos', -1);
+    elseif (ischar(mymovie))
       if (strncmp(mymovie(end-2:end), 'txt', 3))
         kymos = textread(mymovie, '%s');
       else
@@ -35,6 +37,8 @@ function find_kymograph(varargin)
         kymo = kymos(j);
         if (isfield(kymo, 'mymovie'))
           kymo_name = kymo.mymovie.experiment;
+        elseif (strncmp(fitting.type, 'simulation', 10))
+          kymo_name = 'simulation';
         else
           kymo_name = 'Provided_data';
         end

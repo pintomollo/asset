@@ -117,10 +117,17 @@ function uuids = fit_kymograph(fitting, opts)
 
   for g=1:ngroups
     if (strncmp(fitting.type, 'simulation', 10))
-      [fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
-      fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
+        if (fitting.fit_relative)
+           [fitting.ground_truth, fitting.t_pos] = simulate_model_rel(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+        else
+           [fitting.ground_truth, fitting.t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+        end
+
+      %[fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+      fitting.ground_truth = fitting.ground_truth((end/2)+1:end, 1:200);
       fitting.ground_truth = {[fitting.ground_truth; fitting.ground_truth]};
       fitting.x_pos = {[0:opts.nparticles-1] * opts.x_step};
+
     elseif (~isempty(fitting.t_pos))
       if (numel(fitting.t_pos{g}) == 1)
         opts.output_rate(g) = fitting.t_pos{g};
@@ -197,6 +204,8 @@ function uuids = fit_kymograph(fitting, opts)
       ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
       temp_scale{g} = [ones(4,2)*ratio; ones(4,2)];
       flow_scale(g) = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+    else
+      E = [];
     end
   end
   
@@ -401,6 +410,7 @@ function uuids = fit_kymograph(fitting, opts)
         results = dramrun(model,[],params,options);
         p = results.mean;
       case 'sample'
+        options.independent = ~strncmp(fitting.combine_data, 'together', 8);
         options.range_size  = fitting.step_size;
         options.max_iter    = fitting.max_iter;
         options.log_file = [log_name 'evol'];
@@ -623,7 +633,8 @@ function uuids = fit_kymograph(fitting, opts)
           if (fitting.integrate_sigma)
             % Integrated the sigma out from the gaussian error function
             %err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
-            err_all(g,i) = curr_score_weights(g)*(0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g}))) + (0.5*nobs(g,2))*log(sum(tmp_frac));
+            %err_all(g,i) = curr_score_weights(g)*(0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g}))) + (0.5*nobs(g,2))*log(sum(tmp_frac));
+            err_all(g,i) = (0.5*nobs(g,1))*log(curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac));
           else
             if (fitting.fit_sigma)
               %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;

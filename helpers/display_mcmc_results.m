@@ -72,7 +72,8 @@ function display_mcmc_results(data, func)
   end
 
   header = data(:,1);
-  data = data(:,2:end);
+  data = data(:,2:end).^2;
+  disp('Squared !');
 
   %varying = true(1, size(data,2));
   merge = false;

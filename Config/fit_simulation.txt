@@ -1,0 +1,12 @@
+type 'simulation'
+start_with_best false
+fit_relative true
+fitting_type 'cmaes'
+init_noise 0.5
+ndelays 5
+step_size 0.05
+nfits 25
+skip_file 'artifacts.txt'
+tolerance 1e-4
+normalize_smooth false
+data_noise 0.05
