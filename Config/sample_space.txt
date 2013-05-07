@@ -1,9 +1,9 @@
 fit_relative true
 fitting_type 'sample'
-%init_pos [0.0895 1.1211 4.4714 2.2011]
+init_pos [0.02 1 4 3]
 %init_pos [0.2115    1.5827    0.6812    2.7777]
 start_with_best false
-step_size 2
+step_size 1
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-3

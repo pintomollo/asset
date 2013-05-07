@@ -122,8 +122,17 @@ function display_mcmc_results(data, func)
       x = x([1:ceil(end/nbins):end end],:);
       y = y([1:ceil(end/nbins):end end],:);
 
-      x(end) = x(end) + 1e-6;
-      y(end) = y(end) + 1e-6;
+      if (x(end)==x(end-1))
+        x(end) = x(end) + (x(end-1)-x(end-2));
+      else
+        x(end+1) = x(end) + (x(end)-x(end-1));
+      end
+
+      if (y(end)==y(end-1))
+        y(end) = y(end) + (y(end-1)-y(end-2));
+      else
+        y(end+1) = y(end) + (y(end)-y(end-1));
+      end
 
       %dx = min(diff(x));
       %dy = min(diff(y));
@@ -170,6 +179,7 @@ function display_mcmc_results(data, func)
       %pcolor(x,y,[[exp(score_map.') zeros(length(y)-1, 1)]; zeros(1,length(x))]);
       %pcolor(x,y,exp(score_map.'));
       pcolor(x,y,score_map.');
+      set(gca, 'XScale', 'log', 'YScale', 'log');
 
       whitebg('k');
 %      scatter(errs(:, n), errs(:, m), '+b');

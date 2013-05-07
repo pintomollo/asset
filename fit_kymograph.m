@@ -411,7 +411,7 @@ function uuids = fit_kymograph(fitting, opts)
         p = results.mean;
       case 'sample'
         options.independent = ~strncmp(fitting.combine_data, 'together', 8);
-        options.range_size  = fitting.step_size;
+        options.range_size  = sqrt(fitting.step_size);
         options.max_iter    = fitting.max_iter;
         options.log_file = [log_name 'evol'];
         options.printint = 10;
