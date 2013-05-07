@@ -411,7 +411,7 @@ function uuids = fit_kymograph(fitting, opts)
         p = results.mean;
       case 'sample'
         options.independent = ~strncmp(fitting.combine_data, 'together', 8);
-        options.range_size  = sqrt(fitting.step_size);
+        options.range_size  = fitting.step_size;
         options.max_iter    = fitting.max_iter;
         options.log_file = [log_name 'evol'];
         options.printint = 10;
@@ -619,6 +619,7 @@ function uuids = fit_kymograph(fitting, opts)
           end
           
           %tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
+
           tmp_err = (fitting.ground_truth{g} - res).^2 / norm_coeff(g);
           tmp_frac = ((gfraction{g} - fraction)/half).^2;
 
@@ -634,7 +635,7 @@ function uuids = fit_kymograph(fitting, opts)
             % Integrated the sigma out from the gaussian error function
             %err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
             %err_all(g,i) = curr_score_weights(g)*(0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g}))) + (0.5*nobs(g,2))*log(sum(tmp_frac));
-            err_all(g,i) = (0.5*nobs(g,1))*log(curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac));
+            err_all(g,i) = (0.5*nobs(g,2))*log(curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac));
           else
             if (fitting.fit_sigma)
               %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;

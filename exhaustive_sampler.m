@@ -20,7 +20,7 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
     %all_pos = repmat({pos(:)}, 1, nparams);
     %all_pos = enumerate(all_pos{:});
   else
-    nevals = ceil((max_iter^(1/nparams))/2);
+    nevals = max(ceil((max_iter^(1/nparams))/2),2);
     pos = [0:(nevals-1)]*(val_range/(nevals-1));
     pos = exp([-pos(end:-1:2) pos]);
 
@@ -30,7 +30,7 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
 
   nevals = size(all_pos, 1);
   all_pos = all_pos(randperm(nevals), :);
-  all_pos = bsxfun(@times, all_pos, p0(:).');
+  all_pos = sqrt(bsxfun(@times, all_pos, (p0(:).').^2));
 
   % Unique identifier for multiple writers in the same file
   uuid = ['EXHSMPLR' num2str(round(rand(1)*100)) ' '];

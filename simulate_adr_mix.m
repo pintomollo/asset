@@ -16,8 +16,6 @@ function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
     x0 = [];
   end
 
-  opts.reaction_params
-
   if (nargin < 3)
     fit_relative = false;
   end
