@@ -117,6 +117,8 @@ function uuids = fit_kymograph(fitting, opts)
 
   for g=1:ngroups
     if (strncmp(fitting.type, 'simulation', 10))
+        opts.tmax = 2000;
+
         if (fitting.fit_relative)
            [fitting.ground_truth, fitting.t_pos] = simulate_model_rel(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
         else
@@ -124,7 +126,7 @@ function uuids = fit_kymograph(fitting, opts)
         end
 
       %[fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
-      fitting.ground_truth = fitting.ground_truth((end/2)+1:end, 1:200);
+      fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
       fitting.ground_truth = {[fitting.ground_truth; fitting.ground_truth]};
       fitting.x_pos = {[0:opts.nparticles-1] * opts.x_step};
 
