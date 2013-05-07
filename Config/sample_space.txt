@@ -9,7 +9,7 @@ nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-3
 normalize_smooth false
-%max_iter 20000
-max_iter 20
+max_iter 20000
+%max_iter 20
 init_noise 0
 %score_weights 1
