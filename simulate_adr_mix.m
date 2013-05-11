@@ -56,6 +56,31 @@ function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
     [all_x, t] = simulate_model_rel(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
   else
     [all_x, t] = simulate_model_mix(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+    
+    %keyboard
+
+
+    %{
+    
+    all_params2 = all_params;
+
+    L = all_params(end);
+    all_params(4,:) = all_params(4,:).*(L.^(-2*all_params(5,:)));
+    all_params(6,:) = all_params(6,:)*(L^2);
+
+    [all_x, t] = simulate_model_mix(x0/(L^2), all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+
+    all_params = all_params2;
+
+    opts2 = opts;
+    opts2.reaction_params(5,:) = opts.reaction_params(5,:) .* (opts.reaction_params(end,:).^2)
+    opts2.reaction_params(3,:) = opts.reaction_params(3,:) ./ (opts.reaction_params(end,:).^(2*opts.reaction_params(4,:)))
+
+    x1 = opts.init_func(opts2);
+
+    all_params(4,:) = all_params(4,:) ./ all_params(5,:);
+    [all_x2, t2] = simulate_model_real(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+    %}
   end
   %[all_x, t] = simulate_model_mix(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
 

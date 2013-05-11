@@ -305,7 +305,7 @@ static void reactions(float *t_fx, float *t_x_prev, float *t_dx, float *t_ddx, f
     __m128 temp_i = _mm_shuffle_ps(x_i, x_i, _MM_SHUFFLE(2,3,0,1));
 
     //----------------------------------------------------------
-    // _mm_shufle(a,b,_MM_SHUFFLE(i,j,k,l)) produces a[l] a[k] b[j] [b[i]
+    // _mm_shufle(a,b,_MM_SHUFFLE(i,j,k,l)) produces a[l] a[k] b[j] b[i]
     //----------------------------------------------------------
 
     temp_i = FASTPOWS(temp_i, p4);

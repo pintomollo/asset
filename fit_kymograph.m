@@ -152,7 +152,7 @@ function uuids = fit_kymograph(fitting, opts)
     if (strncmp(fitting.aligning_type, 'domain', 6))
       opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
       [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth{g}(1:end/2, :, :), 3).', mymean(fitting.ground_truth{g}((end/2)+1:end, :, :), 3).', size_data(g,1)/2, size_data(g,2), opts_expansion);
-      frac_indx = find(f > fitting.fraction, 1, 'first');
+      frac_indx(g) = find(f > fitting.fraction, 1, 'first');
       tmp_gfrac = f*frac_width;
       tmp_gfrac(isnan(tmp_gfrac)) = 0;
       gfraction{g} = tmp_gfrac;
@@ -456,7 +456,7 @@ function uuids = fit_kymograph(fitting, opts)
 
       for g=1:ngroups
         curr_p = p_all(:,i);
-      
+
         tmp_params = ml_params;
         tmp_params(fit_params) = curr_p(1:nrates);
         more_params = curr_p(nrates+1:end);
@@ -562,7 +562,7 @@ function uuids = fit_kymograph(fitting, opts)
               continue;
             end
             findx = find(f > fitting.fraction, 1, 'first');
-            corr_offset = frac_indx - findx + 1;
+            corr_offset = frac_indx(g) - findx + 1;
             
             if (isempty(corr_offset))
               corr_offset = NaN;
@@ -651,19 +651,67 @@ function uuids = fit_kymograph(fitting, opts)
           %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
 
           if (fitting.display)
-            %figure;
-            subplot(1,2,1);
-            imagesc(mymean(res, 3));
-            title([num2str(err_all(g,i)) ' : ' num2str(sum(tmp_err(linear_goods{g}))) ', ' num2str(sum(tmp_frac))]);
-            subplot(1,2,2);
-            hold off;
-            imagesc(mymean(tmp_err, 3));
-            hold on;
-            plot(size(tmp_err, 1)-2*gfraction{g}, 'k');
-            plot(size(tmp_err, 1)-2*fraction, 'w');
-            title([num2str([tmp_params(fit_params) E(:).'])]);
+            tmp_plot_avg = mymean(res,3).';
+            tmp_plot_err = mymean(tmp_err,3).';
+            tmp_plot_truth = mymean(fitting.ground_truth{g},3).';
 
-            %keyboard
+            tmp_plot_frac = fraction;
+            tmp_plot_frac(1:find(tmp_plot_frac, 1, 'first')-1) = NaN;
+            tmp_plot_gfrac = gfraction{g};
+            tmp_plot_gfrac(1:find(tmp_plot_gfrac, 1, 'first')-1) = NaN;
+
+            xfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_frac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_frac];
+            xgfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_gfrac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_gfrac];
+            yfrac = [size(tmp_plot_err, 1):-1:1 1:size(tmp_plot_err,1)].';
+
+            tmp_pos_tick = [0:50:(size(tmp_plot_err,2)/2 - 1)];
+            tmp_pos_label = fitting.x_pos{1}(tmp_pos_tick + 1);
+            tmp_pos_tick = [-tmp_pos_tick(end:-1:2) tmp_pos_tick] + (size(tmp_plot_err,2)/2);
+            tmp_pos_label = [-tmp_pos_label(end:-1:2) tmp_pos_label];
+
+            %figure;
+            subplot(1,3,1);
+            hold off;
+            imagesc([tmp_plot_avg(:,1:end/2) tmp_plot_avg(:,end:-1:(end/2)+1)]);
+            set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+            colormap(blueredmap)
+            hold on,
+            plot(xfrac, yfrac, 'w');
+            title([num2str(err_all(g,i)) ' : ' num2str(sum(tmp_err(linear_goods{g}))) ', ' num2str(sum(tmp_frac))]);
+
+            subplot(1,3,2);
+            hold off;
+            %imagesc(mymean(tmp_err, 3));
+            imagesc([tmp_plot_err(:,1:end/2) tmp_plot_err(:,end:-1:(end/2)+1)]);
+            set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+            colormap(blueredmap)
+            hold on;
+            %plot((size(tmp_err, 2)/2)-2*gfraction{g}, 1:size(tmp_err,1), 'k');
+            %plot((size(tmp_err, 2)/2)+2*gfraction{g}, 1:size(tmp_err,1), 'k');
+            %plot((size(tmp_err, 2)/2)-2*fraction, 1:size(tmp_err,1), 'w');
+            %plot((size(tmp_err, 2)/2)+2*fraction, 1:size(tmp_err,1), 'w');
+            plot(xfrac, yfrac, 'w');
+            plot(xgfrac, yfrac, 'k');
+
+            disp_params = tmp_params .* rescaling;
+            disp_params = disp_params(fit_params);
+
+            if (fitting.fit_relative)
+              disp_params(1) = bsxfun(@times, disp_params(1), disp_params(4));
+              disp_params(3) = bsxfun(@rdivide, bsxfun(@times, disp_params(3), disp_params(2)), (1.56.^disp_params(4)));
+            end
+            title([num2str([disp_params E(:).'])]);
+
+            subplot(1,3,3);
+            hold off;
+            imagesc([tmp_plot_truth(:,1:end/2) tmp_plot_truth(:,end:-1:(end/2)+1)]);
+            set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+            colormap(blueredmap)
+            hold on
+            plot(xgfrac, yfrac, 'k');
+            title(fitting.type)
+
+            keyboard
             drawnow
           end
         end

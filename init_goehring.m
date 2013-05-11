@@ -1,8 +1,17 @@
-function [init_val, correct] = init_goehring(opts)
+function [init_val, correct] = init_goehring(opts, is_relative)
+
+  if (nargin==1)
+    is_relative = false;
+  end
 
   p = opts.reaction_params;
   correct = true;
 
+  L = p(7);
+  if (is_relative)
+    p(5,:) = p(5,:) ./ (L^2);
+    p(3,:) = p(3,:) .* p(4,:) .* L.^(2*p(4,:));
+  end
   %figure;hold on;
 
   %[pts, lines] = study_isoclines(@maintenance, [0 10], opts.reaction_params);
@@ -43,6 +52,10 @@ function [init_val, correct] = init_goehring(opts)
     %plot(pos, init_val(:,1), 'b');
     %plot(pos, init_val(:,2), 'r');
 
+  end
+
+  if (is_relative)
+    init_val / (L^2);
   end
 
   return;
