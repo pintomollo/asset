@@ -1,16 +1,20 @@
-function [init_val, correct] = init_goehring(opts, is_relative)
+function [init_val, correct] = init_goehring(opts, is_relative, correct_position)
 
   if (nargin==1)
     is_relative = false;
+    correct_position = false;
+  elseif (nargin  == 2)
+    correct_position = false;
   end
 
   p = opts.reaction_params;
   correct = true;
 
-  L = p(7);
+  L = p(7,1);
   if (is_relative)
-    p(5,:) = p(5,:) ./ (L^2);
-    p(3,:) = p(3,:) .* p(4,:) .* L.^(2*p(4,:));
+    p(3,:) = p(3,:) .* p(4,[2 1]);
+    %p(5,:) = p(5,:) ./ (L^2);
+    %p(3,:) = p(3,:) .* p(4,:) .* L.^(2*p(4,:));
   end
   %figure;hold on;
 
@@ -20,16 +24,12 @@ function [init_val, correct] = init_goehring(opts, is_relative)
   %plot(lines(:,1,2), lines(:,2,2), 'r');
   %scatter(pts(:,1), pts(:, 2), 'k');
 
-  pos = p(7)*[0:(opts.nparticles-1)]/(opts.nparticles-1);
-  full_pos = bsxfun(@minus, [pos; pos].', [0.45 0.55]*p(7));
-
   if (opts.init_params)
 
-    pts = find_fixed_points(@uniform, [0 6], p);
+    pts = find_fixed_points(@uniform, [0 0; p(5,:)/p(6,1)], p);
 
-    if (numel(pts) < 2)
+    if (isempty(pts))
       init_val = repmat([1.51 0.1], opts.nparticles, 1); % Values produced by the original parameters
-      correct = false;
     else
       init_val = repmat(pts(1,:), opts.nparticles, 1);
     end
@@ -39,13 +39,16 @@ function [init_val, correct] = init_goehring(opts, is_relative)
 
   else
 
-    pts = find_fixed_points(@maintenance, [0 6], p);
+    pts = find_fixed_points(@maintenance, [0 0; p(5,:)/p(6,1)], p);
     vals = max(pts);
 
-    if (numel(vals) ~= 2)
+    if (isempty(pts))
       vals = [1.8 4]; % Values produced by the original parameters
-      correct = false;
     end
+
+    pos = L*[0:(opts.nparticles-1)]/(opts.nparticles-1);
+    full_pos = bsxfun(@minus, [pos; pos].', [0.45 0.55]*L);
+
     init_val = bsxfun(@times, vals, (erf(bsxfun(@times, [-2/9.8 2/7.7], full_pos)) + 1) / 2);
     %vals * (erf(a*(L-u)) + 1)/2;
 
@@ -54,8 +57,46 @@ function [init_val, correct] = init_goehring(opts, is_relative)
 
   end
 
+  if (numel(pts) < 6)
+    correct = false;
+  end
+
   if (is_relative)
-    init_val / (L^2);
+    init_val = init_val * (L^2);
+  end
+
+  if (correct_position)
+    pts = p;
+    if (~correct && (any(p(4,:) > 1)))
+
+      nevals = 15;
+      pos = [0:(nevals-1)]*(1/(nevals-1));
+      pos = 3.^[-pos(end:-1:2) pos];
+      all_pos = repmat({pos(:)}, 1, 2);
+      all_pos = enumerate(all_pos{:});
+
+      nevals = size(all_pos, 1);
+      all_pos = all_pos(randperm(nevals), :);
+
+      all_pos = abs(bsxfun(@times, all_pos, p(3,:)));
+
+      for i=1:nevals
+        tmp_p = p;
+        tmp_p(3,:) = all_pos(i,:);
+        npts = find_fixed_points(@uniform, [0 0; p(5,:)/p(6,1)], tmp_p, true);
+
+        if (npts == 3)
+          pts = tmp_p;
+          break;
+        end
+      end
+    end
+
+    if (is_relative)
+      pts(3,:) = pts(3,:) ./ pts(4,[2 1]);
+    end
+
+    init_val = pts;
   end
 
   return;

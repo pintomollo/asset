@@ -26,7 +26,8 @@ function orients = align_orientations(orients, aim, dim)
     dim = find(orient_size > 1, 1);
 
     if (isempty(dim))
-      return;
+      dim = 1;
+  %    return;
     end
   elseif (dim > numel(orient_size) | orient_size(dim) == 1)
     return;

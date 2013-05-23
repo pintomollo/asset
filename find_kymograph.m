@@ -104,7 +104,9 @@ function find_kymograph(varargin)
               end
             end
 
-            fitting.init_pos = best_pos;
+            if (~isempty(best_pos))
+              fitting.init_pos = best_pos;
+            end
           end
         end
 

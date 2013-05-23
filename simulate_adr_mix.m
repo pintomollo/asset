@@ -53,13 +53,20 @@ function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
 
   %[all_x, t] = simulate_model_mix(single(x0), single(all_params), single(opts.x_step), single(opts.tmax), single(opts.time_step), single(opts.output_rate), single(flow), single(opts.user_data), single(opts.max_iter));
   if (fit_relative)
-    [all_x, t] = simulate_model_rel(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+    [all_x, t] = simulate_model_real(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
   else
     [all_x, t] = simulate_model_mix(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
     
-    %keyboard
 
+    %{
+    all_params2 = all_params;
+    L = all_params2(end);
+    all_params2(4,:) = all_params(4,:) ./ all_params(5,[2 1]);
 
+    [all_x2, t2] = simulate_model_real(x0*(L^2), all_params2, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+
+    keyboard
+    %}
     %{
     
     all_params2 = all_params;

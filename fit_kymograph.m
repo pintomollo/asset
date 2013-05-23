@@ -23,8 +23,9 @@ function uuids = fit_kymograph(fitting, opts)
     %orig_opts = load_parameters(orig_opts, 'goehring.txt');
     orig_opts = opts;
     if (fitting.fit_relative)
-      orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* (orig_opts.reaction_params(5,[2 1]).^(orig_opts.reaction_params(4,:))) ./ orig_opts.reaction_params(4,[2 1]);
-      orig_opts.reaction_params(5,:) = 1;
+      orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* orig_opts.reaction_params(4,[2 1]);
+      %orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* (orig_opts.reaction_params(5,[2 1]).^(orig_opts.reaction_params(4,:))) ./ orig_opts.reaction_params(4,[2 1]);
+      %orig_opts.reaction_params(5,:) = 1;
     end
     orig_params = [orig_opts.diffusion_params; ...
                 orig_opts.reaction_params];
@@ -34,8 +35,9 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   if (fitting.fit_relative)
-    opts.reaction_params(3,:) = opts.reaction_params(3,:) .* (opts.reaction_params(5,[2 1]).^(opts.reaction_params(4,:))) ./ opts.reaction_params(4,[2 1]);
-    opts.reaction_params(5,:) = 1;
+    opts.reaction_params(3,:) = opts.reaction_params(3,:) ./ opts.reaction_params(4,[2 1]);
+    %opts.reaction_params(3,:) = opts.reaction_params(3,:) .* (opts.reaction_params(5,[2 1]).^(opts.reaction_params(4,:))) ./ opts.reaction_params(4,[2 1]);
+    %opts.reaction_params(5,:) = 1;
   end
 
   ngroups = length(fitting.ground_truth);
@@ -99,7 +101,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   restart = false;
   if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
-    x0 = opts.init_func(opts);
+    x0 = opts.init_func(opts, fitting.fit_relative);
     restart = true;
   else
     x0 = opts.init_params;
@@ -120,7 +122,7 @@ function uuids = fit_kymograph(fitting, opts)
         opts.tmax = 2000;
 
         if (fitting.fit_relative)
-           [fitting.ground_truth, fitting.t_pos] = simulate_model_rel(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+           [fitting.ground_truth, fitting.t_pos] = simulate_model_real(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
         else
            [fitting.ground_truth, fitting.t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
         end
@@ -203,8 +205,9 @@ function uuids = fit_kymograph(fitting, opts)
       kB = 8.6173324e-5;
       E = 0.65;
       C2K = 273.15;
+      diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
       ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
-      temp_scale{g} = [ones(4,2)*ratio; ones(4,2)];
+      temp_scale{g} = [ones(1,2)*diff_ratio; ones(3,2)*ratio; ones(4,2)];
       flow_scale(g) = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
     else
       E = [];
@@ -236,11 +239,11 @@ function uuids = fit_kymograph(fitting, opts)
     end
   end
 
-  if (~isempty(fitting.init_pos) & numel(fit_params) ~= numel(fitting.init_pos))
+  if (~isempty(fitting.init_pos) & (numel(fit_params) + numel(fit_energy)) ~= numel(fitting.init_pos))
     warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
     fitting.init_pos = [];
   elseif (~isempty(fitting.init_pos))
-    fitting.init_pos = fitting.init_pos ./ rescaling(fit_params);
+    fitting.init_pos(1:numel(fit_params)) = fitting.init_pos(1:numel(fit_params)) ./ rescaling(fit_params);
   end
 
   warning off;
@@ -281,7 +284,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (~fit_temperatures)
       flow_scale = 1;
-    else
+    elseif (isempty(fitting.init_pos))
       p0 = [p0 fit_energy];
     end
 
@@ -295,7 +298,32 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = [p0 estim_sigma];
     end
 
-    p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
+    %p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
+    correct = false;
+    tmp_params = ml_params;
+    tmp_opts = opts;
+    for t=1:20
+      tmp_p = exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
+      tmp_params(fit_params) = tmp_p;
+
+      tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
+      tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
+      [tmp_pts, correct] = opts.init_func(opts, fitting.fit_relative, true);
+
+      if (correct)
+        tmp_params = [tmp_opts.diffusion_params; tmp_pts] ./ rescaling;
+        tmp_p = tmp_params(fit_params);
+
+        break;
+      end
+    end
+    p0 = tmp_p;
+    if (~correct)
+      warning on;
+      warning('Could not identify a bistable initial condition');
+      warning off;
+    end
+
     nparams = length(p0);
     for g=1:ngroups
       if (fitting.estimate_n)
@@ -330,7 +358,7 @@ function uuids = fit_kymograph(fitting, opts)
     else
       display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
     end
-    p0 = sqrt(p0(:));
+    %p0 = sqrt(p0(:));
 
     tmp_fit = fitting;
     tmp_fit.ground_truth = [];
@@ -420,14 +448,14 @@ function uuids = fit_kymograph(fitting, opts)
 
         p = exhaustive_sampler(@error_function, p0(:), options);
       otherwise
-        error [opts.do_ml ' machine learning algorithm is not implemented'];
+        error([opts.do_ml ' machine learning algorithm is not implemented']);
 
         return;
     end
 
-    p = p.^2;
+    %p = p.^2;
 
-    display(['Best (' num2str(p(:).') ')']);
+    display(['Best (' num2str(abs(p(:)).') ')']);
   end
 
   warning on;
@@ -449,7 +477,8 @@ function uuids = fit_kymograph(fitting, opts)
     end
     err_all = NaN(ngroups, nevals);
 
-    p_all = p_all.^2;
+    %p_all = p_all.^2;
+    p_all = abs(p_all);
 
     for i = 1:nevals
       correct = true;
@@ -486,15 +515,17 @@ function uuids = fit_kymograph(fitting, opts)
               more_params = more_params(1:end-2);
             end
 
+            diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
             ratio = exp(-(E(1)/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
-            tmp_params = tmp_params .* [ones(4,2)*ratio; ones(4,2)];
+            tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ones(3,2)*ratio; ones(4,2)];
             curr_flow_scale = curr_flow_scale * exp(-(E(2)/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
           end
         end
 
         if (restart)
+          opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
           opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
-          [x0, correct] = opts.init_func(opts);
+          [x0, correct] = opts.init_func(opts, fitting.fit_relative);
 
           if (~correct)
             err_all(g,i) = Inf;
@@ -504,7 +535,7 @@ function uuids = fit_kymograph(fitting, opts)
 
         normalization_done = false;
         if (fitting.fit_relative)
-          [res, t] = simulate_model_rel(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * curr_flow_scale, opts.user_data, opts.max_iter);
+          [res, t] = simulate_model_real(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * curr_flow_scale, opts.user_data, opts.max_iter);
         else
           [res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * curr_flow_scale, opts.user_data, opts.max_iter);
         end
@@ -697,8 +728,9 @@ function uuids = fit_kymograph(fitting, opts)
             disp_params = disp_params(fit_params);
 
             if (fitting.fit_relative)
-              disp_params(1) = bsxfun(@times, disp_params(1), disp_params(4));
-              disp_params(3) = bsxfun(@rdivide, bsxfun(@times, disp_params(3), disp_params(2)), (1.56.^disp_params(4)));
+              disp_params([1 3]) = disp_params([1 3]) .* disp_params([4 2]);
+              %disp_params(1) = bsxfun(@times, disp_params(1), disp_params(4));
+              %disp_params(3) = bsxfun(@rdivide, bsxfun(@times, disp_params(3), disp_params(2)), (1.56.^disp_params(4)));
             end
             title([num2str([disp_params E(:).'])]);
 

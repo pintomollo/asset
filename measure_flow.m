@@ -88,14 +88,19 @@ function mymovie = measure_flow(mymovie, opts)
     end
   end
 
-  nucleus_with = 1.25;
+  nucleus_width = 1.25;
+  %nucleus_width = 3;
 
   all_dists = NaN(nframes, 2);
 
-  prev_pts = mymovie.data.spots(1).carth;
-  for i=2:nframes
+  init_shift = 1;
+  %init_shift = 350
+
+  prev_pts = mymovie.data.spots(init_shift).carth;
+  for i=(init_shift+1):nframes
     nimg = i;
     %nimg = 450
+    %nimg = i+350
 
     all_pts = mymovie.data.spots(nimg).carth;
     links = mymovie.data.spots(nimg).cluster;
@@ -126,7 +131,11 @@ function mymovie = measure_flow(mymovie, opts)
         ell_nucleus = ells(end,:);
         ells = ells(1:end-1, :);
 
-        dangle = asin(nucleus_with*nucleus_center(3)/ell_nucleus(2));
+        dangle = asin(nucleus_width*nucleus_center(3)/ell_nucleus(2));
+  
+        %ell_nucleus(1) = align_orientations(ell_nucleus(1), egg_angle);
+        egg_angle = align_orientations(egg_angle, ell_nucleus(1));
+
         good_ells = (ells(:,1) >= ell_nucleus(1) - dangle & ells(:,1) <= ell_nucleus(1) + dangle);
 
         if (ell_nucleus(1) - dangle < 0)
@@ -152,12 +161,27 @@ function mymovie = measure_flow(mymovie, opts)
         %rads & some function ....
         all_dists(i,2) = dist;
 
+        %dangle = dangle*dist;
+        % Sigmoid between 2 and 4 roughly, 3./(1+exp(-5*(x-2.5)))+1
+
+          dangle = dangle*(4./(1+exp(-5*(dist-2.5)))+1);
+
         if (dist <= 2)
           egg_angle = ell_nucleus(1);
         elseif (dist <= 3)
           dist = dist - 2;
           egg_angle = ell_nucleus(1)*(1-dist) + egg_angle*dist;
         end
+
+        good_ells = (ells(:,1) >= ell_nucleus(1) - dangle & ells(:,1) <= ell_nucleus(1) + dangle);
+
+        if (ell_nucleus(1) - dangle < 0)
+          good_ells = good_ells | (ells(:,1)-2*pi >= ell_nucleus(1) - dangle & ells(:,1)-2*pi <= ell_nucleus(1) + dangle);
+        end
+        if (ell_nucleus(1) + dangle > 2*pi)
+          good_ells = good_ells | (ells(:,1)+2*pi >= ell_nucleus(1) - dangle & ells(:,1)+2*pi <= ell_nucleus(1) + dangle);
+        end
+
 
         prev_center = nucleus_center;
       end
@@ -345,6 +369,12 @@ function mymovie = measure_flow(mymovie, opts)
         otherwise
           error(['Projection type ''' opts.spot_tracking.projection_type ''' unknown.']);
       end
+
+      if (nucleus_center)
+   %     keyboard
+        movement(good_ells(post_indxs), :) = NaN;
+      end
+
       speed = dot([perp(:, 2), -perp(:, 1)], movement, 2) .* scaling;
 
       all_speed = [all_speed; speed*opts.pixel_size];
@@ -396,6 +426,8 @@ function mymovie = measure_flow(mymovie, opts)
 
     prev_pts = all_pts;
   end
+
+  %keyboard
 
   mymovie.data.flow = flow;
 

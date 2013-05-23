@@ -1,4 +1,4 @@
-function [fixed_points] = find_fixed_points(Fiso, range, function_params)
+function [fixed_points] = find_fixed_points(Fiso, range, function_params, count_only)
 % FIND_FIXED_POINTS studies the fixed_points of 2D differential system in the provided 
 % range and returns their position.
 %
@@ -20,6 +20,9 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
   % Some functions do not have parameters so an empty vector will do
   if (nargin < 3)
     function_params = [];
+    count_only = false;
+  elseif (nargin < 4)
+    count_only = false;
   end
 
   % We need a valid range to work with
@@ -33,10 +36,16 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
   if (numel(range) == 4)
     % Discretize the interval in the two dimensions
     pts = [linspace(range(1), range(2)).' linspace(range(3), range(4)).'];
+
+    % Estimate the reciprocal position
+    pts = Fiso(pts, function_params);
+
+    % Concatenate all the positions in the first dimension
+    pts = pts(:,1,:);
+    pts = unique(pts(:));
   else
     % Use a symmetric discretization
     pts = linspace(range(1), range(2)).';
-    pts = pts(:,[1 1]);
   end
 
   % Now let's estimate the position of the fixed points (FP) !
@@ -59,6 +68,12 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
   % Count how many FP we found
   npts = length(pts_pos);
 
+  if (count_only)
+    fixed_points = npts;
+
+    return;
+  end
+
   % Prepare the output matrix (nptsx2)
   fixed_points = NaN(npts, 2);
 
@@ -70,7 +85,7 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
 
     % If the sign is 0, we are at the fixed point
     if (sign_iso(index) == 0)
-      tmp_pos = pts(index, :);
+      tmp_pos = pts(index, 1);
 
     % If the next point is exactly at the fixed point, we'll handle this later
     % If we do not cross 0, skip this
@@ -79,7 +94,7 @@ function [fixed_points] = find_fixed_points(Fiso, range, function_params)
     else
       % Finally, we use fzero (help fzero) to precisely find the position of the FP.
       % To do this, we use the fact that cross will be 0 at the FP !
-      tmp_pos = fzero(@(u) cross(Fiso, u, function_params), pts([index index+1]));
+      tmp_pos = fzero(@(u) cross(Fiso, u, function_params), pts([index index+1], 1));
     end
 
     % Now that we know its position in one dimension, we use the isocline

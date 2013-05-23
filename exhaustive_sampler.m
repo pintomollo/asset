@@ -9,8 +9,8 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
 
   if (opts.independent)
     nevals = ceil((max_iter/nparams)/2);
-    pos = [0:(nevals-1)]*(val_range/(nevals-1));
-    pos = exp([-pos(end:-1:2) pos]);
+    pos = [0:(nevals-1)]*(1/(nevals-1));
+    pos = val_range.^([-pos(end:-1:2) pos]);
     nevals = length(pos);
 
     all_pos = ones(nevals*nparams, nparams);
@@ -21,16 +21,21 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
     %all_pos = enumerate(all_pos{:});
   else
     nevals = max(ceil((max_iter^(1/nparams))/2),2);
-    pos = [0:(nevals-1)]*(val_range/(nevals-1));
-    pos = exp([-pos(end:-1:2) pos]);
+    pos = [0:(nevals-1)]*(1/(nevals-1));
+    pos = val_range.^([-pos(end:-1:2) pos]);
 
     all_pos = repmat({pos(:)}, 1, nparams);
     all_pos = enumerate(all_pos{:});
   end
 
+  if (val_range == 1)
+    all_pos = all_pos(1,:);
+    warning('A range of 1 will evaluate only the current position');
+  end
+
   nevals = size(all_pos, 1);
   all_pos = all_pos(randperm(nevals), :);
-  all_pos = sqrt(bsxfun(@times, all_pos, (p0(:).').^2));
+  all_pos = abs(bsxfun(@times, all_pos, p0(:).'));
 
   % Unique identifier for multiple writers in the same file
   uuid = ['EXHSMPLR' num2str(round(rand(1)*100)) ' '];
