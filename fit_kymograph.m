@@ -119,7 +119,7 @@ function uuids = fit_kymograph(fitting, opts)
 
   for g=1:ngroups
     if (strncmp(fitting.type, 'simulation', 10))
-        opts.tmax = 2000;
+        fitting.simulation_parameters = ml_params(fit_params);
 
         if (fitting.fit_relative)
            [fitting.ground_truth, fitting.t_pos] = simulate_model_real(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
