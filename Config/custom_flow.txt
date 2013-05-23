@@ -12,7 +12,7 @@ init_func @init_goehring
 %reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.19 2; 1 2; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
 diffusion_params [0.28 0.15]
 output_rate 10
-tmax 3500
+tmax 2000
 time_step 0.05
 %user_data getfield(load('cortical_flow_wt.mat', 'flow_step'), 'flow_step')
 %user_data getfield(load('cyto_flow_small.mat', 'flow_step'), 'flow_step')
