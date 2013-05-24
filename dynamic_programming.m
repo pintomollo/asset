@@ -49,7 +49,12 @@ function [path, emission, transitions] = dynamic_programming(img, params, weight
 
   no_spawn = all(~isfinite(img), 2);
   img(no_spawn, :) = mymean(img(:));
-  wimg(no_spawn, :) = mymean(wimg(isfinite(wimg)));
+
+  if (any(isfinite(wimg(:))))
+    wimg(no_spawn, :) = mymean(wimg(isfinite(wimg)));
+  else
+    wimg(no_spawn, :) = 1;
+  end
 
   if (isempty(init))
     init = zeros(1,w);

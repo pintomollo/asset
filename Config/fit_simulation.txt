@@ -10,4 +10,4 @@ skip_file 'artifacts.txt'
 tolerance 1e-4
 normalize_smooth false
 data_noise 0.01
-max_iter 10000
+max_iter 100000

@@ -10,6 +10,8 @@ function [init_val, correct] = init_goehring(opts, is_relative, correct_position
   p = opts.reaction_params;
   correct = true;
 
+  p(6:7,2) = p(6:7,1);
+
   L = p(7,1);
   if (is_relative)
     p(3,:) = p(3,:) .* p(4,[2 1]);

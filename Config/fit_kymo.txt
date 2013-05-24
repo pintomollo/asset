@@ -9,3 +9,4 @@ nfits 5
 skip_file 'artifacts.txt'
 tolerance 1e-3
 normalize_smooth false
+max_iter 100000

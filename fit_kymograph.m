@@ -304,7 +304,7 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_opts = opts;
     for t=1:20
       tmp_p = exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
-      tmp_params(fit_params) = tmp_p;
+      tmp_params(fit_params) = tmp_p(1:numel(fit_params));
 
       tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
       tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
@@ -312,7 +312,7 @@ function uuids = fit_kymograph(fitting, opts)
 
       if (correct)
         tmp_params = [tmp_opts.diffusion_params; tmp_pts] ./ rescaling;
-        tmp_p = tmp_params(fit_params);
+        tmp_p(1:numel(fit_params)) = tmp_params(fit_params);
 
         break;
       end
@@ -448,7 +448,7 @@ function uuids = fit_kymograph(fitting, opts)
 
         p = exhaustive_sampler(@error_function, p0(:), options);
       otherwise
-        error([opts.do_ml ' machine learning algorithm is not implemented']);
+        error([fitting.fitting_type ' machine learning algorithm is not implemented']);
 
         return;
     end

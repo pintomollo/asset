@@ -2,13 +2,14 @@ fit_relative true
 fitting_type 'sample'
 %init_pos [0.0895 1.1211 4.4714 2.2011]
 start_with_best false
-step_size 2
+step_size 3
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-3
 normalize_smooth false
 max_iter 2000
 init_noise 0
+data_noise 0.01
 combine_data 'independent'
 parameter_set 6
 fit_flow true

@@ -2,7 +2,8 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
 
   max_iter = opts.max_iter;
   nparams = length(p0);
-  val_range = log(abs(opts.range_size) + 1);
+  %val_range = log(abs(opts.range_size) + 1);
+  val_range = opts.range_size;
 
   log_file = opts.log_file;
   disp_iter = opts.printint;
@@ -10,13 +11,14 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
   if (opts.independent)
     nevals = ceil((max_iter/nparams)/2);
     pos = [0:(nevals-1)]*(1/(nevals-1));
-    pos = val_range.^([-pos(end:-1:2) pos]);
+    pos = val_range.^([-pos(end:-1:2) pos(2:end)]);
     nevals = length(pos);
 
     all_pos = ones(nevals*nparams, nparams);
     for i=1:nparams
       all_pos([1:nevals] + (i-1)*nevals,i) = pos(:);
     end
+    all_pos(end+1,:) = 1;
     %all_pos = repmat({pos(:)}, 1, nparams);
     %all_pos = enumerate(all_pos{:});
   else
