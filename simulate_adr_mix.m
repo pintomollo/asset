@@ -24,7 +24,7 @@ function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
     opts.nparticles = opts.nparticles - mod(opts.nparticles, 4);
 
     if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
-      x0 = opts.init_func(opts);
+      x0 = opts.init_func(opts, fit_relative);
     else
       x0 = opts.init_params;
       x0 = repmat(x0, [opts.nparticles, 1]);

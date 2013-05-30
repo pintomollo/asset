@@ -46,6 +46,8 @@ function uuids = fit_kymograph(fitting, opts)
   fit_energy = [];
 
   switch fitting.parameter_set
+    case 1
+      fit_params = [4 12];
     case 2
       fit_params = [4 5 12 13];
     case 12
@@ -68,7 +70,7 @@ function uuids = fit_kymograph(fitting, opts)
     case 6
       fit_params = [1:16];
     otherwise
-      fit_params = [4 12];
+      fit_params = [1];
   end
   nrates = length(fit_params);
 
@@ -122,9 +124,9 @@ function uuids = fit_kymograph(fitting, opts)
         fitting.simulation_parameters = ml_params(fit_params);
 
         if (fitting.fit_relative)
-           [fitting.ground_truth, fitting.t_pos] = simulate_model_real(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+           [fitting.ground_truth, fitting.t_pos] = simulate_model_real(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
         else
-           [fitting.ground_truth, fitting.t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+           [fitting.ground_truth, fitting.t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
         end
 
       %[fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
@@ -151,10 +153,12 @@ function uuids = fit_kymograph(fitting, opts)
     [n,m,o] = size(fitting.ground_truth{g});
     size_data(g,1:3) = [n,m,o];
 
-    if (strncmp(fitting.aligning_type, 'domain', 6))
+    %if (strncmp(fitting.aligning_type, 'domain', 6))
       opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
       [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth{g}(1:end/2, :, :), 3).', mymean(fitting.ground_truth{g}((end/2)+1:end, :, :), 3).', size_data(g,1)/2, size_data(g,2), opts_expansion);
-      frac_indx(g) = find(f > fitting.fraction, 1, 'first');
+
+      [junk, relative_fraction{g}] = synchronize_domains(f, f);
+      %frac_indx(g) = find(f > fitting.fraction, 1, 'first');
       tmp_gfrac = f*frac_width;
       tmp_gfrac(isnan(tmp_gfrac)) = 0;
       gfraction{g} = tmp_gfrac;
@@ -166,7 +170,7 @@ function uuids = fit_kymograph(fitting, opts)
 
         normalization_done = true;
       end
-    end
+    %end
 
     if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
       opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
@@ -178,6 +182,10 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
       normalization_done = true;
+
+      tmp_gfrac = f*frac_width;
+      tmp_gfrac(isnan(tmp_gfrac)) = 0;
+      gfraction{g} = tmp_gfrac;
     end
 
     if (strncmp(fitting.aligning_type, 'lsr', 3))
@@ -324,7 +332,6 @@ function uuids = fit_kymograph(fitting, opts)
       warning off;
     end
 
-    nparams = length(p0);
     for g=1:ngroups
       if (fitting.estimate_n)
         ns = identify_n(fitting.ground_truth{g});
@@ -341,7 +348,11 @@ function uuids = fit_kymograph(fitting, opts)
 
       if (fitting.integrate_sigma)
         %full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
-        full_error(g) = curr_score_weights(g) * (0.5*nobs(g,1))*log(penalty(g) * size_data(g,2) * 10) + (0.5*nobs(g,2))*log(size_data(g,2)*10);
+        if (fitting.pixels_only)
+          full_error(g) = (0.5*nobs(g,1))*log(penalty(g) * size_data(g,2) * 10);
+        else
+          full_error(g) = (0.5*nobs(g,2))*log(curr_score_weights(g)*penalty(g)*size_data(g,2)*10 + size_data(g,2)*10);
+        end
       else
         %full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
         full_error(g) = (curr_score_weights(g) * penalty(g) * size_data(g,2) * 10 + prod(size_data(g,1:2))) / (2*estim_sigma(g).^2);
@@ -353,6 +364,16 @@ function uuids = fit_kymograph(fitting, opts)
     end
     full_error = sum(full_error);
 
+    if (strncmp(fitting.aligning_type, 'fitting', 7))
+      nparams = length(p0);
+      fitting.aligning_type = 'domain';
+      [junk, offsets] = error_function(p0(:));
+      fitting.aligning_type = 'fitting';
+      p0 = [p0 offsets];
+    end
+
+
+    nparams = length(p0);
     if (fitting.fit_flow)
       display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) ' & flow):']);
     else
@@ -463,7 +484,7 @@ function uuids = fit_kymograph(fitting, opts)
   return;
 
   %function [err_all, sigma2] = error_function(varargin)
-  function [err_all] = error_function(varargin)
+  function [err_all, offsets] = error_function(varargin)
 
     %sigma2 = 0;
     p_all = varargin{1};
@@ -478,7 +499,7 @@ function uuids = fit_kymograph(fitting, opts)
     err_all = NaN(ngroups, nevals);
 
     %p_all = p_all.^2;
-    p_all = abs(p_all);
+    %p_all = abs(p_all);
 
     for i = 1:nevals
       correct = true;
@@ -487,16 +508,16 @@ function uuids = fit_kymograph(fitting, opts)
         curr_p = p_all(:,i);
 
         tmp_params = ml_params;
-        tmp_params(fit_params) = curr_p(1:nrates);
+        tmp_params(fit_params) = abs(curr_p(1:nrates));
         more_params = curr_p(nrates+1:end);
 
         if (fitting.fit_sigma)
-          estim_sigma = more_params(end);
+          estim_sigma = abs(more_params(end));
           more_params = more_params(1:end-1);
         end
 
         if (fitting.fit_flow)
-          curr_flow_scale = more_params(end);
+          curr_flow_scale = abs(more_params(end));
           more_params = more_params(1:end-1);
         else
           curr_flow_scale = 1;
@@ -508,10 +529,10 @@ function uuids = fit_kymograph(fitting, opts)
             curr_flow_scale = curr_flow_scale * flow_scale(g);
           else
             if (length(fit_energy) == 1)
-              E = [1 1]*more_params(end);
+              E = [1 1]*abs(more_params(end));
               more_params = more_params(1:end-1);
             else
-              E = more_params(end-1:end);
+              E = abs(more_params(end-1:end));
               more_params = more_params(1:end-2);
             end
 
@@ -592,12 +613,20 @@ function uuids = fit_kymograph(fitting, opts)
               err_all(g,i) = Inf;
               continue;
             end
-            findx = find(f > fitting.fraction, 1, 'first');
-            corr_offset = frac_indx(g) - findx + 1;
+            %findx = find(f > fitting.fraction, 1, 'first');
+            %corr_offset = frac_indx(g) - findx + 1;
             
+            corr_offset = synchronize_domains(relative_fraction{g}, f);
+            disp_args = corr_offset;
+            corr_offset = corr_offset(1);
+
             if (isempty(corr_offset))
               corr_offset = NaN;
             end
+
+            offsets(g) = corr_offset;
+          case 'fitting'
+            corr_offset = more_params(g);
           case 'end'
             corr_offset = size_data(g,2) - size(res, 2) + 1;
           case 'lsr'
@@ -607,11 +636,12 @@ function uuids = fit_kymograph(fitting, opts)
             corr_offset = sindx(g) - rindx;
         end
 
-        fraction(isnan(fraction)) = 0;
-        gindxs = [0:size(res, 2)-1];
-        goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(g,2));
+%        fraction(isnan(fraction)) = 0;
+%        gindxs = [0:size(res, 2)-1];
+%        goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(g,2));
 
-        if (sum(goods) < 10)
+%        if (sum(goods) < 10)
+        if (length(relative_fraction{g}) - corr_offset < 10)
           err_all(g,i) = Inf;
         else
           if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
@@ -625,16 +655,23 @@ function uuids = fit_kymograph(fitting, opts)
             normalization_done = true;
           end
 
-          indxs = corr_offset+gindxs(goods);
-          tmp_fraction = zeros(1, size_data(g,2));
-          tmp_fraction(indxs) = fraction(gindxs(goods) + 1);
+          res = interp2([res; fraction.'], [1:length(gfraction{g})].'+corr_offset, [1:size(fitting.ground_truth{g},1)+1]);
+          fraction = res(end,:).';
+          res = res(1:end-1,:);
+
+          fraction(isnan(fraction)) = 0;
+          res(isnan(res)) = 0;
+
+%          indxs = corr_offset+gindxs(goods);
+%          tmp_fraction = zeros(1, size_data(g,2));
+%          tmp_fraction(indxs) = fraction(gindxs(goods) + 1);
           %tmp_fraction(indxs(end)+1:end) = tmp_fraction(indxs(end));
 
-          tmp = ones(size_data(g,1:2))*res(1, 2);
-          tmp(:, indxs) = res(:, gindxs(goods) + 1);
+%          tmp = ones(size_data(g,1:2))*res(1, 2);
+%          tmp(:, indxs) = res(:, gindxs(goods) + 1);
 
-          fraction = tmp_fraction(:);
-          res = tmp;
+%          fraction = tmp_fraction(:);
+%          res = tmp;
           if (multi_data)
             res = repmat(res, [1 1 nlayers(g)]);
           end
@@ -654,7 +691,11 @@ function uuids = fit_kymograph(fitting, opts)
           %tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
 
           tmp_err = (fitting.ground_truth{g} - res).^2 / norm_coeff(g);
-          tmp_frac = ((gfraction{g} - fraction)/half).^2;
+          %tmp_err = 0*tmp_err;
+          %tmp_frac = ((gfraction{g} - fraction)/half).^2;
+
+          tmp_frac = 1./(1+exp(-15*(((gfraction{g} - fraction)/half).^2-0.5)));
+          %tmp_frac = 0;
 
           %[sum(tmp_err(linear_goods)) sum(tmp_frac)]
 
@@ -668,7 +709,12 @@ function uuids = fit_kymograph(fitting, opts)
             % Integrated the sigma out from the gaussian error function
             %err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
             %err_all(g,i) = curr_score_weights(g)*(0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g}))) + (0.5*nobs(g,2))*log(sum(tmp_frac));
-            err_all(g,i) = (0.5*nobs(g,2))*log(curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac));
+
+            if (fitting.pixels_only)
+              err_all(g,i) = (0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g})));
+            else
+              err_all(g,i) = (0.5*nobs(g,2))*log(curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac));
+            end
           else
             if (fitting.fit_sigma)
               %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
@@ -727,12 +773,19 @@ function uuids = fit_kymograph(fitting, opts)
             disp_params = tmp_params .* rescaling;
             disp_params = disp_params(fit_params);
 
-            if (fitting.fit_relative)
+            if (fitting.fit_relative & numel(disp_params) >= 4)
               disp_params([1 3]) = disp_params([1 3]) .* disp_params([4 2]);
               %disp_params(1) = bsxfun(@times, disp_params(1), disp_params(4));
               %disp_params(3) = bsxfun(@rdivide, bsxfun(@times, disp_params(3), disp_params(2)), (1.56.^disp_params(4)));
             end
-            title([num2str([disp_params E(:).'])]);
+            if (numel(disp_params) > 6)
+              tmp_params = NaN(ceil(numel(disp_params)/6),6);
+              tmp_params(1:numel(disp_params)) = disp_params;
+              tmp_params(numel(disp_params)+1:numel(disp_params)+numel(E)) = E(:);
+              title(num2str(tmp_params));
+            else
+              title([num2str([disp_params E(:).']) ':' num2str(disp_args)]);
+            end
 
             subplot(1,3,3);
             hold off;
@@ -759,7 +812,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (all(isinf(err_all)))
       % ML crashes when all values are non-numerical
-      err_all(1) = full_error;
+      err_all(1) = full_error*sign(err_all(1));
     end
 
     return;

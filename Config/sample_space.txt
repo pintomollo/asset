@@ -12,4 +12,5 @@ normalize_smooth false
 max_iter 20000
 %max_iter 20
 init_noise 0
+data_noise 0.01
 %score_weights 1

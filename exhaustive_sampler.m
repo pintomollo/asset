@@ -36,8 +36,17 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
   end
 
   nevals = size(all_pos, 1);
+%  disp('Not randomized')
   all_pos = all_pos(randperm(nevals), :);
-  all_pos = abs(bsxfun(@times, all_pos, p0(:).'));
+  p0 = bsxfun(@times, all_pos, p0(:).');
+
+  nulls = all(p0==0,1);
+  if (any(nulls))
+    tmp_pos = all_pos;
+    tmp_pos(tmp_pos < 1) = -1./tmp_pos(tmp_pos < 1);
+    tmp_pos(tmp_pos==1) = 0;
+    p0(:, nulls) = tmp_pos(:,nulls);
+  end
 
   % Unique identifier for multiple writers in the same file
   uuid = ['EXHSMPLR' num2str(round(rand(1)*100)) ' '];
@@ -50,10 +59,10 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
   best_score = Inf;
   best_pos = NaN(1, nparams);
 
-  fprintf('Exhaustive sampling of [%f %f] in %d iterations!\n', pos(1), pos(end), nevals);
+  fprintf('Exhaustive sampling of [%f %f] in %d (%d x %d) iterations!\n', pos(1), pos(end), nevals, nparams, (nevals-1)/nparams);
 
   for i=1:nevals
-    curr_p = all_pos(i,:);
+    curr_p = p0(i,:);
     score = fitfun(curr_p);
 
     if (score < best_score)

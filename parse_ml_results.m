@@ -336,6 +336,9 @@ function [params, opts] = parse_ml_results(fname, varargin)
 
   fclose(fid);
 
+  props = dir(fname);
+  params(nparams).time = props.date;
+
   return;
 end
 

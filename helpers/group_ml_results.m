@@ -80,11 +80,18 @@ function datas = group_ml_results(fnames, groups, filters)
   display('Loading files...');
 
   for i=1:nstored
+    indx = 0;
     files = datas{i, 2};
     for j=1:length(files)
       display(files{j});
-      datas{i, 2}{j,2} = parse_ml_results(files{j}, Inf, true, 'none');
+      tmp = parse_ml_results(files{j}, Inf, true, 'none');
+      if (isfinite(tmp(end).score))
+        indx = indx + 1;
+        datas{i, 2}{indx,2} = tmp;
+        datas{i, 2}{indx,1} = datas{i, 2}{j,1};
+      end
     end
+    datas{i,2} = datas{i,2}(1:indx,:);
   end
 
   datas = datas(1:nstored, :);
