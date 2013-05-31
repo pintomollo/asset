@@ -409,7 +409,25 @@ function uuids = fit_kymograph(fitting, opts)
           opt.PopSize = opt.PopSize*ngroups;
         end
 
-        [p, fval, ncoutns, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
+        [p, fval, cmaes_count, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
+
+        fitting.max_iter = 20
+
+        options = optimset('MaxFunEvals', max(fitting.max_iter - cmaes_count,0), ...
+                           'MaxIter', max(fitting.max_iter - cmaes_count,0), ...
+                           'Display', 'off', ...
+                           'OutputFcn', @log_simplex, ...
+                           'TolFun', fitting.tolerance, ...
+                           'TolX', fitting.tolerance/10);
+        uuid = out.uuid;
+        fid = fopen([log_name 'evol.dat'], 'a');
+
+        display('Local optimization using the Simplex method');
+        [p_opt, fval_opt, stopflag_opt, out_opt] = fminsearch(@error_function, p(:), options);
+        fclose(fid);
+
+        disp(['Simplex: ' num2str(fval) ' -> ' num2str(fval_opt)]);
+
       case 'pso'
         opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 fitting.tolerance 250 NaN 0 0];
         opt(2) = fitting.max_iter;
@@ -482,6 +500,22 @@ function uuids = fit_kymograph(fitting, opts)
   warning on;
 
   return;
+
+  function stop = log_simplex(x, optimValues, state)
+
+    stop = false;
+
+    if ((mod(optimValues.iteration, 10) == 0 && strncmp(state, 'iter', 4)) || strncmp(state, 'done', 4))
+
+      fprintf(fid, [uuid '1 %ld  %e 0 0'], optimValues.iteration+cmaes_count, optimValues.fval);
+      fprintf(fid, ' %e', x);
+      fprintf(fid, ' \n');
+
+      disp([num2str(optimValues.iteration+cmaes_count) ' : ' num2str(optimValues.fval), ' | ' num2str(x(:).')]);
+    end
+
+    return;
+  end
 
   %function [err_all, sigma2] = error_function(varargin)
   function [err_all, offsets] = error_function(varargin)

@@ -279,6 +279,10 @@ function [params, opts] = parse_ml_results(fname, varargin)
   end
 
   if (~isnan(curr_id) & isfinite(curr_score))
+
+    props = dir(fname);
+    params(nparams).time = props.date;
+
     if (isempty(params(nparams).score)|| any(~isfinite(params(nparams).score)) || nbests==1)
       params(nparams).score = curr_score;
       params(nparams).ml_type = curr_type;
@@ -335,9 +339,6 @@ function [params, opts] = parse_ml_results(fname, varargin)
   end
 
   fclose(fid);
-
-  props = dir(fname);
-  params(nparams).time = props.date;
 
   return;
 end

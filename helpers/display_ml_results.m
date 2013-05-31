@@ -124,6 +124,7 @@ function p = display_ml_results(varargin)
     %hold on
     %scatter(avg_pts(:,1), avg_pts(:,3), 'r');
   else
+    keyboard
     for i=1:length(p)
       confs = NaN(0, 3);
 

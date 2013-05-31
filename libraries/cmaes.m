@@ -239,9 +239,18 @@ if nargin < 1 || isequal(fitfun, 'defaults') % pass default options
 end
 
 if isequal(fitfun, 'displayoptions')
- names = fieldnames(defopts); 
+ names = fieldnames(defopts);
  for name = names'
-   disp([name{:} repmat(' ', 1, 20-length(name{:})) ': ''' defopts.(name{:}) '''']); 
+   field = defopts.(name{:});
+   if (isstruct(field))
+     disp([name{:} repmat(' ', 1, 20-length(name{:})) ':']); 
+     subnames = fieldnames(field); 
+     for subname = subnames'
+       disp([' - ' subname{:} repmat(' ', 1, 20-length(subname{:})) ': ''' field.(subname{:}) '''']); 
+     end
+   else
+     disp([name{:} repmat(' ', 1, 20-length(name{:})) ': ''' field '''']); 
+   end
  end
  return; 
 end
@@ -605,6 +614,7 @@ else % flgresume
     
     % TODO: keep also median solution? 
     out.evals = counteval;  % should be first entry
+    out.uuid = uuid;
     out.stopflag = {};
 
     outiter = 0;
