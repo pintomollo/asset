@@ -410,6 +410,8 @@ function uuids = fit_kymograph(fitting, opts)
         end
 
         [p, fval, cmaes_count, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
+        p = out.solutions.bestever.x;
+        fval = out.solutions.bestever.f;
 
         options = optimset('MaxFunEvals', max(fitting.max_iter - cmaes_count,0), ...
                            'MaxIter', max(fitting.max_iter - cmaes_count,0), ...
