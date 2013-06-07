@@ -1,7 +1,7 @@
 function [signals, full_pos, shuffle] = combine_domains(mymovies, sync_type, sync_param, min_counts)
 
-  %{
   %% The code I acutally used to get the averages
+  num = mymovies;
 
   news = textread(['good_' num2str(num) '.txt'], '%s');
 
@@ -41,7 +41,27 @@ function [signals, full_pos, shuffle] = combine_domains(mymovies, sync_type, syn
     [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(imgs, times);
     save(['aligned_domains_' num2str(num) '-' uuid '.mat'], 'signals_full', 'imgs', 'signals');
   end
-  %}
+
+  scores = cat(1, signals_full{:,3});
+  [val, index] = min(scores);
+
+  signals = signals_full{i,1};
+
+  [h,w,n] = size(signals);
+  full_pos = [1:w] - (((w-1)/2)+1);
+  full_pos = full_pos * (median(diff(pos)));
+
+  counts = sum(~isnan(signals), 3);
+  if (min_counts < 1)
+    min_counts = round(min_counts*n);
+  end
+  rows = any(counts >= min_counts, 2);
+  cols = any(counts >= min_counts, 1);
+
+  signals = signals(rows, cols, :);
+  full_pos = full_pos(cols);
+
+  return;
 
   if (nargin == 1)
     sync_type = 'lsr';

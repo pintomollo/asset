@@ -13,4 +13,6 @@ max_iter 20000
 %max_iter 20
 init_noise 0
 data_noise 0.01
+aligning_type 'fitting'
+pixels_only true
 %score_weights 1

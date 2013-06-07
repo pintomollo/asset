@@ -13,4 +13,6 @@ data_noise 0.01
 combine_data 'independent'
 parameter_set 6
 fit_flow true
+aligning_type 'fitting'
+pixels_only true
 %score_weights 1

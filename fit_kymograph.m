@@ -68,7 +68,7 @@ function uuids = fit_kymograph(fitting, opts)
     case 5
       fit_params = [4 5 6 12 13 14];
     case 6
-      fit_params = [1:16];
+      fit_params = [1:14];
     otherwise
       fit_params = [1];
   end
@@ -492,9 +492,10 @@ function uuids = fit_kymograph(fitting, opts)
         return;
     end
 
+    p(1:nrates) = abs(p(1:nrates));
     %p = p.^2;
 
-    display(['Best (' num2str(abs(p(:)).') ')']);
+    display(['Best (' num2str(p(:).') ')']);
   end
 
   warning on;
