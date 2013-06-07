@@ -1,6 +1,9 @@
 function datas = group_ml_results(fnames, groups, filters)
 
-  if (nargin == 1)
+  if (nargin == 0)
+    datas = {};
+    return;
+  elseif (nargin == 1)
     groups = {};
     filters = {};
   elseif (nargin == 2)
@@ -10,6 +13,8 @@ function datas = group_ml_results(fnames, groups, filters)
     else
       filters = {};
     end
+  elseif (size(groups, 2) > 1)
+    [groups, filters] = deal(filters, groups);
   end
 
   ngroups = size(groups, 1);

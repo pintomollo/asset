@@ -110,7 +110,7 @@ function migrate_data(orig_folder, new_folder, duplicate)
       movefile(fname, new_folder, 'f');
     end
     
-    display(new_fname);
+    disp(new_fname);
   end
 
   return;

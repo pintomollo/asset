@@ -99,8 +99,8 @@ function find_kymograph(varargin)
               if (prev_values{1,2}{k,2}(end).score < best_score)
                 best_score = prev_values{1,2}{k,2}(end).score;
                 best_pos = prev_values{1,2}{k,2}(end).params;
-
-                best_pos = best_pos.^2 .* prev_values{1,1}{1}.rescale_factor;
+                tmp_rescale = prev_values{1,1}{1}.rescale_factor;
+                best_pos = abs(best_pos(1:length(tmp_rescale))) .* tmp_rescale;
               end
             end
 

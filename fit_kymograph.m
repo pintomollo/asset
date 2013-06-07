@@ -74,6 +74,26 @@ function uuids = fit_kymograph(fitting, opts)
   end
   nrates = length(fit_params);
 
+  if (~isempty(fitting.init_pos))
+    if (iscell(fitting.init_pos))
+      tmp_fit = fitting;
+      uuids = [];
+
+      for c=1:length(fitting.init_pos)
+        tmp_fit.init_pos = fitting.init_pos{c};
+        tmp_uuids = fit_kymograph(tmp_fit, opts);
+        uuids = [uuids; tmp_uuids(:)];
+      end
+
+      return;
+    elseif ((nrates + numel(fit_energy)) ~= numel(fitting.init_pos))
+      warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
+      fitting.init_pos = [];
+    else
+      fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+    end
+  end
+
   rng(now + cputime, 'twister');
   uuids = cell(fitting.nfits, 1);
 
@@ -245,13 +265,6 @@ function uuids = fit_kymograph(fitting, opts)
     for g=1:ngroups
       range_data(g) = fitting.data_noise * range(linear_truth{g});
     end
-  end
-
-  if (~isempty(fitting.init_pos) & (numel(fit_params) + numel(fit_energy)) ~= numel(fitting.init_pos))
-    warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
-    fitting.init_pos = [];
-  elseif (~isempty(fitting.init_pos))
-    fitting.init_pos(1:numel(fit_params)) = fitting.init_pos(1:numel(fit_params)) ./ rescaling(fit_params);
   end
 
   warning off;
@@ -676,7 +689,8 @@ function uuids = fit_kymograph(fitting, opts)
 %        goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(g,2));
 
 %        if (sum(goods) < 10)
-        if (length(relative_fraction{g}) - corr_offset < 10)
+        %if (length(relative_fraction{g}) - corr_offset < 10)
+        if (size_data(g,2) - corr_offset < 10)
           err_all(g,i) = Inf;
         else
           if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
@@ -819,7 +833,8 @@ function uuids = fit_kymograph(fitting, opts)
               tmp_params(numel(disp_params)+1:numel(disp_params)+numel(E)) = E(:);
               title(num2str(tmp_params));
             else
-              title([num2str([disp_params E(:).']) ':' num2str(disp_args)]);
+              title([num2str([disp_params E(:).'])]);
+              %title([num2str([disp_params E(:).']) ':' num2str(disp_args)]);
             end
 
             subplot(1,3,3);
