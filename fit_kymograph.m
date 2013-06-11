@@ -323,13 +323,14 @@ function uuids = fit_kymograph(fitting, opts)
     correct = false;
     tmp_params = ml_params;
     tmp_opts = opts;
+
     for t=1:20
       tmp_p = exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
       tmp_params(fit_params) = tmp_p(1:numel(fit_params));
 
       tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
       tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
-      [tmp_pts, correct] = opts.init_func(opts, fitting.fit_relative, true);
+      [tmp_pts, correct] = opts.init_func(tmp_opts, fitting.fit_relative, true);
 
       if (correct)
         tmp_params = [tmp_opts.diffusion_params; tmp_pts] ./ rescaling;
@@ -704,10 +705,13 @@ function uuids = fit_kymograph(fitting, opts)
             normalization_done = true;
           end
 
+          fraction(isnan(fraction)) = 0;
+          res(isnan(res)) = 0;
+          
           res = interp2([res; fraction.'], [1:length(gfraction{g})].'+corr_offset, [1:size(fitting.ground_truth{g},1)+1]);
           fraction = res(end,:).';
           res = res(1:end-1,:);
-
+          
           fraction(isnan(fraction)) = 0;
           res(isnan(res)) = 0;
 

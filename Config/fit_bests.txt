@@ -4,12 +4,12 @@ start_with_best false
 init_noise 0.01
 data_noise 0.01
 ndelays 5
-init_pos {[0.0895 1.1211 4.4714 2.2011]; [0.1120 1.5827 0.6812 2.7777]; [0.1200 1.1500 1.1300 2.3900]}
+init_pos {[3.30991 3.7067 0.0455 0.3728]; [0.02375 0.629961 5.03968 3.1748]; [0.00153 1.6162 0.0112 2.4376]; [0.0502 1.1500 0.9826 2.3900]}
 step_size 0.05
-nfits 5
+nfits 3
 skip_file 'artifacts.txt'
 tolerance 1e-4
 normalize_smooth false
 max_iter 100000
 aligning_type 'fitting'
-pixels_only true
+pixels_only false
