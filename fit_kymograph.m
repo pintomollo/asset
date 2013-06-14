@@ -550,6 +550,8 @@ function uuids = fit_kymograph(fitting, opts)
     %p_all = p_all.^2;
     %p_all = abs(p_all);
 
+    offsets = zeros(1, ngroups);
+
     for i = 1:nevals
       correct = true;
 

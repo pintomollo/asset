@@ -5,11 +5,12 @@ init_noise 0.1
 data_noise 0.01
 ndelays 5
 %init_pos [0.0895 1.1211 4.4714 2.2011]
+init_pos [0.0016 1.65 0.012 2.5]
 step_size 0.1
-nfits 5
+nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-4
 normalize_smooth false
 max_iter 100000
 aligning_type 'fitting'
-pixels_only true
+pixels_only false
