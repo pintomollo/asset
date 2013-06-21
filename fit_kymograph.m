@@ -86,11 +86,14 @@ function uuids = fit_kymograph(fitting, opts)
       end
 
       return;
-    elseif ((nrates + numel(fit_energy)) ~= numel(fitting.init_pos))
+    elseif ((nrates + numel(fit_energy)) == numel(fitting.init_pos))
+      fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+    elseif (nrates == numel(fitting.init_pos))
+      fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
+      fitting.init_pos = [fitting.init_pos fit_energy];
+    else
       warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
       fitting.init_pos = [];
-    else
-      fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
     end
   end
 
