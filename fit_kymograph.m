@@ -69,6 +69,8 @@ function uuids = fit_kymograph(fitting, opts)
       fit_params = [4 5 6 12 13 14];
     case 6
       fit_params = [1:14];
+    case 7
+      fit_params = [1:6 9:13];
     otherwise
       fit_params = [1];
   end
@@ -181,7 +183,6 @@ function uuids = fit_kymograph(fitting, opts)
       [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth{g}(1:end/2, :, :), 3).', mymean(fitting.ground_truth{g}((end/2)+1:end, :, :), 3).', size_data(g,1)/2, size_data(g,2), opts_expansion);
 
       [junk, relative_fraction{g}] = synchronize_domains(f, f);
-      %frac_indx(g) = find(f > fitting.fraction, 1, 'first');
       tmp_gfrac = f*frac_width;
       tmp_gfrac(isnan(tmp_gfrac)) = 0;
       gfraction{g} = tmp_gfrac;
@@ -193,7 +194,10 @@ function uuids = fit_kymograph(fitting, opts)
 
         normalization_done = true;
       end
-    %end
+
+    if (strncmp(fitting.aligning_type, 'domain_width', 12))
+      frac_indx(g) = find(f > fitting.fraction, 1, 'first');
+    end
 
     if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
       opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
@@ -679,6 +683,28 @@ function uuids = fit_kymograph(fitting, opts)
             end
 
             offsets(g) = corr_offset;
+          case 'domain_width'
+            if (size(res,2) <= 10)
+              err_all(g,i) = Inf;
+              continue;
+            else
+
+              %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
+              if (strncmp(fitting.scale_type, 'normalize', 10))
+                %res = normalize_domain(res, f*fwidth, opts_expansion, false);
+                res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
+                %res = normalize_domain(res, false);
+                normalization_done = true;
+              end
+            end
+
+            if (isnan(f(end)))
+              err_all(g,i) = Inf;
+              continue;
+            end
+            findx = find(f > fitting.fraction, 1, 'first');
+            %corr_offset = frac_indx(g) - findx + 1;
+            corr_offset = findx - frac_indx(g);
           case 'fitting'
             corr_offset = more_params(g);
           case 'end'
@@ -750,8 +776,8 @@ function uuids = fit_kymograph(fitting, opts)
 
           tmp_err = (fitting.ground_truth{g} - res).^2 / norm_coeff(g);
           %tmp_err = 0*tmp_err;
-          %tmp_frac = ((gfraction{g} - fraction)/half).^2;
 
+          %tmp_frac = ((gfraction{g} - fraction)/half).^2;
           tmp_frac = 1./(1+exp(-15*(((gfraction{g} - fraction)/half).^2-0.5)));
           %tmp_frac = 0;
 

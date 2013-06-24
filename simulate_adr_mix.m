@@ -1,4 +1,4 @@
-function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
+function [all_x, t, x_pos] = simulate_adr_mix(x0, opts, fit_relative)
 
   if (nargin == 1)
     if (isstruct(x0))
@@ -88,6 +88,11 @@ function [all_x, t] = simulate_adr_mix(x0, opts, fit_relative)
     all_params(4,:) = all_params(4,:) ./ all_params(5,:);
     [all_x2, t2] = simulate_model_real(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
     %}
+  end
+
+  if (nargout > 2)
+    x_pos = [0:size(x0,1)-1] * opts.x_step;
+    x_pos = -x_pos([end:-1:1]);
   end
   %[all_x, t] = simulate_model_mix(x0, all_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
 
