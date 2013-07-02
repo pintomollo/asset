@@ -35,6 +35,7 @@ function opts = load_parameters(opts, fname)
     return;
   end
 
+
   % If the file does not exists, we have a few other options
   if (~exist(fname, 'file'))
 

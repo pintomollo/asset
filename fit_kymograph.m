@@ -42,6 +42,8 @@ function uuids = fit_kymograph(fitting, opts)
 
   ngroups = length(fitting.ground_truth);
 
+  all_params = false;
+
   fit_temperatures = false;
   fit_energy = [];
 
@@ -88,8 +90,9 @@ function uuids = fit_kymograph(fitting, opts)
       end
 
       return;
-    elseif ((nrates + numel(fit_energy)) == numel(fitting.init_pos))
+    elseif ((nrates + numel(fit_energy) + strncmp(fitting.aligning_type, 'fitting', 7) + fitting.fit_flow) == numel(fitting.init_pos))
       fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+      all_params = true;
     elseif (nrates == numel(fitting.init_pos))
       fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
       fitting.init_pos = [fitting.init_pos fit_energy];
@@ -316,7 +319,7 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = [p0 fit_energy];
     end
 
-    if (fitting.fit_flow)
+    if (fitting.fit_flow & ~all_params)
       p0 = [p0 1];
     else
       curr_flow_scale = 1;
@@ -332,11 +335,12 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_opts = opts;
 
     for t=1:20
-      tmp_p = exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
+      tmp_p = real(exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0))));
       tmp_params(fit_params) = tmp_p(1:numel(fit_params));
 
       tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
       tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
+
       [tmp_pts, correct] = opts.init_func(tmp_opts, fitting.fit_relative, true);
 
       if (correct)
@@ -385,14 +389,13 @@ function uuids = fit_kymograph(fitting, opts)
     end
     full_error = sum(full_error);
 
-    if (strncmp(fitting.aligning_type, 'fitting', 7))
+    if (strncmp(fitting.aligning_type, 'fitting', 7) && length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow))
       nparams = length(p0);
       fitting.aligning_type = 'domain';
       [junk, offsets] = error_function(p0(:));
       fitting.aligning_type = 'fitting';
       p0 = [p0 offsets];
     end
-
 
     nparams = length(p0);
     if (fitting.fit_flow)
@@ -630,7 +633,7 @@ function uuids = fit_kymograph(fitting, opts)
         
         res = res((end/2)+1:end, :);
         if (opts.nparticles ~= ndata)
-          res = interp1q(simul_pos, res, fitting.x_pos{g}.');
+          res = flipud(interp1q(simul_pos, flipud(res), fitting.x_pos{g}.'));
         end
         
         [f, fwidth] = domain_expansion(res.', size(res, 1), size(res,2), opts_expansion);
@@ -866,9 +869,15 @@ function uuids = fit_kymograph(fitting, opts)
               tmp_params = NaN(ceil(numel(disp_params)/6),6);
               tmp_params(1:numel(disp_params)) = disp_params;
               tmp_params(numel(disp_params)+1:numel(disp_params)+numel(E)) = E(:);
+              tmp_params(numel(disp_params)+numel(E)+1:numel(disp_params)+numel(E)+1) =  curr_flow_scale;
+              tmp_params(numel(disp_params)+numel(E)+2:numel(disp_params)+numel(E)+2) =  corr_offset;
               title(num2str(tmp_params));
             else
-              title([num2str([disp_params E(:).'])]);
+              if (strncmp(fitting.aligning_type, 'fitting', 7))
+                title([num2str([disp_params E(:).' corr_offset])]);
+              else
+                title([num2str([disp_params E(:).'])]);
+              end
               %title([num2str([disp_params E(:).']) ':' num2str(disp_args)]);
             end
 

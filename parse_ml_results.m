@@ -263,7 +263,7 @@ function [params, opts] = parse_ml_results(fname, varargin)
                 if (mod(evol_indx, nbuffer) == 1)
                   evol = [evol; NaN(nbuffer, lparams+1)];
                 end
-                evol(evol_indx, :) = [score myparams];
+                evol(evol_indx, 1:(1+length(myparams))) = [score myparams];
               end
             end
           %elseif (first & isfinite(score))

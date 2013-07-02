@@ -81,6 +81,12 @@ function find_kymograph(varargin)
         end
         ngroups = length(ground_truth);
 
+        if (fitting.fit_relative)
+          log_file = ['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'];
+        else
+          log_file = ['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'];
+        end
+
         if (fitting.start_with_best)
 
           fields = fieldnames(fitting);
@@ -89,23 +95,25 @@ function find_kymograph(varargin)
 
           good_fields = ismember(fields, filters);
 
-          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]]);
+          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]], log_file);
 
           if (~isempty(prev_values))
             best_score = Inf;
             best_pos = fitting.init_pos;
+            best_args = [];
 
             for k=1:size(prev_values{1,2}, 1)
               if (prev_values{1,2}{k,2}(end).score < best_score)
                 best_score = prev_values{1,2}{k,2}(end).score;
                 best_pos = prev_values{1,2}{k,2}(end).params;
                 tmp_rescale = prev_values{1,1}{1}.rescale_factor;
+                best_args = best_pos(length(tmp_rescale)+1:end);
                 best_pos = abs(best_pos(1:length(tmp_rescale))) .* tmp_rescale;
               end
             end
 
             if (~isempty(best_pos))
-              fitting.init_pos = best_pos;
+              fitting.init_pos = [best_pos best_args];
             end
           end
         end
@@ -118,11 +126,7 @@ function find_kymograph(varargin)
           end
         end
 
-        if (fitting.fit_relative)
-          fid = fopen(['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
-        else
-          fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
-        end
+        fid = fopen(log_file, 'a');
         fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo_name, fitting.parameter_set);
         fclose(fid);
 
@@ -183,11 +187,7 @@ function find_kymograph(varargin)
           uuids = fit_kymograph(fitting, opts);
         end
 
-        if (fitting.fit_relative)
-          fid = fopen(['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
-        else
-          fid = fopen(['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'], 'a');
-        end
+        fid = fopen(log_file, 'a');
         for u = 1:length(uuids)
           if (iscell(uuids{u}))
             fprintf(fid, '%s %s OK\n', uuids{u}{1}, kymo_name);
