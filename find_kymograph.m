@@ -74,7 +74,11 @@ function find_kymograph(varargin)
           error('No suitable data for performing the fitting procedure');
         end
 
-        aim_circum = 2*pos(end);
+        if (iscell(pos))
+          aim_circum = 2*max(cat(2, pos{:}));
+        else
+          aim_circum = 2*pos(end);
+        end
         rescale_factor = ellipse_circum(opts.axes_length, aim_circum);
 
         opts.axes_length = opts.axes_length*rescale_factor;
