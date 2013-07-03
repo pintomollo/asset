@@ -430,7 +430,7 @@ function uuids = fit_kymograph(fitting, opts)
         opt.PopSize = 5*numel(p0);
 
         if (fit_temperatures)
-          opt.PopSize = opt.PopSize*ngroups;
+          opt.PopSize = opt.PopSize + ngroups;
         end
 
         [p, fval, cmaes_count, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
