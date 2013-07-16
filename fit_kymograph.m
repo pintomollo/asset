@@ -90,7 +90,7 @@ function uuids = fit_kymograph(fitting, opts)
       end
 
       return;
-    elseif ((nrates + numel(fit_energy) + strncmp(fitting.aligning_type, 'fitting', 7) + fitting.fit_flow) == numel(fitting.init_pos))
+    elseif ((nrates + numel(fit_energy) + ngroups*strncmp(fitting.aligning_type, 'fitting', 7) + fitting.fit_flow) == numel(fitting.init_pos))
       fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
       all_params = true;
     elseif (nrates == numel(fitting.init_pos))
