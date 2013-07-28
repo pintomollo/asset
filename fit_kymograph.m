@@ -394,7 +394,7 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.aligning_type = 'domain';
       [junk, offsets] = error_function(p0(:));
       fitting.aligning_type = 'fitting';
-      p0 = [p0 offsets];
+      p0 = [p0(1:nrates) offsets p0(nrates+1:end)];
     end
 
     nparams = length(p0);
