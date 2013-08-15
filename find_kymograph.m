@@ -304,6 +304,8 @@ function [mymovies, uuid, fitting, opts] = parse_input(varargin)
       % provided value
       if (isfield(fitting, varargin{2*i - 1}))
         fitting.(varargin{2*i - 1}) = varargin{2*i};
+      elseif (isfield(opts, varargin{2*i - 1}))
+        opts.(varargin{2*i - 1}) = varargin{2*i};
       else
         switch varargin{2*i - 1}
           case 'config_modeling'
@@ -311,6 +313,7 @@ function [mymovies, uuid, fitting, opts] = parse_input(varargin)
           case 'config_fitting'
             conf_fit = varargin{2*i};
           otherwise
+            warning on
             warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
         end
       end

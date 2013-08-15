@@ -44,8 +44,11 @@ function uuids = fit_kymograph(fitting, opts)
 
   all_params = false;
 
+  fit_viscosity = false;
   fit_temperatures = false;
   fit_energy = [];
+
+  viscosities = ones(1, ngroups);
 
   switch fitting.parameter_set
     case 1
@@ -61,6 +64,20 @@ function uuids = fit_kymograph(fitting, opts)
       fit_energy = 0.65;
     case 14
       fit_params = [4 5 12 13];
+      fit_temperatures = true;
+      fit_energy = [0.65 0.65];
+    case 22
+      fit_params = [4 5 12 13];
+      fit_viscosity = true;
+      fit_temperatures = true;
+    case 23
+      fit_params = [4 5 12 13];
+      fit_viscosity = true;
+      fit_temperatures = true;
+      fit_energy = 0.65;
+    case 24
+      fit_params = [4 5 12 13];
+      fit_viscosity = true;
       fit_temperatures = true;
       fit_energy = [0.65 0.65];
     case 3
@@ -129,18 +146,9 @@ function uuids = fit_kymograph(fitting, opts)
     opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
   end
 
-  restart = false;
-  if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
-    x0 = opts.init_func(opts, fitting.fit_relative);
-    restart = true;
-  else
-    x0 = opts.init_params;
-    x0 = repmat(x0, [opts.nparticles, 1]);
-  end
-
   flow = opts.advection_params;
-  if (size(flow, 1) ~= size(x0, 1))
-    [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:size(x0, 1)-1]*(size(flow, 1)-1)/(size(x0, 1)-1)).');
+  if (size(flow, 1) ~= opts.nparticles)
+    [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:opts.nparticles-1]*(size(flow, 1)-1)/(opts.nparticles-1)).');
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
 
@@ -149,6 +157,14 @@ function uuids = fit_kymograph(fitting, opts)
 
   for g=1:ngroups
     if (strncmp(fitting.type, 'simulation', 10))
+
+        if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
+          x0 = opts.init_func(opts, fitting.fit_relative);
+        else
+          x0 = opts.init_params;
+          x0 = repmat(x0, [opts.nparticles, 1]);
+        end
+
         fitting.simulation_parameters = ml_params(fit_params);
 
         if (fitting.fit_relative)
@@ -247,6 +263,10 @@ function uuids = fit_kymograph(fitting, opts)
       ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
       temp_scale{g} = [ones(1,2)*diff_ratio; ones(3,2)*ratio; ones(4,2)];
       flow_scale(g) = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+
+      if (fit_viscosity && fitting.temperature(g) == opts.reaction_temperature)
+        viscosities(g) = NaN;
+      end
     else
       E = [];
     end
@@ -319,6 +339,15 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = [p0 fit_energy];
     end
 
+    if (fit_viscosity)
+      good_visc = ~isnan(viscosities);
+      nvisc = sum(good_visc);
+      p0 = [p0 viscosities(good_visc)];
+    else
+      nvisc = 0;
+      viscosities(:) = 1;
+    end
+
     if (fitting.fit_flow & ~all_params)
       p0 = [p0 1];
     else
@@ -336,7 +365,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     for t=1:20
       tmp_p = real(exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0))));
-      tmp_params(fit_params) = tmp_p(1:numel(fit_params));
+      tmp_params(fit_params) = tmp_p(1:nrates);
 
       tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
       tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
@@ -350,7 +379,14 @@ function uuids = fit_kymograph(fitting, opts)
         break;
       end
     end
+
     p0 = tmp_p;
+
+    tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
+    tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
+
+    [x0] = opts.init_func(tmp_opts, fitting.fit_relative);
+
     if (~correct)
       warning on;
       warning('Could not identify a bistable initial condition');
@@ -389,7 +425,7 @@ function uuids = fit_kymograph(fitting, opts)
     end
     full_error = sum(full_error);
 
-    if (strncmp(fitting.aligning_type, 'fitting', 7) && length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow))
+    if (strncmp(fitting.aligning_type, 'fitting', 7) && length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow + nvisc*fit_viscosity))
       nparams = length(p0);
       fitting.aligning_type = 'domain';
       [junk, offsets] = error_function(p0(:));
@@ -584,6 +620,14 @@ function uuids = fit_kymograph(fitting, opts)
           curr_flow_scale = 1;
         end
 
+        if (fit_viscosity)
+          curr_visc = ones(1,ngroups);
+          curr_visc(good_visc) = abs(more_params(end-nvisc+1:end));
+          more_params = more_params(1:end-nvisc);
+        else
+          curr_visc = viscosities;
+        end
+
         if (fit_temperatures)
           if (isempty(fit_energy))
             tmp_params = tmp_params .* temp_scale{g};
@@ -602,9 +646,13 @@ function uuids = fit_kymograph(fitting, opts)
             tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ones(3,2)*ratio; ones(4,2)];
             curr_flow_scale = curr_flow_scale * exp(-(E(2)/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
           end
+
+          if (fit_viscosity)
+            tmp_params(1,:) = tmp_params(1,:)*curr_visc(g);
+          end
         end
 
-        if (restart)
+        if (opts.restart_init)
           opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
           opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
           [x0, correct] = opts.init_func(opts, fitting.fit_relative);
