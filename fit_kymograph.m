@@ -66,6 +66,14 @@ function uuids = fit_kymograph(fitting, opts)
       fit_params = [4 5 12 13];
       fit_temperatures = true;
       fit_energy = [0.65 0.65];
+    case 15
+      fit_params = [4 5 12 13];
+      fit_temperatures = true;
+      fit_energy = ones(1,4) * 0.65;
+    case 16
+      fit_params = [4 5 12 13];
+      fit_temperatures = true;
+      fit_energy = ones(1,7) * 0.65;
     case 22
       fit_params = [4 5 12 13];
       fit_viscosity = true;
@@ -634,17 +642,31 @@ function uuids = fit_kymograph(fitting, opts)
             curr_flow_scale = curr_flow_scale * flow_scale(g);
           else
             if (length(fit_energy) == 1)
-              E = [1 1]*abs(more_params(end));
+              E = ones(3,2)*abs(more_params(end));
+              flow_E = E(1);
               more_params = more_params(1:end-1);
-            else
-              E = abs(more_params(end-1:end));
+            elseif (length(fit_energy) == 2)
+              E = ones(3,2)*abs(more_params(end-1));
+              flow_E = more_params(end);
               more_params = more_params(1:end-2);
+            elseif (length(fit_energy) == 4)
+              E = abs(more_params(end-3:end-1));
+              E = E(:);
+              E = E(:,[1 1]);
+              flow_E = more_params(end);
+              more_params = more_params(1:end-4);
+            elseif (length(fit_energy) == 7)
+              E = abs(more_params(end-6:end-1));
+              E = E(:);
+              E = [E(1:3,1) E(4:6,1)];
+              flow_E = more_params(end);
+              more_params = more_params(1:end-7);
             end
 
             diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
-            ratio = exp(-(E(1)/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
-            tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ones(3,2)*ratio; ones(4,2)];
-            curr_flow_scale = curr_flow_scale * exp(-(E(2)/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+            ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
+            tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ones(3,2).*ratio; ones(4,2)];
+            curr_flow_scale = curr_flow_scale * exp(-(flow_E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
           end
 
           if (fit_viscosity)
