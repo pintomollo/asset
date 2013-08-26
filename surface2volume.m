@@ -1,4 +1,4 @@
-function ratio = surface2volume(axes_length)
+function [ratio, surface, volume] = surface2volume(axes_length)
 
   a = axes_length(1,:);
   b = axes_length(2,:);

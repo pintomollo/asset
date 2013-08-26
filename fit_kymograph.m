@@ -377,7 +377,7 @@ function uuids = fit_kymograph(fitting, opts)
     end
 
     %p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
-    correct = false;
+    correct = 0;
     tmp_params = ml_params;
     tmp_opts = opts;
 
@@ -390,7 +390,7 @@ function uuids = fit_kymograph(fitting, opts)
 
       [tmp_pts, correct] = opts.init_func(tmp_opts, fitting.fit_relative, true);
 
-      if (correct)
+      if (correct == 3 || fitting.start_with_best)
         tmp_params = [tmp_opts.diffusion_params; tmp_pts] ./ rescaling;
         tmp_p(1:numel(fit_params)) = tmp_params(fit_params);
 
@@ -405,7 +405,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     [x0] = opts.init_func(tmp_opts, fitting.fit_relative);
 
-    if (~correct)
+    if (correct < 3)
       warning on;
       warning('Could not identify a bistable initial condition');
       warning off;
@@ -557,9 +557,10 @@ function uuids = fit_kymograph(fitting, opts)
         results = dramrun(model,[],params,options);
         p = results.mean;
       case 'sample'
-        options.independent = ~strncmp(fitting.combine_data, 'together', 8);
+        options.sampling_type = fitting.combine_data;
         options.range_size  = fitting.step_size;
         options.max_iter    = fitting.max_iter;
+        options.is_log = fitting.sample_log;
         options.log_file = [log_name 'evol'];
         options.printint = 10;
 
@@ -617,7 +618,7 @@ function uuids = fit_kymograph(fitting, opts)
     offsets = zeros(1, ngroups);
 
     for i = 1:nevals
-      correct = true;
+      correct = 3;
 
       for g=1:ngroups
         curr_p = p_all(:,i);
@@ -689,7 +690,7 @@ function uuids = fit_kymograph(fitting, opts)
           opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
           [x0, correct] = opts.init_func(opts, fitting.fit_relative);
 
-          if (~correct)
+          if (correct == 0)
             err_all(g,i) = Inf;
             continue;
           end

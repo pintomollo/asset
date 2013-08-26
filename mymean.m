@@ -1,4 +1,4 @@
-function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
+function [all_mvals, all_svals, all_nelems, groups] = mymean(all_vals, dim, indexes)
 
   all_mvals = all_vals;
   all_svals = NaN;
@@ -36,6 +36,7 @@ function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
 
   all_mvals = NaN(0, numel(all_vals)/vals_size(dim));
   all_svals = all_mvals;
+  all_nelems = all_mvals;
 
   perm_dim = [1:length(vals_size)];
   perm_dim(dim) = 1;
@@ -76,6 +77,10 @@ function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
       svals(nelems == 1) = 0;
 
       all_svals = cat(1, all_svals, svals);
+
+      if (nargout > 2)
+        all_nelems = cat(1, all_nelems, nelems);
+      end
     end
   end
 
@@ -87,6 +92,11 @@ function [all_mvals, all_svals, groups] = mymean(all_vals, dim, indexes)
   if (nargout > 1)
     all_svals = reshape(all_svals, vals_size(perm_dim));
     all_svals = ipermute(all_svals, perm_dim);
+
+    if (nargout > 2)
+      all_nelems = reshape(all_nelems, vals_size(perm_dim));
+      all_nelems = ipermute(all_nelems, perm_dim);
+    end
   end
 
   return;

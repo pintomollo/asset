@@ -105,7 +105,7 @@ function find_kymograph(varargin)
 
           good_fields = ismember(fields, filters);
 
-          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]], log_file);
+          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]]);
 
           if (~isempty(prev_values))
             best_score = Inf;

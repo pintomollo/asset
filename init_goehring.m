@@ -23,8 +23,9 @@ function [init_val, correct] = init_goehring(opts, is_relative, correct_position
   %[pts, lines] = study_isoclines(@maintenance, [0 10], opts.reaction_params);
   %figure;hold on;
   %plot(lines(:,1,1), lines(:,2,1), 'b');
-  %plot(lines(:,1,2), lines(:,2,2), 'r');
+   %plot(lines(:,1,2), lines(:,2,2), 'r');
   %scatter(pts(:,1), pts(:, 2), 'k');
+  correct = [];
 
   if (opts.init_params)
 
@@ -32,6 +33,7 @@ function [init_val, correct] = init_goehring(opts, is_relative, correct_position
 
     if (isempty(pts))
       init_val = repmat([1.51 0.1], opts.nparticles, 1); % Values produced by the original parameters
+      correct = 0;
     else
       init_val = repmat(pts(1,:), opts.nparticles, 1);
     end
@@ -46,6 +48,7 @@ function [init_val, correct] = init_goehring(opts, is_relative, correct_position
 
     if (isempty(pts))
       vals = [1.8 4]; % Values produced by the original parameters
+      correct = 0;
     end
 
     pos = L*[0:(opts.nparticles-1)]/(opts.nparticles-1);
@@ -59,8 +62,8 @@ function [init_val, correct] = init_goehring(opts, is_relative, correct_position
 
   end
 
-  if (numel(pts) < 6)
-    correct = false;
+  if (isempty(correct))
+    correct = size(pts,1);
   end
 
   if (is_relative)
@@ -69,7 +72,7 @@ function [init_val, correct] = init_goehring(opts, is_relative, correct_position
 
   if (correct_position)
     pts = p;
-    if (~correct && (any(p(4,:) > 1)))
+    if (correct < 3 && (any(p(4,:) > 1)))
 
       nevals = 15;
       pos = [0:(nevals-1)]*(1/(nevals-1));
