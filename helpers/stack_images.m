@@ -75,6 +75,8 @@ function [window, shift, pos] = stack_images(varargin)
 
     window = window(:, width:end-width+1, :);
     pos = pos(width:end-width+1);
+
+    shift = shift - first;
   end
 
   return;

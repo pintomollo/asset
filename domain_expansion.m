@@ -1,6 +1,8 @@
 function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domain_expansion(domain, center, cytok, opts, domain_half)
 
   mymovie = [];
+  raw_domain = [];
+  pos = [];
   if (nargin < 2)
     error('Minimal number of arguments is 2');
   elseif (nargin == 2)
@@ -67,7 +69,7 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
 %    domain_half(~goods_half) = 0;
 
 %    raw_domain = (domain + domain_half) ./ (goods + goods_half);
-  
+
     domain = nanmean(cat(3, domain, domain_half), 3);
 
     if (center == size(domain,2))
@@ -75,12 +77,14 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
     elseif (center ~= 1)
       domain = nanmean(cat(3, domain(:, center:end), domain(:,center:-1:1)), 3);
     end
+    boundary = size(domain, 2);
   else
     if (center == size(domain,2))
       domain = domain(:,end:-1:1);
     elseif (center ~= 1)
       domain = nanmean(cat(3, domain(:, center:end), domain(:,center:-1:1)), 3);
     end
+    boundary = size(domain, 2);
   end
 
 %  figure;imagesc(domain);
@@ -143,13 +147,21 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
     if (opts.verbosity == 3)
       pos_indx = [0:50:boundary];
 
+      if (isempty(raw_domain))
+        raw_domain = [domain(:,end:-1:2) domain];
+      end
+
       figure;
       imagesc(raw_domain);
-      set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+center, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+center));
+      if (~isempty(pos))
+        set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+center, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+center));
+      end
 
       figure;imagesc(domain);
       hold on;plot(path, 1:length(path));
-      set(gca, 'XTick', pos_indx+1, 'XTickLabel', pos(pos_indx+center));
+      if (~isempty(pos))
+        set(gca, 'XTick', pos_indx+1, 'XTickLabel', pos(pos_indx+center));
+      end
 
       figure;imagesc(opts.segmentation_parameters.domain_expansion.scoring_func(domain, opts.segmentation_parameters.domain_expansion.cortex_weights));
     end

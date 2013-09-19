@@ -1467,6 +1467,20 @@ for i=length(axchild):-1:1
         if strcmp(get(ax,'YScale'),'log')
             points(2,:)=log10(points(2,:));
         end
+
+        linex = get(axchild(i),'XData');
+        linex = linex(:)'; % Octave stores the data in a column vector
+        if strcmp(get(ax,'XScale'),'log')
+            linex(find(linex<=0)) = NaN;
+            linex=log10(linex);
+        end
+        liney = get(axchild(i),'YData');
+        liney = liney(:)'; % Octave stores the data in a column vector
+        if strcmp(get(ax,'YScale'),'log')
+            liney(find(liney<=0)) = NaN;
+            liney=log10(liney);
+        end
+
         % TODO LogZ
         if size(points,1)==2
             [x,y,z] = project(points(1,:),points(2,:),zeros(size(points(1,:))),projection);    

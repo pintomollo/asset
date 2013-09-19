@@ -191,7 +191,7 @@ function mystruct = get_struct(type, nstruct)
 
 
     % Parameters used to perform machine learning (see find_parameters.m)
-    case 'ml_params'                              
+    case 'ml_params'
       mystruct = struct('config', {{}}, ...                 % Parameters of the optimization
                         'evolution', {{}}, ...              % "Path" of the optimization
                         'goal', [], ...

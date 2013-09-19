@@ -1,8 +1,23 @@
 function [ratio, surface, volume] = surface2volume(axes_length)
 
+  axes_length = sort(axes_length, 'descend');
+
   a = axes_length(1,:);
   b = axes_length(2,:);
   c = axes_length(3,:);
+
+  npts = numel(a);
+  if (npts > 1)
+    ratio = NaN(1, npts);
+    surface = ratio;
+    volume = ratio;
+
+    for i=1:npts
+      [ratio(i), surface(i), volume(i)] = surface2volume(axes_length(:,i));
+    end
+
+    return;
+  end
 
   tmp = b;
   b(c > b) = c(c > b);

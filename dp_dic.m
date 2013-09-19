@@ -56,7 +56,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
   mymovie.dic.parameters = parameters;
 
   img = [];
-  rescale_size = [370 570];
+  rescale_size = [400 700];
 
   if (length(eggshell) < nimg | empty_struct(eggshell(nimg), 'carth') | opts.recompute | (~strncmp(opts.do_ml, 'none', 4) & (strncmp(opts.ml_type, 'eggshell', 8) | strncmp(opts.ml_type, 'all', 3))))
     update(1,nimg) = true;

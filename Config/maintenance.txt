@@ -1,4 +1,4 @@
 advection_params zeros(opts.nparticles, 1)
 init_params false
-tmax 3500
+tmax 1500
 user_data 1
