@@ -1,16 +1,16 @@
 fit_relative true
 fitting_type 'cmaes'
-start_with_best false
+start_with_best true
 init_noise 0.1
 data_noise 0.01
 ndelays 5
 %init_pos [0.0895 1.1211 4.4714 2.2011]
-init_pos [0.0027 1.88 0.014 2.36]
+%init_pos [0.0027 1.88 0.014 2.36]
 step_size 0.1
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-3
-normalize_smooth false
+normalize_smooth true
 max_iter 100000
 aligning_type 'fitting'
 pixels_only false
