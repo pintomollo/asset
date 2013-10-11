@@ -1,6 +1,6 @@
 fit_relative true
 fitting_type 'cmaes'
-start_with_best true
+start_with_best false
 init_noise 0.1
 data_noise 0.01
 ndelays 5
