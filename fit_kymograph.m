@@ -583,7 +583,7 @@ function uuids = fit_kymograph(fitting, opts)
         return;
     end
 
-    p = roundn(p, ndecimals);
+    p = roundn(p, -(ndecimals+2));
     p(1:nrates) = abs(p(1:nrates));
     %p = p.^2;
 
