@@ -128,6 +128,9 @@ function uuids = fit_kymograph(fitting, opts)
     elseif ((nrates + numel(fit_energy) + ngroups*strncmp(fitting.aligning_type, 'fitting', 7) + fitting.fit_flow) == numel(fitting.init_pos))
       fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
       all_params = true;
+    elseif ((nrates + numel(fit_energy) + ngroups*strncmp(fitting.aligning_type, 'fitting', 7) + fitting.fit_flow + fit_viscosity*2) == numel(fitting.init_pos))
+      warning('Assuming two viscosities to fit !')
+      all_params = true;
     elseif (nrates == numel(fitting.init_pos))
       fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
       fitting.init_pos = [fitting.init_pos fit_energy];
@@ -174,7 +177,8 @@ function uuids = fit_kymograph(fitting, opts)
                 opts.reaction_params];
 
   for g=1:ngroups
-    if (strncmp(fitting.type, 'simulation', 10))
+    is_simulation = (strncmp(fitting.type, 'simulation', 10));
+    if (is_simulation)
 
         if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
           x0 = opts.init_func(opts, fitting.fit_relative);
@@ -226,7 +230,7 @@ function uuids = fit_kymograph(fitting, opts)
 
       if (strncmp(fitting.scale_type, 'normalize', 10))
         %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-        fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
+        fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_simulation, fitting.normalize_smooth);
         %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
 
         normalization_done = true;
@@ -243,7 +247,7 @@ function uuids = fit_kymograph(fitting, opts)
         f(:) = 1;
       end
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-      fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, true, fitting.normalize_smooth);
+      fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_simulation, fitting.normalize_smooth);
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
       normalization_done = true;
 
@@ -390,9 +394,14 @@ function uuids = fit_kymograph(fitting, opts)
 
       [tmp_pts, correct] = opts.init_func(tmp_opts, fitting.fit_relative, true);
 
-      if (correct == 3 || fitting.start_with_best)
+      if (correct == 3)
         tmp_params = [tmp_opts.diffusion_params; tmp_pts] ./ rescaling;
         tmp_p(1:numel(fit_params)) = tmp_params(fit_params);
+
+        break;
+      elseif (fitting.start_with_best || ~isempty(fitting.init_pos))
+        tmp_p = p0;
+        tmp_params = ml_params;
 
         break;
       end
@@ -410,6 +419,8 @@ function uuids = fit_kymograph(fitting, opts)
       warning('Could not identify a bistable initial condition');
       warning off;
     end
+
+    ndecimals = -min(log10(fitting.tolerance/10), 0);
 
     for g=1:ngroups
       if (fitting.estimate_n)
@@ -563,6 +574,7 @@ function uuids = fit_kymograph(fitting, opts)
         options.is_log = fitting.sample_log;
         options.log_file = [log_name 'evol'];
         options.printint = 10;
+        options.precision = ndecimals;
 
         p = exhaustive_sampler(@error_function, p0(:), options);
       otherwise
@@ -571,6 +583,7 @@ function uuids = fit_kymograph(fitting, opts)
         return;
     end
 
+    p = roundn(p, ndecimals);
     p(1:nrates) = abs(p(1:nrates));
     %p = p.^2;
 
@@ -586,9 +599,10 @@ function uuids = fit_kymograph(fitting, opts)
     stop = false;
 
     if ((mod(optimValues.iteration, 10) == 0 && strncmp(state, 'iter', 4)) || strncmp(state, 'done', 4))
+      print_str = [' %.' num2str(ndecimals) 'f'];
 
       fprintf(fid, [uuid '1 %ld  %e 0 0'], optimValues.iteration+cmaes_count, optimValues.fval);
-      fprintf(fid, ' %e', x);
+      fprintf(fid, print_str, x);
       fprintf(fid, ' \n');
 
       disp([num2str(optimValues.iteration+cmaes_count) ' : ' num2str(optimValues.fval), ' | ' num2str(x(:).')]);
@@ -601,7 +615,8 @@ function uuids = fit_kymograph(fitting, opts)
   function [err_all, offsets] = error_function(varargin)
 
     %sigma2 = 0;
-    p_all = varargin{1};
+    %p_all = varargin{1};
+    p_all = roundn(varargin{1}, -ndecimals);
 
     [curr_nparams, nevals] = size(p_all);
     flip = false;
@@ -702,7 +717,7 @@ function uuids = fit_kymograph(fitting, opts)
         else
           [res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * curr_flow_scale, opts.user_data, opts.max_iter);
         end
-        
+
        % if (~isempty(useful_data))
        %   figure;imagesc(useful_data - res);
        % end
@@ -997,7 +1012,7 @@ end
 function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
 %function domain = normalize_domain(domain, has_noise)
 
-  prct_thresh = 0.1;
+  prct_thresh = 5;
   path = path/opts.quantification.resolution;
   [h, w, f] = size(domain);
   h = h/2;
@@ -1009,9 +1024,9 @@ function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
 
   nplanes = size(domain, 3);
 
-  if (do_min_max)
+  if (do_min_max && has_noise)
     noise = estimate_noise(domain);
-    domain = min_max_domain(domain, path, noise(2));
+    domain = min_max_domain(domain, path, 3*noise(2));
   end
 
   for i=1:nplanes

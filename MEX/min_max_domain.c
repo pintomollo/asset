@@ -50,6 +50,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
           column[j] = ref_val;
         }
       }
+      /*
       ref_val = column[pos];
       for (j=pos+1;j<half;j++) {
         tmp_val = column[j];
@@ -59,7 +60,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         } else {
           column[j] = ref_val;
         }
-      }
+      }*/
 
       column+=half;
       ref_val = column[pos];
@@ -72,6 +73,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
           column[j] = ref_val;
         }
       }
+      /*
       ref_val = column[pos];
       for (j=pos+1;j<half;j++) {
         tmp_val = column[j];
@@ -81,7 +83,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         } else {
           column[j] = ref_val;
         }
-      }
+      }*/
       column+=half;
     }
   }

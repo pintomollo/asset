@@ -8,6 +8,8 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
   log_file = opts.log_file;
   disp_iter = opts.printint;
 
+  print_str = [' %.' num2str(opts.precision) 'f'];
+
   switch (opts.sampling_type)
     case 'independent'
       nevals = ceil((max_iter/nparams)/2);
@@ -35,10 +37,13 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
         pos = 1 + val_range.*([-pos(end:-1:2) pos(2:end)]);
       end
 
-      pos = enumerate(pos(:), pos(:));
+      single_pos = pos(:);
+      pos = enumerate(single_pos, single_pos);
       nevals = size(pos, 1);
+      nsingle = length(single_pos);
 
       all_pos = ones(nevals*(nparams*(nparams-1))/2, nparams);
+      single_vals = ones(nsingle*nparams, nparams);
       count = 0;
       for i=1:nparams-1
         for j=i+1:nparams
@@ -46,7 +51,11 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
           all_pos([1:nevals] + count*nevals,j) = pos(:, 2);
           count = count + 1;
         end
+        single_vals([1:nsingle]+(i-1)*nsingle, i) = single_pos;
       end
+      single_vals([1:nsingle]+(nparams-1)*nsingle, end) = single_pos;
+
+      all_pos = [all_pos; single_vals];
       all_pos(end+1,:) = 1;
     case 'together'
       nevals = max(ceil((max_iter^(1/nparams))/2),2);
@@ -105,7 +114,7 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
 
     if (do_log)
       fprintf(fid, [uuid '%ld : %e |'], i, score);
-      fprintf(fid, ' %f', curr_p);
+      fprintf(fid, print_str, curr_p);
       fprintf(fid, '\n');
     end
 

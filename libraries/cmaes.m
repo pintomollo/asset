@@ -413,6 +413,8 @@ end
 
 % Unique idientifier in case of multipler writers in the same file
 uuid = ['CMAES' num2str(round(rand(1)*100)) ' '];
+ndecimals = -min(log10(stopTolX), 0);
+print_str = ['%.' num2str(ndecimals) 'f '];
 
 % TODO here silent option? set disp, save and log options to 0 
 
@@ -671,7 +673,8 @@ else % flgresume
 	    fprintf(fid, [uuid '%ld %ld 0 0 0 '], 0, counteval); 
 	    % fprintf(fid, '%ld %ld 0 0 %e ', countiter, counteval, fmean); 
 %qqq	    fprintf(fid, msprintf('%e ', genophenotransform(out.genopheno, xmean)) + '\n'); 
-	    fprintf(fid, '%e ', xmean);
+	    %fprintf(fid, '%e ', xmean);
+	    fprintf(fid, print_str, xmean);
             fprintf(fid, '\n'); 
 	  end
 	  fclose(fid); 
@@ -1445,7 +1448,7 @@ while isempty(stopflag)
 	  if strcmp(name, 'axlen')
 	    fprintf(fid, [uuid '%d %d %e %e %e '], countiter, counteval, sigma, ...
 		max(diagD), min(diagD)); 
-            fprintf(fid, '%e ', sort(diagD)); 
+            fprintf(fid, print_str, sort(diagD)); 
             fprintf(fid, '\n');
 	  elseif strcmp(name, 'disp') % TODO
 	  elseif strcmp(name, 'fit')
@@ -1456,7 +1459,7 @@ while isempty(stopflag)
 	    fprintf(fid, '\n');
 	  elseif strcmp(name, 'stddev')
 	    fprintf(fid, [uuid '%ld %ld %e 0 0 '], countiter, counteval, sigma); 
-	    fprintf(fid, '%e ', sigma*sqrt(diagC)); 
+	    fprintf(fid, print_str, sigma*sqrt(diagC)); 
             fprintf(fid, '\n');
 	  elseif strcmp(name, 'xmean')
 	    if isnan(fmean)
@@ -1464,12 +1467,12 @@ while isempty(stopflag)
 	    else
 	      fprintf(fid, [uuid '%ld %ld 0 0 %e '], countiter, counteval, fmean); 
 	    end
-	    fprintf(fid, '%e ', xmean); 
+	    fprintf(fid, print_str, xmean); 
             fprintf(fid, '\n');
 	  elseif strcmp(name, 'evol')
             % TODO: fitness is inconsistent with x-value
 	    fprintf(fid, [uuid '%ld %ld %25.18e 0 0 '], countiter, counteval, fitness.raw(1)); 
-	    fprintf(fid, '%e ', arx(:,fitness.idx(1))); 
+	    fprintf(fid, print_str, arx(:,fitness.idx(1))); 
             fprintf(fid, '\n');
 	  end
 	  fclose(fid); 
