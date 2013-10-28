@@ -177,8 +177,8 @@ function uuids = fit_kymograph(fitting, opts)
                 opts.reaction_params];
 
   for g=1:ngroups
-    is_simulation = (strncmp(fitting.type, 'simulation', 10));
-    if (is_simulation)
+    is_data = ~(strncmp(fitting.type, 'simulation', 10));
+    if (~is_data)
 
         if (~isempty(opts.init_func) & isa(opts.init_func, 'function_handle'))
           x0 = opts.init_func(opts, fitting.fit_relative);
@@ -230,7 +230,7 @@ function uuids = fit_kymograph(fitting, opts)
 
       if (strncmp(fitting.scale_type, 'normalize', 10))
         %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-        fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_simulation, fitting.normalize_smooth);
+        fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_data, fitting.normalize_smooth);
         %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
 
         normalization_done = true;
@@ -247,7 +247,7 @@ function uuids = fit_kymograph(fitting, opts)
         f(:) = 1;
       end
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-      fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_simulation, fitting.normalize_smooth);
+      fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_data, fitting.normalize_smooth);
       %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
       normalization_done = true;
 
@@ -936,7 +936,7 @@ function uuids = fit_kymograph(fitting, opts)
             set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
             colormap(blueredmap)
             hold on,
-            plot(xfrac, yfrac, 'w');
+            plot(xfrac, yfrac, 'Color', [83 83 83]/255);
             title([num2str(err_all(g,i)) ' : ' num2str(sum(tmp_err(linear_goods{g}))) ', ' num2str(sum(tmp_frac))]);
 
             subplot(1,3,2);
@@ -950,8 +950,8 @@ function uuids = fit_kymograph(fitting, opts)
             %plot((size(tmp_err, 2)/2)+2*gfraction{g}, 1:size(tmp_err,1), 'k');
             %plot((size(tmp_err, 2)/2)-2*fraction, 1:size(tmp_err,1), 'w');
             %plot((size(tmp_err, 2)/2)+2*fraction, 1:size(tmp_err,1), 'w');
-            plot(xfrac, yfrac, 'w');
-            plot(xgfrac, yfrac, 'k');
+            plot(xfrac, yfrac, 'Color', [83 83 83]/255);
+            plot(xgfrac, yfrac, 'Color', [83 83 83]/255);
 
             disp_params = tmp_params .* rescaling;
             disp_params = disp_params(fit_params);
@@ -983,7 +983,7 @@ function uuids = fit_kymograph(fitting, opts)
             set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
             colormap(blueredmap)
             hold on
-            plot(xgfrac, yfrac, 'k');
+            plot(xgfrac, yfrac, 'Color', [83 83 83]/255);
             title(fitting.type)
 
             keyboard

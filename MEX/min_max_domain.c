@@ -38,8 +38,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       if (mxIsNaN(path[i])) {
         pos = half - 1;
       } else {
-        pos = half - (int)path[i];
+        pos = half - (int)path[i] - 1;
       }
+      pos = pos < 0 ? 0 : pos;
+      pos = pos >= half-1 ? half-1 : pos;
+
       ref_val = column[pos];
       for (j=pos-1;j>=0;j--) {
         tmp_val = column[j];
