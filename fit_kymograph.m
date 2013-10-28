@@ -140,7 +140,11 @@ function uuids = fit_kymograph(fitting, opts)
     end
   end
 
-  rng(now + cputime, 'twister');
+  if (exist('rng'))
+    rng(now + cputime, 'twister');
+  else
+    RandStream.setDefaultStream(RandStream('mt19937ar','seed',now + cputime));
+  end
   uuids = cell(fitting.nfits, 1);
 
   %tail_coeff = 0.25;
