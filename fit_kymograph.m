@@ -463,7 +463,7 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.aligning_type = 'domain';
       [junk, offsets] = error_function(p0(:));
       fitting.aligning_type = 'fitting';
-      p0 = [p0(1:nrates) offsets/100 p0(nrates+1:end)];
+      p0 = [p0(1:nrates) offsets/fitting.offset_scaling p0(nrates+1:end)];
     end
 
     nparams = length(p0);
@@ -809,7 +809,7 @@ function uuids = fit_kymograph(fitting, opts)
             %corr_offset = frac_indx(g) - findx + 1;
             corr_offset = findx - frac_indx(g);
           case 'fitting'
-            corr_offset = more_params(g)*100;
+            corr_offset = more_params(g)*fitting.offset_scaling;
           case 'end'
             corr_offset = size_data(g,2) - size(res, 2) + 1;
           case 'lsr'
@@ -1030,7 +1030,7 @@ function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
 
   if (do_min_max && has_noise)
     noise = estimate_noise(domain);
-    domain = min_max_domain(domain, path, 3*noise(2));
+    domain = min_max_domain(domain, path, 3*noise(:,2));
   end
 
   for i=1:nplanes

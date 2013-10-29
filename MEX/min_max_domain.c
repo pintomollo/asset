@@ -5,15 +5,16 @@
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
-  int i, j, p, pos;
+  int i, j, p, pos, nnoise = 0;
   mwSize w, h, planes, half, ndims;
   const mwSize *sizes;
-  double *img, *path, noise = 0, *column, ref_val, tmp_val;
+  double *img, *path, *noises, noise = 0, *column, ref_val, tmp_val;
 
   if (nrhs < 2) {
     mexErrMsgTxt("Not enough input arguments (2 is the minimum) !");
   } else if (nrhs == 3) {
-    noise = mxGetScalar(prhs[2]);
+    noises = mxGetPr(prhs[2]);
+    nnoise = mxGetNumberOfElements(prhs[2]);
   }
   
   ndims = mxGetNumberOfDimensions(prhs[0]);
@@ -34,6 +35,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   column = img;
 
   for (p=0; p<planes; p++) {
+    if (nnoise == planes) {
+      noise = noises[p];
+    }
     for (i=0; i < w; i++) {
       if (mxIsNaN(path[i])) {
         pos = half - 1;
