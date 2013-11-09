@@ -94,8 +94,8 @@ function myregress(x, y, c)
       scatter(pos_out(i,:), y_out(i,:), '+',  'MarkerEdgeColor', c_out(i,:));
     end
   else
-    scatter(pos, y, c);
-    scatter(pos_out, y_out, ['+' c]);
+    scatter(pos, y, 'MarkerEdgeColor', c);
+    scatter(pos_out, y_out, '+', 'MarkerEdgeColor', c);
   end
   plot(X, Y, 'k');
   plot(X, Y+t_n*sqrt(s_predi), 'k');

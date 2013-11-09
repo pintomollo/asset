@@ -137,6 +137,10 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
 
       all_params = true;
+    elseif ((nrates + numel(fit_energy) + noffsets + fit_viscosity*nvisc) == numel(fitting.init_pos))
+
+      fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+      fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
     elseif (nrates == numel(fitting.init_pos))
       fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
       fitting.init_pos = [fitting.init_pos fit_energy];
@@ -688,19 +692,19 @@ function uuids = fit_kymograph(fitting, opts)
               more_params = more_params(1:end-1);
             elseif (length(fit_energy) == 2)
               E = ones(3,2)*abs(more_params(end-1));
-              flow_E = more_params(end);
+              flow_E = abs(more_params(end));
               more_params = more_params(1:end-2);
             elseif (length(fit_energy) == 4)
               E = abs(more_params(end-3:end-1));
               E = E(:);
               E = E(:,[1 1]);
-              flow_E = more_params(end);
+              flow_E = abs(more_params(end));
               more_params = more_params(1:end-4);
             elseif (length(fit_energy) == 7)
               E = abs(more_params(end-6:end-1));
               E = E(:);
               E = [E(1:3,1) E(4:6,1)];
-              flow_E = more_params(end);
+              flow_E = abs(more_params(end));
               more_params = more_params(1:end-7);
             end
 

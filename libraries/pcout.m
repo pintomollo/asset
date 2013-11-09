@@ -1,66 +1,62 @@
-function outliers = pcout(pts, s)
+function [outliers, w1, w2] = pcout(pts, w1coef, w2coef)
+% Based on the R code
 % P. Filzmoser, R. Maronna, and M. Werner. Outlier identification in high dimensions.
 % Computational Statistics and Data Analysis, Vol. 52, pp. 1694-1711, 2008
 
-  if (nargin == 1)
-    s = 0.25;
+  cs = 0.25;
+  if (nargin < 3)
+    w1coef = [0.33 2.5];
+    w2coef = [0.25 0.99];
+  else
+    if (numel(w1coef) < 2)
+      w1coef = [0.33 2.5];
+    end
+    if (numel(w2coef) < 2)
+      w2coef = [0.25 0.99];
+    end
   end
   npts = size(pts, 1);
 
+  % PHASE 1:
+  % Step 1: robustly sphere the data:
   rob_mean = nanmedian(pts);
-  rob_var = mad(pts, 1);
-
+  rob_var = 1.4826*mad(pts, 1);
   x = bsxfun(@rdivide, bsxfun(@minus, pts, rob_mean), rob_var);
-  cov_mat = nancov(x);
-  [eig_vect, eig_vals] = eig(cov_mat);
 
-  eig_vals = diag(eig_vals);
-  [eig_vals, indx] = sort(eig_vals, 'descend');
-  eig_vect = eig_vect(:, indx);
-
-  tot_var = sum(eig_vals);
-  frac_exp = cumsum(eig_vals) / tot_var;
+  % Step 2: PC decomposition; compute p*, robustly sphere:
+  [u, s, v] = svd(bsxfun(@minus, x, nanmean(x)));
+  var_expl = (diag(s).^2) / (npts-1);
+  frac_exp = cumsum(var_expl) / sum(var_expl);
   last = find(frac_exp > 0.99, 1);
-  eig_vect = eig_vect(:, 1:last);
+  quantiles = sqrt(chi2inv([0.5 w2coef], last));
 
-  z = x*eig_vect;
+  z = x*v(:,1:last);
   rob_mean = nanmedian(z);
-  rob_var = mad(z, 1);
+  rob_var = 1.4826*mad(z, 1);
   z = bsxfun(@rdivide, bsxfun(@minus, z, rob_mean), rob_var);
 
-  rob_mean = nanmedian(z);
-  rob_var = mad(z, 1);
-  rob_cov = nancov(z);
+  % Step 3: compute robust kurtosis weights, transform to distances:
+  kurt = abs(nanmean(z.^4) - 3);
+  weighted = z * diag(kurt / sum(kurt));
 
-  centered = bsxfun(@minus, z, rob_mean);
+  mahala = sqrt(sum(weighted.^2, 2));
+  mahala = mahala * quantiles(1) / median(mahala);
 
-  kurt = abs(nanmean(bsxfun(@rdivide, centered.^4, rob_var.^4)) - 3);
-  kurt = kurt / sum(kurt);
-
-  kcov = rob_cov .* (kurt' * kurt);
-  kcov = pinv(kcov);
-
-  quantiles = sqrt(chi2inv([0.25 0.5 0.99], last));
-
-  mahala = NaN(npts, 1);
-  for i=1:npts
-    mahala(i) = sqrt(centered(i,:) * kcov * centered(i,:)');
-  end
-  mahala = mahala * (quantiles(2) / nanmedian(mahala));
-
-  M = prctile(mahala, 100/3);
-  c = nanmedian(mahala) + 2.5*mad(mahala, 1);
+  % Step 4: determine weights according to translated biweight:
+  M = prctile(mahala, w1coef(1)*100);
+  c = nanmedian(mahala) + w1coef(2)*1.4826*mad(mahala, 1);
   w1 = biweight(mahala, c, M);
 
-  rcov = pinv(rob_cov);
-  for i=1:npts
-    mahala(i) = sqrt(centered(i,:) * rcov * centered(i,:)');
-  end
-  mahala = mahala * (quantiles(2) / nanmedian(mahala));
+  % PHASE 2:
+  % Step 5: compute Euclidean norms of PCs and their distances:
+  mahala = sqrt(sum(z.^2, 2));
+  mahala = mahala * quantiles(1) / median(mahala);
 
-  w2 = biweight(mahala, quantiles(3), quantiles(1));
+  % Step 6: determine weight according to translated biweight:
+  w2 = biweight(mahala, quantiles(3), quantiles(2));
 
-  w = (w1 + s) .* (w2 + s) / ((1 + s)^2);
+  % Combine PHASE1 and PHASE 2: compute final weights:
+  w = (w1 + cs) .* (w2 + cs) / ((1 + cs)^2);
   outliers = (w < 0.25);
 
   return;
@@ -68,11 +64,10 @@ end
 
 function w = biweight(d, c, M)
 
-  w = zeros(size(d));
-  w(d <= M) = 1;
+  w = (1- ((d - M)./(c-M)).^2).^2;
 
-  middle = (M < d) & (d < c);
-  w(middle) = (1- ((d(middle) - M)./(c-M)).^2).^2;
+  w(d > c) = 0;
+  w(d <= M) = 1;
 
   return;
 end

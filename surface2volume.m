@@ -33,7 +33,7 @@ function [ratio, surface, volume] = surface2volume(axes_length)
   volume = 4/3 .* pi .* a .* b .* c;
 
   ratio = surface ./ volume;
-  ratio(bads) = 1;
+  ratio(bads) = 3 ./ a(bads);
 
   return;
 end
