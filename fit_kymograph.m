@@ -766,7 +766,7 @@ function uuids = fit_kymograph(fitting, opts)
               cc = normxcorr2(mymean(fitting.ground_truth{g}, 3), res); 
 
               [max_cc, imax] = max(cc(size_data(g,1), :));
-              corr_offset = -(imax-size_data(g,2));
+              corr_offset = (imax-size_data(g,2));
             else
               corr_offset = 0;
             end
@@ -1054,6 +1054,8 @@ function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
     max_val = prctile(img(mask), 100-prct_thresh);
     domain(:,:,i) = (img - min_val) / (max_val - min_val);
   end
+
+  %keyboard
 %{
   for i=1:nplanes
     for x=1:length(path)

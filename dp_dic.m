@@ -93,7 +93,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     end
 
     img = mask_neighbors(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), neighbors(nimg), opts);
-    orientations(1,nimg) = orientations(1,nimg) + pi;
+    %orientations(1,nimg) = orientations(1,nimg) + pi;
 
     polar_img = elliptic_coordinate(img, centers(:,nimg), axes_length(:,nimg), orientations(1,nimg), parameters.safety);
 
