@@ -48,7 +48,13 @@ function uuids = fit_kymograph(fitting, opts)
   fit_temperatures = false;
   fit_energy = [];
 
-  viscosities = ones(1, ngroups);
+  noffsets = ngroups*strncmp(fitting.aligning_type, 'fitting', 7);
+  [temperatures, junk, temp_indx] = unique(fitting.temperature);
+  good_visc = (temperatures ~= opts.reaction_temperature);
+  bad_flow = (temperatures == opts.flow_temperature);
+  nvisc = sum(good_visc);
+  ntemps = length(temperatures);
+  viscosities = ones(1, ntemps);
 
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
@@ -61,6 +67,7 @@ function uuids = fit_kymograph(fitting, opts)
     case 12
       fit_params = [4 5 12 13];
       fit_temperatures = true;
+      fitting.fit_model = true;
     case 13
       fit_params = [4 5 12 13];
       fit_temperatures = true;
@@ -81,6 +88,7 @@ function uuids = fit_kymograph(fitting, opts)
       fit_params = [4 5 12 13];
       fit_viscosity = true;
       fit_temperatures = true;
+      fitting.fit_model = true;
     case 23
       fit_params = [4 5 12 13];
       fit_viscosity = true;
@@ -115,9 +123,12 @@ function uuids = fit_kymograph(fitting, opts)
       fit_params = [1];
   end
   nrates = length(fit_params);
-  noffsets = ngroups*strncmp(fitting.aligning_type, 'fitting', 7);
-  good_visc = (fitting.temperature ~= opts.reaction_temperature);
-  nvisc = sum(good_visc);
+
+  nenergy = length(fit_energy);
+  if (~fitting.fit_model && fit_temperatures)
+    fit_energy = ones(1, nenergy*nvisc);
+    fitting.fit_flow = any(~good_visc);
+  end
 
   if (~isempty(fitting.init_pos))
     if (iscell(fitting.init_pos))
@@ -383,7 +394,6 @@ function uuids = fit_kymograph(fitting, opts)
     end
 
     if (~fit_viscosity)
-      nvisc = 0;
       viscosities(:) = 1;
     elseif (~all_params)
       p0 = [p0 viscosities(good_visc)];
@@ -514,7 +524,7 @@ function uuids = fit_kymograph(fitting, opts)
         opt.PopSize = 5*numel(p0);
 
         if (fit_temperatures)
-          opt.PopSize = opt.PopSize + ngroups;
+          opt.PopSize = opt.PopSize + nvisc;
         end
 
         [p, fval, cmaes_count, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
@@ -674,7 +684,7 @@ function uuids = fit_kymograph(fitting, opts)
         end
 
         if (fit_viscosity)
-          curr_visc = ones(1,ngroups);
+          curr_visc = ones(1,ntemps);
           curr_visc(good_visc) = abs(more_params(end-nvisc+1:end));
           more_params = more_params(1:end-nvisc);
         else
@@ -686,36 +696,78 @@ function uuids = fit_kymograph(fitting, opts)
             tmp_params = tmp_params .* temp_scale{g};
             curr_flow_scale = curr_flow_scale * flow_scale(g);
           else
-            if (length(fit_energy) == 1)
-              E = ones(3,2)*abs(more_params(end));
-              flow_E = E(1);
-              more_params = more_params(1:end-1);
-            elseif (length(fit_energy) == 2)
-              E = ones(3,2)*abs(more_params(end-1));
-              flow_E = abs(more_params(end));
-              more_params = more_params(1:end-2);
-            elseif (length(fit_energy) == 4)
-              E = abs(more_params(end-3:end-1));
-              E = E(:);
-              E = E(:,[1 1]);
-              flow_E = abs(more_params(end));
-              more_params = more_params(1:end-4);
-            elseif (length(fit_energy) == 7)
-              E = abs(more_params(end-6:end-1));
-              E = E(:);
-              E = [E(1:3,1) E(4:6,1)];
-              flow_E = abs(more_params(end));
-              more_params = more_params(1:end-7);
+            if (fitting.fit_model)
+              switch nenergy
+                case 1
+                  E = ones(3,2)*abs(more_params(end));
+                  flow_E = E(1);
+                  more_params = more_params(1:end-1);
+                case 2
+                  E = ones(3,2)*abs(more_params(end-1));
+                  flow_E = abs(more_params(end));
+                  more_params = more_params(1:end-2);
+                case 4
+                  E = abs(more_params(end-3:end-1));
+                  E = E(:);
+                  E = E(:,[1 1]);
+                  flow_E = abs(more_params(end));
+                  more_params = more_params(1:end-4);
+                case 7
+                  E = abs(more_params(end-6:end-1));
+                  E = E(:);
+                  E = [E(1:3,1) E(4:6,1)];
+                  flow_E = abs(more_params(end));
+                  more_params = more_params(1:end-7);
+                otherwise
+                  error(['No temperature model with ' num2str(nenergy) ' parameters has been implemented.']);
+              end
+
+              diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
+              ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
+              flow_ratio = exp(-(flow_E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+            else
+
+              diff_ratio = 1;
+
+              curr_ratios = ones(nenergy,ntemps);
+              curr_ratios(:,good_visc) = reshape(abs(more_params(end-nenergy*nvisc+1:end)), nenergy, nvisc);
+              more_params = more_params(1:end-nenergy*nvisc);
+
+              eindx = temp_indx(g);
+
+              switch nenergy
+                case 1
+                  ratio = ones(3,2)*curr_ratios(1,eindx);
+                  flow_ratio = ratio(1);
+                case 2
+                  ratio = ones(3,2)*curr_ratios(1,eindx);
+                  flow_ratio = curr_ratios(2, eindx);
+                case 4
+                  ratio = curr_ratios(1:3, [eindx eindx]);
+                  flow_ratio = curr_ratios(4, eindx);
+                case 7
+                  ratio = [curr_ratios(1:3, eindx) curr_ratios(4:6, eindx)];
+                  flow_ratio = curr_ratios(7, eindx);
+                otherwise
+                  error(['No temperature scaling with ' num2str(nenergy) ' parameters has been implemented.']);
+              end
+
+              if (bad_flow(eindx))
+                flow_ratio = 1;
+                curr_flow_scale = 1;
+              elseif (good_visc(eindx))
+                curr_flow_scale = 1;
+              end
             end
 
-            diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
-            ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
-            tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ones(3,2).*ratio; ones(4,2)];
-            curr_flow_scale = curr_flow_scale * exp(-(flow_E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+            %keyboard
+
+            tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ratio; ones(4,2)];
+            curr_flow_scale = curr_flow_scale * flow_ratio;
           end
 
           if (fit_viscosity)
-            tmp_params(1,:) = tmp_params(1,:)*curr_visc(g);
+            tmp_params(1,:) = tmp_params(1,:)*curr_visc(temp_indx(g));
           end
         end
 
