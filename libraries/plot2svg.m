@@ -1254,11 +1254,13 @@ if strcmp(get(ax,'Visible'),'on')
                         end
                    else
                         [angle, align] = improvedYLabel(ax, 0, 'Right');
+                        axlabely = [axlabely; repmat('-', length(axyindex)-size(axlabely,1), size(axlabely, 2))];
                         for i = 1:length(axyindex)
                             label2svg(fid,grouplabel,axpos,ax,xg_label_end(i),yg_label_end(i),convertString(axlabely(i,:)),align,angle,'middle',1,paperpos,scolorname,exponent);
                         end
                     end
                 else
+                    axlabely = [axlabely; repmat('-', length(axyindex)-size(axlabely,1), size(axlabely, 2))];
                     for i = 1:length(axyindex)
                         label2svg(fid,grouplabel,axpos,ax,xg_label_end(i),yg_label_end(i),convertString(axlabely(i,:)),'Center',0,'top',1,paperpos,scolorname,exponent);
                     end

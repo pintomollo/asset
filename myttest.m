@@ -1,4 +1,8 @@
-function [H, pval] = myttest(values, indexes)
+function [H, pval] = myttest(values, indexes, tails)
+
+  if (nargin == 2)
+    tails = 'both';
+  end
 
   groups = unique(indexes(:)).';
 
@@ -14,7 +18,7 @@ function [H, pval] = myttest(values, indexes)
 
   for i = 1:ngroups
     for j = 1:ngroups
-      [H(i,j), pval(i,j)] = ttest2(values(indexes==groups(i)), values(indexes==groups(j)));
+      [H(i,j), pval(i,j)] = ttest2(values(indexes==groups(i)), values(indexes==groups(j)), 0.05, tails);
     end
   end
 

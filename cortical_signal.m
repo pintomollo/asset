@@ -1,4 +1,9 @@
-function mymovie = cortical_signal(mymovie, opts)
+function mymovie = cortical_signal(mymovie, nobj, opts)
+
+  if (nargin == 2)
+    opts = nobj;
+    nobj = [];
+  end
 
   type = opts.segmentation_type;
   if (strncmp(type, 'markers', 7) | strncmp(type, 'all', 3))
@@ -29,7 +34,8 @@ function mymovie = cortical_signal(mymovie, opts)
     window_shape = window_shape / sum(window_shape(:));
   end
 
-  rescale_size = [370 570];
+  rescale_size = [400 700];
+  %rescale_size = [370 570];
 
   if (opts.quantification.use_ruffles)
     if ((opts.recompute & opts.segment) | ~isfield(mymovie.(type), 'ruffles') | isempty(mymovie.(type).ruffles))
@@ -97,7 +103,11 @@ function mymovie = cortical_signal(mymovie, opts)
     %bounds_invag = [-Inf bin_step -Inf -Inf 0 0; ...
     %                 Inf Inf Inf Inf Inf Inf];
 
-    nimg = i;
+    if (isempty(nobj))
+      nimg = i;
+    else
+      nimg = nobj;
+    end
     %nimg = randi(nframes)
     %nimg = i + 30
     %nimg = 30
@@ -120,6 +130,10 @@ function mymovie = cortical_signal(mymovie, opts)
 
       ph = double(load_data(mymovie.cortex, nimg));
       ph = mask_neighbors(ph, mymovie.data.centers(:,nimg), mymovie.data.axes_length(:,nimg), mymovie.data.orientations(1,nimg), mymovie.data.neighbors(nimg), opts);
+
+      if (opts.verbosity == 3)
+        figure;imshow(realign(imnorm(img),rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)));
+      end
 
       % Background substraction
 
@@ -330,6 +344,15 @@ function mymovie = cortical_signal(mymovie, opts)
 
     if (opts.verbosity > 0)
       waitbar(i/nframes,hwait);
+    end
+
+    if (~isempty(nobj))
+
+      if (opts.verbosity > 0)
+        close(hwait);
+      end
+
+      return;
     end
   end
 
@@ -594,6 +617,17 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
     gauss = bsxfun(@lt, abs(p), gaussians(:,3)*coef);
     bkg = halfed;
 
+    center = size(values,1) - half;
+
+    [dist, tot_dist] = carth2linear(cortex, opts);
+    tot_dist = tot_dist * opts.pixel_size;
+    dist = round((dist - dist(center))*tot_dist);
+    dindx = unique([fliplr([center:-250:1]) center:250:size(values,1)]);
+
+    center = find(dpos==0);
+    pdist = -round(dpos*opts.pixel_size);
+    pindx = unique([fliplr([center:-30:1]) center:30:length(dpos)]);
+
     for j=1:size(bkg,1)
       bkg(j,gauss(j,:)) = interp1(dpos(~gauss(j,:)), bkg(j,~gauss(j,:)), dpos(:,gauss(j,:)), 'linear');
   %final3 = bkg + bsxfun(@times, gaussians(:,1), exp(bsxfun(@rdivide, -p.^2, 2*gaussians(:,3).^2)));
@@ -605,12 +639,36 @@ function [gaussians, dperp] = estimate_signal(img, cortex, pos, peak_width, opts
     mval = min(values(:));
     Mval = max(values(:));
 
-    figure;imagesc(values([half+1:end, 1:half], :));caxis([mval Mval]);
-    figure;imagesc(halfed([half+1:end, 1:half], :));caxis([mval Mval]);
-    figure;imagesc(bkg([half+1:end, 1:half], :));caxis([mval Mval]);
-    figure;imagesc(signal([half+1:end, 1:half], :));caxis([mval Mval]);
-    figure;imagesc(final([half+1:end, 1:half], :));caxis([mval Mval]);
-    figure;imagesc(values([half+1:end, 1:half], :)  - final([half+1:end, 1:half], :));caxis([mval Mval]);
+    figure;imagesc(rot90(values([half+1:end, 1:half], :)));caxis([mval Mval]);
+    set(gca, 'YTick', pindx, 'YTickLabel', pdist(pindx));
+    set(gca, 'XTick', dindx, 'XTickLabel', dist(dindx));
+    title('Raw data')
+    colormap(blueredmap)
+    figure;imagesc(rot90(halfed([half+1:end, 1:half], :)));caxis([mval Mval]);
+    set(gca, 'YTick', pindx, 'YTickLabel', pdist(pindx));
+    set(gca, 'XTick', dindx, 'XTickLabel', dist(dindx));
+    title('Smoothed data')
+    colormap(blueredmap)
+    figure;imagesc(rot90(bkg([half+1:end, 1:half], :)));caxis([mval Mval]);
+    set(gca, 'YTick', pindx, 'YTickLabel', pdist(pindx));
+    set(gca, 'XTick', dindx, 'XTickLabel', dist(dindx));
+    title('Background data')
+    colormap(blueredmap)
+    figure;imagesc(rot90(signal([half+1:end, 1:half], :)));caxis([mval Mval]);
+    set(gca, 'YTick', pindx, 'YTickLabel', pdist(pindx));
+    set(gca, 'XTick', dindx, 'XTickLabel', dist(dindx));
+    title('Signal data')
+    colormap(blueredmap)
+    figure;imagesc(rot90(final([half+1:end, 1:half], :)));caxis([mval Mval]);
+    set(gca, 'YTick', pindx, 'YTickLabel', pdist(pindx));
+    set(gca, 'XTick', dindx, 'XTickLabel', dist(dindx));
+    title('Reconstructed data')
+    colormap(blueredmap)
+    figure;imagesc(abs(rot90(values([half+1:end, 1:half], :)  - final([half+1:end, 1:half], :))));caxis([mval Mval]);
+    set(gca, 'YTick', pindx, 'YTickLabel', pdist(pindx));
+    set(gca, 'XTick', dindx, 'XTickLabel', dist(dindx));
+    title('Error')
+    colormap(blueredmap)
   end
 
   %p = bsxfun(@minus, dpos, gaussians(:,2));

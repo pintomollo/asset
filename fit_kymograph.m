@@ -812,12 +812,12 @@ function uuids = fit_kymograph(fitting, opts)
             if (length(t) < size_data(g,2))
               cc = normxcorr2(res, mymean(fitting.ground_truth{g}, 3)); 
 
-              [max_cc, imax] = max(cc(size(res, 1), :));
+              [max_cc, imax] = max(cc(size(res, 1), 1:2*size(res,2)));
               corr_offset = -(imax-size(res, 2));
             elseif (all(isfinite(res)))
               cc = normxcorr2(mymean(fitting.ground_truth{g}, 3), res); 
 
-              [max_cc, imax] = max(cc(size_data(g,1), :));
+              [max_cc, imax] = max(cc(size_data(g,1), 1:2*size_data(g,2)));
               corr_offset = (imax-size_data(g,2));
             else
               corr_offset = 0;
@@ -991,6 +991,10 @@ function uuids = fit_kymograph(fitting, opts)
             tmp_plot_gfrac = gfraction{g};
             tmp_plot_gfrac(1:find(tmp_plot_gfrac, 1, 'first')-1) = NaN;
 
+            yindx = find(tmp_plot_gfrac>0, 1, 'first');
+            y_tick = unique([fliplr([yindx:-20:1]) yindx:20:size(tmp_plot_avg,1)]);
+            y_labels = (y_tick - yindx)*10;
+
             xfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_frac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_frac];
             xgfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_gfrac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_gfrac];
             yfrac = [size(tmp_plot_err, 1):-1:1 1:size(tmp_plot_err,1)].';
@@ -1005,6 +1009,7 @@ function uuids = fit_kymograph(fitting, opts)
             hold off;
             imagesc([tmp_plot_avg(:,1:end/2) tmp_plot_avg(:,end:-1:(end/2)+1)]);
             set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+            set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
             colormap(blueredmap)
             hold on,
             plot(xfrac, yfrac, 'Color', [83 83 83]/255);
@@ -1015,6 +1020,7 @@ function uuids = fit_kymograph(fitting, opts)
             %imagesc(mymean(tmp_err, 3));
             imagesc([tmp_plot_err(:,1:end/2) tmp_plot_err(:,end:-1:(end/2)+1)]);
             set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+            set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
             colormap(blueredmap)
             hold on;
             %plot((size(tmp_err, 2)/2)-2*gfraction{g}, 1:size(tmp_err,1), 'k');
@@ -1052,6 +1058,7 @@ function uuids = fit_kymograph(fitting, opts)
             hold off;
             imagesc([tmp_plot_truth(:,1:end/2) tmp_plot_truth(:,end:-1:(end/2)+1)]);
             set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+            set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
             colormap(blueredmap)
             hold on
             plot(xgfrac, yfrac, 'Color', [83 83 83]/255);
@@ -1081,7 +1088,6 @@ function uuids = fit_kymograph(fitting, opts)
 end
 
 function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
-%function domain = normalize_domain(domain, has_noise)
 
   prct_thresh = 5;
   path = path/opts.quantification.resolution;
@@ -1106,120 +1112,6 @@ function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
     max_val = prctile(img(mask), 100-prct_thresh);
     domain(:,:,i) = (img - min_val) / (max_val - min_val);
   end
-
-  %keyboard
-%{
-  for i=1:nplanes
-    for x=1:length(path)
-      pos = path(x);
-      if (isnan(pos))
-        pos = 1;
-      end
-      pos = h-pos+1;
-      mins = domain(pos+[0;h], x, i);
-      for y=pos-1:-1:1
-        indx = y+[0;h];
-        vals = domain(indx, x, i);
-        mins(mins>vals+noise(2)) = vals(mins>vals+noise(2));
-        bads = (vals>mins+noise(2)) | isnan(vals);
-        domain(indx(bads), x, i) = mins(bads);
-      end
-      maxs = domain(pos+[0;h], x, i);
-      for y=pos+1:h
-        indx = y+[0;h];
-        vals = domain(indx, x, i);
-        maxs(maxs<vals) = vals(maxs<vals);
-        bads = (vals<maxs-noise(2)) | isnan(vals);
-        domain(indx(bads), x, i) = maxs(bads);
-      end
-    end
-
-    img = domain(:,:,i);
-    min_val = prctile(img(~mask), prct_thresh);
-    max_val = prctile(img(mask), 100-prct_thresh);
-    domain(:,:,i) = (img - min_val) / (max_val - min_val);
-  end
-%}
-
-%  figure;imagesc(orig);
-%  figure;imagesc(domain);
-%  domain = orig;
-
-  %{
-  if (has_noise)
-    noise = estimate_noise(domain);
-
-    for i=1:nplanes
-      img = domain(:,:,i);
-      img = [img((end/2)+1:end,:); img(end/2:-1:1,:)];
-      img = padarray(img, [5 5], 'symmetric');
-      img = wiener2(img, [3 3], noise(i,2));
-      img = img(6:end-5, 6:end-5);
-      img = [img(end:-1:(end/2)+1, :); img(1:end/2,:)];
-
-      max_val = prctile(img(mask), 100 - prct_thresh);
-      domain(:,:,i) = (img - noise(1)) / (max_val - noise(1));
-    end
-
-  else
-    for i=1:nplanes
-      img = domain(:,:,i);
-      min_val = prctile(img(~mask), prct_thresh);
-      max_val = prctile(img(mask), 100-prct_thresh);
-      domain(:,:,i) = (img - min_val) / (max_val - min_val);
-    end
-  end
-
-  for i=1:length(path)
-    pos = path(i);
-    if (isnan(pos))
-      pos = 0;
-    end
-    pos = h-pos;
-    mins = domain(pos+[0;h], i);
-    for j=pos-1:-1:1
-      vals = domain(j+[0;h], i);
-      mins(mins>vals) = vals(mins>vals);
-      domain(j+[0;h], i) = mins;
-    end
-    maxs = domain(pos+[0;h], i);
-    for j=pos+1:h
-      vals = domain(j+[0;h], i);
-      maxs(maxs<vals) = vals(maxs<vals);
-      domain(j+[0;h], i) = maxs;
-    end
-  end
-
-  figure;imagesc(domain);
-
-  img = mymean(domain, 3);
-  min_val = prctile(img(~mask), prct_thresh);
-  max_val = prctile(img(mask), 100-prct_thresh);
-  domain = (domain - min_val) / (max_val - min_val);
-  %}
-
-%  keyboard
-
-  return;
-
-  %{
-  path = path/opts.quantification.resolution;
-  [h, w, f] = size(domain);
-  h = h/2;
-  pos_mat = repmat([1:h].', 1, w);
-  mask = bsxfun(@le, pos_mat, path.');
-
-  full_mask = repmat(flipud(mask), [2, 1, f]);
-  bkg = median(domain(~full_mask & isfinite(domain)));
-
-  if (isempty(bkg))
-    bkg = 0;
-  end
-
-  domain = (domain - bkg);
-  int = mymean(domain(full_mask));
-  domain(full_mask) = domain(full_mask) / int;
-  %}
 
   return;
 end

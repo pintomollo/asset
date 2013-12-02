@@ -161,7 +161,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
     cart_egg = cart_egg(all(cart_egg >= 1 & bsxfun(@le, cart_egg , fliplr(size(img))), 2), :);
 
     [centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)] = fit_ellipse(cart_egg);
-    %orientations(1,nimg) = orientations(1,nimg) + pi
+    orientations(1,nimg) = orientations(1,nimg) + pi;
     %plot(cart_egg(:,1), cart_egg(:,2), 'g');
     %draw_ellipse(centers(:, nimg), axes_length(:,nimg), orientations(1,nimg), 'r');
 
@@ -185,6 +185,7 @@ function mymovie = dp_dic(mymovie, nimg, opts)
       myplot(realign(cart_egg,rescale_size,centers(:,nimg),orientations(1,nimg)),'g');
       myplot(realign(draw_ellipse(old_center, old_axes, old_orient),rescale_size,old_center, old_orient),'m');
       myplot(realign(draw_ellipse(centers(:,nimg), axes_length(:,nimg), orientations(1,nimg)),rescale_size,centers(:,nimg), orientations(1,nimg)),'c');
+      plot([0 10/opts.pixel_size]+20, [20 20], 'LineWidth', 3);
     end
 
     mymovie.dic.eggshell = eggshell;

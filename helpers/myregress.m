@@ -1,7 +1,14 @@
-function myregress(x, y, c)
+function myregress(x, y, c, s)
 
   if (nargin < 3)
     c = 'b';
+    s = 'o+';
+  elseif (nargin < 4)
+    s = 'o+';
+  end
+
+  if (length(s) < 2)
+    s(2) = '+';
   end
 
   npts = 100;
@@ -42,13 +49,22 @@ function myregress(x, y, c)
   full_X = bsxfun(@power, X, [1:ndims]-has_intercept);
   Y = sum(bsxfun(@times, full_X, b(:).'), 2);
 
+  ndof = size(x,1) - ndims;
+
   %% From Finn J.D., 1974
-  sigma = r'*r / ndof;
-  C = pinv(x'*x)*sigma^2;
+  %p. 100, Methods to unbias estimator of sigma
+  sigma = sqrt(r'*r / ndof);
+  %p. 100 covariance matrix using the variance-covariance factors
+  C = inv(x'*x)*sigma^2;
+  %p. 100 the standard error of the parameters
   ss_all = sqrt(diag(C));
+  %p. 101 95\% confidence interval, exact same result as bint !
+  %conf_int = ss_all*tinv(0.975, ndof);
+  %conf_int = [-conf_int conf_int] + b(:, [1 1]);
+  %p. 101, transforming into a t-distribution around 0 (b-0)
   t_all = b ./ ss_all;
-  p_all = 2*(1 - tcdf(abs(t_all), ndof));
-  %pred_all = sigma*sqrt(full_X*C*full_X');
+  % compute the corresponding p-value of the interval
+  p_all = 2*tcdf(-abs(t_all), ndof);
 
   %%% Directly from Wikipedia
   ss_x = sum((pos - mean(pos)).^2);
@@ -58,24 +74,6 @@ function myregress(x, y, c)
   s_predi = s_slope.*(ss_x/N + (X - mean(pos)).^2);
 
   t_n = tinv(0.975, ndof);
-
-  %{
-  if (has_intercept)
-    T = [b(1) / sqrt(s_inter) b(2) / sqrt(s_slope)];
-  else
-    T = b(1) / sqrt(s_slope);
-  end
-
-  p_val = 2*(1 - tcdf(abs(T), ndof));
-  %}
-
-  %[b - t_n*sqrt([s_inter; s_slope]) b + t_n*sqrt([s_inter; s_slope])]
-  %bint
-
-  %SS_tot = sum((y - mean(y)).^2);
-  %SS_err = sum((x*b - y).^2);
-
-  %Rsq = 1 - SS_err/SS_tot
 
   %figure;
   hold on;
@@ -88,14 +86,14 @@ function myregress(x, y, c)
     c_out = c(~goods, :);
     c = c(goods, :);
     for i=1:size(y,1)
-      scatter(pos(i,:), y(i,:), 'MarkerEdgeColor', c(i,:));
+      scatter(pos(i,:), y(i,:), s(1), 'MarkerEdgeColor', c(i,:));
     end
     for i=1:size(y_out,1)
-      scatter(pos_out(i,:), y_out(i,:), '+',  'MarkerEdgeColor', c_out(i,:));
+      scatter(pos_out(i,:), y_out(i,:), s(2),  'MarkerEdgeColor', c_out(i,:));
     end
   else
-    scatter(pos, y, 'MarkerEdgeColor', c);
-    scatter(pos_out, y_out, '+', 'MarkerEdgeColor', c);
+    scatter(pos, y, s(1), 'MarkerEdgeColor', c);
+    scatter(pos_out, y_out, s(2), '+', 'MarkerEdgeColor', c);
   end
   plot(X, Y, 'k');
   plot(X, Y+t_n*sqrt(s_predi), 'k');

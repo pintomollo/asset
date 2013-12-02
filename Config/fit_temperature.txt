@@ -13,3 +13,4 @@ parameter_set 12
 pixels_only false
 offset_scaling 100
 fit_flow true
+aligning_type 'fitting'

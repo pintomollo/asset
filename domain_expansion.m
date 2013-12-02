@@ -49,6 +49,8 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
     [domain, boundary] = crop_domain(domain, indx);
     pos = pos([-boundary:boundary]+indx);
 
+    raw_domain = align_domain(raw_domain, ruffles, path_center, opts);
+    raw_domain = crop_domain(raw_domain, indx);
     %raw_domain = domain;
 
     opts = load_parameters(opts, 'domain_expansion.txt');
@@ -56,7 +58,8 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
     cytok = time(end);
     center = boundary + 1;
 
-    raw_domain = domain(1:cytok, :);
+    raw_domain = raw_domain(1:cytok, :);
+
     domain = nanmean(cat(3, domain(:, center:end), domain(:,center:-1:1)), 3);
 
   elseif (nargin == 5)
