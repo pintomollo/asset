@@ -1,7 +1,8 @@
 function perform_fitting(selection)
 
   params = {'config_fitting'; 'fit_kymo'; 'config_modeling'; 'custom_flow'};
-
+  init_noise = 0;
+  
   switch selection
     case 0
       % All ani-2 and c27d9.1
@@ -12,7 +13,7 @@ function perform_fitting(selection)
                dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      starts = 'A';
+      starts = 'B';
       param_set = 2;
       params{2} = 'refine_fit';
     case 1
@@ -149,7 +150,7 @@ function perform_fitting(selection)
     switch starts(s)
       case 'A'
       % Average of all bests
-        s_params = {'init_pos'; [0.00286 2.22 0.0153 2.31]}
+        s_params = {'init_pos'; [0.00286 2.22 0.0153 2.31]};
       case 'B'
       % Best value found
         s_params = {'start_with_best'; true};
