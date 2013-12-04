@@ -8,7 +8,6 @@ step_size 1e-3
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-8
-normalize_smooth false
 max_iter 1000
 %max_iter 20
 init_noise 0

@@ -136,6 +136,8 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   if (~isempty(fitting.init_pos))
+    fitting.init_pos = fitting.init_pos(:).';
+
     if (iscell(fitting.init_pos))
       tmp_fit = fitting;
       uuids = [];

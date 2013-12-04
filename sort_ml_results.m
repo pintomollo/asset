@@ -53,7 +53,7 @@ end
 function [fnames, groups, filters, folder, type, args] = parse_input(varargin)
 
   fnames = 'adr-kymo-*_evol.dat';
-  groups = {'type'; 'parameter_set';'fit_model';'fit_flow'};
+  groups = {'type'; 'parameter_set';'fit_model';'fit_flow';'fit_full';'fit_relative'};
   filters = {};
   folder = 'Sorted';
   args = {};

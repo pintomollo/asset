@@ -17,6 +17,5 @@ step_size [1.25e-5 0 1.25e-5 0; 0 2.502e-7 -1.25e-6 -2.502e-7; 1.25e-5 -1.25e-6 
 nfits 2
 skip_file 'artifacts.txt'
 tolerance 1e-3
-normalize_smooth false
 max_iter 50000
 %score_weights 1
