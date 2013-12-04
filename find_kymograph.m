@@ -81,9 +81,13 @@ function find_kymograph(varargin)
         end
 
         if (aim_circum > 0)
-          rescale_factor = ellipse_circum(opts.axes_length, aim_circum);
+          rescale_factor = ellipse_circum(opts.axes_length, aim_circum, fitting.rescale_length_only);
 
-          opts.axes_length = opts.axes_length*rescale_factor;
+          if (fitting.rescale_length_only)
+            opts.axes_length(1) = rescale_factor;
+          else
+            opts.axes_length = opts.axes_length*rescale_factor;
+          end
           opts.reaction_params(end-1,:) = surface2volume(opts.axes_length);
           opts.reaction_params(end, :) = 0.5*ellipse_circum(opts.axes_length);
         end

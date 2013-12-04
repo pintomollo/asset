@@ -1,13 +1,13 @@
 function sort_ml_results(varargin)
 
-  [fnames, groups, filters, folder, type] = parse_input(varargin{:});
+  [fnames, groups, filters, folder, type, args] = parse_input(varargin{:});
 
   [path, name, ext] = fileparts(fnames);
   new_folder = fullfile(path, folder);
 
   if (mkdir(new_folder))
     datas = group_ml_results(fnames, groups, filters);
-    selected_files = cell(size(datas,1), 1);
+    selected_files = {};
 
     switch type
       case 'best'
@@ -23,8 +23,19 @@ function sort_ml_results(varargin)
             end
           end
 
-          selected_files{i} = vals{best_indx, 1};
+          selected_files{end+1} = vals{best_indx, 1};
         end
+
+      case '~nparams'
+        for i=1:size(datas,1)
+          vals = datas{i,2};
+          for j=1:size(vals,1)
+            if (length(vals{j,2}(end).params) ~= args{1}(1))
+              selected_files{end+1} = vals{j, 1};
+            end
+          end
+        end
+
       otherwise
         warning(['Sorting type ' type ' has not yet been implemented.']);
     end
@@ -39,13 +50,14 @@ function sort_ml_results(varargin)
   return;
 end
 
-function [fnames, groups, filters, folder, type] = parse_input(varargin)
+function [fnames, groups, filters, folder, type, args] = parse_input(varargin)
 
   fnames = 'adr-kymo-*_evol.dat';
   groups = {'type'; 'parameter_set';'fit_model';'fit_flow'};
   filters = {};
-  folder = '';
-  type = 'best';
+  folder = 'Sorted';
+  args = {};
+  type = '';
 
   for i=1:nargin
     var_type = class(varargin{i});
@@ -54,10 +66,10 @@ function [fnames, groups, filters, folder, type] = parse_input(varargin)
         name = varargin{i};
         if (any(name == '*'))
           fnames = name;
-        elseif (isempty(folder))
-          folder = name;
-        else
+        elseif (isempty(type))
           type = name;
+        else
+          folder = name;
         end
       case 'cell'
         if (size(varargin{i},2) == 1)
@@ -65,11 +77,13 @@ function [fnames, groups, filters, folder, type] = parse_input(varargin)
         else
           filters = varargin{i};
         end
+      otherwise
+        args{end+1} = varargin{i};
     end
   end
 
-  if (isempty(folder))
-    folder = 'Sorted';
+  if (isempty(type))
+    type = 'best';
   end
 
   return;

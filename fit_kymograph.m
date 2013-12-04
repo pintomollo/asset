@@ -84,6 +84,11 @@ function uuids = fit_kymograph(fitting, opts)
       fit_params = [4 5 12 13];
       fit_temperatures = true;
       fit_energy = ones(1,7) * 0.65;
+    case 20
+      fit_params = [4 5 12 13];
+      fit_viscosity = true;
+      fit_temperatures = false;
+      fitting.fit_model = true;
     case 22
       fit_params = [4 5 12 13];
       fit_viscosity = true;
@@ -171,6 +176,7 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.init_pos = [tmp_params(fit_params) fit_energy];
     else
       warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
+      keyboard
       fitting.init_pos = [];
     end
   end
@@ -765,10 +771,9 @@ function uuids = fit_kymograph(fitting, opts)
             tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ratio; ones(4,2)];
             curr_flow_scale = curr_flow_scale * flow_ratio;
           end
-
-          if (fit_viscosity)
-            tmp_params(1,:) = tmp_params(1,:)*curr_visc(temp_indx(g));
-          end
+        end
+        if (fit_viscosity)
+          tmp_params(1,:) = tmp_params(1,:)*curr_visc(temp_indx(g));
         end
 
         if (opts.restart_init)
@@ -1096,8 +1101,6 @@ function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
   pos_mat = repmat([1:h].', 1, w);
   mask = bsxfun(@le, pos_mat, path.');
   mask = repmat(flipud(mask), [2, 1]);
-
-%  path = round(path);
 
   nplanes = size(domain, 3);
 
