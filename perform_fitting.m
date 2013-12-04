@@ -12,8 +12,9 @@ function perform_fitting(selection)
                dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      starts = 'B';
+      starts = 'A';
       param_set = 2;
+      params{2} = 'refine_fit';
     case 1
       % All 24°C
       files = dir('1056-24-*_.mat');
@@ -47,14 +48,16 @@ function perform_fitting(selection)
       files = {'1056-temps-all.mat'};
       repeats = 2;
       init_noise = 0.1;
-      starts = 'GABB';
+      starts = 'AB';
       param_set = [12 13 23];
+      params{2} = 'refine_fit';
     case 6
       files = {'1056-temps-all.mat'};
       repeats = 2;
       init_noise = 0.1;
-      starts = 'GABB';
+      starts = 'AB';
       param_set = [24 25];
+      params{2} = 'refine_fit';
     case 7
       files = {'simulation'};
       repeats = 10;
@@ -84,41 +87,54 @@ function perform_fitting(selection)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'T';
-      param_set = [12 13 23 24 25];
-      params{2} = 'fit_temperature';
+      starts = 'AB';
+      param_set = [2 12 13 20 23 24 25];
+      params{2} = 'refine_fit';
     case 10
-      files = {'1056-all-all.mat'};
-      repeats = 2;
+      files = {'1056-temps-all.mat'};
+      repeats = 1;
       init_noise = 0;
-      starts = 'T';
-      param_set = 2;
+      starts = 'AB';
+      param_set = [2 12 13 20 23 24 25];
+      params{2} = 'refine_flow';
     case 11
       files = {'1056-all-all.mat'};
       repeats = 2;
       init_noise = 0;
       starts = 'T';
-      param_set = 13;
+      param_set = 2;
     case 12
       files = {'1056-all-all.mat'};
       repeats = 2;
       init_noise = 0;
       starts = 'T';
-      param_set = 24;
+      param_set = 13;
     case 13
+      files = {'1056-all-all.mat'};
+      repeats = 2;
+      init_noise = 0;
+      starts = 'T';
+      param_set = 24;
+    case 14
       files = {'1056-temps-all.mat'};
       repeats = 2;
       init_noise = 0;
       starts = 'T';
       param_set = 24;
       params{2} = 'fit_flows';
-    case 14
+    case 15
       files = {'1056-temps-all.mat'};
       repeats = 2;
       init_noise = 0.1;
       starts = 'T';
       param_set = 24;
       params{2} = 'fit_temp_indep';
+    case 16
+      files = {'1056-temps-all.mat'};
+      repeats = 2;
+      starts = 'AB';
+      param_set = 24;
+      params{2} = 'refine_temp_indep';
 
     otherwise
       warning('Choose a fitting group between 1 and 7');
@@ -132,8 +148,8 @@ function perform_fitting(selection)
   for s = 1:length(starts)
     switch starts(s)
       case 'A'
-      % Best average 20°C detected previously
-        s_params = {'init_pos'; [0.00107 1.9688 0.0069 2.4249]};
+      % Average of all bests
+        s_params = {'init_pos'; [0.00286 2.22 0.0153 2.31]}
       case 'B'
       % Best value found
         s_params = {'start_with_best'; true};
