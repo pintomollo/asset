@@ -44,10 +44,6 @@ function uuids = fit_kymograph(fitting, opts)
 
   all_params = false;
 
-  fit_viscosity = false;
-  fit_temperatures = false;
-  fit_energy = [];
-
   noffsets = ngroups*strncmp(fitting.aligning_type, 'fitting', 7);
   [temperatures, junk, temp_indx] = unique(fitting.temperature);
   good_visc = (temperatures ~= opts.reaction_temperature);
@@ -59,77 +55,16 @@ function uuids = fit_kymograph(fitting, opts)
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
 
-  switch fitting.parameter_set
-    case 1
-      fit_params = [4 12];
-    case 2
-      fit_params = [4 5 12 13];
-    case 12
-      fit_params = [4 5 12 13];
-      fit_temperatures = true;
-      fitting.fit_model = true;
-    case 13
-      fit_params = [4 5 12 13];
-      fit_temperatures = true;
-      fit_energy = 0.65;
-    case 14
-      fit_params = [4 5 12 13];
-      fit_temperatures = true;
-      fit_energy = [0.65 0.65];
-    case 15
-      fit_params = [4 5 12 13];
-      fit_temperatures = true;
-      fit_energy = ones(1,4) * 0.65;
-    case 16
-      fit_params = [4 5 12 13];
-      fit_temperatures = true;
-      fit_energy = ones(1,7) * 0.65;
-    case 20
-      fit_params = [4 5 12 13];
-      fit_viscosity = true;
-      fit_temperatures = false;
-      fitting.fit_model = true;
-    case 22
-      fit_params = [4 5 12 13];
-      fit_viscosity = true;
-      fit_temperatures = true;
-      fitting.fit_model = true;
-    case 23
-      fit_params = [4 5 12 13];
-      fit_viscosity = true;
-      fit_temperatures = true;
-      fit_energy = 0.65;
-    case 24
-      fit_params = [4 5 12 13];
-      fit_viscosity = true;
-      fit_temperatures = true;
-      fit_energy = [0.65 0.65];
-    case 25
-      fit_params = [4 5 12 13];
-      fit_viscosity = true;
-      fit_temperatures = true;
-      fit_energy = ones(1,4) * 0.65;
-    case 26
-      fit_params = [4 5 12 13];
-      fit_viscosity = true;
-      fit_temperatures = true;
-      fit_energy = ones(1,7) * 0.65;
-    case 3
-      fit_params = [4 5 6 12 13];
-    case 4
-      fit_params = [2 4 5 6 10 12 13];
-    case 5
-      fit_params = [4 5 6 12 13 14];
-    case 6
-      fit_params = [1:14];
-    case 7
-      fit_params = [1:6 9:13];
-    otherwise
-      fit_params = [1];
-  end
-  nrates = length(fit_params);
+  [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_description(fitting.parameter_set);
 
+  % In these case, we always need a model
+  if (mod(fitting.parameter_set, 10) < 3)
+    fitting.fit_model = true;
+  end
+
+  nrates = length(fit_params);
   nenergy = length(fit_energy);
+
   if (~fitting.fit_model && fit_temperatures)
     fit_energy = ones(1, nenergy*nvisc);
     fitting.fit_flow = any(~good_visc);
@@ -220,7 +155,21 @@ function uuids = fit_kymograph(fitting, opts)
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
 
+  if (fitting.display)
+    tmp_h = findobj('Type', 'figure');
+    hfig = tmp_h(1:min(end, 3));
+  end
+
   for g=1:ngroups
+
+    if (fitting.display)
+      if (length(hfig) < g)
+        hfig(g) = figure('Visible', 'off', 'Name', ['Group #' num2str(g)]);
+      else
+        set(hfig(g), 'Name', ['Group #' num2str(g)]);
+      end
+    end
+
     is_data = ~(strncmp(fitting.type, 'simulation', 10));
     if (~is_data)
 
@@ -516,6 +465,25 @@ function uuids = fit_kymograph(fitting, opts)
     fclose(fid);
 
     switch (fitting.fitting_type)
+      case 'simplex'
+        options = optimset('MaxFunEvals', fitting.max_iter, ...
+                           'MaxIter', fitting.max_iter, ...
+                           'Display', 'off', ...
+                           'OutputFcn', @log_simplex, ...
+                           'TolFun', fitting.tolerance, ...
+                           'TolX', fitting.tolerance/10);
+
+        uuid = ['SPLX' num2str(ceil(rand(1)*100)) ' '];
+        cmaes_count = 0;
+
+        fid = fopen([log_name 'evol.dat'], 'a');
+
+        fprintf(fid, [uuid '%% columns="iteration, evalutation | lastbest" (' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')\n']);
+
+        display('Local optimization using the Simplex method');
+        [p, fval_opt, stopflag_opt, out_opt] = fminsearch(@error_function, p0(:), options);
+        fclose(fid);
+
       case 'cmaes'
 
         opt = cmaes('defaults');
@@ -549,7 +517,7 @@ function uuids = fit_kymograph(fitting, opts)
         fid = fopen([log_name 'evol.dat'], 'a');
 
         display('Local optimization using the Simplex method');
-        [p_opt, fval_opt, stopflag_opt, out_opt] = fminsearch(@error_function, p(:), options);
+        [p, fval_opt, stopflag_opt, out_opt] = fminsearch(@error_function, p(:), options);
         fclose(fid);
 
         disp(['Simplex: ' num2str(fval) ' -> ' num2str(fval_opt)]);
@@ -635,12 +603,18 @@ function uuids = fit_kymograph(fitting, opts)
 
     stop = false;
 
-    if ((mod(optimValues.iteration, 10) == 0 && strncmp(state, 'iter', 4)) || strncmp(state, 'done', 4))
+    if ((mod(optimValues.iteration, 10) == 1 && strncmp(state, 'iter', 4)) || strncmp(state, 'done', 4))
       print_str = [' %.' num2str(ndecimals) 'f'];
 
-      fprintf(fid, [uuid '1 %ld  %e 0 0'], optimValues.iteration+cmaes_count, optimValues.fval);
-      fprintf(fid, print_str, x);
-      fprintf(fid, ' \n');
+      if (uuid(1) == 'C')
+        fprintf(fid, [uuid '1 %ld  %e 0 0'], optimValues.iteration+cmaes_count, optimValues.fval);
+        fprintf(fid, print_str, x);
+        fprintf(fid, '\n');
+      else
+        fprintf(fid, [uuid '%ld : %ld |'], optimValues.iteration+cmaes_count, optimValues.fval);
+        fprintf(fid, print_str, x);
+        fprintf(fid, '\n');
+      end
 
       disp([num2str(optimValues.iteration+cmaes_count) ' : ' num2str(optimValues.fval), ' | ' num2str(x(:).')]);
     end
@@ -1011,31 +985,32 @@ function uuids = fit_kymograph(fitting, opts)
             tmp_pos_tick = [-tmp_pos_tick(end:-1:2) tmp_pos_tick] + (size(tmp_plot_err,2)/2);
             tmp_pos_label = [-tmp_pos_label(end:-1:2) tmp_pos_label];
 
-            %figure;
-            subplot(1,3,1);
-            hold off;
-            imagesc([tmp_plot_avg(:,1:end/2) tmp_plot_avg(:,end:-1:(end/2)+1)]);
-            set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
-            set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-            colormap(blueredmap)
-            hold on,
-            plot(xfrac, yfrac, 'Color', [83 83 83]/255);
-            title([num2str(err_all(g,i)) ' : ' num2str(sum(tmp_err(linear_goods{g}))) ', ' num2str(sum(tmp_frac))]);
+            %figure(hfig(g));
+            hax = subplot(1,3,1, 'Parent', hfig(g), 'NextPlot', 'replace');
+            %hold off;
+            imagesc([tmp_plot_avg(:,1:end/2) tmp_plot_avg(:,end:-1:(end/2)+1)], 'Parent', hax);
+            set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
+                     'YTick', y_tick, 'YTickLabel', y_labels, ...
+                     'NextPlot', 'add')
+            colormap(hax, blueredmap)
+            plot(hax, xfrac, yfrac, 'Color', [83 83 83]/255);
+            title(hax, [num2str(err_all(g,i)) ' : ' num2str(sum(tmp_err(linear_goods{g}))) ', ' num2str(sum(tmp_frac))]);
 
-            subplot(1,3,2);
-            hold off;
+            hax = subplot(1,3,2, 'Parent', hfig(g), 'NextPlot', 'replace');
+            %hold off;
             %imagesc(mymean(tmp_err, 3));
-            imagesc([tmp_plot_err(:,1:end/2) tmp_plot_err(:,end:-1:(end/2)+1)]);
-            set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
-            set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-            colormap(blueredmap)
-            hold on;
+            imagesc([tmp_plot_err(:,1:end/2) tmp_plot_err(:,end:-1:(end/2)+1)], 'Parent', hax);
+            set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
+                     'YTick', y_tick, 'YTickLabel', y_labels, ...
+                     'NextPlot', 'add')
+            colormap(hax, redblackmap)
+            %hold on;
             %plot((size(tmp_err, 2)/2)-2*gfraction{g}, 1:size(tmp_err,1), 'k');
             %plot((size(tmp_err, 2)/2)+2*gfraction{g}, 1:size(tmp_err,1), 'k');
             %plot((size(tmp_err, 2)/2)-2*fraction, 1:size(tmp_err,1), 'w');
             %plot((size(tmp_err, 2)/2)+2*fraction, 1:size(tmp_err,1), 'w');
-            plot(xfrac, yfrac, 'Color', [83 83 83]/255);
-            plot(xgfrac, yfrac, 'Color', [83 83 83]/255);
+            plot(hax, xfrac, yfrac, 'Color', [83 83 83]/255);
+            plot(hax, xgfrac, yfrac, 'Color', [83 83 83]/255);
 
             disp_params = tmp_params .* rescaling;
             disp_params = disp_params(fit_params);
@@ -1051,30 +1026,38 @@ function uuids = fit_kymograph(fitting, opts)
               tmp_params(numel(disp_params)+1:numel(disp_params)+numel(E)) = E(:);
               tmp_params(numel(disp_params)+numel(E)+1:numel(disp_params)+numel(E)+1) =  curr_flow_scale;
               tmp_params(numel(disp_params)+numel(E)+2:numel(disp_params)+numel(E)+2) =  corr_offset;
-              title(num2str(tmp_params));
+              title(hax, num2str(tmp_params));
             else
               if (strncmp(fitting.aligning_type, 'fitting', 7))
-                title([num2str([disp_params E(:).' corr_offset])]);
+                title(hax, [num2str([disp_params E(:).' corr_offset])]);
               else
-                title([num2str([disp_params E(:).'])]);
+                title(hax, [num2str([disp_params E(:).'])]);
               end
               %title([num2str([disp_params E(:).']) ':' num2str(disp_args)]);
             end
 
-            subplot(1,3,3);
-            hold off;
-            imagesc([tmp_plot_truth(:,1:end/2) tmp_plot_truth(:,end:-1:(end/2)+1)]);
-            set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
-            set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-            colormap(blueredmap)
-            hold on
-            plot(xgfrac, yfrac, 'Color', [83 83 83]/255);
-            title(fitting.type)
+            hax = subplot(1,3,3, 'NextPlot', 'replace', 'Parent', hfig(g));
+            %hold off;
+            imagesc([tmp_plot_truth(:,1:end/2) tmp_plot_truth(:,end:-1:(end/2)+1)], 'Parent', hax);
+            %set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+            %set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
+            set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
+                     'YTick', y_tick, 'YTickLabel', y_labels, ...
+                     'NextPlot', 'add')
+            colormap(hax, blueredmap)
+            %hold on
+            plot(hax, xgfrac, yfrac, 'Color', [83 83 83]/255);
+            title(hax, fitting.type)
 
-            keyboard
-            drawnow
+            %keyboard
+            %drawnow
           end
         end
+      end
+      if (fitting.display)
+        set(hfig, 'Visible', 'on');
+        drawnow;
+        keyboard
       end
     end
 

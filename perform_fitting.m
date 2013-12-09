@@ -13,7 +13,7 @@ function perform_fitting(selection)
                dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      starts = 'B';
+      starts = 'A';
       param_set = 2;
       params{2} = 'refine_fit';
     case 1
@@ -41,10 +41,11 @@ function perform_fitting(selection)
       param_set = 2;
     case 4
       files = dir('1056-*-all.mat');
-      repeats = 5;
-      init_noise = 0.1;
-      starts = 'GABB';
+      repeats = 1;
+      init_noise = 0;
+      starts = 'B';
       param_set = 2;
+      params{2} = 'refine_fit';
     case 5
       files = {'1056-temps-all.mat'};
       repeats = 2;
@@ -88,14 +89,14 @@ function perform_fitting(selection)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'AB';
-      param_set = [2 12 13 20 23 24 25];
+      starts = 'B';
+      param_set = [12 13 20 23 24 25];
       params{2} = 'refine_fit';
     case 10
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'AB';
+      starts = 'B';
       param_set = [2 12 13 20 23 24 25];
       params{2} = 'refine_flow';
     case 11

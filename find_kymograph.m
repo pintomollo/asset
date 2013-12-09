@@ -11,11 +11,13 @@ function find_kymograph(varargin)
       if (strncmp(mymovie(end-2:end), 'txt', 3))
         kymos = textread(mymovie, '%s');
       else
+        file_dir = fileparts(mymovie);
         kymos = dir(mymovie);
         fields = fieldnames(kymos);
         kymos = struct2cell(kymos);
         kymos = kymos(ismember(fields, 'name'), :);
         kymos = kymos(:);
+        kymos = cellfun(@(f)({fullfile(file_dir, f)}), kymos);
       end
     elseif (isfield(mymovie, 'mymovie'))
       kymos = mymovie;
@@ -125,22 +127,30 @@ function find_kymograph(varargin)
           end
 
           if (~isempty(prev_values))
+            prev_values = extract_model_parameters(prev_values);
+
             best_score = Inf;
             best_pos = fitting.init_pos;
             best_args = [];
 
             for k=1:size(prev_values{1,2}, 1)
-              if (prev_values{1,2}{k,2}(end).score < best_score)
-                best_score = prev_values{1,2}{k,2}(end).score;
-                best_pos = prev_values{1,2}{k,2}(end).params;
-                tmp_rescale = prev_values{1,1}{1}.rescale_factor;
-                best_args = best_pos(length(tmp_rescale)+1:end);
-                best_pos = abs(best_pos(1:length(tmp_rescale))) .* tmp_rescale;
+              if (prev_values{1,2}{k,2}.score < best_score)
+                best_score = prev_values{1,2}{k,2}.score;
+                best_pos = [prev_values{1,2}{k,2}.params.rate ...
+                            prev_values{1,2}{k,2}.params.offset ...
+                            prev_values{1,2}{k,2}.params.energy ...
+                            prev_values{1,2}{k,2}.params.viscosity ...
+                            prev_values{1,2}{k,2}.params.flow ...
+                            prev_values{1,2}{k,2}.params.sigma];
+                %best_pos = prev_values{1,2}{k,2}(end).params;
+                %tmp_rescale = prev_values{1,1}{1}.rescale_factor;
+                %best_args = best_pos(length(tmp_rescale)+1:end);
+                %best_pos = abs(best_pos(1:length(tmp_rescale))) .* tmp_rescale;
               end
             end
 
             if (~isempty(best_pos))
-              fitting.init_pos = [best_pos best_args];
+              fitting.init_pos = best_pos;
             end
           end
         end
