@@ -4,6 +4,16 @@ function perform_fitting(selection)
   init_noise = 0;
   
   switch selection
+    case -1
+      % All ani-2 and c27d9.1
+      files = dir('1056-temps-all.mat');
+      repeats = 1;
+      init_noise = 0;
+      starts = 'P';
+      param_set = 24;
+      params{2} = 'refine_temp_indep';
+      %params{2} = 'refine_flow';
+      %params{2} = 'refine_fit';
     case 0
       % All ani-2 and c27d9.1
       files = [dir('1056-3-*_.mat'); ...
@@ -90,7 +100,7 @@ function perform_fitting(selection)
       repeats = 1;
       init_noise = 0;
       starts = 'B';
-      param_set = [12 13 20 23 24 25];
+      param_set = [2 12 13 20 23 24 25];
       params{2} = 'refine_fit';
     case 10
       files = {'1056-temps-all.mat'};
@@ -152,6 +162,12 @@ function perform_fitting(selection)
       case 'A'
       % Average of all bests
         s_params = {'init_pos'; [0.00286 2.22 0.0153 2.31]};
+      case 'P'
+      % Provided
+
+       s_params = {'init_pos'; [0.00134 1.7874 0.0091 2.4993 -5.9900 4.4900 0 0.6652 0.9319 1.2515 1.0152 0.3760 2.2994 0.9848]};
+       %s_params = {'init_pos'; [0.00083 2.3309 0.0050 2.4398 -5.9900 8.1600 0 0 0 1.0161 1.6961 0.8069]};
+       %s_params = {'init_pos'; [0.00171 1.8601 0.0104 2.2477 -5.0000 8.8100 -2.0000 0.0195 0.0195 0.8283 1.7989]};
       case 'B'
       % Best value found
         s_params = {'start_with_best'; true};

@@ -6,6 +6,7 @@ function perif = ellipse_circum(axes_length, aim, x_only)
 
   if (nargin ~= 1)
     if (x_only)
+      axes_length = axes_length(:);
       perif = fzero(@(u)(ellipse_circum([u; axes_length(2:3)])-aim), [0.25 4]*axes_length(1));
     else
       perif = fzero(@(u)(ellipse_circum(axes_length*u)-aim), [0.25 4]);

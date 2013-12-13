@@ -245,6 +245,11 @@ function mymovie = dp_markers(mymovie, nimg, opts)
 
       figure;imagesc(parameters.scoring_func{2}(polar_img, parameters.cortex_weights));
       colormap(redbluemap);
+
+      figure;
+      imshow(realign(img,rescale_size,centers(:,nimg),orientations(1,nimg)));
+      hold on;
+      myplot(realign(insert_ruffles(carths, mymovie.markers.ruffles(nimg).paths),rescale_size,centers(:,nimg),orientations(1,nimg)),'Color',[1 0.5 0]);
     end
 
     %cortex(nimg).raw = cortex_path;

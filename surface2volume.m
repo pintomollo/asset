@@ -19,10 +19,6 @@ function [ratio, surface, volume] = surface2volume(axes_length)
     return;
   end
 
-  tmp = b;
-  b(c > b) = c(c > b);
-  c(c > tmp) = tmp(c > tmp);
-
   phi = acos(c./a);
   K = (a.^2 .* (b.^2 - c.^2)) ./ (b.^2 .* (a.^2 - c.^2));
   bads = ~isfinite(K);

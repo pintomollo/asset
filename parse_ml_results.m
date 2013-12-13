@@ -55,7 +55,7 @@ function [params, opts] = parse_ml_results(fname, varargin)
   lparams = NaN;
   while ischar(line)
     if (length(line) > 0)
-      tokens = regexp(line, '\s+', 'split');
+      tokens = regexp(strtrim(line), '\s+', 'split');
       ntokens = length(tokens);
 
       if (had_headers)
@@ -218,7 +218,7 @@ function [params, opts] = parse_ml_results(fname, varargin)
 
           if (tokens{1}(1) == 'C')
             iscmaes = true;
-            lparams = ntokens - 7;
+            lparams = ntokens - 6;
           else
             iscmaes = false;
             lparams = ntokens - 5;
@@ -240,9 +240,10 @@ function [params, opts] = parse_ml_results(fname, varargin)
               end
 
               myparams = zeros(1, lparams);
-              for j = 1:lparams
-                myparams(j) = str2double(tokens{j + shift});
-              end
+              myparams = str2double(tokens([1:lparams]+shift));
+              %for j = 1:lparams
+              %  myparams(j) = str2double(tokens{j + shift});
+              %end
 
               if (score < curr_score)
                 curr_score = score;

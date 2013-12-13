@@ -13,17 +13,20 @@ function sort_ml_results(varargin)
       case 'best'
         for i=1:size(datas,1)
           vals = datas{i,2};
-          best_score = vals{1,2}(end).score;
-          best_indx = 1;
 
-          for j=2:size(vals,1)
-            if (vals{j,2}(end).score < best_score)
-              best_score = vals{j,2}(end).score;
-              best_indx = j;
+          if (~isempty(vals))
+            best_score = vals{1,2}(end).score;
+            best_indx = 1;
+
+            for j=2:size(vals,1)
+              if (vals{j,2}(end).score < best_score)
+                best_score = vals{j,2}(end).score;
+                best_indx = j;
+              end
             end
-          end
 
-          selected_files{end+1} = vals{best_indx, 1};
+            selected_files{end+1} = vals{best_indx, 1};
+          end
         end
 
       case '~nparams'
@@ -33,6 +36,14 @@ function sort_ml_results(varargin)
             if (length(vals{j,2}(end).params) ~= args{1}(1))
               selected_files{end+1} = vals{j, 1};
             end
+          end
+        end
+
+      case 'isa'
+        for i=1:size(datas,1)
+          vals = datas{i,2};
+          for j=1:size(vals,1)
+            selected_files{end+1} = vals{j, 1};
           end
         end
 
