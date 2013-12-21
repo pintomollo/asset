@@ -11,8 +11,8 @@ function perform_fitting(selection)
       init_noise = 0;
       starts = 'P';
       param_set = 24;
-      params{2} = 'refine_temp_indep';
-      %params{2} = 'refine_flow';
+      %params{2} = 'refine_temp_indep';
+      params{2} = 'refine_flow';
       %params{2} = 'refine_fit';
     case 0
       % All ani-2 and c27d9.1
@@ -165,7 +165,13 @@ function perform_fitting(selection)
       case 'P'
       % Provided
 
-       s_params = {'init_pos'; [0.00134 1.7874 0.0091 2.4993 -5.9900 4.4900 0 0.6652 0.9319 1.2515 1.0152 0.3760 2.2994 0.9848]};
+        s_params = {'init_pos', [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265]};
+        % refine_flow for 25
+        %s_params = {'init_pos', [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0.1599 0.1599 0 0.6277 1.6908 0.8265]};
+        %refine_temp_indep
+        %s_params = {'init_pos', [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
+
+       %s_params = {'init_pos'; [0.00134 1.7874 0.0091 2.4993 -5.9900 4.4900 0 0.6652 0.9319 1.2515 1.0152 0.3760 2.2994 0.9848]};
        %s_params = {'init_pos'; [0.00083 2.3309 0.0050 2.4398 -5.9900 8.1600 0 0 0 1.0161 1.6961 0.8069]};
        %s_params = {'init_pos'; [0.00171 1.8601 0.0104 2.2477 -5.0000 8.8100 -2.0000 0.0195 0.0195 0.8283 1.7989]};
       case 'B'

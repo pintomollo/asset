@@ -113,7 +113,7 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.init_pos = [tmp_params(fit_params) fit_energy];
     else
       warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
-      keyboard
+      %keyboard
       fitting.init_pos = [];
     end
   end

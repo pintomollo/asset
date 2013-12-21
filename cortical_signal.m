@@ -210,9 +210,20 @@ function mymovie = cortical_signal(mymovie, nobj, opts)
         figure;imshow(realign(imnorm(img),rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)));
         hold on;
         myplot(realign(mymovie.markers.eggshell(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)), 'g')
-        myplot(realign(mymovie.markers.cortex(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)), 'r')
+        
+        tmp_cortex = mymovie.markers.cortex(nimg).carth;
+        if (opts.quantification.use_ruffles)
+          tmp_cortex = insert_ruffles(tmp_cortex, mymovie.data.ruffles(nimg).paths);
+        end
+
+        myplot(realign(tmp_cortex,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)), 'r')
         myplot(realign(mymovie.data.eggshell(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)),'Color',[0.5 1 0]);
-        myplot(realign(mymovie.data.cortex(nimg).carth,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)),'Color',[1 0.5 0]);
+
+        tmp_cortex = mymovie.data.cortex(nimg).carth;
+        if (opts.quantification.use_ruffles)
+          tmp_cortex = insert_ruffles(tmp_cortex, mymovie.data.ruffles(nimg).paths);
+        end
+        myplot(realign(tmp_cortex,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg)),'Color',[1 0.5 0]);
 
         figure;
         estimate_peak(ph, cortex, [], true, opts);
