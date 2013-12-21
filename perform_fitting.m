@@ -77,24 +77,32 @@ function perform_fitting(selection)
       starts = 'GA';
       param_set = 2;
     case 8
-      perform_fitting(8.1);
       perform_fitting(8.2);
+      perform_fitting(8.3);
+      perform_fitting(8.1);
       return;
 
     case 8.1
-      files = dir('1056-*-all.mat');
+      files = dir('1056-temps-all.mat');
       repeats = 1;
       init_noise = 0;
       starts = 'O';
-      param_set = 6;
+      param_set = 30;
       params{2} = 'hessian';
     case 8.2
-      files = dir('1056-*-all.mat');
+      files = dir('1056-temps-all.mat');
       repeats = 1;
       init_noise = 0;
       starts = 'O';
-      param_set = 6;
+      param_set = 30;
       params{2} = 'sensitivity';
+    case 8.3
+      files = dir('1056-temps-all.mat');
+      repeats = 1;
+      init_noise = 0;
+      starts = 'O';
+      param_set = 30;
+      params{2} = 'refine_flow';
     case 9
       files = {'1056-temps-all.mat'};
       repeats = 1;
@@ -205,6 +213,7 @@ function perform_fitting(selection)
             end
 
             if (starts(s) == 'O')
+              %{
               vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type', f_params{1}(1:end-4); 'parameter_set', 2; 'fitting_type', 'cmaes'});
               %vals = group_ml_results('adr-kymo-*_evol.dat', {'type', f_params{1}(1:end-4); 'parameter_set', 2; 'fitting_type', 'cmaes'});
               
@@ -226,7 +235,9 @@ function perform_fitting(selection)
               tmp_p(1:4) = abs(tmp_p(1:4) .* vals{1,1}{1}.rescale_factor);
               tmp_p(5:end) = tmp_p(5:end) * vals{1,1}{1}.offset_scaling;
               s_params{2} = tmp_p;
-            
+              %}
+              s_params{2} = [0.28 0.00857 0.0054 0.00154 2.2569 1.56 0.17353 67.5 0.15 0.0472 0.0073 0.0078 2.0203 1 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265];
+
             elseif (starts(s) == 'T')
               vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type', '1056-temps-all'; 'parameter_set', param_set(p); 'fitting_type', 'cmaes'});
               %vals = group_ml_results('adr-kymo-*_evol.dat', {'type', f_params{1}(1:end-4); 'parameter_set', 2; 'fitting_type', 'cmaes'});
