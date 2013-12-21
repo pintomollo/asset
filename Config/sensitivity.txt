@@ -1,4 +1,4 @@
-fit_relative false
+fit_relative true
 fitting_type 'sample'
 %init_pos [0.0895 1.1211 4.4714 2.2011]
 %init_pos {[3.30991 3.7067 0.0455 0.3728]; [0.02375 0.629961 5.03968 3.1748]; [0.00153 1.6162 0.0112 2.4376]; [0.0502 1.1500 0.9826 2.3900]}
@@ -16,4 +16,5 @@ parameter_set 6
 fit_flow true
 aligning_type 'fitting'
 pixels_only false
-%score_weights 1
+offset_scaling 100
+rescale_length_only true

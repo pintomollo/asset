@@ -18,4 +18,6 @@ combine_data 'dual'
 sample_log false
 parameter_set 6
 fit_flow true
+offset_scaling 100
 %score_weights 1
+rescale_length_only true
