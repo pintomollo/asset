@@ -59,7 +59,7 @@ function myprint(fid, variable, spacer, prefix)
         end
       case {'double', 'single', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64'}
         if (numel(variable) == 1)
-          fprintf(fid, [prefix spacer '%f\n'], variable);
+          fprintf(fid, [prefix spacer '%e\n'], variable);
         else
           fprintf(fid, [prefix spacer '[']);
           fprintf(fid, '%f ', variable);

@@ -1219,14 +1219,15 @@ if strcmp(get(ax,'Visible'),'on')
     if (ticklength(1) ~= 0)
         if axlimy(1)~=axlimy(2)
             if (nomy(y_axis_point_index(1)))
-                lim = [axlimy(2) axlimy(1)];    
+                lim = real([axlimy(2) axlimy(1)]);    
             else
-                lim = [axlimy(1) axlimy(2)];
+                lim = real([axlimy(1) axlimy(2)]);
             end
             x_label_end1 = interp1([0 1],[x(y_axis_point_index(1)) x(edge_neighbours(y_axis_point_index(1),1))],label_distance,'linear','extrap');
             y_label_end1 = interp1([0 1],[y(y_axis_point_index(1)) y(edge_neighbours(y_axis_point_index(1),1))],label_distance,'linear','extrap');
             x_label_end2 = interp1([0 1],[x(edge_neighbours(y_axis_point_index(1),2)) x(edge_neighbours(edge_neighbours(y_axis_point_index(1),2),1))],label_distance,'linear','extrap');
             y_label_end2 = interp1([0 1],[y(edge_neighbours(y_axis_point_index(1),2)) y(edge_neighbours(edge_neighbours(y_axis_point_index(1),2),1))],label_distance,'linear','extrap');
+
             xg_label_end = interp1(lim,[x_label_end1 x_label_end2],axytick);
             yg_label_end = interp1(lim,[y_label_end1 y_label_end2],axytick);            
             frontTicks(fid, grouplabel, axpos, x, y, scolorname, linewidth, ...

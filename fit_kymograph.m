@@ -742,8 +742,6 @@ function uuids = fit_kymograph(fitting, opts)
               end
             end
 
-            %keyboard
-
             tmp_params = tmp_params .* [ones(1,2)*diff_ratio; ratio; ones(4,2)];
             curr_flow_scale = curr_flow_scale * flow_ratio;
           end
@@ -1021,9 +1019,9 @@ function uuids = fit_kymograph(fitting, opts)
               %disp_params(3) = bsxfun(@rdivide, bsxfun(@times, disp_params(3), disp_params(2)), (1.56.^disp_params(4)));
             end
             if (numel(disp_params) > 6)
-              tmp_params = NaN(ceil(numel(disp_params)/6),6);
+              tmp_params = NaN(ceil((numel(disp_params)+numel(E)+2)/6),6);
               tmp_params(1:numel(disp_params)) = disp_params;
-              tmp_params(numel(disp_params)+1:numel(disp_params)+numel(E)) = E(:);
+              tmp_params(numel(disp_params)+1:numel(disp_params)+numel(E)) = E(:).';
               tmp_params(numel(disp_params)+numel(E)+1:numel(disp_params)+numel(E)+1) =  curr_flow_scale;
               tmp_params(numel(disp_params)+numel(E)+2:numel(disp_params)+numel(E)+2) =  corr_offset;
               title(hax, num2str(tmp_params));

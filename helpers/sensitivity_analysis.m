@@ -8,16 +8,33 @@ function [conf_int] = sensitivity_analysis(pts, name)
   %tmp(3,:) = tmp(3,:) * tmp(2,1)
   %max(abs(tmp(:,[2 3]) - tmp(:,[1 1])), [], 2)
 
-
   if (nargin < 2)
     name = '';
   end
 
   legend = {'D_A', 'k_{A+}', 'k_{A-}', 'k_{AP}', '\alpha','\rho_A','\psi', 'L', ...
             'D_P', 'k_{P+}', 'k_{P-}', 'k_{PA}', '\beta', '\rho_P', '\nu'};
-  nshifts = size(pts,2) - length(legend) - 1;
-  shifts = cellstr([repmat('\delta_', nshifts, 1), num2str([1:nshifts].')]);
-  legend = [legend(1:end-1) shifts.' legend(end)];
+  if (isstruct(pts))
+
+    nrates = size(pts.rate, 2);
+    noffset = size(pts.offset, 2);
+    nenergy = size(pts.energy, 2);
+    nvisc = size(pts.viscosity, 2);
+    nflow = size(pts.flow, 2);
+
+    pts = [pts.score pts.rate pts.offset pts.energy pts.viscosity pts.flow];
+
+    legend = [legend(1:nrates), ... 
+              cellstr([repmat('\delta_', noffset, 1), num2str([1:noffset].')]).', ...
+              cellstr([repmat('E_', nenergy, 1), num2str([1:nenergy].')]).', ...
+              cellstr([repmat('\eta_', nvisc, 1), num2str([1:nvisc].')]).', ...
+              cellstr([repmat(legend{end}, nflow, 1), num2str([1:nflow].')]).'];
+
+  else
+    nshifts = size(pts,2) - length(legend) - 1;
+    shifts = cellstr([repmat('\delta_', nshifts, 1), num2str([1:nshifts].')]);
+    legend = [legend(1:end-1) shifts.' legend(end)];
+  end
 
   hfig = figure;
   haxes = axes('Parent', hfig, 'NextPlot', 'add', 'box', 'on');
@@ -65,16 +82,20 @@ function [conf_int] = sensitivity_analysis(pts, name)
 
     is_neg = any(pos < 0);
 
-    if (is_neg)
+    if (is_neg || std_values(i) == 0)
       center = find(pos == 0);
     else
       center = find(pos == 1);
     end
 
+    try
     [mval, mindx] = min(likeli);
     ci = (likeli <= likeli(center) + 1.92);
     left_bound = find(ci, 1, 'first')-1;
     right_bound = find(ci, 1, 'last')+1;
+    catch
+      beep;keyboard
+    end
 
     if (isempty(left_bound) || left_bound < 1)
       left_bound = 1;

@@ -18,3 +18,4 @@ aligning_type 'fitting'
 pixels_only false
 offset_scaling 100
 rescale_length_only true
+restart_init false
