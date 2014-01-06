@@ -21,4 +21,3 @@ fit_flow true
 offset_scaling 100
 %score_weights 1
 rescale_length_only true
-restart_init false

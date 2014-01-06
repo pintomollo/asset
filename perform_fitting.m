@@ -89,6 +89,7 @@ function perform_fitting(selection)
       starts = 'O';
       param_set = 30;
       params{2} = 'hessian';
+      params{4} = 'custom_flow_sample';
     case 8.2
       files = dir('1056-temps-all.mat');
       repeats = 1;
@@ -96,6 +97,7 @@ function perform_fitting(selection)
       starts = 'O';
       param_set = 30;
       params{2} = 'sensitivity';
+      params{4} = 'custom_flow_sample';
     case 8.3
       files = dir('1056-temps-all.mat');
       repeats = 1;
@@ -103,6 +105,7 @@ function perform_fitting(selection)
       starts = 'O';
       param_set = 30;
       params{2} = 'refine_flow';
+      params{4} = 'custom_flow';
     case 9
       files = {'1056-temps-all.mat'};
       repeats = 1;
