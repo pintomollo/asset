@@ -119,22 +119,25 @@ function perform_fitting(selection)
       params{2} = 'refine_flow';
     case 11
       files = {'1056-all-all.mat'};
-      repeats = 2;
+      repeats = 1;
       init_noise = 0;
-      starts = 'T';
-      param_set = 2;
+      starts = mod(selection, 10);
+      param_set = 24;
+      params{2} = 'refine_flow';
     case 12
       files = {'1056-all-all.mat'};
-      repeats = 2;
+      repeats = 1;
       init_noise = 0;
-      starts = 'T';
-      param_set = 13;
+      starts = mod(selection, 10);
+      param_set = 24;
+      params{2} = 'refine_flow';
     case 13
       files = {'1056-all-all.mat'};
-      repeats = 2;
+      repeats = 1;
       init_noise = 0;
-      starts = 'T';
+      starts = mod(selection, 10);
       param_set = 24;
+      params{2} = 'refine_flow';
     case 14
       files = {'1056-temps-all.mat'};
       repeats = 2;
@@ -189,8 +192,13 @@ function perform_fitting(selection)
       % Current best found during optimization in BestFits
         s_params = {'init_pos'; []};
       otherwise
-      % Default setting
-        s_params = {};
+        if (isnumeric(starts))
+          ps = load('full_params');
+          s_params = {'init_pos'; ps.params(starts(s),:)};
+        else
+        % Default setting
+          s_params = {};
+        end
     end
 
     for i = 1:length(init_noise)
