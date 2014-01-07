@@ -105,7 +105,7 @@ function perform_fitting(selection)
       starts = 'O';
       param_set = 30;
       params{2} = 'refine_flow';
-      params{4} = 'custom_flow';
+      params{4} = 'custom_flow_sample';
     case 9
       files = {'1056-temps-all.mat'};
       repeats = 1;
