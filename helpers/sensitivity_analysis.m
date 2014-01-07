@@ -14,6 +14,7 @@ function [conf_int] = sensitivity_analysis(pts, name)
 
   legend = {'D_A', 'k_{A+}', 'k_{A-}', 'k_{AP}', '\alpha','\rho_A','\psi', 'L', ...
             'D_P', 'k_{P+}', 'k_{P-}', 'k_{PA}', '\beta', '\rho_P', '\nu'};
+
   if (isstruct(pts))
 
     nrates = size(pts.rate, 2);
@@ -80,7 +81,7 @@ function [conf_int] = sensitivity_analysis(pts, name)
     pos = rel_sampling(:,i);
     likeli = sep_sampling(:,i);
 
-    is_neg = any(pos < 0);
+    is_neg = any(pos <= 0);
 
     if (is_neg || std_values(i) == 0)
       center = find(pos == 0);

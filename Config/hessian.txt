@@ -14,7 +14,7 @@ init_noise 0
 data_noise 0.01
 aligning_type 'fitting'
 pixels_only false
-combine_data 'dual'
+combine_data 'hessian'
 sample_log false
 parameter_set 6
 fit_flow true

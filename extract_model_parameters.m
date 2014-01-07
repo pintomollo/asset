@@ -13,6 +13,13 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
 
   for i = 1:size(ml_values, 1)
     fitting = ml_values{i, 1}{1};
+
+    if (strncmp(fitting.fitting_type, 'sample', 6))
+      norm_func = @(x)(x);
+    else
+      norm_func = @abs;
+    end
+
     [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_description(fitting.parameter_set);
 
     nparams = length(fit_params);
@@ -46,7 +53,7 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
       if (nvals > nparams)
 
         data.score = pts(:, 1);
-        data.rate = bsxfun(@times, abs(pts(:, 2:(nparams+1))), fitting.rescale_factor);
+        data.rate = bsxfun(@times, norm_func(pts(:, 2:(nparams+1))), fitting.rescale_factor);
         ntotal = ntotal + nparams;
 
         [good_params, params_indx] = ismember([4 5 12 13], fit_params);
@@ -64,13 +71,13 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
           is_deprecated = (date_change - datenum(datevec(value.time)) > 0);
 
           if (fitting.fit_sigma)
-            data.sigma = abs(pts(:, end));
+            data.sigma = norm_func(pts(:, end));
             pts = pts(:, 1:end-1);
             ntotal = ntotal + 1;
           end
 
           if (fitting.fit_flow)
-            data.flow = abs(pts(:, end));
+            data.flow = norm_func(pts(:, end));
             pts = pts(:, 1:end-1);
             ntotal = ntotal + 1;
           end
@@ -78,10 +85,10 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
           if (fit_viscosity)
             data.viscosity = ones(npts, ntemps);
             if (is_deprecated)
-              data.viscosity(:, good_visc(:, indx_bwd)) = abs(pts(:, end-nvisc+1:end));
+              data.viscosity(:, good_visc(:, indx_bwd)) = norm_func(pts(:, end-nvisc+1:end));
               data.viscosity = data.viscosity(:, indx_fwd);
             else
-              data.viscosity(:, good_visc) = abs(pts(:, end-nvisc+1:end));
+              data.viscosity(:, good_visc) = norm_func(pts(:, end-nvisc+1:end));
             end
             data.viscosity = data.viscosity(:, good_visc);
 
@@ -91,10 +98,10 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
 
           if (fit_temperatures && nenergy > 0)
             if (fitting.fit_model)
-              data.energy = abs(pts(:,end-nenergy+1:end));
+              data.energy = norm_func(pts(:,end-nenergy+1:end));
               ntotal = ntotal + nenergy;
             else
-              data.energy = abs(pts(:,end-nenergy*nvisc+1:end));
+              data.energy = norm_func(pts(:,end-nenergy*nvisc+1:end));
               ntotal = ntotal + nenergy*nvisc;
             end
           end
@@ -140,6 +147,9 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
               flow_E = E;
             end
 
+            E = abs(E);
+            flow_E = abs(flow_E);
+
             diff_ratio = (temperatures+C2K) ./ (opts.reaction_temperature+C2K);
             rate_ratio = exp(bsxfun(@times, -(E/kB), ((1./(temperatures+C2K)) - (1/(opts.reaction_temperature+C2K)))));
             flow_ratio = exp(-(flow_E/kB).*((1./(temperatures+C2K)) - (1/(opts.flow_temperature+C2K))));
@@ -163,9 +173,9 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
             diff_ratio = effect_params.viscosity;
           end
 
-          effect_params.rate = rate_ratio;
-          effect_params.flow = flow_ratio;
-          effect_params.viscosity = diff_ratio;
+          effect_params.rate = abs(rate_ratio);
+          effect_params.flow = abs(flow_ratio);
+          effect_params.viscosity = abs(diff_ratio);
 
           effect_params.temperature = temperatures;
         end
