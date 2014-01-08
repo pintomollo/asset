@@ -29,11 +29,8 @@ function h = find_cap_size(axes_length, arc_length)
     if (curr_angle < 0)
       curr_angle = curr_angle + 2*pi;
     end
-    try
     [F, E] = elliptic12(curr_angle, e);
-    catch
-      beep;keyboard
-    end
+
     curr_arc = 2 * a * E;
 
     return;

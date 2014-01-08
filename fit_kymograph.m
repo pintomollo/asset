@@ -497,7 +497,7 @@ function uuids = fit_kymograph(fitting, opts)
         opt.LogFilenamePrefix = log_name;
         opt.StopOnWarnings = false;
         opt.WarnOnEqualFunctionValues = false;
-        opt.PopSize = 5*numel(p0);
+        opt.PopSize = min(5*numel(p0), fitting.max_population);
 
         if (fit_temperatures)
           opt.PopSize = opt.PopSize + nvisc;

@@ -4,7 +4,7 @@ fitting_type 'sample'
 %init_pos [0.2115    1.5827    0.6812    2.7777]
 %init_pos [0.0895 1.1211 4.4714 2.2011]
 start_with_best false
-step_size 2
+step_size 0.1
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-3
@@ -13,5 +13,9 @@ max_iter 20000
 init_noise 0
 data_noise 0.01
 aligning_type 'fitting'
+combine_data 'dual'
 pixels_only false
+fit_flow true
+offset_scaling 100
+rescale_length_only true
 %score_weights 1

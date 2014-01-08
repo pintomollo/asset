@@ -131,9 +131,10 @@ function perform_fitting(selection)
       files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = mod(selection, 10);
+      %starts = mod(selection, 10);
+      starts = 1;
       param_set = 24;
-      params{2} = 'refine_flow';
+      params{2} = 'fit_flows';
     case 13
       files = {'1056-all-all.mat'};
       repeats = 1;
