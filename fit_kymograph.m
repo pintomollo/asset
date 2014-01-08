@@ -498,6 +498,7 @@ function uuids = fit_kymograph(fitting, opts)
         opt.StopOnWarnings = false;
         opt.WarnOnEqualFunctionValues = false;
         opt.PopSize = min(5*numel(p0), fitting.max_population);
+        opt.DiagonalOnly = (numel(p0) > 100);
 
         if (fit_temperatures)
           opt.PopSize = opt.PopSize + nvisc;
