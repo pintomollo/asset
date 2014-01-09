@@ -876,7 +876,7 @@ while isempty(stopflag)
       end
       %}
 
-      [arx, arz] = getxinsidebounds(xmean, lambda, sigma, BD, flgDiagonalOnly, lbounds, ubounds);
+      [arx, arz] = getxinsidebounds(xmean, lambda, sigma, BD, diagD, flgDiagonalOnly, lbounds, ubounds);
 
       if noiseHandling 
         if noiseEpsilon == 0
@@ -925,7 +925,7 @@ while isempty(stopflag)
         end
         %}
 
-        [arx(:,k), arz(:,k)] = getxinsidebounds(xmean, 1, sigma, BD, flgDiagonalOnly, lbounds, ubounds);
+        [arx(:,k), arz(:,k)] = getxinsidebounds(xmean, 1, sigma, BD, diagD, flgDiagonalOnly, lbounds, ubounds);
       else % re-evaluation solution with index > lambda
         if flgDiagonalOnly  
           arx(:,k) = arx(:,k-lambda) + (noiseEpsilon * sigma) * diagD .* randn(N,1);
@@ -1587,7 +1587,7 @@ end % while irun <= Restarts
 
 % ---------------------------------------------------------------  
 % ---------------------------------------------------------------  
-function [arx, arz] = getxinsidebounds(xmean, lambda, sigma, BD, flgDiagonalOnly, lbounds, ubounds);
+function [arx, arz] = getxinsidebounds(xmean, lambda, sigma, BD, diagD, flgDiagonalOnly, lbounds, ubounds);
 
   nsafety = 10*lambda;
   N = size(xmean, 1);
