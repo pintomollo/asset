@@ -515,6 +515,7 @@ else % flgresume
   end
   if flgDiagonalOnly
     B = 1; 
+    BD = -1;
   end
 
   fitness.hist=NaN*ones(1,10+ceil(3*10*N/lambda)); % history of fitness values

@@ -34,7 +34,6 @@ function [rel_C, C, rel_H, H] = correlation_matrix(pts)
 
   nparams = size(pts, 2);
   H = NaN(nparams);
-  min_residue = NaN(1, nparams);
 
   rel_H = H;
   C = H;
@@ -43,49 +42,67 @@ function [rel_C, C, rel_H, H] = correlation_matrix(pts)
   for i=1:nparams
     valsi = unique(pts(:,i));
     dptsi = abs(valsi - std_values(i));
-    if (numel(valsi)~=3)
-      continue;
-    end
-    for j=i:nparams
-      pattern = std_values;
-      if (i==j)
-        pattern(i) = valsi(1);
-        f_1 = find_value(pts, pattern, scores);
-        pattern(i) = valsi(2);
-        f0 = find_value(pts, pattern, scores);
-        pattern(i) = valsi(3);
-        f1 = find_value(pts, pattern, scores);
+    nis = floor((numel(dptsi)-1)/2);
+    ci = nis + 1;
 
-        H(i,j) = (f_1 - 2*f0 + f1) / (dptsi(1)*dptsi(3));
-        min_residue(i) = min(abs([f_1 f1] - f0));
-      else
-        valsj = unique(pts(:,j));
-        dptsj = abs(valsj - std_values(j));
-        if (numel(valsj)~=3)
-          continue;
+    for ni = 1:nis
+      for j=i:nparams
+        if (isnan(H(i,j)))
+          pattern = std_values;
+          if (i==j)
+            pattern(i) = valsi(ni);
+            f_1 = find_value(pts, pattern, scores);
+
+            if (isempty(f_1))
+              continue;
+            end
+
+            pattern(i) = valsi(ci);
+            f0 = find_value(pts, pattern, scores);
+            pattern(i) = valsi(end-ni+1);
+            f1 = find_value(pts, pattern, scores);
+
+            H(i,j) = (f_1 - 2*f0 + f1) / (dptsi(ni)*dptsi(end-ni+1));
+          else
+            valsj = unique(pts(:,j));
+            dptsj = abs(valsj - std_values(j));
+
+            njs = floor((numel(dptsj)-1)/2);
+            cj = njs + 1;
+
+            for nj = 1:njs
+              if (isnan(H(i,j)))
+                pattern(i) = valsi(ni);
+                pattern(j) = valsj(nj);
+                f_1_1 = find_value(pts, pattern, scores);
+
+                if (isempty(f_1_1))
+                  continue;
+                end
+
+                pattern(i) = valsi(ni);
+                pattern(j) = valsj(end-nj+1);
+                f_11 = find_value(pts, pattern, scores);
+                pattern(i) = valsi(end-ni+1);
+                pattern(j) = valsj(nj);
+                f1_1 = find_value(pts, pattern, scores);
+                pattern(i) = valsi(end-ni+1);
+                pattern(j) = valsj(end-nj+1);
+                f11 = find_value(pts, pattern, scores);
+
+                %H(i,j) = (f_1_1 + f11 - f_11 - f1_1) / (4*dpts(i)*dpts(j));
+                H(i,j) = (f_1_1 + f11 - f_11 - f1_1) / (dptsi(ni)*dptsj(nj) + ...
+                          dptsi(ni)*dptsj(end-nj+1) + dptsi(end-ni+1)*dptsj(nj) + ...
+                          dptsi(end-ni+1)*dptsj(end-nj+1));
+              end
+            end
+          end
+          rel_H(i,j) = H(i,j)*norm_values(i)*norm_values(j);
+
+          H(j,i) = H(i,j);
+          rel_H(j,i) = rel_H(i,j);
         end
-
-        pattern(i) = valsi(1);
-        pattern(j) = valsj(1);
-        f_1_1 = find_value(pts, pattern, scores);
-        pattern(i) = valsi(1);
-        pattern(j) = valsj(3);
-        f_11 = find_value(pts, pattern, scores);
-        pattern(i) = valsi(3);
-        pattern(j) = valsj(1);
-        f1_1 = find_value(pts, pattern, scores);
-        pattern(i) = valsi(3);
-        pattern(j) = valsj(3);
-        f11 = find_value(pts, pattern, scores);
-
-        %H(i,j) = (f_1_1 + f11 - f_11 - f1_1) / (4*dpts(i)*dpts(j));
-        H(i,j) = (f_1_1 + f11 - f_11 - f1_1) / (dptsi(1)*dptsj(1) + ...
-                  dptsi(1)*dptsj(3) + dptsi(3)*dptsj(1) + dptsi(3)*dptsj(3));
       end
-      rel_H(i,j) = H(i,j)*norm_values(i)*norm_values(j);
-
-      H(j,i) = H(i,j);
-      rel_H(j,i) = rel_H(i,j);
     end
   end
 
