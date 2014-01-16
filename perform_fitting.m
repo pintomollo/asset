@@ -133,7 +133,7 @@ function perform_fitting(selection, roundit)
       files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = mod(selection, 1)*10;
+      starts = round(mod(selection, 1)*10);
       param_set = 24;
       params{2} = 'refine_flow';
     case 12
