@@ -1097,7 +1097,11 @@ function domain = normalize_domain(domain, path, opts, has_noise, do_min_max)
     img = domain(:,:,i);
     min_val = prctile(img(~mask), prct_thresh);
     max_val = prctile(img(mask), 100-prct_thresh);
-    domain(:,:,i) = (img - min_val) / (max_val - min_val);
+    if (min_val > max_val)
+      domain(:,:,i) = (img - max_val) / (min_val - max_val);
+    else
+      domain(:,:,i) = (img - min_val) / (max_val - min_val);
+    end
   end
 
   return;

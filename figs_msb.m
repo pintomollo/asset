@@ -212,13 +212,16 @@ function figs_msb(num)
       load('full_params');
       params = params(:,[1:4 end-5:end]);
 
-      %new_vals = [0.0015:0.0005:0.0035].';
-%      params(1,3) = 0.008;
+      %new_vals = [1.55:0.05:1.95].';
+      %params(1,3) = 0.01;
 
-      %params = repmat(params(1,:), length(new_vals), 1);
-      %params(:,1) = new_vals;
+%      params = repmat(params(1,:), length(new_vals), 1);
+%      params = [params new_vals];
 
 %      params = [interp1([1 5], params([1 3], 1:4), [1:5]) repmat(params(1,5:end), 5, 1)];
+%      params = params(3:end,:);
+      params = params(2,:);
+      params(end) = 0.77;
 
       full_params = {};
       for i=1:size(params, 1)
@@ -226,18 +229,23 @@ function figs_msb(num)
       end
 
       %{
-      values = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'type', '1056-temps-all';'fitting_type', 'simplex'; 'parameter_set', 30});
-      values = extract_model_parameters(values);
+      values_orig = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'type', '1056-all-all'; 'parameter_set', 24});
+      values_orig = [values_orig; group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'type', '1056-all-all'; 'parameter_set', 24})];
+      values_orig = [values_orig; group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'type', '1056-all-all'; 'parameter_set', 30})];
+      values = extract_model_parameters(values_orig);
+      values = [values(1,1) {cat(1, values{:,2})}];
 
       for i=1:size(values{1,2}, 1)
-        tmp_visc = (values{1,2}{i,2}.params.temperature ~= 20);
-        viscs = ones(size(tmp_visc));
-        viscs(tmp_visc) = values{1,2}{i,2}.params.viscosity;
+        if (values{1,2}{i,2}.score < -1000)
+          tmp_visc = (values{1,2}{i,2}.params.temperature ~= 20);
+          viscs = ones(size(tmp_visc));
+          viscs(tmp_visc) = values{1,2}{i,2}.params.viscosity;
 
-        full_params{end+1} = [values{1,2}{i,2}.params.rate ...
-                              values{1,2}{i,2}.params.energy ...
-                              interp1(values{1,2}{i,2}.params.temperature, viscs, temps(good_visc)) ...
-                              values{1,2}{i,2}.params.flow];
+          full_params{end+1} = [values{1,2}{i,2}.params.rate ...
+                                values{1,2}{i,2}.params.energy ...
+                                interp1(values{1,2}{i,2}.params.temperature, viscs, temps(good_visc)) ...
+                                values{1,2}{i,2}.params.flow];
+        end
       end
       %}
 
@@ -254,6 +262,7 @@ function figs_msb(num)
       orig_opts = opts;
 
       for p = 1:length(full_params)
+
         tmp_opts = orig_opts;
         params = full_params{p};
 
@@ -262,6 +271,12 @@ function figs_msb(num)
           case 10
             tmp_opts.reaction_params([3 4 10 11]) = params(1:4);
             more_params = params(5:end);
+
+          % Parameter set 24 with test of rho
+          case 11
+            tmp_opts.reaction_params([3 4 10 11]) = params(1:4);
+            tmp_opts.reaction_params(5) = params(end);
+            more_params = params(5:end-1);
 
           % Parameter set 30
           case 20
@@ -352,12 +367,12 @@ function figs_msb(num)
         end
 
         all_simul{p} = all_data;
+
       end
 
-      save('simul_optimized', 'all_simul', 'temperatures');
+      save('simul_optimized', 'all_simul', 'temperatures', 'full_params');
 
       keyboard
-
     case 1
       files = dir('stainings/*.txt');
       nfiles = length(files);
@@ -2569,6 +2584,10 @@ function figs_msb(num)
 
       [rC, C, rH, H] = correlation_matrix(vals2{2,2}{1,2}.evolution);
 
+      figure;imagesc(rC, [-1 1]);
+      colormap(flipud(redgreencmap));
+      colorbar
+
       keyboard
 
     case 8.1
@@ -3048,7 +3067,11 @@ function [means, center, dwidth, full_width, f] = get_profile(domain, nframes, o
     img = domain(:,:,i);
     min_val = prctile(img(~mask), prct_thresh);
     max_val = prctile(img(mask), 100-prct_thresh);
-    domain(:,:,i) = (img - min_val) / (max_val - min_val);
+    if (min_val > max_val)
+      domain(:,:,i) = (img - max_val) / (min_val - max_val);
+    else
+      domain(:,:,i) = (img - min_val) / (max_val - min_val);
+    end
   end
 
   domain = permute([domain(1:width+1, :, :); domain(end-1:-1:width+2, :, :)], [2 1 3]); 

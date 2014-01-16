@@ -89,14 +89,10 @@ function [conf_int] = sensitivity_analysis(pts, name)
       center = find(pos == 1);
     end
 
-    try
     [mval, mindx] = min(likeli);
     ci = (likeli <= likeli(center) + 1.92);
     left_bound = find(ci, 1, 'first')-1;
     right_bound = find(ci, 1, 'last')+1;
-    catch
-      beep;keyboard
-    end
 
     if (isempty(left_bound) || left_bound < 1)
       left_bound = 1;
@@ -121,7 +117,7 @@ function [conf_int] = sensitivity_analysis(pts, name)
     end
 
     if (is_neg)
-      zoom = ((pos >= ci(1)*1.2) & pos <= ci(2)*1.2);
+      zoom = ((pos >= ci(1)*5) & pos <= ci(2)*5);
     else
       zoom = ((pos >= ci(1)*0.75) & pos <= ci(2)*1.2);
     end

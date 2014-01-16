@@ -1,5 +1,7 @@
 function [surface, volume] = spheroidal_cap(axes_length, height)
 
+  axes_length = sort(axes_length, 'descend');
+
   a = axes_length(1,:);
   b = axes_length(2,:);
   c = axes_length(3,:);
@@ -14,10 +16,6 @@ function [surface, volume] = spheroidal_cap(axes_length, height)
     end
 
     return;
-  end
-
-  if (b < c)
-    [c, b] = deal(b, c);
   end
 
   delta = 1 - c^2 / a^2;

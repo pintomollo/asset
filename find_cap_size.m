@@ -18,7 +18,12 @@ function h = find_cap_size(axes_length, arc_length)
   end
 
   e = sqrt(1 - b.^2 / a.^2);
-  h = fzero(@(u)(arc_length - get_length(u)), [-a a]);
+
+  if (get_length(-a) < arc_length)
+    h = -a;
+  else
+    h = fzero(@(u)(arc_length - get_length(u)), [-a a]);
+  end
 
   return;
 

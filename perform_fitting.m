@@ -1,8 +1,17 @@
-function perform_fitting(selection)
+function perform_fitting(selection, roundit)
+
+  if (nargin == 1)
+    roundit = true;
+  end
 
   params = {'config_fitting'; 'fit_kymo'; 'config_modeling'; 'custom_flow'};
   init_noise = 0;
-  
+
+  switch_selection = selection;
+  if (roundit)
+    switch_selection = floor(selection);
+  end
+
   switch selection
     case -1
       % All ani-2 and c27d9.1
@@ -77,9 +86,9 @@ function perform_fitting(selection)
       starts = 'GA';
       param_set = 2;
     case 8
-      perform_fitting(8.2);
-      perform_fitting(8.3);
-      perform_fitting(8.1);
+      perform_fitting(8.2,false);
+      perform_fitting(8.3,false);
+      perform_fitting(8.1,false);
       return;
 
     case 8.1
@@ -124,7 +133,7 @@ function perform_fitting(selection)
       files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = mod(selection, 10);
+      starts = mod(selection, 1)*10;
       param_set = 24;
       params{2} = 'refine_flow';
     case 12
