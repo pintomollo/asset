@@ -220,8 +220,13 @@ function figs_msb(num)
 
 %      params = [interp1([1 5], params([1 3], 1:4), [1:5]) repmat(params(1,5:end), 5, 1)];
 %      params = params(3:end,:);
-      params = params(2,:);
-      params(end) = 0.77;
+      params = params(4,:);
+      new_vals = [0.8:0.1:1.2].';
+      params = repmat(params, length(new_vals), 1);
+      params(:,3) = params(:,3) .* new_vals;
+
+      %params(end) = 0.8;
+      %params(end-4) = 0.05;
 
       full_params = {};
       for i=1:size(params, 1)
@@ -346,12 +351,15 @@ function figs_msb(num)
 
             [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
 
-           % figure;subplot(1,2,1);
-           % imagesc(domain);
-           % subplot(1,2,2);
-           % plot(path);
-           % mtit(num2str(i))
-           %(find(path > 0, 1) - find(path > 0.775, 1))
+            %{
+            figure;subplot(1,2,1);
+            imagesc(domain);
+            subplot(1,2,2);
+            plot(path);
+            mtit(num2str(i))
+            (find(path > 0, 1) - find(path > 0.775, 1))
+            keyboard
+            %}
 
             norig = length(all_data{f,3}{i,1})-1;
             nprofile = length(profile)-1;
@@ -371,6 +379,8 @@ function figs_msb(num)
       end
 
       save('simul_optimized', 'all_simul', 'temperatures', 'full_params');
+      figs_msb(8.1);
+      figs_msb(8.2);
 
       keyboard
     case 1
@@ -1147,7 +1157,8 @@ function figs_msb(num)
       keyboard
 
     case 7
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'fitting_type', 'cmaes'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
+      %vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'fitting_type', 'cmaes'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
 
       %data = load('1056-temps-all.mat');
       load('data_fitting.mat');
@@ -2808,7 +2819,7 @@ function figs_msb(num)
         mtit('Simulations')
       end
 
-      keyboard
+      %keyboard
 
     case 8.2
 
@@ -3012,7 +3023,7 @@ function figs_msb(num)
         mtit('Membrane length fraction')
       end
 
-      keyboard
+%      keyboard
 
 
 

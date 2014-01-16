@@ -67,18 +67,29 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_fit';
     case 5
       files = {'1056-temps-all.mat'};
-      repeats = 2;
-      init_noise = 0.1;
-      starts = 'AB';
-      param_set = [12 13 23];
-      params{2} = 'refine_fit';
+      repeats = 1;
+      init_noise = 0;
+      starts = 'B';
+      param_set = [2 13 20 25];
+      params{2} = 'refine_flows';
     case 6
+      perform_fitting(6.1,false);
+      perform_fitting(6.2,false);
+      return;
+    case 6.1
       files = {'1056-temps-all.mat'};
-      repeats = 2;
-      init_noise = 0.1;
-      starts = 'AB';
-      param_set = [24 25];
-      params{2} = 'refine_fit';
+      repeats = 1;
+      init_noise = 0;
+      starts = 'B';
+      param_set = 24;
+      params{2} = 'refine_flows';
+    case 6.2
+      files = {'1056-temps-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'B';
+      param_set = 24;
+      params{2} = 'refine_temp_indep';
     case 7
       files = {'simulation'};
       repeats = 10;
@@ -116,19 +127,42 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_flow';
       params{4} = 'custom_flow_sample';
     case 9
-      files = {'1056-temps-all.mat'};
+      perform_fitting(9.1,false);
+      perform_fitting(9.2,false);
+      return;
+    case 9.1
+      files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'B';
-      param_set = [2 12 13 20 23 24 25];
+      starts = 'D';
+      param_set = 0;
       params{2} = 'refine_fit';
-    case 10
-      files = {'1056-temps-all.mat'};
+    case 9.2
+      files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'B';
-      param_set = [2 12 13 20 23 24 25];
-      params{2} = 'refine_flow';
+      starts = 'D';
+      param_set = 0;
+      params{2} = 'refine_fit';
+      params{2} = 'goehring';
+    case 10
+      perform_fitting(10.1,false);
+      perform_fitting(10.2,false);
+      return;
+    case 10.1
+      files = {'1056-all-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'A';
+      param_set = 0;
+      params{2} = 'refine_fit';
+    case 10.2
+      files = {'1056-all-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'A';
+      param_set = 2;
+      params{2} = 'refine_fit';
     case 11
       files = {'1056-all-all.mat'};
       repeats = 1;
@@ -141,16 +175,16 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       %starts = mod(selection, 10);
-      starts = 1;
-      param_set = 24;
-      params{2} = 'fit_flows';
+      starts = 'A';
+      param_set = 0;
+      params{2} = 'refine_size';
     case 13
       files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = mod(selection, 10);
-      param_set = 24;
-      params{2} = 'refine_flow';
+      starts = 'A'
+      param_set = 2;
+      params{2} = 'refine_size';
     case 14
       files = {'1056-temps-all.mat'};
       repeats = 2;
@@ -185,7 +219,7 @@ function perform_fitting(selection, roundit)
     switch starts(s)
       case 'A'
       % Average of all bests
-        s_params = {'init_pos'; [0.00286 2.22 0.0153 2.31]};
+        s_params = {'init_pos'; [0.00154 2.27 0.0078 2.02]};
       case 'P'
       % Provided
 

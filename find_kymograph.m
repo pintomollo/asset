@@ -57,7 +57,7 @@ function find_kymograph(varargin)
           times = get_manual_timing(kymo.mymovie, kymo.opts);
           ground_truth = domain(1:times(end), :);
 
-          opts.axes_length = kymo.mymovie.metadata.axes_length_3d;
+          axes_length = kymo.mymovie.metadata.axes_length_3d;
 
           kymo_name = kymo.mymovie.experiment;
         elseif (isfield(kymo, 'ground_truth') & isfield(kymo, 'pos'))
@@ -72,26 +72,13 @@ function find_kymograph(varargin)
           if (isfield(kymo, 'temperatures'))
             fitting.temperature = kymo.temperatures;
           end
+          if (isfield(kymo, 'axes_length'))
+            axes_length = kymo.axes_length;
+          else
+            axes_length = opts.axes_length;
+          end
         else
           error('No suitable data for performing the fitting procedure');
-        end
-
-        if (iscell(pos))
-          aim_circum = 2*max(cat(2, pos{:}));
-        else
-          aim_circum = 2*pos(end);
-        end
-
-        if (aim_circum > 0)
-          rescale_factor = ellipse_circum(opts.axes_length, aim_circum, fitting.rescale_length_only);
-
-          if (fitting.rescale_length_only)
-            opts.axes_length(1) = rescale_factor;
-          else
-            opts.axes_length = opts.axes_length*rescale_factor;
-          end
-          opts.reaction_params(end-1,:) = surface2volume(opts.axes_length);
-          opts.reaction_params(end, :) = 0.5*ellipse_circum(opts.axes_length);
         end
 
         if (~iscell(ground_truth))
@@ -99,6 +86,10 @@ function find_kymograph(varargin)
           pos = {pos};
         end
         ngroups = length(ground_truth);
+
+        if (size(axes_length, 2) ~= ngroups)
+          axes_length = repmat(axes_length(:,1), 1, ngroups);
+        end
 
         if (fitting.fit_relative)
           log_file = ['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'];
@@ -110,7 +101,7 @@ function find_kymograph(varargin)
 
           fields = fieldnames(fitting);
           values = struct2cell(fitting);
-          filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set';'fit_flow';'fit_model'};
+          filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set';'fit_flow';'fit_model';'aligning_type';'normalize_smooth';'rescale_length_only'};
 
           good_fields = ismember(fields, filters);
 
@@ -155,14 +146,6 @@ function find_kymograph(varargin)
           end
         end
 
-        for g=1:ngroups
-          outside = (abs(pos{g}) > opts.reaction_params(end, 1));
-          if (any(outside))
-            pos{g} = pos{g}(~outside);
-            ground_truth{g} = ground_truth{g}(:, ~outside, :);
-          end
-        end
-
         fid = fopen(log_file, 'a');
         fprintf(fid, '%d %s %d\n', fitting.fit_full, kymo_name, fitting.parameter_set);
         fclose(fid);
@@ -171,7 +154,35 @@ function find_kymograph(varargin)
         fitting.x_pos = pos;
         fitting.t_pos = pos;
         fitting.type = kymo_name;
+
+        [aim_circum, indx] = max(cellfun(@max, pos));
+        aim_circum = 2*aim_circum;
+        axes_length = repmat(axes_length(:,indx), 1, ngroups);
+
         for g=1:ngroups
+
+          if (fitting.scale_each_egg)
+            aim_circum = 2*max(pos{g});
+          end
+
+          if (aim_circum > 0)
+            rescale_factor = ellipse_circum(axes_length(:,g), aim_circum, fitting.rescale_length_only);
+
+            if (fitting.rescale_length_only)
+              axes_length(1,g) = rescale_factor;
+            else
+              axes_length(:,g) = axes_length(:,g)*rescale_factor;
+            end
+          end
+          egg_properties(1,g) = surface2volume(axes_length(:,g));
+          egg_properties(2,g) = 0.5*ellipse_circum(axes_length(:,g));
+
+          outside = (abs(pos{g}) > egg_properties(2, g));
+          if (any(outside))
+            pos{g} = pos{g}(~outside);
+            ground_truth{g} = ground_truth{g}(:, ~outside, :);
+          end
+
           boundary = (length(pos{g})-1)/2;
           fitting.ground_truth{g} = permute([ground_truth{g}(:, 1:boundary+1, :), ground_truth{g}(:,end:-1:boundary+1, :)], [2 1 3]);
           fitting.x_pos{g} = pos{g}(boundary+1:end);
@@ -198,6 +209,7 @@ function find_kymograph(varargin)
             end
           end
         end
+        fitting.egg_properties = egg_properties;
 
         if (strncmp(fitting.fitting_type, 'mcmc', 4))
           uuids = metropolis_hastings(fitting, opts);

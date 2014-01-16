@@ -16,5 +16,5 @@ aligning_type 'fitting'
 pixels_only false
 offset_scaling 100
 rescale_length_only true
-fit_flow true
-scale_each_egg true
+rescale_each_egg true
+scale_flow true

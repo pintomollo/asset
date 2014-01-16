@@ -5,6 +5,8 @@ function [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_descr
   fit_viscosity = false;
 
   switch parameter_set
+    case 0
+      fit_params = [];
     case 1
       fit_params = [4 12];
     case 2

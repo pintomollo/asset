@@ -55,6 +55,16 @@ function uuids = fit_kymograph(fitting, opts)
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
 
+  ml_params(end-1,:) = fitting.egg_properties(1,1);
+  ml_params(end, :) = fitting.egg_properties(2,1);
+  half = ml_params(end, 1);
+
+  if (fitting.scale_flow)
+    flow_scale_factor = (65.5 ./ fitting.egg_properties(2,:)) - 1;
+  else
+    flow_scaling = 1;
+  end
+
   [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_description(fitting.parameter_set);
 
   % In these case, we always need a model
@@ -125,10 +135,6 @@ function uuids = fit_kymograph(fitting, opts)
   end
   uuids = cell(fitting.nfits, 1);
 
-  %tail_coeff = 0.25;
-  %stable_coeff = 2;
-  %close_coeff = 10;
-
   normalization_done = false;
 
   if (strncmp(fitting.fitting_type, 'dram', 4))
@@ -142,10 +148,7 @@ function uuids = fit_kymograph(fitting, opts)
       error('Data is missing for the fitting !');
     end
 
-    %embryo_size = range(fitting.x_pos);
-    %opts.reaction_params(end, :) = embryo_size;
-    %opts.boundaries = [0 embryo_size];
-    opts.boundaries = [0 opts.reaction_params(end,1)];
+    opts.boundaries = [0 fitting.egg_properties(2,1)];
     opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
   end
 
@@ -169,6 +172,12 @@ function uuids = fit_kymograph(fitting, opts)
         set(hfig(g), 'Name', ['Group #' num2str(g)]);
       end
     end
+
+    opts.reaction_params(end-1,:) = fitting.egg_properties(1,g);
+    opts.reaction_params(end, :) = fitting.egg_properties(2,g);
+
+    opts.boundaries = [0 fitting.egg_properties(2,g)];
+    opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
 
     is_data = ~(strncmp(fitting.type, 'simulation', 10));
     if (~is_data)
@@ -212,22 +221,19 @@ function uuids = fit_kymograph(fitting, opts)
     [n,m,o] = size(fitting.ground_truth{g});
     size_data(g,1:3) = [n,m,o];
 
-    %if (strncmp(fitting.aligning_type, 'domain', 6))
-      opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
-      [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth{g}(1:end/2, :, :), 3).', mymean(fitting.ground_truth{g}((end/2)+1:end, :, :), 3).', size_data(g,1)/2, size_data(g,2), opts_expansion);
+    opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
+    [f, frac_width, full_width] = domain_expansion(mymean(fitting.ground_truth{g}(1:end/2, :, :), 3).', mymean(fitting.ground_truth{g}((end/2)+1:end, :, :), 3).', size_data(g,1)/2, size_data(g,2), opts_expansion);
 
-      [junk, relative_fraction{g}] = synchronize_domains(f, f);
-      tmp_gfrac = f*frac_width;
-      tmp_gfrac(isnan(tmp_gfrac)) = 0;
-      gfraction{g} = tmp_gfrac;
+    [junk, relative_fraction{g}] = synchronize_domains(f, f);
+    tmp_gfrac = f*frac_width;
+    tmp_gfrac(isnan(tmp_gfrac)) = 0;
+    gfraction{g} = tmp_gfrac;
 
-      if (strncmp(fitting.scale_type, 'normalize', 10))
-        %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
-        fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_data, fitting.normalize_smooth);
-        %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
+    if (strncmp(fitting.scale_type, 'normalize', 10))
+      fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_data, fitting.normalize_smooth);
 
-        normalization_done = true;
-      end
+      normalization_done = true;
+    end
 
     if (strncmp(fitting.aligning_type, 'domain_width', 12))
       frac_indx(g) = find(f > fitting.fraction, 1, 'first');
@@ -282,23 +288,8 @@ function uuids = fit_kymograph(fitting, opts)
       E = [];
     end
   end
-  
-  %{
-  if (~fit_temperatures)
-    linear_goods = linear_goods{1};
-    if (strncmp(fitting.aligning_type, 'lsr', 3))
-      mean_ground_truth{g} = mean_ground_truth{g};
-    end
-    fitting.ground_truth = fitting.ground_truth{1};
-    fitting.x_pos = fitting.x_pos{1};
-    fitting.t_pos = fitting.t_pos{1};
-    gfraction = gfraction{1};
-  end
-  %}
 
   rescaling = orig_scaling;
-  %rescaling = 10.^(floor(log10(ml_params)));
-  %rescaling(ml_params == 0) = 1;
   ml_params = ml_params ./ rescaling;
 
   if (strncmp(fitting.type, 'simulation', 10))
@@ -366,6 +357,10 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = [p0 estim_sigma];
     end
 
+    if (fitting.scale_flow)
+      p0 = [p0 1];
+    end
+
     %p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     correct = 0;
     tmp_params = ml_params;
@@ -420,7 +415,6 @@ function uuids = fit_kymograph(fitting, opts)
 
       %fitting.score_weights = 1/nobs(1);
       curr_score_weights(g) = fitting.score_weights*length(gfraction{g})/nobs(g,1);
-      half = opts.boundaries(2);
 
       if (fitting.integrate_sigma)
         %full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
@@ -463,6 +457,8 @@ function uuids = fit_kymograph(fitting, opts)
     fid = fopen([log_name 'evol.dat'], 'w');
     print_all(fid, tmp_fit);
     fclose(fid);
+
+    fitting.scale_each_egg = (fitting.scale_each_egg && (ngroups > 1));
 
     switch (fitting.fitting_type)
       case 'simplex'
@@ -651,8 +647,24 @@ function uuids = fit_kymograph(fitting, opts)
         curr_p = p_all(:,i);
 
         tmp_params = ml_params;
+
+        if (fitting.scale_each_egg)
+          tmp_params(end-1,:) = fitting.egg_properties(1, g);
+          tmp_params(end, :) = fitting.egg_properties(2, g);
+
+          opts.boundaries = [0 fitting.egg_properties(2,g)];
+          opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
+
+          half = opts.boundaries(2);
+        end
+
         tmp_params(fit_params) = abs(curr_p(1:nrates));
         more_params = curr_p(nrates+1:end);
+
+        if (fitting.scale_flow)
+          flow_scaling = (abs(more_params(end))*flow_scale_factor(g) + 1);
+          more_params = more_params(1:end-1);
+        end
 
         if (fitting.fit_sigma)
           estim_sigma = abs(more_params(end));
@@ -665,6 +677,7 @@ function uuids = fit_kymograph(fitting, opts)
         else
           curr_flow_scale = 1;
         end
+        curr_flow_scale = curr_flow_scale*flow_scaling;
 
         if (fit_viscosity)
           curr_visc = ones(1,ntemps);
