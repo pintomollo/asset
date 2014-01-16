@@ -12,7 +12,7 @@ function perform_fitting(selection, roundit)
     switch_selection = floor(selection);
   end
 
-  switch selection
+  switch switch_selection
     case -1
       % All ani-2 and c27d9.1
       files = dir('1056-temps-all.mat');
