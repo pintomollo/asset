@@ -17,9 +17,9 @@ function perform_fitting(selection, roundit)
       % All ani-2 and c27d9.1
       files = dir('1056-temps-all.mat');
       repeats = 1;
-      init_noise = 0;
+      init_noise = 0.01;
       starts = 'P';
-      param_set = 24;
+      param_set = 25;
       %params{2} = 'refine_temp_indep';
       params{2} = 'refine_flow';
       %params{2} = 'refine_fit';
@@ -40,14 +40,14 @@ function perform_fitting(selection, roundit)
       files = dir('1056-24-*_.mat');
       repeats = 1;
       init_noise = 0.1;
-      starts = 'GABB';
+      starts = 'A';
       param_set = 2;
     case 2
       % All 14°C
       files = dir('1056-14-*_.mat');
       repeats = 1;
       init_noise = 0.1;
-      starts = 'GABB';
+      starts = 'A';
       param_set = 2;
     case 3
       % All 3°C, ani-2 and c27d9.1
@@ -56,7 +56,7 @@ function perform_fitting(selection, roundit)
                dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0.1;
-      starts = 'GABB';
+      starts = 'A';
       param_set = 2;
     case 4
       files = dir('1056-*-all.mat');
@@ -103,26 +103,29 @@ function perform_fitting(selection, roundit)
       return;
 
     case 8.1
-      files = dir('1056-temps-all.mat');
+      files = dir('1056-all-all.mat');
       repeats = 1;
       init_noise = 0;
-      starts = 'O';
+      %starts = 'O';
+      starts = 1;
       param_set = 30;
       params{2} = 'hessian';
       params{4} = 'custom_flow_sample';
     case 8.2
-      files = dir('1056-temps-all.mat');
+      files = dir('1056-all-all.mat');
       repeats = 1;
       init_noise = 0;
-      starts = 'O';
+      %starts = 'O';
+      starts = 1;
       param_set = 30;
       params{2} = 'sensitivity';
       params{4} = 'custom_flow_sample';
     case 8.3
-      files = dir('1056-temps-all.mat');
+      files = dir('1056-all-all.mat');
       repeats = 1;
       init_noise = 0;
-      starts = 'O';
+      %starts = 'O';
+      starts = 1;
       param_set = 30;
       params{2} = 'refine_flow';
       params{4} = 'custom_flow_sample';
@@ -223,11 +226,11 @@ function perform_fitting(selection, roundit)
       case 'P'
       % Provided
 
-        s_params = {'init_pos', [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265]};
+        %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265]};
         % refine_flow for 25
-        %s_params = {'init_pos', [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0.1599 0.1599 0 0.6277 1.6908 0.8265]};
+        s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0.1599 0.1599 0 0.6277 1.6908 0.8265]};
         %refine_temp_indep
-        %s_params = {'init_pos', [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
+        %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
 
        %s_params = {'init_pos'; [0.00134 1.7874 0.0091 2.4993 -5.9900 4.4900 0 0.6652 0.9319 1.2515 1.0152 0.3760 2.2994 0.9848]};
        %s_params = {'init_pos'; [0.00083 2.3309 0.0050 2.4398 -5.9900 8.1600 0 0 0 1.0161 1.6961 0.8069]};
