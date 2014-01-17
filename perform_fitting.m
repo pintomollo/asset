@@ -71,7 +71,7 @@ function perform_fitting(selection, roundit)
       init_noise = 0;
       starts = 'B';
       param_set = [2 13 20 25];
-      params{2} = 'refine_flows';
+      params{2} = 'refine_flow';
     case 6
       perform_fitting(6.1,false);
       perform_fitting(6.2,false);
@@ -82,7 +82,7 @@ function perform_fitting(selection, roundit)
       init_noise = 0;
       starts = 'B';
       param_set = 24;
-      params{2} = 'refine_flows';
+      params{2} = 'refine_flow';
     case 6.2
       files = {'1056-temps-all.mat'};
       repeats = 1;
