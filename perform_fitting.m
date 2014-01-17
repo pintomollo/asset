@@ -175,7 +175,7 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_flow';
     case 12
       files = {'1056-all-all.mat'};
-      repeats = 1;
+      repeats = 2;
       init_noise = 0;
       %starts = mod(selection, 10);
       starts = 'A';
@@ -183,9 +183,9 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_size';
     case 13
       files = {'1056-all-all.mat'};
-      repeats = 1;
+      repeats = 2;
       init_noise = 0;
-      starts = 'A'
+      starts = 'A';
       param_set = 2;
       params{2} = 'refine_size';
     case 14

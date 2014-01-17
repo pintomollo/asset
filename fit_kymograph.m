@@ -60,7 +60,10 @@ function uuids = fit_kymograph(fitting, opts)
   half = ml_params(end, 1);
 
   if (fitting.scale_flow)
-    flow_scale_factor = (65.5 ./ fitting.egg_properties(2,:)) - 1;
+    tmp_opts = get_struct('modeling');
+    tmp_conv = get_struct('conversion');
+    tmp_factor = surface2volume(tmp_opts.axes_length .* [tmp_conv.maintenance;1;1]);
+    flow_scale_factor = (fitting.egg_properties(1,:) / tmp_factor) - 1;
   else
     flow_scaling = 1;
   end
@@ -434,7 +437,7 @@ function uuids = fit_kymograph(fitting, opts)
     end
     full_error = sum(full_error);
 
-    if (strncmp(fitting.aligning_type, 'fitting', 7) && length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow + nvisc*fit_viscosity))
+    if (strncmp(fitting.aligning_type, 'fitting', 7) && length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow + nvisc*fit_viscosity + fitting.scale_flow))
       nparams = length(p0);
       fitting.aligning_type = 'domain';
       [junk, offsets] = error_function(p0(:));

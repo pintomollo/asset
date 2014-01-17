@@ -155,9 +155,11 @@ function find_kymograph(varargin)
         fitting.t_pos = pos;
         fitting.type = kymo_name;
 
-        [aim_circum, indx] = max(cellfun(@max, pos));
-        aim_circum = 2*aim_circum;
-        axes_length = repmat(axes_length(:,indx), 1, ngroups);
+        if (~fitting.scale_each_egg)
+          [aim_circum, indx] = max(cellfun(@max, pos));
+          aim_circum = 2*aim_circum;
+          axes_length = repmat(axes_length(:,indx), 1, ngroups);
+        end
 
         for g=1:ngroups
 

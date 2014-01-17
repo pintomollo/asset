@@ -1,5 +1,5 @@
 fit_relative true
-fitting_type 'cmaes'
+fitting_type 'simplex'
 start_with_best false
 init_noise 0
 data_noise 0.05

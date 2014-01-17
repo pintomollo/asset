@@ -5,11 +5,15 @@ function perif = ellipse_circum(axes_length, aim, x_only)
   end
 
   if (nargin ~= 1)
-    if (x_only)
-      axes_length = axes_length(:);
-      perif = fzero(@(u)(ellipse_circum([u; axes_length(2:3)])-aim), [0.25 4]*axes_length(1));
-    else
-      perif = fzero(@(u)(ellipse_circum(axes_length*u)-aim), [0.25 4]);
+    perif = NaN(1, length(aim));
+
+    for i=1:length(aim)
+      if (x_only)
+        tmp_axes = axes_length(:, i);
+        perif(i) = fzero(@(u)(ellipse_circum([u; tmp_axes(2:3)])-aim(i)), [0.25 4]*tmp_axes(1));
+      else
+        perif(i) = fzero(@(u)(ellipse_circum(axes_length(:,i)*u)-aim(i)), [0.25 4]);
+      end
     end
   else
     a = axes_length(1,:);
