@@ -101,7 +101,7 @@ function find_kymograph(varargin)
 
           fields = fieldnames(fitting);
           values = struct2cell(fitting);
-          filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set';'fit_flow';'fit_model';'aligning_type';'normalize_smooth';'rescale_length_only'};
+          filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set';'fit_flow';'fit_model';'aligning_type';'normalize_smooth'};
 
           good_fields = ismember(fields, filters);
 
