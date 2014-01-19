@@ -147,7 +147,7 @@ function perform_fitting(selection, roundit)
       starts = 'D';
       param_set = 0;
       params{2} = 'refine_fit';
-      params{2} = 'goehring';
+      params{4} = 'goehring';
     case 10
       perform_fitting(10.1,false);
       perform_fitting(10.2,false);
