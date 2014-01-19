@@ -32,7 +32,7 @@ function perform_fitting(selection, roundit)
                dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      starts = 'A';
+      starts = 'B';
       param_set = 2;
       params{2} = 'refine_fit';
     case 1
