@@ -406,6 +406,8 @@ function uuids = fit_kymograph(fitting, opts)
 
     ndecimals = -min(log10(fitting.tolerance/10), 0);
 
+    each_full_error = NaN(1, ngroups);
+
     for g=1:ngroups
       if (fitting.estimate_n)
         ns = identify_n(fitting.ground_truth{g});
@@ -422,20 +424,20 @@ function uuids = fit_kymograph(fitting, opts)
       if (fitting.integrate_sigma)
         %full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
         if (fitting.pixels_only)
-          full_error(g) = (0.5*nobs(g,1))*log(penalty(g) * size_data(g,2) * 10);
+          each_full_error(g) = (0.5*nobs(g,1))*log(penalty(g) * size_data(g,2) * 10);
         else
-          full_error(g) = (0.5*nobs(g,2))*log(curr_score_weights(g)*penalty(g)*size_data(g,2)*10 + size_data(g,2)*10);
+          each_full_error(g) = (0.5*nobs(g,2))*log(curr_score_weights(g)*penalty(g)*size_data(g,2)*10 + size_data(g,2)*10);
         end
       else
         %full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
-        full_error(g) = (curr_score_weights(g) * penalty(g) * size_data(g,2) * 10 + prod(size_data(g,1:2))) / (2*estim_sigma(g).^2);
+        each_full_error(g) = (curr_score_weights(g) * penalty(g) * size_data(g,2) * 10 + prod(size_data(g,1:2))) / (2*estim_sigma(g).^2);
       end
 
       if (strncmp(fitting.type, 'simulation', 10))
         fitting.ground_truth{g} = noiseless{g} + range_data(g)*randn(size_data(g,:));
       end
     end
-    full_error = sum(full_error);
+    full_error = sum(each_full_error);
 
     if (strncmp(fitting.aligning_type, 'fitting', 7) && length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow + nvisc*fit_viscosity + fitting.scale_flow))
       nparams = length(p0);
@@ -889,7 +891,7 @@ function uuids = fit_kymograph(fitting, opts)
 %        if (sum(goods) < 10)
         %if (length(relative_fraction{g}) - corr_offset < 10)
         if (size_data(g,2) - corr_offset < 10)
-          err_all(g,i) = Inf;
+          err_all(g,i) = each_full_error(g);
         else
           if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
             %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
