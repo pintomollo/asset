@@ -201,15 +201,16 @@ function perform_fitting(selection, roundit)
       %starts = mod(selection, 10);
       starts = 'D';
       param_set = 0;
-      params{2} = 'refine_size';
+      params{2} = 'fit_size';
       params{4} = 'custom_model';
     case 13
       files = {'1056-all-all.mat'};
       repeats = 2;
       init_noise = 0;
-      starts = 'A';
+      starts = 'D';
       param_set = 2;
       params{2} = 'refine_size';
+      params{4} = 'custom_model';
     case 14
       files = {'1056-temps-all.mat'};
       repeats = 2;
