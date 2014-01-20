@@ -196,7 +196,7 @@ function perform_fitting(selection, roundit)
                dir('1056-24-*_.mat'); ...
                dir('1056-ani2-*_.mat'); ...
                dir('1056-c27d91-*_.mat')];
-      repeats = 2;
+      repeats = 1;
       init_noise = 0;
       %starts = mod(selection, 10);
       starts = 'D';
