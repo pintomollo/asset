@@ -134,14 +134,24 @@ function perform_fitting(selection, roundit)
       perform_fitting(9.2,false);
       return;
     case 9.1
-      files = {'1056-all-all.mat'};
+      %files = {'1056-all-all.mat'};
+      files = [dir('1056-3-*_.mat'); ...
+               dir('1056-14-*_.mat'); ...
+               dir('1056-24-*_.mat'); ...
+               dir('1056-ani2-*_.mat'); ...
+               dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
       starts = 'D';
       param_set = 0;
       params{2} = 'refine_fit';
     case 9.2
-      files = {'1056-all-all.mat'};
+      %files = {'1056-all-all.mat'};
+      files = [dir('1056-3-*_.mat'); ...
+               dir('1056-14-*_.mat'); ...
+               dir('1056-24-*_.mat'); ...
+               dir('1056-ani2-*_.mat'); ...
+               dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
       starts = 'D';
@@ -153,12 +163,18 @@ function perform_fitting(selection, roundit)
       perform_fitting(10.2,false);
       return;
     case 10.1
-      files = {'1056-all-all.mat'};
+      %files = {'1056-all-all.mat'};
+      files = [dir('1056-3-*_.mat'); ...
+               dir('1056-14-*_.mat'); ...
+               dir('1056-24-*_.mat'); ...
+               dir('1056-ani2-*_.mat'); ...
+               dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      starts = 'A';
+      starts = 'D';
       param_set = 0;
       params{2} = 'refine_fit';
+      params{4} = 'custom_model';
     case 10.2
       files = {'1056-all-all.mat'};
       repeats = 1;
@@ -174,13 +190,19 @@ function perform_fitting(selection, roundit)
       param_set = 24;
       params{2} = 'refine_flow';
     case 12
-      files = {'1056-all-all.mat'};
+      %files = {'1056-all-all.mat'};
+      files = [dir('1056-3-*_.mat'); ...
+               dir('1056-14-*_.mat'); ...
+               dir('1056-24-*_.mat'); ...
+               dir('1056-ani2-*_.mat'); ...
+               dir('1056-c27d91-*_.mat')];
       repeats = 2;
       init_noise = 0;
       %starts = mod(selection, 10);
-      starts = 'A';
+      starts = 'D';
       param_set = 0;
       params{2} = 'refine_size';
+      params{4} = 'custom_model';
     case 13
       files = {'1056-all-all.mat'};
       repeats = 2;
@@ -222,7 +244,7 @@ function perform_fitting(selection, roundit)
     switch starts(s)
       case 'A'
       % Average of all bests
-        s_params = {'init_pos'; [0.00154 2.27 0.0078 2.02]};
+        s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202]};
       case 'P'
       % Provided
 

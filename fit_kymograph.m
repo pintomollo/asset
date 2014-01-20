@@ -295,6 +295,10 @@ function uuids = fit_kymograph(fitting, opts)
   rescaling = orig_scaling;
   ml_params = ml_params ./ rescaling;
 
+  if (fitting.scale_each_egg)
+    egg_properties = bsxfun(@rdivide, fitting.egg_properties, rescaling(end-1:end,1));
+  end
+
   if (strncmp(fitting.type, 'simulation', 10))
     noiseless = fitting.ground_truth;
     for g=1:ngroups
@@ -654,8 +658,8 @@ function uuids = fit_kymograph(fitting, opts)
         tmp_params = ml_params;
 
         if (fitting.scale_each_egg)
-          tmp_params(end-1,:) = fitting.egg_properties(1, g);
-          tmp_params(end, :) = fitting.egg_properties(2, g);
+          tmp_params(end-1,:) = egg_properties(1, g);
+          tmp_params(end, :) = egg_properties(2, g);
 
           opts.boundaries = [0 fitting.egg_properties(2,g)];
           opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);

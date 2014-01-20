@@ -49,7 +49,7 @@ function figs_msb(num)
       keyboard
 
     case 0.1
-      vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type'}, {'parameter_set', 2; 'fit_flow', false});
+      vals = group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'type'}, {'parameter_set', 2; 'fit_flow', false; 'extrapol_z', true; 'rescale_length_only', true});
       vals = extract_model_parameters(vals, true);
       nfits = size(vals,1);
 
