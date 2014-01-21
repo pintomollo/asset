@@ -212,12 +212,18 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_size';
       params{4} = 'custom_model';
     case 14
-      files = {'1056-temps-all.mat'};
-      repeats = 2;
+      files = [dir('1056-3-*_.mat'); ...
+               dir('1056-14-*_.mat'); ...
+               dir('1056-24-*_.mat'); ...
+               dir('1056-ani2-*_.mat'); ...
+               dir('1056-c27d91-*_.mat')];
+      repeats = 1;
       init_noise = 0;
-      starts = 'T';
-      param_set = 24;
-      params{2} = 'fit_flows';
+      %starts = mod(selection, 10);
+      starts = 'D';
+      param_set = 0;
+      params{2} = 'refine_size_flow';
+      params{4} = 'custom_model';
     case 15
       files = {'1056-temps-all.mat'};
       repeats = 2;
