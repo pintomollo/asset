@@ -388,8 +388,8 @@ function figs_msb(num)
       nfiles = length(files);
       names = cell(nfiles, 1);
 
-      %objective = 'Mean';
-      objective = 'Max';
+      objective = 'Mean';
+      %objective = 'Max';
 
       all_vals = NaN(0,4);
       for i=1:nfiles
@@ -434,20 +434,15 @@ function figs_msb(num)
         all_vals = [all_vals; [all_pts group]];
       end
 
+      bkg = find(ismember(names, 'n2-par2RNAi'));
+      bkg = mean(all_vals(all_vals(:,end)==bkg, :));
+
+      all_vals(:,1:2) = bsxfun(@minus, all_vals(:,1:2), bkg(1,1:2));
+
       ref = find(ismember(names, 'n2'));
       avg = mean(all_vals(all_vals(:,end)==ref, :));
 
       figure;
-      
-      %{
-      subplot(2,3,1);
-      boxplot(all_vals(:,1), all_vals(:,end), 'labels', names);
-      title('Post membrane');
-
-      subplot(2,3,2);
-      boxplot(all_vals(:,2), all_vals(:,end), 'labels', names);
-      title('Ant membrane');
-      %}
 
       subplot(2,3,1);
       boxplot(100*(all_vals(:,1)./all_vals(:,3))*(avg(3)/avg(1)), all_vals(:,end), 'labels', names);
@@ -457,76 +452,63 @@ function figs_msb(num)
       boxplot(100*(all_vals(:,2)./all_vals(:,3))*(avg(3)/avg(2)), all_vals(:,end), 'labels', names);
       title('Ant membrane over bkg');
 
-      %{
-      subplot(2,3,5);
-      boxplot(all_vals(:,1)-all_vals(:,3), all_vals(:,end), 'labels', names);
-      title('Post membrane minus bkg');
-
-      subplot(2,3,6);
-      boxplot(all_vals(:,2)-all_vals(:,3), all_vals(:,end), 'labels', names);
-      title('Ant membrane minus bkg');
-
-      mtit(objective);
-      %}
-
-      %[H,p] = myttest(all_vals(:,1), all_vals(:,end))
-      %[H,p] = myttest(all_vals(:,2), all_vals(:,end))
       [H,P] = myttest(all_vals(:,1)./all_vals(:,3), all_vals(:,end))
       [H,P] = myttest(all_vals(:,2)./all_vals(:,3), all_vals(:,end))
-      %[H,p] = myttest(all_vals(:,1)-all_vals(:,3), all_vals(:,end))
-      %[H,p] = myttest(all_vals(:,2)-all_vals(:,3), all_vals(:,end))
-      %disp(objective)
 
-      %{
-      keyboard;
-
-      scores = NaN(nfiles);
-      for i=1:nfiles
-        for j=i+1:nfiles
-          [junk, scores(i,j)] =  ttest2(all_vals(all_vals(:,end)==i,1), all_vals(all_vals(:,end)==j,1));
-          [junk, scores(j,i)] =  ttest2(all_vals(all_vals(:,end)==i,1)/avg, all_vals(all_vals(:,end)==j,1)/avg);
-        end
-      end
-      disp(scores)
-
-      files = dir('stainings/*_ant_domain.txt');
-      nfiles = length(files);
-      new_names = cell(nfiles, 1);
-
-      all_ref = all_vals;
-      all_vals = NaN(0,3);
-      for i=1:nfiles
-        tmp = importdata(['stainings/' files(i).name]);
-        %good_vals = ismember(tmp.colheaders, 'Mean') | ismember(tmp.colheaders, 'Median');
-        good_vals = ismember(tmp.colheaders, 'Mean') | ismember(tmp.colheaders, 'Slice');
-        new_names{i,1} = files(i).name(1:find(files(i).name=='_')-1);
-        good_ref = find(ismember(names, new_names{i,1}));
-
-        tmp = tmp.data(:, good_vals);
-        ref = all_ref(all_ref(:,end)==good_ref, 1:3);
-
-
-        tmp = [tmp(:,1) - ref(tmp(:,2),3) tmp];
-        tmp = [tmp(:,1) tmp(:,1)./ref(tmp(:,3),1) tmp(:,2)./ref(tmp(:,3),2) tmp(:,2)./ref(tmp(:,3),1)];
-        group = ones(size(tmp,1), 1)*i;
-        all_vals = [all_vals; [tmp group]]
-      end
-
-      figure;subplot(2,2,1);
-      boxplot(all_vals(:,1), all_vals(:,end), 'labels', new_names);
-      subplot(2,2,2);
-      boxplot(all_vals(:,2), all_vals(:,end), 'labels', new_names);
-      subplot(2,2,3);
-      boxplot(all_vals(:,3), all_vals(:,end), 'labels', new_names);
-      subplot(2,2,4);
-      boxplot(all_vals(:,4), all_vals(:,end), 'labels', new_names);
-      %keyboard
-      %}
-
-      files = dir('signal_quantif/*_results.txt');
+      files = dir('signal_quantif/*.txt');
       nfiles = length(files);
       names = cell(nfiles, 1);
 
+      objective = 'Mean';
+      %objective = 'Max';
+
+      all_vals = NaN(0,4);
+      for i=1:nfiles
+        tmp = importdata(['signal_quantif/' files(i).name]);
+        tmp = [tmp.data(:, ismember(tmp.colheaders, 'Slice')), ...
+               tmp.data(:, ismember(tmp.colheaders, objective)), ...
+               tmp.data(:, ismember(tmp.colheaders, 'BX')), ...
+               tmp.data(:, ismember(tmp.colheaders, 'Width'))];
+
+        slices = unique(tmp(:,1)).';
+        all_pts = NaN(length(slices), 3);
+
+        for j=slices
+          pts = tmp(tmp(:,1)==j, 2:end);
+          [junk, ant] = min(pts(:,2));
+          [junk, post] = max(pts(:,2)+pts(:,3));
+
+          bkg = [1:size(pts,1)];
+          bkg = bkg(bkg ~= ant & bkg ~= post);
+          bkg = sort(pts(bkg, 1));
+
+          dint = diff(bkg);
+
+          all_pts(j,:) = [(pts(post,1)-dint) (pts(ant,1)) bkg(1)];
+        end
+
+        names{i,1} = files(i).name(1:find(files(i).name=='_')-1);
+        group = ones(size(all_pts,1), 1)*i;
+        all_vals = [all_vals; [all_pts group]];
+      end
+
+      %bkg = find(ismember(names, 'n2-par2RNAi'));
+      bkg = mean(all_vals(:, 2));
+
+      %all_vals(:,1:2) = bsxfun(@minus, all_vals(:,1:2), bkg(1,1:2));
+      all_vals(:,[1 3]) = all_vals(:,[1 3]) - bkg;
+
+      ref = find(ismember(names, '1054'));
+      avg = mean(all_vals(all_vals(:,end)==ref, :));
+
+      subplot(2,3,3);
+      boxplot(100*(all_vals(:,1)./all_vals(:,3))*(avg(3)/avg(1)), all_vals(:,end), 'labels', names);
+      title('GFP post membrane over bkg');
+
+      [H,P] = myttest(all_vals(:,1)./all_vals(:,3), all_vals(:,end))
+
+      %figure;subplot(2,3,4);
+      %{
       all_vals = NaN(0,4);
       for i=1:nfiles
         tmp = importdata(['signal_quantif/' files(i).name]);
@@ -543,7 +525,6 @@ function figs_msb(num)
       ref = find(ismember(names, '1054'));
       avg = mean(all_vals(all_vals(:,end)==ref, :));
 
-      %figure;subplot(2,3,4);
       subplot(2,3,4);
       boxplot(100*all_vals(:,1)/avg(1), all_vals(:,end), 'labels', names);
       title('Membrane minus background');
@@ -553,6 +534,7 @@ function figs_msb(num)
       subplot(2,3,6);
       boxplot(100*all_vals(:,2)/avg(2), all_vals(:,end), 'labels', names);
       title('Membrane signal');
+      %}
 
       %scores = NaN(nfiles);
       %for i=1:nfiles
@@ -561,9 +543,9 @@ function figs_msb(num)
       %    [junk, scores(j,i)] =  ttest2(all_vals(all_vals(:,end)==i,2), all_vals(all_vals(:,end)==j,2));
       %  end
       %end
-      [H,P] = myttest(all_vals(:,1), all_vals(:,end))
-      [H,P] = myttest(all_vals(:,2)./all_vals(:,3), all_vals(:,end))
-      [H,P] = myttest(all_vals(:,2), all_vals(:,end))
+      %[H,P] = myttest(all_vals(:,1), all_vals(:,end))
+      %[H,P] = myttest(all_vals(:,2)./all_vals(:,3), all_vals(:,end))
+      %[H,P] = myttest(all_vals(:,2), all_vals(:,end))
 
       targets = {'good_24.txt'; 'good_20.txt'; 'good_13.txt'; 'good_c27d91.txt'; 'good_ani2.txt'};
       data = load('data_expansion.mat');

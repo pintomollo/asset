@@ -99,7 +99,9 @@ function uuids = fit_kymograph(fitting, opts)
       return;
     elseif ((nrates + numel(fit_energy) + noffsets + fitting.fit_flow + fit_viscosity*nvisc) == numel(fitting.init_pos))
 
-      fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+      if (nrates > 0)
+        fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+      end
       fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
 
       all_params = true;
@@ -191,8 +193,6 @@ function uuids = fit_kymograph(fitting, opts)
           x0 = opts.init_params;
           x0 = repmat(x0, [opts.nparticles, 1]);
         end
-
-        fitting.simulation_parameters = ml_params(fit_params);
 
         if (fitting.fit_relative)
            [fitting.ground_truth, fitting.t_pos] = simulate_model_real(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
@@ -463,6 +463,8 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_fit.ground_truth = [];
     tmp_fit.flow_size = size(flow);
     tmp_fit.rescale_factor = rescaling(fit_params);
+    tmp_fit.simulation_parameters = ml_params .* rescaling;
+
     fid = fopen([log_name 'evol.dat'], 'w');
     print_all(fid, tmp_fit);
     fclose(fid);
