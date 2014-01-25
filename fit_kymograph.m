@@ -40,6 +40,23 @@ function uuids = fit_kymograph(fitting, opts)
     %opts.reaction_params(5,:) = 1;
   end
 
+  if (~isempty(fitting.simulation_parameters))
+    fitting.simulation_parameters = reshape(fitting.simulation_parameters, [], 2);
+
+    opts.diffusion_params = fitting.simulation_parameters(1,:);
+    opts.reaction_params = fitting.simulation_parameters(2:end,:);
+  end
+
+  if (~isempty(fitting.flow_size) && size(opts.advection_params, 2) ~= fitting.flow_size(end))
+    tmp_opts = get_struct('modeling');
+    tmp_opts = load_parameters(tmp_opts, 'goehring.txt');
+
+    opts.advection_params = tmp_opts.advection_params;
+    opts.user_data = tmp_opts.user_data;
+    opts.flow_temperature = tmp_opts.flow_temperature;
+    opts.tmax = tmp_opts.tmax;
+  end
+
   ngroups = length(fitting.ground_truth);
 
   all_params = false;
@@ -97,7 +114,7 @@ function uuids = fit_kymograph(fitting, opts)
       end
 
       return;
-    elseif ((nrates + numel(fit_energy) + noffsets + fitting.fit_flow + fit_viscosity*nvisc) == numel(fitting.init_pos))
+    elseif ((nrates + numel(fit_energy) + noffsets + fitting.fit_flow + fit_viscosity*nvisc + fitting.scale_flow) == numel(fitting.init_pos))
 
       if (nrates > 0)
         fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
@@ -275,7 +292,8 @@ function uuids = fit_kymograph(fitting, opts)
 
     linear_truth{g} = fitting.ground_truth{g}(:);
     linear_goods{g} = isfinite(linear_truth{g});
-    simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
+    %simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
+    simul_pos = [0:opts.nparticles-1].';
     penalty(g) = ((max(linear_truth{g}(linear_goods{g})))^2)*opts.nparticles;
     ndata(g) = length(fitting.x_pos{g});
 
@@ -364,7 +382,7 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = [p0 estim_sigma];
     end
 
-    if (fitting.scale_flow)
+    if (fitting.scale_flow & ~all_params)
       p0 = [p0 1];
     end
 
@@ -408,10 +426,12 @@ function uuids = fit_kymograph(fitting, opts)
       warning off;
     end
 
-    ndecimals = -min(log10(fitting.tolerance/10), 0);
+    ndecimals = -min(floor(real(log10(fitting.tolerance/10))), 0);
+    if (~isfinite(ndecimals))
+      ndecimals = 0;
+    end
 
     each_full_error = NaN(1, ngroups);
-
     for g=1:ngroups
       if (fitting.estimate_n)
         ns = identify_n(fitting.ground_truth{g});
@@ -804,7 +824,7 @@ function uuids = fit_kymograph(fitting, opts)
         
         res = res((end/2)+1:end, :);
         if (opts.nparticles ~= ndata)
-          res = flipud(interp1q(simul_pos, flipud(res), fitting.x_pos{g}.'));
+          res = flipud(interp1q(simul_pos*opts.x_step, flipud(res), fitting.x_pos{g}.'));
         end
         
         [f, fwidth] = domain_expansion(res.', size(res, 1), size(res,2), opts_expansion);

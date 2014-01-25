@@ -53,8 +53,10 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
       if (nvals > nparams)
 
         data.score = pts(:, 1);
-        data.rate = bsxfun(@times, norm_func(pts(:, 2:(nparams+1))), fitting.rescale_factor);
-        ntotal = ntotal + nparams;
+        if (nparams > 0)
+          data.rate = bsxfun(@times, norm_func(pts(:, 2:(nparams+1))), fitting.rescale_factor);
+          ntotal = ntotal + nparams;
+        end
 
         [good_params, params_indx] = ismember([4 5 12 13], fit_params);
 
@@ -69,6 +71,12 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
 
         if (~isempty(pts))
           is_deprecated = (date_change - datenum(datevec(value.time)) > 0);
+
+          if (fitting.scale_flow)
+            data.flow_scaling = norm_func(pts(:, end));
+            pts = pts(:, 1:end-1);
+            ntotal = ntotal + 1;
+          end
 
           if (fitting.fit_sigma)
             data.sigma = norm_func(pts(:, end));

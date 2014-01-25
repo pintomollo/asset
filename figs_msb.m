@@ -1218,6 +1218,9 @@ function figs_msb(num)
       nparams = nparams(indx);
       params = params(indx);
       rel_params = rel_params(indx);
+
+      keyboard
+
       aic = 2*(nparams + score) + 2*nparams.*(nparams+1)./(npts-nparams-1);
 
       temps = vals{1,2}{1,2}.params.temperature;
@@ -3007,7 +3010,60 @@ function figs_msb(num)
 
 %      keyboard
 
+    case 9
 
+      load('data_expansion');
+      tmp_data = cat(1, all_data{:,3});
+      all_names = tmp_data(:, 3);
+
+      tmp_opts = get_struct('modeling');
+      opts_goehring = load_parameters(tmp_opts, 'goehring.txt');
+      opts_flow = load_parameters(opts_goehring, 'custom_flow.txt');
+
+      orig_params = [opts_flow.diffusion_params; opts_flow.reaction_params];
+      orig_params([4 12]) = orig_params([4 12]) ./ orig_params([13 5]);
+      orig_params = orig_params(:).';
+
+      all_scores = NaN(length(all_names), 5);
+      all_offsets = all_scores;
+      all_params = all_scores(:,1:3);
+
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'type';'simulation_parameters';'flow_size';'scale_flow';'fit_flow'}, {'parameter_set', 0});
+      vals = extract_model_parameters(vals, true);
+
+      nfits = size(vals,1);
+
+      for i=1:nfits
+        curr_val = vals{i,1}{1};
+
+        indx = find(ismember(all_names, [curr_val.type '.mat']), 1);
+
+        if (~curr_val.scale_flow)
+          if (curr_val.flow_size(2) == size(opts_goehring.advection_params, 2))
+            sub_indx = 1;
+          elseif (all(curr_val.simulation_parameters(4:5) == orig_params(4:5)))
+            sub_indx = 2;
+          else
+            sub_indx = 3;
+          end
+        else
+          if (~curr_val.fit_flow)
+            sub_indx = 4;
+            
+            all_params(indx, 1) = vals{i,2}{1,2}.params.flow_scaling;
+          else
+            sub_indx = 5;
+
+            all_params(indx, 2) = vals{i,2}{1,2}.params.flow_scaling;
+            all_params(indx, 3) = vals{i,2}{1,2}.params.flow;
+          end
+        end
+
+        all_scores(indx, sub_indx) = vals{i,2}{1,2}.score;
+        all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
+      end
+
+      keyboard
 
   end
 

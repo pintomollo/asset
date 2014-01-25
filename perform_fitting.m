@@ -163,30 +163,30 @@ function perform_fitting(selection, roundit)
       perform_fitting(10.2,false);
       return;
     case 10.1
-      %files = {'1056-all-all.mat'};
-      files = [dir('1056-3-*_.mat'); ...
-               dir('1056-14-*_.mat'); ...
-               dir('1056-24-*_.mat'); ...
-               dir('1056-ani2-*_.mat'); ...
-               dir('1056-c27d91-*_.mat')];
+      files = {'1056-all-all.mat'};
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      starts = 'D';
-      param_set = 0;
+      starts = 4;
+      param_set = 2;
       params{2} = 'refine_fit';
-      params{4} = 'custom_model';
+      %params{4} = 'custom_model';
     case 10.2
       files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'A';
+      starts = 'D';
       param_set = 2;
       params{2} = 'refine_fit';
     case 11
       files = {'1056-all-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = round(mod(selection, 1)*10);
+      %starts = round(mod(selection, 1)*10);
       param_set = 24;
       params{2} = 'refine_flow';
     case 12
@@ -205,38 +205,51 @@ function perform_fitting(selection, roundit)
       params{4} = 'custom_model';
     case 13
       files = {'1056-all-all.mat'};
-      repeats = 2;
+      repeats = 1;
       init_noise = 0;
-      starts = 'D';
-      param_set = 2;
+      starts = 1;
+      param_set = 0;
       params{2} = 'refine_size';
       params{4} = 'custom_model';
     case 14
-      files = [dir('1056-3-*_.mat'); ...
-               dir('1056-14-*_.mat'); ...
-               dir('1056-24-*_.mat'); ...
-               dir('1056-ani2-*_.mat'); ...
-               dir('1056-c27d91-*_.mat')];
+      files = {'1056-all-all.mat'};
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
       %starts = mod(selection, 10);
-      starts = 'D';
+      starts = 2;
       param_set = 0;
-      params{2} = 'refine_size_flow';
+      params{2} = 'refine_flow';
       params{4} = 'custom_model';
     case 15
-      files = {'1056-temps-all.mat'};
-      repeats = 2;
-      init_noise = 0.1;
-      starts = 'T';
-      param_set = 24;
-      params{2} = 'fit_temp_indep';
+      files = {'1056-all-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 3;
+      param_set = 0;
+      %params{2} = 'fit_temp_indep';
+      params{2} = 'refine_size_flow';
+      params{4} = 'custom_model';
     case 16
-      files = {'1056-temps-all.mat'};
-      repeats = 2;
-      starts = 'AB';
+      files = {'1056-all-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 5;
+      param_set = 2;
+      params{2} = 'refine_size_flow';
+      params{4} = 'custom_model';
+    case 17
+      files = {'1056-all-all.mat'};
+      repeats = 1;
+      starts = 6;
       param_set = 24;
-      params{2} = 'refine_temp_indep';
+      %params{2} = 'refine_temp_indep';
+      params{2} = 'refine_size_flow';
+      params{4} = 'custom_model';
 
     otherwise
       warning('Choose a fitting group between 1 and 7');
@@ -272,8 +285,27 @@ function perform_fitting(selection, roundit)
         s_params = {'init_pos'; []};
       otherwise
         if (isnumeric(starts))
-          ps = load('full_params');
-          s_params = {'init_pos'; ps.params(starts(s),:)};
+          %ps = load('full_params');
+          %s_params = {'init_pos'; ps.params(starts(s),:)};
+          ps = load('all_offsets');
+
+          switch starts
+            case 1
+              s_params = {'init_pos'; [ps.all_offsets.' 8.22]};
+            case 2
+              s_params = {'init_pos'; [ps.all_offsets.' 0.823]};
+            case 3
+              s_params = {'init_pos'; [ps.all_offsets.' 0.601 1.581]};
+            case 4
+              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.']};
+            case 5
+              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.601 1.581]};
+            case 6
+              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.1599 0 0.6277 1.6908 0.8265 1.581]};
+            otherwise
+              s_params = {'init_pos'; ps.all_offsets.'};
+          end
+
         else
         % Default setting
           s_params = {};
