@@ -301,7 +301,7 @@ function perform_fitting(selection, roundit)
             case 5
               s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.601 1.581]};
             case 6
-              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.1599 0 0.6277 1.6908 0.8265 1.581]};
+              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.1599 0 0.6277 1.5181 1.6908 0.8265 1.581]};
             otherwise
               s_params = {'init_pos'; ps.all_offsets.'};
           end
