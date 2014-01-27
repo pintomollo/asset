@@ -300,6 +300,7 @@ function uuids = fit_kymograph(fitting, opts)
     if (fit_temperatures)
       kB = 8.6173324e-5;
       E = 0.65;
+      visc_E = 0;
       C2K = 273.15;
       diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
       ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
@@ -733,6 +734,11 @@ function uuids = fit_kymograph(fitting, opts)
                   E = ones(3,2)*abs(more_params(end-1));
                   flow_E = abs(more_params(end));
                   more_params = more_params(1:end-2);
+                case 3
+                  E = ones(3,2)*abs(more_params(end-2));
+                  flow_E = abs(more_params(end-1));
+                  visc_E = abs(more_params(end));
+                  more_params = more_params(1:end-3);
                 case 4
                   E = abs(more_params(end-3:end-1));
                   E = E(:);
@@ -749,7 +755,8 @@ function uuids = fit_kymograph(fitting, opts)
                   error(['No temperature model with ' num2str(nenergy) ' parameters has been implemented.']);
               end
 
-              diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
+              diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K)) * ...
+                           exp(-(visc_E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
               ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
               flow_ratio = exp(-(flow_E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
             else

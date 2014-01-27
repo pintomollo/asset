@@ -13,13 +13,21 @@ function perform_fitting(selection, roundit)
   end
 
   switch switch_selection
+    case -2
+      files = dir('1056-temps-all.mat');
+      repeats = 3;
+      init_noise = 0.01;
+      starts = 'P';
+      param_set = 15;
+      %params{2} = 'refine_temp_indep';
+      params{2} = 'fit_flow';
     case -1
       % All ani-2 and c27d9.1
       files = dir('1056-temps-all.mat');
       repeats = 1;
-      init_noise = 0.01;
+      init_noise = 0;
       starts = 'P';
-      param_set = 25;
+      param_set = 15;
       %params{2} = 'refine_temp_indep';
       params{2} = 'refine_flow';
       %params{2} = 'refine_fit';
@@ -270,7 +278,8 @@ function perform_fitting(selection, roundit)
 
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265]};
         % refine_flow for 25
-        s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0.1599 0.1599 0 0.6277 1.6908 0.8265]};
+        %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0.1599 0.1599 0 0.6277 1.6908 0.8265]};
+        s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 -2.9900 9.6900 0 0.1599 0 0.83 0.8265]};
         %refine_temp_indep
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
 

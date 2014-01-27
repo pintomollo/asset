@@ -26,8 +26,12 @@ function [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_descr
     case 15
       fit_params = [4 5 12 13];
       fit_temperatures = true;
-      fit_energy = ones(1,4) * 0.65;
+      fit_energy = [0.65 0.65 0.84];
     case 16
+      fit_params = [4 5 12 13];
+      fit_temperatures = true;
+      fit_energy = ones(1,4) * 0.65;
+    case 17
       fit_params = [4 5 12 13];
       fit_temperatures = true;
       fit_energy = ones(1,7) * 0.65;
