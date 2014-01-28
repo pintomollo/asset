@@ -77,7 +77,7 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'B';
+      starts = 'D';
       param_set = [2 14 20 25];
       params{2} = 'refine_flow';
       params{4} = 'custom_model';
@@ -89,7 +89,7 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'B';
+      starts = 'D';
       param_set = 24;
       params{2} = 'refine_flow';
       params{4} = 'custom_model';
@@ -97,7 +97,7 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'B';
+      starts = 'D';
       param_set = 24;
       params{2} = 'refine_temp_indep';
       params{4} = 'custom_model';
