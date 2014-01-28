@@ -49,7 +49,7 @@ function figs_msb(num)
       keyboard
 
     case 0.1
-      vals = group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'type'}, {'parameter_set', 2; 'fit_flow', false; 'extrapol_z', true; 'rescale_length_only', true});
+      vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type'}, {'parameter_set', 2; 'fit_flow', false; 'extrapol_z', true; 'rescale_length_only', true; 'scale_each_egg', true});
       vals = extract_model_parameters(vals, true);
       nfits = size(vals,1);
 
@@ -1140,16 +1140,17 @@ function figs_msb(num)
 
     case 7
       %vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'fitting_type', 'cmaes'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'scale_flow'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true});
 
-      %data = load('1056-temps-all.mat');
-      load('data_fitting.mat');
-      good = ismember(all_data(:,1), 'averages');
-      values = all_data(good, :);
-      good = ismember(values{1,3}, '1056-temps-all.mat');
-      npts = values{1,2}(good, end);
+      data = load('1056-temps-all.mat');
+      npts = sum(cellfun(@(x)(size(x,1)), data.ground_truth));
+      %load('data_fitting.mat');
+      %good = ismember(all_data(:,1), 'averages');
+      %values = all_data(good, :);
+      %good = ismember(values{1,3}, '1056-temps-all.mat');
+      %npts = values{1,2}(good, end);
 
-      param_set = NaN(size(vals,1), 3);
+      param_set = NaN(size(vals,1), 4);
       score = NaN(size(param_set, 1), 1);
       nparams = score;
       params = cell(size(score));
@@ -1160,7 +1161,7 @@ function figs_msb(num)
       vals = extract_model_parameters(vals, false);
 
       for i=1:size(vals,1)
-        param_set(i,:) = [vals{i,1}{1}.parameter_set vals{i,1}{1}.fit_flow vals{i,1}{1}.fit_model];
+        param_set(i,:) = [vals{i,1}{1}.parameter_set vals{i,1}{1}.fit_flow vals{i,1}{1}.fit_model vals{i,1}{1}.scale_flow];
         best = Inf;
         indx = 0;
         for j=1:size(vals{i,2}, 1)
@@ -1206,7 +1207,11 @@ function figs_msb(num)
           %nparams(i) = numel(params{i});
 
           params{i} = [vals{i,2}{indx,2}.params.rate vals{i,2}{indx,2}.params.offset vals{i,2}{indx,2}.params.energy vals{i,2}{indx,2}.params.viscosity vals{i,2}{indx,2}.params.flow vals{i,2}{indx,2}.params.sigma];
+          try
           rel_params{i} = [vals{i,2}{indx,2}.params.effective_value.viscosity; vals{i,2}{indx,2}.params.effective_value.rate; vals{i,2}{indx,2}.params.effective_value.flow];
+          catch
+            beep;keyboard
+          end
           nparams(i) = vals{i,2}{indx,2}.params.nparams;
         else
           keyboard
@@ -1218,8 +1223,6 @@ function figs_msb(num)
       nparams = nparams(indx);
       params = params(indx);
       rel_params = rel_params(indx);
-
-      keyboard
 
       aic = 2*(nparams + score) + 2*nparams.*(nparams+1)./(npts-nparams-1);
 
@@ -3037,11 +3040,14 @@ function figs_msb(num)
         curr_val = vals{i,1}{1};
 
         indx = find(ismember(all_names, [curr_val.type '.mat']), 1);
+        if (isempty(indx))
+          continue;
+        end
 
         if (~curr_val.scale_flow)
           if (curr_val.flow_size(2) == size(opts_goehring.advection_params, 2))
             sub_indx = 1;
-          elseif (all(curr_val.simulation_parameters(4:5) == orig_params(4:5)))
+          elseif (numel(curr_val.simulation_parameters)>4 && all(curr_val.simulation_parameters(4:5) == orig_params(4:5)))
             sub_indx = 2;
           else
             sub_indx = 3;
@@ -3062,6 +3068,9 @@ function figs_msb(num)
         all_scores(indx, sub_indx) = vals{i,2}{1,2}.score;
         all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
       end
+
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'simulation_parameters';'flow_size';'scale_flow';'fit_flow'}, {'type', '1056-all-all'});
+      vals = extract_model_parameters(vals, true);
 
       keyboard
 

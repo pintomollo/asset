@@ -127,69 +127,70 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
             data.(fields{f}) = data.(fields{f})(indx, :);
           end
         end
+      end
 
-        effect_params = params_struct;
+      effect_params = params_struct;
 
-        effect_params.rate = ones(1, ntemps);
-        effect_params.flow = ones(1, ntemps);
-        effect_params.viscosity = ones(1, ntemps);
+      effect_params.rate = ones(1, ntemps);
+      effect_params.flow = ones(1, ntemps);
+      effect_params.viscosity = ones(1, ntemps);
 
-        if (fit_viscosity)
-          effect_params.viscosity(good_visc) = data.viscosity;
-        end
+      if (fit_viscosity)
+        effect_params.viscosity(good_visc) = data.viscosity;
+      end
 
-        if (fit_temperatures)
-          if (fitting.fit_model)
-            kB = 8.6173324e-5;
-            C2K = 273.15;
+      if (fit_temperatures)
+        if (fitting.fit_model)
+          kB = 8.6173324e-5;
+          C2K = 273.15;
 
-            if (nenergy > 1)
-              E = data.energy(1:end-1);
-              E = E(:);
-              flow_E = data.energy(end);
-            elseif (nenergy > 0)
-              E = data.energy;
-              flow_E = data.energy;
-            else
-              E = 0.65;
-              flow_E = E;
-            end
-
-            E = abs(E);
-            flow_E = abs(flow_E);
-
-            diff_ratio = (temperatures+C2K) ./ (opts.reaction_temperature+C2K);
-            rate_ratio = exp(bsxfun(@times, -(E/kB), ((1./(temperatures+C2K)) - (1/(opts.reaction_temperature+C2K)))));
-            flow_ratio = exp(-(flow_E/kB).*((1./(temperatures+C2K)) - (1/(opts.flow_temperature+C2K))));
-            diff_ratio = effect_params.viscosity .* diff_ratio;
+          if (nenergy > 1)
+            E = data.energy(1:end-1);
+            E = E(:);
+            flow_E = data.energy(end);
+          elseif (nenergy > 0)
+            E = data.energy;
+            flow_E = data.energy;
           else
-            curr_ratios = ones(nenergy,ntemps);
-            curr_ratios(:,good_visc) = reshape(data.energy, nenergy, nvisc);
-
-            if (nenergy > 1)
-              rate_ratio = curr_ratios(1:end-1,:);
-              flow_ratio = curr_ratios(end, :);
-            else
-              rate_ratio = curr_ratios;
-              flow_ratio = curr_ratios;
-            end
-
-            if (fitting.fit_flow)
-              flow_ratio(~good_visc) = data.flow;
-            end
-
-            diff_ratio = effect_params.viscosity;
+            E = 0.65;
+            flow_E = E;
           end
 
-          effect_params.rate = abs(rate_ratio);
-          effect_params.flow = abs(flow_ratio);
-          effect_params.viscosity = abs(diff_ratio);
+          E = abs(E);
+          flow_E = abs(flow_E);
 
-          effect_params.temperature = temperatures;
+          diff_ratio = (temperatures+C2K) ./ (opts.reaction_temperature+C2K);
+          rate_ratio = exp(bsxfun(@times, -(E/kB), ((1./(temperatures+C2K)) - (1/(opts.reaction_temperature+C2K)))));
+          flow_ratio = exp(-(flow_E/kB).*((1./(temperatures+C2K)) - (1/(opts.flow_temperature+C2K))));
+          diff_ratio = effect_params.viscosity .* diff_ratio;
+        else
+          curr_ratios = ones(nenergy,ntemps);
+          curr_ratios(:,good_visc) = reshape(data.energy, nenergy, nvisc);
+
+          if (nenergy > 1)
+            rate_ratio = curr_ratios(1:end-1,:);
+            flow_ratio = curr_ratios(end, :);
+          else
+            rate_ratio = curr_ratios;
+            flow_ratio = curr_ratios;
+          end
+
+          if (fitting.fit_flow)
+            flow_ratio(~good_visc) = data.flow;
+          end
+
+          diff_ratio = effect_params.viscosity;
         end
 
-        data.effective_value = effect_params;
+        effect_params.rate = abs(rate_ratio);
+        effect_params.flow = abs(flow_ratio);
+        effect_params.viscosity = abs(diff_ratio);
+
+        effect_params.temperature = temperatures;
       end
+
+      data.effective_value = effect_params;
+
       data.nparams = ntotal;
       data.temperature = temperatures;
       value.params = data;

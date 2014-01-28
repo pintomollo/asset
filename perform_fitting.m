@@ -20,7 +20,7 @@ function perform_fitting(selection, roundit)
       starts = 'P';
       param_set = 15;
       %params{2} = 'refine_temp_indep';
-      params{2} = 'fit_flow';
+      params{2} = 'fit_flows';
     case -1
       % All ani-2 and c27d9.1
       files = dir('1056-temps-all.mat');
