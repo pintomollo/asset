@@ -40,6 +40,8 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
       value = ml_values{i, 2}{j, 2}(end);
 
       data = params_struct;
+      effect_params = params_struct;
+
       ntotal = 0;
 
       if (isempty(value.evolution))
@@ -50,7 +52,11 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
 
       [npts, nvals] = size(pts);
 
-      if (nvals > nparams)
+      if (~isfinite(value.score))
+        warning('Empty optimization file !');
+        continue;
+
+      elseif (nvals > nparams)
 
         data.score = pts(:, 1);
         if (nparams > 0)
@@ -129,8 +135,6 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
         end
       end
 
-      effect_params = params_struct;
-
       effect_params.rate = ones(1, ntemps);
       effect_params.flow = ones(1, ntemps);
       effect_params.viscosity = ones(1, ntemps);
@@ -147,7 +151,11 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
           if (nenergy > 1)
             E = data.energy(1:end-1);
             E = E(:);
+            try
             flow_E = data.energy(end);
+            catch
+              beep;keyboard
+            end
           elseif (nenergy > 0)
             E = data.energy;
             flow_E = data.energy;

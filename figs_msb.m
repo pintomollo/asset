@@ -3069,8 +3069,32 @@ function figs_msb(num)
         all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
       end
 
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'simulation_parameters';'flow_size';'scale_flow';'fit_flow'}, {'type', '1056-all-all'});
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'simulation_parameters';'flow_size';'scale_flow';'fit_flow'}, {'type', '1056-all-all'; 'scale_each_egg', true; 'extrapol_z', true});
       vals = extract_model_parameters(vals, true);
+
+      nfits = size(vals, 1);
+      all_scores2 = NaN(nfits, 5);
+      all_params2 = cell(nfits, 2);
+
+      for i=1:nfits
+        curr_val = vals{i,1}{1};
+        best = Inf;
+
+        for j=1:size(vals{i,2}, 1)
+          value = vals{i,2}{j,2};
+          if (value.score < best)
+            all_scores2(i, :) = [value.score curr_val.parameter_set curr_val.fit_flow curr_val.scale_flow curr_val.flow_size(2)];
+            all_params2{i,1} = [value.params.rate value.params.flow value.params.flow_scaling];
+            all_params2{i,2} = curr_val.simulation_parameters;
+
+            best = value.score;
+          end
+        end
+      end
+
+      [junk, indx] = sort(all_scores2(:,1), 'descend');
+      all_scores2 = all_scores2(indx, :);
+      all_params2 = all_params2(indx, :);
 
       keyboard
 

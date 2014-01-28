@@ -78,8 +78,9 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       starts = 'B';
-      param_set = [2 13 20 25];
+      param_set = [2 14 20 25];
       params{2} = 'refine_flow';
+      params{4} = 'custom_model';
     case 6
       perform_fitting(6.1,false);
       perform_fitting(6.2,false);
@@ -91,6 +92,7 @@ function perform_fitting(selection, roundit)
       starts = 'B';
       param_set = 24;
       params{2} = 'refine_flow';
+      params{4} = 'custom_model';
     case 6.2
       files = {'1056-temps-all.mat'};
       repeats = 1;
@@ -98,6 +100,7 @@ function perform_fitting(selection, roundit)
       starts = 'B';
       param_set = 24;
       params{2} = 'refine_temp_indep';
+      params{4} = 'custom_model';
     case 7
       files = {'simulation'};
       repeats = 10;
