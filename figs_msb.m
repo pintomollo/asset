@@ -220,39 +220,26 @@ function figs_msb(num)
 
 %      params = [interp1([1 5], params([1 3], 1:4), [1:5]) repmat(params(1,5:end), 5, 1)];
 %      params = params(3:end,:);
-      params = params(4,:);
-      new_vals = [0.8:0.1:1.2].';
-      params = repmat(params, length(new_vals), 1);
-      params(:,3) = params(:,3) .* new_vals;
+%      params = params(4,:);
+%      new_vals = [0.8:0.1:1.2].';
+%      params = repmat(params, length(new_vals), 1);
+%      params(:,3) = params(:,3) .* new_vals;
+
+      params = params(1:3,:);
+
+      params(1,1:4) = [0.19 1 2 2];
+      params(2,1:4) = [0.00556 2.161 0.0307 2.013];
+      params(3,1:4) = [0.00596 2.038 0.0304 1.835];
 
       %params(end) = 0.8;
       %params(end-4) = 0.05;
+
+      params(:, end-5:end) = repmat([0 0 1 1 1 1], size(params,1), 1);
 
       full_params = {};
       for i=1:size(params, 1)
         full_params{end+1} = params(i,:);
       end
-
-      %{
-      values_orig = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'type', '1056-all-all'; 'parameter_set', 24});
-      values_orig = [values_orig; group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'type', '1056-all-all'; 'parameter_set', 24})];
-      values_orig = [values_orig; group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'type', '1056-all-all'; 'parameter_set', 30})];
-      values = extract_model_parameters(values_orig);
-      values = [values(1,1) {cat(1, values{:,2})}];
-
-      for i=1:size(values{1,2}, 1)
-        if (values{1,2}{i,2}.score < -1000)
-          tmp_visc = (values{1,2}{i,2}.params.temperature ~= 20);
-          viscs = ones(size(tmp_visc));
-          viscs(tmp_visc) = values{1,2}{i,2}.params.viscosity;
-
-          full_params{end+1} = [values{1,2}{i,2}.params.rate ...
-                                values{1,2}{i,2}.params.energy ...
-                                interp1(values{1,2}{i,2}.params.temperature, viscs, temps(good_visc)) ...
-                                values{1,2}{i,2}.params.flow];
-        end
-      end
-      %}
 
       opts = get_struct('modeling');
       opts = load_parameters(opts, 'goehring.txt');
@@ -2617,7 +2604,7 @@ function figs_msb(num)
             tmp_params(1) = min(tmp_params(1), tmp_params(2)-1e-2);
 
             tmp_params = [tmp_params 2*tmp_params(3)];
-            tmp_params(3) = ellipse_circum(tmp_params(3:5), tmp_params(2), true);
+            tmp_params(3) = ellipse_circum(tmp_params(3:5).', tmp_params(2), true);
 
             all_params(i,:) = tmp_params;
             disp([num2str(i) '/' num2str(nfiles)]);

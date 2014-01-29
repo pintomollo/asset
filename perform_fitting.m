@@ -303,11 +303,11 @@ function perform_fitting(selection, roundit)
 
           switch starts
             case 1
-              s_params = {'init_pos'; [ps.all_offsets.' 8.22]};
+              s_params = {'init_pos'; [ps.all_offsets.' 0]};
             case 2
-              s_params = {'init_pos'; [ps.all_offsets.' 0.823]};
+              s_params = {'init_pos'; [ps.all_offsets.' 1]};
             case 3
-              s_params = {'init_pos'; [ps.all_offsets.' 0.601 1.581]};
+              s_params = {'init_pos'; [ps.all_offsets.' 1 0]};
             case 4
               s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.']};
             case 5
