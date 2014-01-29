@@ -150,6 +150,28 @@ function uuids = fit_kymograph(fitting, opts)
     end
   end
 
+  if (~isempty(fitting.init_pos) && fitting.fit_relative)
+    indx1 = find(fit_params == 4, 1);
+    if (~isempty(indx1))
+      indx2 = find(fit_params == 13, 1);
+      if (~isempty(indx2))
+        fitting.init_pos(indx1) = fitting.init_pos(indx1) / fitting.init_pos(indx2);
+      else
+        fitting.init_pos(indx1) = fitting.init_pos(indx1) / opts.reaction_params(4,2);
+      end
+    end
+
+    indx1 = find(fit_params == 12, 1);
+    if (~isempty(indx1))
+      indx2 = find(fit_params == 5, 1);
+      if (~isempty(indx2))
+        fitting.init_pos(indx1) = fitting.init_pos(indx1) / fitting.init_pos(indx2);
+      else
+        fitting.init_pos(indx1) = fitting.init_pos(indx1) / opts.reaction_params(4,1);
+      end
+    end
+  end
+
   if (exist('rng'))
     rng(now + cputime, 'twister');
   else

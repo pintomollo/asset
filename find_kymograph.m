@@ -118,7 +118,7 @@ function find_kymograph(varargin)
           end
 
           if (~isempty(prev_values))
-            prev_values = extract_model_parameters(prev_values);
+            prev_values = extract_model_parameters(prev_values, true);
 
             best_score = Inf;
             best_pos = fitting.init_pos;

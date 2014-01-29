@@ -201,16 +201,8 @@ function figs_msb(num)
     case 0.3
       load('data_expansion')
 
-      temps = unique(temperatures);
-      ntemps = length(temps);
-      good_visc = (temps~=20);
-      nvisc = sum(good_visc);
-
-      kB = 8.6173324e-5;
-      C2K = 273.15;
-
-      load('full_params');
-      params = params(:,[1:4 end-5:end]);
+      %load('full_params');
+      %params = params(:,[1:4 end-5:end]);
 
       %new_vals = [1.55:0.05:1.95].';
       %params(1,3) = 0.01;
@@ -225,151 +217,90 @@ function figs_msb(num)
 %      params = repmat(params, length(new_vals), 1);
 %      params(:,3) = params(:,3) .* new_vals;
 
-      params = params(1:3,:);
+      %params = params(1:3,:);
 
-      params(1,1:4) = [0.19 1 2 2];
-      params(2,1:4) = [0.00556 2.161 0.0307 2.013];
-      params(3,1:4) = [0.00596 2.038 0.0304 1.835];
+      params = [0.19 1 2 2; 0.00556 2.161 0.0307 2.013; 0.00596 2.038 0.0304 1.835];
+
+      d = load('all_offsets');
+      params = [params, repmat(d.all_offsets(:).', size(params,1), 1)];
+
+      params = params(end,:);
+      new_vals = [0:3].';
+
+      params = [repmat(params, length(new_vals), 1) new_vals];
 
       %params(end) = 0.8;
       %params(end-4) = 0.05;
-
-      params(:, end-5:end) = repmat([0 0 1 1 1 1], size(params,1), 1);
+      %params(:, end-5:end) = repmat([0 0 1 1 1 1], size(params,1), 1);
 
       full_params = {};
       for i=1:size(params, 1)
         full_params{end+1} = params(i,:);
       end
 
-      opts = get_struct('modeling');
-      opts = load_parameters(opts, 'goehring.txt');
-      opts = load_parameters(opts, 'custom_flow.txt');
-
-      flow = opts.advection_params;
-      if (size(flow, 1) ~= opts.nparticles)
-        [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:opts.nparticles-1]*(size(flow, 1)-1)/(opts.nparticles-1)).');
-        flow = bilinear_mex(flow, X, Y, [2 2]);
-      end
-
-      orig_opts = opts;
+      scores = NaN(length(full_params), 1);
 
       for p = 1:length(full_params)
 
-        tmp_opts = orig_opts;
         params = full_params{p};
 
-        switch length(params)
-          % Parameter set 24
-          case 10
-            tmp_opts.reaction_params([3 4 10 11]) = params(1:4);
-            more_params = params(5:end);
+        scale_flow = false;
 
-          % Parameter set 24 with test of rho
-          case 11
-            tmp_opts.reaction_params([3 4 10 11]) = params(1:4);
-            tmp_opts.reaction_params(5) = params(end);
-            more_params = params(5:end-1);
+        switch length(params)
+          case 144
+            param_set = 2;
+
+          case 145
+            param_set = 2;
+            scale_flow = true;
+
+          % Parameter set 24
+          case 150
+            param_set = 24;
 
           % Parameter set 30
-          case 20
-
-            tmp = [tmp_opts.diffusion_params; tmp_opts.reaction_params];
-            tmp(1:14) = params(1:14);
-
-            tmp_opts.diffusion_params = tmp(1,:);
-            tmp_opts.reaction_params = tmp(2:end,:);
-
-            more_params = params(15:end);
+          case 160
+            param_set = 30;
 
           otherwise
             warning('Unknown parameter length.')
             continue;
         end
 
-        curr_flow_scale = abs(more_params(end));
-        more_params = more_params(1:end-1);
+        [scores(p), results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'start_with_best', false, 'parameter_set', param_set, 'init_pos', params, 'scale_flow', scale_flow);
 
-        curr_visc = ones(1,ntemps);
-        curr_visc(good_visc) = abs(more_params(end-nvisc+1:end));
-        more_params = more_params(1:end-nvisc);
-
-        E = ones(3,2)*abs(more_params(end-1));
-        flow_E = abs(more_params(end));
-
+        count = 1;
         for f = 1:size(all_data, 1)
-
-          diff_ratio = curr_visc(temps==temperatures(f))*((temperatures(f)+C2K) / (opts.reaction_temperature+C2K));
-          ratio = exp(-(E/kB)*((1/(temperatures(f)+C2K)) - (1/(opts.reaction_temperature+C2K))));
-          flow_ratio = exp(-(flow_E/kB)*((1/(temperatures(f)+C2K)) - (1/(opts.flow_temperature+C2K))));
-
-          temp_scaling = [ones(1,2)*diff_ratio; ratio; ones(4,2)];
-          temp_flow_scale = curr_flow_scale * flow_ratio;
-
           for i = 1:size(all_data{f,2}, 1)
 
-            opts = tmp_opts;
-
-            egg_size = all_data{f,2}(i, 3:5).';
-            cell_width = all_data{f,2}(i,2);
-
-            egg_size(1) = ellipse_circum(egg_size, cell_width, true);
-
-            opts.axes_length = egg_size;
-
-            opts.reaction_params(end-1,:) = surface2volume(opts.axes_length);
-            opts.reaction_params(end, :) = 0.5*ellipse_circum(opts.axes_length);
-
-            opts.boundaries = [0 opts.reaction_params(end,1)];
-            opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
-
-            ml_params = [opts.diffusion_params; ...
-                          opts.reaction_params];
-            ml_params = ml_params .* temp_scaling;
-
-            opts.diffusion_params = ml_params(1, :);
-            opts.reaction_params = ml_params(2:end, :);
-
-            x0 = opts.init_func(opts, true, false);
-
-            [domain, t_pos] = simulate_model_real(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow*temp_flow_scale, opts.user_data, opts.max_iter);
+            domain = results{count, 1};
 
             domain = domain((end/2)+1:end, :).';
             domain = [domain domain(:,end-1:-1:1)];
 
             [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
 
-            %{
-            figure;subplot(1,2,1);
-            imagesc(domain);
-            subplot(1,2,2);
-            plot(path);
-            mtit(num2str(i))
-            (find(path > 0, 1) - find(path > 0.775, 1))
-            keyboard
-            %}
-
             norig = length(all_data{f,3}{i,1})-1;
             nprofile = length(profile)-1;
             profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
+            dwidth = mymean(results{count,2}(end-nframes+1:end));
 
-            all_data{f,2}(i,1) = min(2*max_width * opts.x_step/opts_expansion.quantification.resolution, all_data{f,2}(i,2));
+            all_data{f,2}(i,1) = min(2*dwidth, all_data{f,2}(i,2));
             all_data{f,3}{i,1} = profile;
-            all_data{f,3}{i,2} = path;
+            all_data{f,3}{i,2} = [path(:) results{count, 2}(:)];
 
             disp([num2str(i) '/' num2str(size(all_data{f,2},1)) ':' num2str(p)]);
+
+            count = count + 1;
           end
-          %keyboard
         end
-
         all_simul{p} = all_data;
-
       end
 
       save('simul_optimized', 'all_simul', 'temperatures', 'full_params');
-      figs_msb(8.1);
-      figs_msb(8.2);
 
       keyboard
+
     case 1
       files = dir('stainings/*.txt');
       nfiles = length(files);
@@ -2576,6 +2507,9 @@ function figs_msb(num)
 
       keyboard
 
+    case 8
+      figs_msb(8.1);
+      figs_msb(8.2);
     case 8.1
       colors = [254 217 166; ...
                 251 180 174; ...
