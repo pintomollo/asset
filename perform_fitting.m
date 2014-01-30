@@ -4,7 +4,10 @@ function perform_fitting(selection, roundit)
     roundit = true;
   end
 
-  params = {'config_fitting'; 'fit_kymo'; 'config_modeling'; 'custom_flow'};
+  all_files = {'good_24.txt'; 'good_20.txt'; 'good_13.txt'; 'good_c27d91.txt'; 'good_ani2.txt'};
+  all_files = cellfun(@(x)(textread(x, '%s')), all_files, 'UniformOutput', false);
+
+  params = {'config_fitting'; 'fit_kymo'; 'config_modeling'; 'custom_flow'; 'fixed_parameter'; []};
   init_noise = 0;
   fixed_parameter = [];
 
@@ -171,11 +174,17 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_fit';
       params{4} = 'goehring';
     case 10
-      perform_fitting(10.1,false);
-      perform_fitting(10.2,false);
-      return;
-    case 10.1
-      files = {'1056-all-all.mat'};
+      files = cat(1, all_files{:});
+      repeats = 1;
+      init_noise = 0;
+      starts = -2;
+      param_set = 2;
+      params{2} = 'refine_size';
+      fixed_parameter = [1:4 6];
+
+    case 11
+
+      files = cat(1, all_files{:});
       %files = [dir('1056-3-*_.mat'); ...
       %         dir('1056-14-*_.mat'); ...
       %         dir('1056-24-*_.mat'); ...
@@ -183,25 +192,16 @@ function perform_fitting(selection, roundit)
       %         dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      starts = 4;
-      param_set = 2;
-      params{2} = 'refine_fit';
-      %params{4} = 'custom_model';
-    case 10.2
-      files = {'1056-all-all.mat'};
-      repeats = 1;
-      init_noise = 0;
-      starts = 'D';
-      param_set = 2;
-      params{2} = 'refine_fit';
-    case 11
-      files = {'1056-all-all.mat'};
-      repeats = 1;
-      init_noise = 0;
-      %starts = round(mod(selection, 1)*10);
-      param_set = 24;
-      params{2} = 'refine_flow';
+      %starts = mod(selection, 10);
+      starts = -1;
+      param_set = 0;
+      params{2} = 'refine_size';
+      params{4} = 'custom_model';
+      fixed_parameter = [2];
+
     case 12
+
+    case 13
       %files = {'1056-all-all.mat'};
       files = [dir('1056-3-*_.mat'); ...
                dir('1056-14-*_.mat'); ...
@@ -210,20 +210,10 @@ function perform_fitting(selection, roundit)
                dir('1056-c27d91-*_.mat')];
       repeats = 1;
       init_noise = 0;
-      %starts = mod(selection, 10);
       starts = 'D';
-      param_set = 0;
-      params{2} = 'fit_size';
-      params{4} = 'custom_model';
-    case 13
-      files = {'1056-all-all.mat'};
-      repeats = 1;
-      init_noise = 0;
-      starts = 1;
       param_set = 0;
       params{2} = 'refine_size';
       params{4} = 'custom_model';
-      fixed_parameter = [141];
     case 14
       files = {'1056-all-all.mat'};
       %files = [dir('1056-3-*_.mat'); ...
@@ -315,6 +305,8 @@ function perform_fitting(selection, roundit)
       return;
   end
 
+  params{6, 1} = fixed_parameter;
+
   ntotal = length(files)*repeats*length(init_noise)*length(starts)*length(param_set);
   counts = 1;
 
@@ -352,11 +344,11 @@ function perform_fitting(selection, roundit)
           %s_params = {'init_pos'; ps.params(starts(s),:)};
           ps = load('all_offsets');
 
-          switch starts
+          switch abs(starts)
             case 1
               s_params = {'init_pos'; [ps.all_offsets.' 1.441]};
             case 2
-              s_params = {'init_pos'; [ps.all_offsets.' 1]};
+              s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 ps.all_offsets.' 1.441]};
             case 3
               s_params = {'init_pos'; [ps.all_offsets.' 1 0]};
             case 4
@@ -369,6 +361,7 @@ function perform_fitting(selection, roundit)
               s_params = {'init_pos'; ps.all_offsets.'};
           end
 
+          orig_s = s_params;
         else
         % Default setting
           s_params = {};
@@ -442,6 +435,13 @@ function perform_fitting(selection, roundit)
               s_params{2} = abs(tmp_p(1:4) .* vals{1,1}{1}.rescale_factor);
               %tmp_p(5:end) = tmp_p(5:end) * vals{1,1}{1}.offset_scaling;
               %s_params{2} = tmp_p;
+            elseif (starts(s) < 0)
+              switch abs(starts)
+                case 1
+                  s_params{2,1} = orig_s{2,1}([f end]);
+                case 2
+                  s_params{2,1} = orig_s{2,1}([1:4 (f+4) end]);
+              end
             end
 
             all_params = [f_params; p_params; i_params; s_params; params];

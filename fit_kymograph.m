@@ -124,7 +124,10 @@ function uuids = fit_kymograph(fitting, opts)
       all_params = true;
     elseif ((nrates + numel(fit_energy) + noffsets + fit_viscosity*nvisc) == numel(fitting.init_pos))
 
-      fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+      if (nrates > 0)
+        fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+      end
+
       fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
     elseif (nrates == numel(fitting.init_pos))
       fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
