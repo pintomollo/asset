@@ -219,26 +219,36 @@ function figs_msb(num)
 
       %params = params(1:3,:);
 
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'}, {'type', '1056-med-scale'});
-      vals = [vals;group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'}, {'type', '1056-med-all'})];
+      %{
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'; 'scale_flow'; 'extrapol_z'}, {'type', '1056-med-scale'});
+      vals = [vals; group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'; 'scale_flow'; 'extrapol_z'}, {'type', '1056-med-all'})];
 
       values = extract_model_parameters(vals, true);
-      params = NaN(0, 4);
+      params = NaN(0, 5);
       fit_scores = NaN(0, 1);
+      extrapols = true(0, 1);
     
       for i=1:size(values, 1)
         for j=1:size(values{i,2}, 1)
-          params(end+1,:) = values{i,2}{j,2}.params.rate;
+          if (isempty(values{i,1}{1}.scale_flow))
+            params(end+1,:) = [values{i,2}{j,2}.params.rate values{i,2}{j,2}.params.scale_flow];
+          else
+            params(end+1,:) = [values{i,2}{j,2}.params.rate 0];
+          end
           fit_scores(end+1,1) = values{i,2}{j,2}.score;
+          extrapols(end+1,1) = values{i,1}{1}.extrapol_z;
         end
       end
 
 %      params = [0.19 1 2 2; 0.00556 2.161 0.0307 2.013; 0.00596 2.038 0.0304 1.835];
+    %}
 
+      params = [0.0116 2.1571 0.0658 2.1871 0];
+      extrapols = true;
       d = load('all_offsets');
-      params = [params, repmat(d.all_offsets(:).', size(params,1), 1)];
+      params = [params(:, 1:4), repmat(d.all_offsets(:).', size(params,1), 1), params(:, end)];
 
-      params = params(2,:);
+      %params = params(2,:);
 
       %params = params(end,:);
       %new_vals = [0:3].';
@@ -283,7 +293,7 @@ function figs_msb(num)
             continue;
         end
 
-        [scores(p), results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'start_with_best', false, 'parameter_set', param_set, 'init_pos', params, 'scale_flow', scale_flow);
+        [scores(p), results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'start_with_best', false, 'parameter_set', param_set, 'init_pos', params, 'scale_flow', scale_flow, 'extrapol_z', extrapols(p));
 
         count = 1;
         for f = 1:size(all_data, 1)
@@ -3036,7 +3046,8 @@ function figs_msb(num)
       keyboard
 
     case 10
-      vals = group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'}, {'type', '1056-med-all'});
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'; 'scale_flow'; 'extrapol_z'}, {'type', '1056-med-scale'});
+      vals = [vals; group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'; 'scale_flow'; 'extrapol_z'}, {'type', '1056-med-all'})];
       values = extract_model_parameters(vals, true);
 
       all_scales = cell(0,2);

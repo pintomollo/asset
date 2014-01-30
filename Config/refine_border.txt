@@ -18,4 +18,4 @@ offset_scaling 100
 rescale_length_only true
 scale_each_egg true
 extrapol_z true
-fit_flow true
+score_weights 0.1

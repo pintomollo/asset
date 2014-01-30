@@ -406,7 +406,7 @@ function uuids = fit_kymograph(fitting, opts)
     end
 
     if (fitting.scale_flow & ~all_params)
-      p0 = [p0 1];
+      p0 = [p0 0];
     end
 
     %p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
@@ -1053,7 +1053,7 @@ function uuids = fit_kymograph(fitting, opts)
             yfrac = [size(tmp_plot_err, 1):-1:1 1:size(tmp_plot_err,1)].';
 
             tmp_pos_tick = [0:50:(size(tmp_plot_err,2)/2 - 1)];
-            tmp_pos_label = fitting.x_pos{1}(tmp_pos_tick + 1);
+            tmp_pos_label = fitting.x_pos{g}(tmp_pos_tick + 1);
             tmp_pos_tick = [-tmp_pos_tick(end:-1:2) tmp_pos_tick] + (size(tmp_plot_err,2)/2);
             tmp_pos_label = [-tmp_pos_label(end:-1:2) tmp_pos_label];
 

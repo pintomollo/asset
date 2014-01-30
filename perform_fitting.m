@@ -282,6 +282,27 @@ function perform_fitting(selection, roundit)
       starts = 'A';
       param_set = 2;
       params{2} = 'fit_noex_size';
+    case 21
+      files = {'1056-med-scale.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'refine_fit';
+    case 22
+      files = {'1056-med-scale.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'refine_border';
+    case 23
+      files = {'1056-med-scale.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'refine_size';
 
     otherwise
       warning('Choose a fitting group between 1 and 7');
@@ -303,7 +324,10 @@ function perform_fitting(selection, roundit)
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265]};
         % refine_flow for 25
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.1599 0.1599 0.1599 0 0.6277 1.6908 0.8265]};
-        s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 -2.9900 9.6900 0 0.1599 0 0.83 0.8265]};
+        %s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 -2.9900 9.6900 0 0.1599 0 0.83 0.8265]};
+
+        s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 21 2.2400 28.0400]};
+
         %refine_temp_indep
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
 
