@@ -219,7 +219,21 @@ function figs_msb(num)
 
       %params = params(1:3,:);
 
-      params = [0.19 1 2 2; 0.00556 2.161 0.0307 2.013; 0.00596 2.038 0.0304 1.835];
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'}, {'type', '1056-med-scale'});
+      vals = [vals;group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'}, {'type', '1056-med-all'})];
+
+      values = extract_model_parameters(vals, true);
+      params = NaN(0, 4);
+      fit_scores = NaN(0, 1);
+    
+      for i=1:size(values, 1)
+        for j=1:size(values{i,2}, 1)
+          params(end+1,:) = values{i,2}{j,2}.params.rate;
+          fit_scores(end+1,1) = values{i,2}{j,2}.score;
+        end
+      end
+
+%      params = [0.19 1 2 2; 0.00556 2.161 0.0307 2.013; 0.00596 2.038 0.0304 1.835];
 
       d = load('all_offsets');
       params = [params, repmat(d.all_offsets(:).', size(params,1), 1)];
