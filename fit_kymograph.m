@@ -402,7 +402,7 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (~fit_viscosity)
       viscosities(:) = 1;
-    elseif (~all_params || ~almost_all_params)
+    elseif ~(all_params || almost_all_params)
       p0 = [p0 viscosities(good_visc)];
     end
 
