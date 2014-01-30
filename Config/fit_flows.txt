@@ -19,3 +19,4 @@ fit_flow true
 rescale_length_only true
 scale_each_egg true
 extrapol_z true
+scale_flow true

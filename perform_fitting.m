@@ -200,43 +200,38 @@ function perform_fitting(selection, roundit)
       fixed_parameter = [2];
 
     case 12
-
-    case 13
-      %files = {'1056-all-all.mat'};
-      files = [dir('1056-3-*_.mat'); ...
-               dir('1056-14-*_.mat'); ...
-               dir('1056-24-*_.mat'); ...
-               dir('1056-ani2-*_.mat'); ...
-               dir('1056-c27d91-*_.mat')];
-      repeats = 1;
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
       init_noise = 0;
-      starts = 'D';
-      param_set = 0;
-      params{2} = 'refine_size';
+      starts = 'T';
+      param_set = 2;
+      params{2} = 'fit_flows';
+      params{4} = 'custom_model';
+    case 13
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'T';
+      param_set = 15;
+      params{2} = 'fit_flows';
       params{4} = 'custom_model';
     case 14
-      files = {'1056-all-all.mat'};
-      %files = [dir('1056-3-*_.mat'); ...
-      %         dir('1056-14-*_.mat'); ...
-      %         dir('1056-24-*_.mat'); ...
-      %         dir('1056-ani2-*_.mat'); ...
-      %         dir('1056-c27d91-*_.mat')];
-      repeats = 1;
+      files = {'1056-temps-all.mat'};
+      repeats = 24;
       init_noise = 0;
-      %starts = mod(selection, 10);
-      starts = 2;
-      param_set = 0;
-      params{2} = 'refine_flow';
+      starts = 'T';
+      param_set = 15;
+      params{2} = 'fit_flows';
       params{4} = 'custom_model';
     case 15
-      files = {'1056-all-all.mat'};
-      repeats = 1;
+      files = {'1056-temps-all.mat'};
+      repeats = 24;
       init_noise = 0;
-      starts = 3;
-      param_set = 0;
-      %params{2} = 'fit_temp_indep';
-      params{2} = 'refine_size_flow';
+      starts = 'T';
+      param_set = 15;
+      params{2} = 'fit_temp_indep';
       params{4} = 'custom_model';
+
     case 16
       files = {'1056-all-all.mat'};
       repeats = 1;
@@ -446,7 +441,7 @@ function perform_fitting(selection, roundit)
               good_indx = (tmp_data.param_set(:,1) == param_set(p));
               if (any(good_indx))
                 if (sum(good_indx) > 1)
-                  good_indx = good_indx & (tmp_data.param_set(:,3) == (params{2}(end) == 'w'));
+                  good_indx = good_indx & (tmp_data.param_set(:,3) ~= (params{2}(end) == 'p'));
                 end
 
                 s_params{2} = [0.00769 2.197 0.0314 2.202 tmp_data.params{good_indx}(8:end) 1.441];

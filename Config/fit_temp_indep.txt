@@ -13,4 +13,8 @@ pixels_only false
 offset_scaling 100
 fit_flow true
 fit_model false
+rescale_length_only true
 aligning_type 'fitting'
+scale_each_egg true
+extrapol_z true
+scale_flow true
