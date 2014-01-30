@@ -224,10 +224,12 @@ function figs_msb(num)
       d = load('all_offsets');
       params = [params, repmat(d.all_offsets(:).', size(params,1), 1)];
 
-      params = params(end,:);
-      new_vals = [0:3].';
+      params = params(2,:);
 
-      params = [repmat(params, length(new_vals), 1) new_vals];
+      %params = params(end,:);
+      %new_vals = [0:3].';
+
+      %params = [repmat(params, length(new_vals), 1) new_vals];
 
       %params(end) = 0.8;
       %params(end-4) = 0.05;
@@ -3016,6 +3018,43 @@ function figs_msb(num)
       [junk, indx] = sort(all_scores2(:,1), 'descend');
       all_scores2 = all_scores2(indx, :);
       all_params2 = all_params2(indx, :);
+
+      keyboard
+
+    case 10
+      vals = group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'}, {'type', '1056-med-all'});
+      values = extract_model_parameters(vals, true);
+
+      all_scales = cell(0,2);
+      count = 1;
+
+      for i=1:size(values, 1)
+        for j=1:size(values{i,2}, 1)
+          params = [values{i,2}{j,2}.params.rate values{i,2}{j,2}.params.offset values{i,2}{j,2}.params.energy values{i,2}{j,2}.params.viscosity values{i,2}{j,2}.params.flow values{i,2}{j,2}.params.sigma values{i,2}{j,2}.params.flow_scaling];
+
+          [score, results] = check_parameters([values{i,1}{1}.type '.mat'], values{i,1}{1}, 'config_modeling', 'custom_flow', 'init_pos', params, 'start_with_best', false);
+          tmp_results = NaN(length(results), 2);
+
+          for g = 1:length(results)
+            domain = results{g, 1};
+
+            domain = domain((end/2)+1:end, :).';
+            domain = [domain domain(:,end-1:-1:1)];
+
+            [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
+
+            nprofile = length(profile)-1;
+            dwidth = mymean(results{g,2}(end-nframes+1:end));
+
+            tmp_results(g, :) = [score, 2*dwidth];
+          end
+
+          all_scales{count, 1} =  tmp_results;
+          all_scales{count, 2} =  results;
+
+          count = count + 1;
+        end
+      end
 
       keyboard
 

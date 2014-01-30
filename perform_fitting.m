@@ -265,23 +265,23 @@ function perform_fitting(selection, roundit)
       files = {'1056-med-scale.mat'; '1056-med-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'AG';
+      starts = 'A';
       param_set = 2;
-      params{2} = 'refine_fit';
+      params{2} = 'refine_size';
     case 19
       files = {'1056-med-scale.mat'};
-      repeats = 2;
-      init_noise = 0.05;
-      starts = 'AG';
+      repeats = 1;
+      init_noise = 0;
+      starts = 'A';
       param_set = 2;
-      params{2} = 'fit_kymo';
+      params{2} = 'fit_no_extrapol';
     case 20
-      files = {'1056-med-all.mat'};
-      repeats = 2;
-      init_noise = 0.05;
-      starts = 'AG';
+      files = {'1056-med-scale.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'A';
       param_set = 2;
-      params{2} = 'fit_kymo';
+      params{2} = 'fit_noex_size';
 
     otherwise
       warning('Choose a fitting group between 1 and 7');
