@@ -535,6 +535,7 @@ function uuids = fit_kymograph(fitting, opts)
       if (has_fixed_parameters)
         p_fixed = p0;
         p0 = p0(~fitting.fixed_parameter);
+        nparams = length(p0);
       end
     end
 
