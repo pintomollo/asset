@@ -6,6 +6,7 @@ function perform_fitting(selection, roundit)
 
   params = {'config_fitting'; 'fit_kymo'; 'config_modeling'; 'custom_flow'};
   init_noise = 0;
+  fixed_parameter = [];
 
   switch_selection = selection;
   if (roundit)
@@ -222,6 +223,7 @@ function perform_fitting(selection, roundit)
       param_set = 0;
       params{2} = 'refine_size';
       params{4} = 'custom_model';
+      fixed_parameter = [141];
     case 14
       files = {'1056-all-all.mat'};
       %files = [dir('1056-3-*_.mat'); ...
@@ -348,7 +350,7 @@ function perform_fitting(selection, roundit)
 
           switch starts
             case 1
-              s_params = {'init_pos'; [ps.all_offsets.' 0]};
+              s_params = {'init_pos'; [ps.all_offsets.' 1.441]};
             case 2
               s_params = {'init_pos'; [ps.all_offsets.' 1]};
             case 3

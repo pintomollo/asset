@@ -502,6 +502,31 @@ function uuids = fit_kymograph(fitting, opts)
     end
     %p0 = sqrt(p0(:));
 
+    has_fixed_parameters = (~isempty(fitting.fixed_parameter) && any(fitting.fixed_parameter));
+    if (has_fixed_parameters)
+      tmp_fixed = false(1, numel(p0));
+      if (islogical(fitting.fixed_parameter))
+        nfixed = min(numel(p0), numel(fitting.fixed_parameter));
+        tmp_fixed(1:nfixed) = fitting.fixed_parameter(1:nfixed);
+      else
+        fixed_indxs = fitting.fixed_parameter;
+        fixed_indxs = fixed_indxs(fixed_indxs > 0 & fixed_indxs <= numel(p0));
+
+        if (isempty(fixed_indxs))
+          has_fixed_parameters = false;
+          tmp_fixed = [];
+        else
+          tmp_fixed(fixed_indxs) = true;
+        end
+      end
+
+      fitting.fixed_parameter = tmp_fixed;
+      if (has_fixed_parameters)
+        p_fixed = p0;
+        p0 = p0(~fitting.fixed_parameter);
+      end
+    end
+
     tmp_fit = fitting;
     tmp_fit.ground_truth = [];
     tmp_fit.flow_size = size(flow);
@@ -699,6 +724,12 @@ function uuids = fit_kymograph(fitting, opts)
 
       for g=1:ngroups
         curr_p = p_all(:,i);
+
+        if (has_fixed_parameters)
+          tmp_p = p_fixed;
+          tmp_p(~fitting.fixed_parameter) = curr_p;
+          curr_p = tmp_p;
+        end
 
         tmp_params = ml_params;
 

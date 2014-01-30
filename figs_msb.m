@@ -239,12 +239,16 @@ function figs_msb(num)
           extrapols(end+1,1) = values{i,1}{1}.extrapol_z;
         end
       end
+      %}
 
 %      params = [0.19 1 2 2; 0.00556 2.161 0.0307 2.013; 0.00596 2.038 0.0304 1.835];
-    %}
 
-      params = [0.0116 2.1571 0.0658 2.1871 0];
-      extrapols = true;
+      params = [0.00769 2.197 0.0314 2.202 0; ...
+                0.0116 2.1571 0.0658 2.1871 0; ...
+                0.0116 2.1571 0.0658 2.1871 1.441]
+
+      %params(end+1,:) = [0.0116 2.1571 0.0658 2.1871 0];
+      %extrapols(end+1,1) = true;
       d = load('all_offsets');
       params = [params(:, 1:4), repmat(d.all_offsets(:).', size(params,1), 1), params(:, end)];
 
@@ -293,7 +297,7 @@ function figs_msb(num)
             continue;
         end
 
-        [scores(p), results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'start_with_best', false, 'parameter_set', param_set, 'init_pos', params, 'scale_flow', scale_flow, 'extrapol_z', extrapols(p));
+        [scores(p), results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'start_with_best', false, 'parameter_set', param_set, 'init_pos', params, 'scale_flow', scale_flow);
 
         count = 1;
         for f = 1:size(all_data, 1)
