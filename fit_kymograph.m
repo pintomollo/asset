@@ -60,6 +60,7 @@ function uuids = fit_kymograph(fitting, opts)
   ngroups = length(fitting.ground_truth);
 
   all_params = false;
+  almost_all_params = false;
 
   noffsets = ngroups*strncmp(fitting.aligning_type, 'fitting', 7);
   [temperatures, junk, temp_indx] = unique(fitting.temperature);
@@ -68,6 +69,7 @@ function uuids = fit_kymograph(fitting, opts)
   nvisc = sum(good_visc);
   ntemps = length(temperatures);
   viscosities = ones(1, ntemps);
+  has_fixed_parameters = false;
 
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
@@ -122,6 +124,12 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
 
       all_params = true;
+    elseif ((nrates + numel(fit_energy) + fitting.fit_flow + fit_viscosity*nvisc + fitting.scale_flow) == numel(fitting.init_pos))
+
+      if (nrates > 0)
+        fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+      end
+      almost_all_params = true;
     elseif ((nrates + numel(fit_energy) + noffsets + fit_viscosity*nvisc) == numel(fitting.init_pos))
 
       if (nrates > 0)
@@ -394,11 +402,11 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (~fit_viscosity)
       viscosities(:) = 1;
-    elseif (~all_params)
+    elseif (~all_params || ~almost_all_params)
       p0 = [p0 viscosities(good_visc)];
     end
 
-    if (fitting.fit_flow & ~all_params)
+    if (fitting.fit_flow & ~(all_params || almost_all_params))
       p0 = [p0 1];
     else
       curr_flow_scale = 1;
@@ -408,7 +416,7 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = [p0 estim_sigma];
     end
 
-    if (fitting.scale_flow & ~all_params)
+    if (fitting.scale_flow & ~(all_params || almost_all_params))
       p0 = [p0 0];
     end
 

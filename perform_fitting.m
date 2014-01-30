@@ -81,8 +81,8 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'D';
-      param_set = [2 14 20 25];
+      starts = 'T';
+      param_set = [14 15 20 25];
       params{2} = 'refine_flow';
       params{4} = 'custom_model';
     case 6
@@ -93,15 +93,15 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'D';
-      param_set = 24;
+      starts = 'T';
+      param_set = [2 24];
       params{2} = 'refine_flow';
       params{4} = 'custom_model';
     case 6.2
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 'D';
+      starts = 'T';
       param_set = 24;
       params{2} = 'refine_temp_indep';
       params{4} = 'custom_model';
@@ -349,6 +349,8 @@ function perform_fitting(selection, roundit)
               s_params = {'init_pos'; [ps.all_offsets.' 1.441]};
             case 2
               s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 ps.all_offsets.' 1.441]};
+
+             %{ 
             case 3
               s_params = {'init_pos'; [ps.all_offsets.' 1 0]};
             case 4
@@ -357,6 +359,7 @@ function perform_fitting(selection, roundit)
               s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.601 1.581]};
             case 6
               s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.1599 0 0.6277 1.5181 1.6908 0.8265 1.581]};
+              %}
             otherwise
               s_params = {'init_pos'; ps.all_offsets.'};
           end
@@ -414,6 +417,7 @@ function perform_fitting(selection, roundit)
               s_params{2} = [0.28 0.00857 0.0054 0.00154 2.2569 1.56 0.17353 67.5 0.15 0.0472 0.0073 0.0078 2.0203 1 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265];
 
             elseif (starts(s) == 'T')
+              %{
               vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type', '1056-temps-all'; 'parameter_set', param_set(p); 'fitting_type', 'cmaes'});
               %vals = group_ml_results('adr-kymo-*_evol.dat', {'type', f_params{1}(1:end-4); 'parameter_set', 2; 'fitting_type', 'cmaes'});
               
@@ -435,6 +439,22 @@ function perform_fitting(selection, roundit)
               s_params{2} = abs(tmp_p(1:4) .* vals{1,1}{1}.rescale_factor);
               %tmp_p(5:end) = tmp_p(5:end) * vals{1,1}{1}.offset_scaling;
               %s_params{2} = tmp_p;
+              %}
+
+              tmp_data = load('temp_params.mat');
+
+              good_indx = (tmp_data.param_set(:,1) == param_set(p));
+              if (any(good_indx))
+                if (sum(good_indx) > 1)
+                  good_indx = good_indx & (tmp_data.param_set(:,3) == (params{2}(end) == 'w'));
+                end
+
+                s_params{2} = [0.00769 2.197 0.0314 2.202 tmp_data.params{good_indx}(8:end) 1.441];
+                params{6, 1} = [2 4 (length(s_params{2})+3)];
+              else
+                warning('No adequat initial condition identified, skipping !');
+                continue;
+              end
             elseif (starts(s) < 0)
               switch abs(starts)
                 case 1
