@@ -217,18 +217,18 @@ function perform_fitting(selection, roundit)
       params{4} = 'custom_model';
     case 14
       files = {'1056-temps-all.mat'};
-      repeats = 24;
+      repeats = 3;
       init_noise = 0;
       starts = 'T';
-      param_set = 15;
+      param_set = 24;
       params{2} = 'fit_flows';
       params{4} = 'custom_model';
     case 15
       files = {'1056-temps-all.mat'};
-      repeats = 24;
+      repeats = 3;
       init_noise = 0;
       starts = 'T';
-      param_set = 15;
+      param_set = 24;
       params{2} = 'fit_temp_indep';
       params{4} = 'custom_model';
 
