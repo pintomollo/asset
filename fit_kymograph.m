@@ -668,8 +668,13 @@ function uuids = fit_kymograph(fitting, opts)
     end
 
     p = roundn(p, -(ndecimals+2));
+
+    if (has_fixed_parameters)
+      tmp_p = p_fixed;
+      tmp_p(~fitting.fixed_parameter) = p;
+      p = tmp_p;
+    end
     p(1:nrates) = abs(p(1:nrates));
-    %p = p.^2;
 
     display(['Best (' num2str(p(:).') ')']);
   end
