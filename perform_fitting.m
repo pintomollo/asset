@@ -233,21 +233,37 @@ function perform_fitting(selection, roundit)
       params{4} = 'custom_model';
 
     case 16
-      files = {'1056-all-all.mat'};
+      perform_fitting(16.1,false);
+      perform_fitting(16.2,false);
+      perform_fitting(16.3,false);
+      return;
+    case 16.1
+      files = {'1056-temps-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 3;
+      param_set = 14;
+      params{2} = 'refine_flow';
+      params{4} = 'custom_model';
+    case 16.2
+      files = {'1056-temps-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 4;
+      param_set = 14;
+      params{2} = 'refine_flow';
+      params{4} = 'custom_model';
+    case 16.3
+      files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
       starts = 5;
-      param_set = 2;
-      params{2} = 'refine_size_flow';
+      param_set = 15;
+      params{2} = 'refine_flow';
       params{4} = 'custom_model';
+
     case 17
-      files = {'1056-all-all.mat'};
-      repeats = 1;
-      starts = 6;
-      param_set = 24;
-      %params{2} = 'refine_temp_indep';
-      params{2} = 'refine_size_flow';
-      params{4} = 'custom_model';
+
     case 18
       files = {'1056-med-scale.mat'; '1056-med-all.mat'};
       repeats = 1;
@@ -338,12 +354,32 @@ function perform_fitting(selection, roundit)
           %ps = load('full_params');
           %s_params = {'init_pos'; ps.params(starts(s),:)};
           ps = load('all_offsets');
+          tmp_data = load('temp_params.mat');
 
           switch abs(starts)
             case 1
               s_params = {'init_pos'; [ps.all_offsets.' 1.441]};
             case 2
               s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 ps.all_offsets.' 1.441]};
+            case {3, 4}
+              good_indx = (tmp_data.param_set(:,1) == param_set);
+              s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 tmp_data.params{good_indx}(8:end) 1.441]};
+              params{6, 1} = [2 4 (length(s_params{2})+3)];
+
+              if (starts == 3)
+                s_params{2}(end-3) = 0;
+                params{6, 1} = [params{6,1}(1:2) (params{6,1}(3)-[3 0])];
+              else
+                s_params{2}(end-2) = 0;
+                params{6, 1} = [params{6,1}(1:2) (params{6,1}(3)-[2 0])];
+              end
+            case 5
+              good_indx = (tmp_data.param_set(:,1) == param_set);
+              s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 tmp_data.params{good_indx}(8:end) 1.441]};
+              params{6, 1} = [2 4 (length(s_params{2})+3)];
+
+              s_params{2}([end-4 end-3]) = 0;
+              params{6, 1} = [params{6,1}(1:2) (params{6,1}(3)-[4 3 0])];
 
              %{ 
             case 3
