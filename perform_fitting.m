@@ -390,10 +390,10 @@ function perform_fitting(selection, roundit)
             case 1
               s_params = {'init_pos'; [ps.all_offsets.' 1.441]};
             case 2
-              s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 ps.all_offsets.' 1.441]};
+              s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 ps.all_offsets.' 1.441]};
             case {3, 4}
               good_indx = (tmp_data.param_set(:,1) == param_set);
-              s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 tmp_data.params{good_indx}(8:end) 1.441]};
+              s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441]};
               params{6, 1} = [2 4 (length(s_params{2})+3)];
 
               if (starts == 3)
@@ -405,7 +405,7 @@ function perform_fitting(selection, roundit)
               end
             case 5
               good_indx = (tmp_data.param_set(:,1) == param_set);
-              s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 tmp_data.params{good_indx}(8:end) 1.441]};
+              s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441]};
               params{6, 1} = [2 4 (length(s_params{2})+3)];
 
               s_params{2}([end-4 end-3]) = 0;
@@ -510,7 +510,7 @@ function perform_fitting(selection, roundit)
                   good_indx = good_indx & (tmp_data.param_set(:,3) ~= (params{2}(end) == 'p'));
                 end
 
-                s_params{2} = [0.00769 2.197 0.0314 2.202 tmp_data.params{good_indx}(8:end) 1.441];
+                s_params{2} = [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441];
                 params{6, 1} = [2 4 (length(s_params{2})+3)];
               else
                 warning('No adequat initial condition identified, skipping !');

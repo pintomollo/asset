@@ -903,7 +903,7 @@ function uuids = fit_kymograph(fitting, opts)
         if (opts.nparticles ~= ndata)
           res = flipud(interp1q(simul_pos*opts.x_step, flipud(res), fitting.x_pos{g}.'));
         end
-        
+
         [f, fwidth] = domain_expansion(res.', size(res, 1), size(res,2), opts_expansion);
         fraction = f*fwidth;
         res = [res; res];

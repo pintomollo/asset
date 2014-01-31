@@ -39,6 +39,11 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
     for j = 1:size(ml_values{i, 2}, 1)
       value = ml_values{i, 2}{j, 2}(end);
 
+      if (~isfinite(value.score))
+        warning('Empty optimization file !');
+        continue;
+      end
+
       data = params_struct;
       effect_params = params_struct;
 
@@ -52,11 +57,27 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
 
       [npts, nvals] = size(pts);
 
-      if (~isfinite(value.score))
-        warning('Empty optimization file !');
-        continue;
+      if (~isempty(fitting.fixed_parameter))
+        nfixed = length(fitting.fixed_parameter);
 
-      elseif (nvals > nparams)
+        if (nfixed == length(fitting.init_pos))
+          tmp_pts = repmat(fitting.init_pos, npts, 1);
+          tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
+        elseif (nfixed == length(fitting.init_pos) + noffsets)
+          tmp_pts = NaN(npts, nfixed);
+          tmp_pts(:,1:nparams) = repmat(fitting.init_pos(:,1:nparams), npts, 1);
+          tmp_pts(:,nparams+noffsets+1:end) = repmat(fitting.init_pos(:,nparams+1:end), npts, 1);
+          tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
+        else
+          tmp_pts = NaN(npts, nfixed);
+          beep;pause(0.5);beep
+          beep;keyboard
+        end
+
+        pts = [pts(:,1), tmp_pts];
+      end
+
+      if (nvals > nparams)
 
         data.score = pts(:, 1);
         if (nparams > 0)
