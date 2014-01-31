@@ -261,17 +261,41 @@ function perform_fitting(selection, roundit)
       param_set = 15;
       params{2} = 'refine_flow';
       params{4} = 'custom_model';
-
     case 17
-
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 3;
+      param_set = 14;
+      params{2} = 'fit_flows';
+      params{4} = 'custom_model';
     case 18
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 4;
+      param_set = 14;
+      params{2} = 'fit_flows';
+      params{4} = 'custom_model';
+    case 19
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 5;
+      param_set = 15;
+      params{2} = 'fit_flows';
+      params{4} = 'custom_model';
+
+    case 117
+
+    case 118
       files = {'1056-med-scale.mat'; '1056-med-all.mat'};
       repeats = 1;
       init_noise = 0;
       starts = 'A';
       param_set = 2;
       params{2} = 'refine_size';
-    case 19
+    case 119
       files = {'1056-med-scale.mat'};
       repeats = 1;
       init_noise = 0;
