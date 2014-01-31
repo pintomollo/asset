@@ -198,7 +198,6 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_size';
       params{4} = 'custom_model';
       fixed_parameter = [2];
-
     case 12
       files = {'1056-temps-all.mat'};
       repeats = 3;
@@ -285,7 +284,14 @@ function perform_fitting(selection, roundit)
       param_set = 15;
       params{2} = 'fit_flows';
       params{4} = 'custom_model';
-
+    case 20
+      files = {'1056-temps-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'T';
+      param_set = [14 20 14 20 14 20];
+      params{2} = 'fit_flows';
+      params{4} = 'custom_model';
     case 117
 
     case 118
@@ -302,7 +308,7 @@ function perform_fitting(selection, roundit)
       starts = 'A';
       param_set = 2;
       params{2} = 'fit_no_extrapol';
-    case 20
+    case 200
       files = {'1056-med-scale.mat'};
       repeats = 1;
       init_noise = 0;
