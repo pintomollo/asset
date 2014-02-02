@@ -60,6 +60,15 @@ function find_kymograph(varargin)
           axes_length = kymo.mymovie.metadata.axes_length_3d;
 
           kymo_name = kymo.mymovie.experiment;
+
+          temp = regexp(kymo_name, '-(\w*)-', 'tokens');
+          temp = str2double(temp{1});
+
+          if (~isfinite(temp))
+            fitting.temperature = 23;
+          else
+            fitting.temperature = temp;
+          end
         elseif (isfield(kymo, 'ground_truth') & isfield(kymo, 'pos'))
           ground_truth = kymo.ground_truth;
           pos = kymo.pos;
