@@ -1088,7 +1088,7 @@ function figs_msb(num)
 
     case 7
       %vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'fitting_type', 'cmaes'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
-      vals = group_ml_results('LatestFits/ToCheck/Good/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true; 'scale_flow', true});
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true; 'scale_flow', true});
 
       data = load('1056-temps-all.mat');
       npts = sum(cellfun(@(x)(size(x,1)), data.ground_truth));
