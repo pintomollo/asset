@@ -1,0 +1,21 @@
+fit_relative true
+fitting_type 'cmaes'
+start_with_best false
+init_noise 0.1
+data_noise 0.05
+ndelays 5
+init_pos [0.002657 2.1571 0.014992 2.1871 0.3566 0 0.9734 0.8755 1.441]
+parameter_set 15
+step_size 0.05
+nfits 1
+skip_file 'artifacts.txt'
+tolerance 1e-3
+max_iter 100000
+aligning_type 'fitting'
+pixels_only false
+offset_scaling 100
+fit_flow true
+rescale_length_only true
+scale_each_egg true
+extrapol_z true
+scale_flow true

@@ -58,6 +58,11 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
       [npts, nvals] = size(pts);
 
       if (~isempty(fitting.fixed_parameter))
+        if (size(pts, 2) ~= sum(~fitting.fixed_parameter)+1)
+          warning('Warning: wrong number of parameters');
+          continue
+        end
+
         nfixed = length(fitting.fixed_parameter);
 
         if (nfixed == length(fitting.init_pos))
@@ -75,6 +80,7 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
         end
 
         pts = [pts(:,1), tmp_pts];
+        nvals = size(pts, 2);
       end
 
       if (nvals > nparams)
@@ -169,13 +175,15 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
           kB = 8.6173324e-5;
           C2K = 273.15;
 
+          visc_E = 0;
           if (nenergy > 1)
             E = data.energy(1:end-1);
             E = E(:);
-            try
             flow_E = data.energy(end);
-            catch
-              beep;keyboard
+            if (nenergy == 3)
+              visc_E = flow_E;
+              flow_E = E(end);
+              E = E(1);
             end
           elseif (nenergy > 0)
             E = data.energy;
@@ -188,10 +196,12 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
           E = abs(E);
           flow_E = abs(flow_E);
 
-          diff_ratio = (temperatures+C2K) ./ (opts.reaction_temperature+C2K);
+          diff_ratio = ((temperatures+C2K) / (opts.reaction_temperature+C2K)) .* ...
+                       exp(-(visc_E/kB)*((1./(temperatures+C2K)) - (1/(opts.reaction_temperature+C2K))));
           rate_ratio = exp(bsxfun(@times, -(E/kB), ((1./(temperatures+C2K)) - (1/(opts.reaction_temperature+C2K)))));
           flow_ratio = exp(-(flow_E/kB).*((1./(temperatures+C2K)) - (1/(opts.flow_temperature+C2K))));
           diff_ratio = effect_params.viscosity .* diff_ratio;
+
         else
           curr_ratios = ones(nenergy,ntemps);
           curr_ratios(:,good_visc) = reshape(data.energy, nenergy, nvisc);

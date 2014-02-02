@@ -19,9 +19,10 @@ function uuids = fit_kymograph(fitting, opts)
       end
     end
   else
-    %orig_opts = get_struct('modeling');
-    %orig_opts = load_parameters(orig_opts, 'goehring.txt');
-    orig_opts = opts;
+    orig_opts = get_struct('modeling');
+    orig_opts = load_parameters(orig_opts, 'goehring.txt');
+    orig_opts = load_parameters(orig_opts, 'custom_model.txt');
+    %orig_opts = opts;
     if (fitting.fit_relative)
       orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* orig_opts.reaction_params(4,[2 1]);
       %orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* (orig_opts.reaction_params(5,[2 1]).^(orig_opts.reaction_params(4,:))) ./ orig_opts.reaction_params(4,[2 1]);

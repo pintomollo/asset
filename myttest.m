@@ -1,6 +1,11 @@
 function [H, pval] = myttest(values, indexes, tails)
 
-  if (nargin == 2)
+  if (nargin == 1)
+    indexes = repmat([1:size(values,2)], size(values,1), 1);
+    indexes = indexes(:);
+    values = values(:);
+    tails = 'both';
+  elseif (nargin == 2)
     tails = 'both';
   end
 

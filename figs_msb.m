@@ -1088,7 +1088,7 @@ function figs_msb(num)
 
     case 7
       %vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'fitting_type', 'cmaes'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'scale_flow'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true});
+      vals = group_ml_results('LatestFits/ToCheck/Good/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true; 'scale_flow', true});
 
       data = load('1056-temps-all.mat');
       npts = sum(cellfun(@(x)(size(x,1)), data.ground_truth));
@@ -1101,15 +1101,22 @@ function figs_msb(num)
       param_set = NaN(size(vals,1), 4);
       score = NaN(size(param_set, 1), 1);
       nparams = score;
-      params = cell(size(score));
+      params = cell(size(score,1), 2);
       rel_params = params;
       orig_p = params;
 
       orig_v = vals;
-      vals = extract_model_parameters(vals, false);
+      vals = extract_model_parameters(vals, true);
 
       for i=1:size(vals,1)
-        param_set(i,:) = [vals{i,1}{1}.parameter_set vals{i,1}{1}.fit_flow vals{i,1}{1}.fit_model vals{i,1}{1}.scale_flow];
+        ind = find(vals{i,1}{1}.fixed_parameter(5:end-1));
+        if (isempty(ind))
+          ind = 0;
+        elseif (numel(ind) > 1)
+          ind = 10*ind(1) + ind(2);
+        end
+
+        param_set(i,:) = [vals{i,1}{1}.parameter_set ind vals{i,1}{1}.fit_model vals{i,1}{1}.scale_flow];
         best = Inf;
         indx = 0;
         for j=1:size(vals{i,2}, 1)
@@ -1154,13 +1161,10 @@ function figs_msb(num)
           %params{i} = p;
           %nparams(i) = numel(params{i});
 
-          params{i} = [vals{i,2}{indx,2}.params.rate vals{i,2}{indx,2}.params.offset vals{i,2}{indx,2}.params.energy vals{i,2}{indx,2}.params.viscosity vals{i,2}{indx,2}.params.flow vals{i,2}{indx,2}.params.sigma];
-          try
-          rel_params{i} = [vals{i,2}{indx,2}.params.effective_value.viscosity; vals{i,2}{indx,2}.params.effective_value.rate; vals{i,2}{indx,2}.params.effective_value.flow];
-          catch
-            beep;keyboard
-          end
+          params{i,1} = [vals{i,2}{indx,2}.params.rate vals{i,2}{indx,2}.params.offset vals{i,2}{indx,2}.params.energy vals{i,2}{indx,2}.params.viscosity vals{i,2}{indx,2}.params.flow vals{i,2}{indx,2}.params.sigma];
+          rel_params{i,1} = [vals{i,2}{indx,2}.params.effective_value.viscosity; vals{i,2}{indx,2}.params.effective_value.rate; vals{i,2}{indx,2}.params.effective_value.flow];
           nparams(i) = vals{i,2}{indx,2}.params.nparams;
+          params{i,2} = vals{i,1}{1}.fixed_parameter;
         else
           keyboard
         end
@@ -1169,10 +1173,11 @@ function figs_msb(num)
       [param_set, indx] = sortrows(param_set);
       score = score(indx);
       nparams = nparams(indx);
-      params = params(indx);
-      rel_params = rel_params(indx);
+      params = params(indx,:);
+      rel_params = rel_params(indx, 1);
 
       aic = 2*(nparams + score) + 2*nparams.*(nparams+1)./(npts-nparams-1);
+      rel_L = exp((min(aic) - aic)/2)*100;
 
       temps = vals{1,2}{1,2}.params.temperature;
 
@@ -1187,7 +1192,7 @@ function figs_msb(num)
           figure;
         end
         subplot(2,3,mod(i-1,6)+1);hold on;
-        vals = rel_params{i};
+        vals = rel_params{i,1};
         vals = bsxfun(@rdivide, vals, vals(:,2));
 
         for j=2:size(vals,1)-1
@@ -1198,7 +1203,7 @@ function figs_msb(num)
         ylim([0 2.5]);
         xlim([10 26])
 
-        title([num2str(param_set(i,:)) ':' num2str(aic(i))]);
+        title([num2str(param_set(i,:)) ':' num2str(aic(i)) ',' num2str(rel_L(i))]);
       end
 
       keyboard
@@ -1322,8 +1327,13 @@ function figs_msb(num)
     case 4
       rescale_size = [400 700];
 
-      load('1056-ani2-250612_3_.mat');
-      nimg = 61;
+      files = {'1056-ani2-290612_3_.mat', '1056-24-090311_11_.mat', '1056-c27d91-310712_1_.mat'};
+      frames = [59, 64, 90];
+      %files = {'1056-ani2-250612_3_.mat', '1056-24-250511_0_.mat', '1056-c27d91-040712_3_.mat'};
+      %frames = [61, 63, 67];
+
+      load(files{1});
+      nimg = frames(1);
 
       img = imnorm(double(load_data(mymovie.dic,nimg)));
       img = mask_neighbors(img, mymovie.dic.centers(:,nimg), mymovie.dic.axes_length(:,nimg), mymovie.dic.orientations(1,nimg), mymovie.dic.neighbors(nimg), opts);
@@ -1338,7 +1348,7 @@ function figs_msb(num)
 
       figure;
       imshow(realign(img,rescale_size,mymovie.dic.centers(:,nimg),mymovie.dic.orientations(1,nimg)));
-      title('1056-ani2-250612\_3\_');
+      title(files{1});
 
       figure;imagesc(domain)
       hold on;
@@ -1346,7 +1356,7 @@ function figs_msb(num)
       plot(-path+width+1, 1:length(path), 'Color', [83 83 83]/255);
       set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+width+1, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+width+1));
       set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-      title('1056-ani2-250612\_3\_');
+      title(files{1});
       colormap(blueredmap)
 
       domain = permute([domain(:, 1:width+1, :), domain(:,end:-1:width+1, :)], [2 1 3]);
@@ -1360,11 +1370,11 @@ function figs_msb(num)
       plot(-path+width+1, 1:length(path), 'Color', [83 83 83]/255);
       set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+width+1, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+width+1));
       set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-      title('1056-ani2-250612\_3\_ normalized');
+      title([files{1} ' normalized']);
       colormap(blueredmap)
 
-      load('1056-24-250511_0_.mat');
-      nimg = 63;
+      load(files{2});
+      nimg = frames(2);
 
       img = imnorm(double(load_data(mymovie.dic,nimg)));
       img = mask_neighbors(img, mymovie.dic.centers(:,nimg), mymovie.dic.axes_length(:,nimg), mymovie.dic.orientations(1,nimg), mymovie.dic.neighbors(nimg), opts);
@@ -1379,7 +1389,7 @@ function figs_msb(num)
 
       figure;
       imshow(realign(img,rescale_size,mymovie.dic.centers(:,nimg),mymovie.dic.orientations(1,nimg)));
-      title('1056-24-250511\_0\_');
+      title(files{2});
 
       figure;imagesc(domain)
       hold on;
@@ -1387,7 +1397,7 @@ function figs_msb(num)
       plot(-path+width+1, 1:length(path), 'Color', [83 83 83]/255);
       set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+width+1, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+width+1));
       set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-      title('1056-24-250511\_0\_');
+      title(files{2});
       colormap(blueredmap)
 
       domain = permute([domain(:, 1:width+1, :), domain(:,end:-1:width+1, :)], [2 1 3]);
@@ -1401,11 +1411,11 @@ function figs_msb(num)
       plot(-path+width+1, 1:length(path), 'Color', [83 83 83]/255);
       set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+width+1, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+width+1));
       set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-      title('1056-24-250511\_0\_ normalized');
+      title([files{2} ' normalized']);
       colormap(blueredmap)
 
-      load('1056-c27d91-040712_3_.mat');
-      nimg = 67;
+      load(files{3});
+      nimg = frames(3);
 
       img = imnorm(double(load_data(mymovie.dic,nimg)));
       img = mask_neighbors(img, mymovie.dic.centers(:,nimg), mymovie.dic.axes_length(:,nimg), mymovie.dic.orientations(1,nimg), mymovie.dic.neighbors(nimg), opts);
@@ -1420,7 +1430,7 @@ function figs_msb(num)
 
       figure;
       imshow(realign(img,rescale_size,mymovie.dic.centers(:,nimg),mymovie.dic.orientations(1,nimg)));
-      title('1056-c27d91-040712\_3\_');
+      title(files{3});
 
       figure;imagesc(domain)
       hold on;
@@ -1428,7 +1438,7 @@ function figs_msb(num)
       plot(-path+width+1, 1:length(path), 'Color', [83 83 83]/255);
       set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+width+1, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+width+1));
       set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-      title('1056-c27d91-040712\_3\_');
+      title(files{3});
       colormap(blueredmap)
 
       domain = permute([domain(:, 1:width+1, :), domain(:,end:-1:width+1, :)], [2 1 3]);
@@ -1442,7 +1452,7 @@ function figs_msb(num)
       plot(-path+width+1, 1:length(path), 'Color', [83 83 83]/255);
       set(gca, 'XTick', [-pos_indx([end:-1:2]) pos_indx]+width+1, 'XTickLabel', pos([-pos_indx([end:-1:2]) pos_indx]+width+1));
       set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-      title('1056-c27d91-040712\_3\_ normalized');
+      title([files{3} ' normalized']);
       colormap(blueredmap)
 
     case 4.1
@@ -2963,6 +2973,32 @@ function figs_msb(num)
       end
 
 %      keyboard
+
+    case 8.3
+
+      data = load('data_expansion.mat');
+      simul = load('simul_optimized.mat');
+
+      groups = [];
+      all_ratios = NaN(0, length(simul.all_simul));
+
+      for i=1:size(data.all_data, 1)
+        ratios = data.all_data{i,2}(:,1) ./ data.all_data{i,2}(:,2);
+
+        for j=1:length(simul.all_simul)
+          ratios = [ratios, simul.all_simul{j}{i,2}(:,1) ./ simul.all_simul{j}{i,2}(:,2)];
+        end
+        all_ratios = [all_ratios; ratios];
+        groups = [groups; ones(size(ratios, 1), 1)*i];
+
+        subplot(2,3,i)
+        boxplot(ratios*100);
+        title(data.all_data{i,1})
+        ylim([0 100]);
+        [H,P] = myttest(ratios)
+      end
+
+      keyboard
 
     case 9
 

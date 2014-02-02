@@ -292,29 +292,6 @@ function perform_fitting(selection, roundit)
       param_set = [14 20 14 20 14 20];
       params{2} = 'fit_flows';
       params{4} = 'custom_model';
-    case 117
-
-    case 118
-      files = {'1056-med-scale.mat'; '1056-med-all.mat'};
-      repeats = 1;
-      init_noise = 0;
-      starts = 'A';
-      param_set = 2;
-      params{2} = 'refine_size';
-    case 119
-      files = {'1056-med-scale.mat'};
-      repeats = 1;
-      init_noise = 0;
-      starts = 'A';
-      param_set = 2;
-      params{2} = 'fit_no_extrapol';
-    case 200
-      files = {'1056-med-scale.mat'};
-      repeats = 1;
-      init_noise = 0;
-      starts = 'A';
-      param_set = 2;
-      params{2} = 'fit_noex_size';
     case 21
       files = {'1056-med-scale.mat'};
       repeats = 1;
@@ -339,6 +316,51 @@ function perform_fitting(selection, roundit)
       param_set = 0;
       params{2} = 'refine_size';
       params{4} = 'custom_model';
+    case 24
+      files = cat(1, all_files{:});
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
+      repeats = 1;
+      init_noise = 0;
+      %starts = mod(selection, 10);
+      starts = -6;
+      param_set = 15;
+      params{2} = 'refine_extended';
+      params{4} = 'extended_model';
+      fixed_parameter = [1:4 6:10];
+    case 25
+      files = {'1056-all-all.mat'};
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
+      repeats = 1;
+      init_noise = 0;
+      %starts = mod(selection, 10);
+      starts = 7;
+      param_set = 15;
+      params{2} = 'refine_extended';
+      params{4} = 'extended_model';
+      fixed_parameter = [2 4 145:149];
+    case 25
+      files = {'1056-all-all.mat'};
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
+      repeats = 1;
+      init_noise = 0;
+      %starts = mod(selection, 10);
+      starts = 7;
+      param_set = 15;
+      params{2} = 'refine_extended';
+      params{4} = 'extended_model';
+      fixed_parameter = [2 4 149];
 
     otherwise
       warning('Choose a fitting group between 1 and 7');
@@ -410,17 +432,9 @@ function perform_fitting(selection, roundit)
 
               s_params{2}([end-4 end-3]) = 0;
               params{6, 1} = [params{6,1}(1:2) (params{6,1}(3)-[4 3 0])];
+            case {6, 7}
+              s_params = {'init_pos'; [0.002657 2.1571 0.014992 2.1871 ps.all_offsets.' 0.3566 0 0.9734 0.8755 1.441]};
 
-             %{ 
-            case 3
-              s_params = {'init_pos'; [ps.all_offsets.' 1 0]};
-            case 4
-              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.']};
-            case 5
-              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.601 1.581]};
-            case 6
-              s_params = {'init_pos'; [0.00349 2.197 0.0143 2.202 ps.all_offsets.' 0.1599 0 0.6277 1.5181 1.6908 0.8265 1.581]};
-              %}
             otherwise
               s_params = {'init_pos'; ps.all_offsets.'};
           end
@@ -522,6 +536,8 @@ function perform_fitting(selection, roundit)
                   s_params{2,1} = orig_s{2,1}([f end]);
                 case 2
                   s_params{2,1} = orig_s{2,1}([1:4 (f+4) end]);
+                case 6
+                  s_params{2,1} = orig_s{2,1}([1:4 (f+4) end-4:end]);
               end
             end
 
