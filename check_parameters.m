@@ -1,4 +1,320 @@
-function uuids = fit_kymograph(fitting, opts)
+function [score, results] = check_parameters(varargin)
+
+  score = Inf;
+  results = {};
+
+  [mymovies, uuid, fitting, opts] = parse_input(varargin{:});
+
+  for i=1:length(mymovies)
+    mymovie = mymovies{i};
+
+    if (strncmp(fitting.type, 'simulation', 10))
+      kymos = struct('ground_truth', -1, 'pos', -1);
+    elseif (ischar(mymovie))
+      if (strncmp(mymovie(end-2:end), 'txt', 3))
+        kymos = textread(mymovie, '%s');
+      else
+        kymos = dir(mymovie);
+        fields = fieldnames(kymos);
+        kymos = struct2cell(kymos);
+        kymos = kymos(ismember(fields, 'name'), :);
+        kymos = kymos(:);
+      end
+    elseif (isfield(mymovie, 'mymovie'))
+      kymos = mymovie;
+    else
+      kymos = struct('mymovie', mymovie, 'opts', get_struct('ASSET'));
+    end
+
+    if (exist(fitting.skip_file, 'file') == 2 && iscell(kymos))
+      skip_files = textread(fitting.skip_file, '%s');
+      kymos = kymos(~ismember(kymos, skip_files));
+    end
+
+    for j=1:length(kymos)
+      if (iscell(kymos))
+        kymo_name = kymos{j};
+        kymo = load(kymo_name);
+        kymo_name = kymo_name(1:end-4);
+      elseif (isstruct(kymos))
+        kymo = kymos(j);
+        if (isfield(kymo, 'mymovie'))
+          kymo_name = kymo.mymovie.experiment;
+        elseif (strncmp(fitting.type, 'simulation', 10))
+          kymo_name = 'simulation';
+        else
+          kymo_name = 'Provided_data';
+        end
+      else
+        error('Unknow object proposed for fitting');
+      end
+
+      temps = [];
+
+      try
+        if (isfield(kymo, 'mymovie'))
+          kymo.opts.recompute = false;
+          [fraction, max_width, cell_width, domain, pos] = domain_expansion(kymo.mymovie, kymo.opts);
+          times = get_manual_timing(kymo.mymovie, kymo.opts);
+          ground_truth = domain(1:times(end), :);
+
+          axes_length = kymo.mymovie.metadata.axes_length_3d;
+
+          kymo_name = kymo.mymovie.experiment;
+        elseif (isfield(kymo, 'ground_truth') & isfield(kymo, 'pos'))
+          ground_truth = kymo.ground_truth;
+          pos = kymo.pos;
+
+          if (isfield(kymo, 'times'))
+            times = kymo.times;
+          else
+            times = NaN(1,3);
+          end
+          if (isfield(kymo, 'temperatures'))
+            fitting.temperature = kymo.temperatures;
+          end
+          if (isfield(kymo, 'axes_length'))
+            axes_length = kymo.axes_length;
+          else
+            axes_length = opts.axes_length;
+          end
+        else
+          error('No suitable data for performing the fitting procedure');
+        end
+
+        if (~iscell(ground_truth))
+          ground_truth = {ground_truth};
+          pos = {pos};
+        end
+        ngroups = length(ground_truth);
+
+        if (size(axes_length, 2) ~= ngroups)
+          axes_length = repmat(axes_length(:,1), 1, ngroups);
+        end
+
+        if (fitting.fit_relative)
+          log_file = ['fitting_rel-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'];
+        else
+          log_file = ['fitting_adr-' num2str(fitting.fit_flow) '-' num2str(fitting.fit_full) '-' num2str(fitting.parameter_set) '.txt'];
+        end
+
+        if (fitting.start_with_best)
+
+          fields = fieldnames(fitting);
+          values = struct2cell(fitting);
+          filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set';'fit_flow';'fit_model';'aligning_type';'normalize_smooth'};
+
+          good_fields = ismember(fields, filters);
+
+          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]]);
+          if (exist('BestFits', 'dir')==7)
+            other_values = group_ml_results(['BestFits' filesep 'adr-kymo-*_evol.dat'], [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]]);
+            if (~isempty(other_values))
+              if (~isempty(prev_values))
+                prev_values{1,2} = [prev_values{1,2}; other_values{1,2}];
+              else
+                prev_values = other_values;
+              end
+            end
+          end
+
+          if (~isempty(prev_values))
+            prev_values = extract_model_parameters(prev_values);
+
+            best_score = Inf;
+            best_pos = fitting.init_pos;
+            best_args = [];
+
+            for k=1:size(prev_values{1,2}, 1)
+              if (prev_values{1,2}{k,2}.score < best_score)
+                best_score = prev_values{1,2}{k,2}.score;
+                best_pos = [prev_values{1,2}{k,2}.params.rate ...
+                            prev_values{1,2}{k,2}.params.offset ...
+                            prev_values{1,2}{k,2}.params.energy ...
+                            prev_values{1,2}{k,2}.params.viscosity ...
+                            prev_values{1,2}{k,2}.params.flow ...
+                            prev_values{1,2}{k,2}.params.sigma];
+              end
+            end
+
+            if (~isempty(best_pos))
+              fitting.init_pos = best_pos;
+            end
+          end
+        end
+
+        if (~fitting.scale_each_egg)
+          [aim_circum, indx] = max(cellfun(@max, pos));
+          aim_circum = 2*aim_circum;
+          axes_length = repmat(axes_length(:,indx), 1, ngroups);
+        end
+
+        axes_length = sort(axes_length, 'descend');
+        if (fitting.extrapol_z)
+          convert = get_struct('z-correlation');
+          axes_length(3,:) = convert.bkg + convert.long_axis*axes_length(1,:) + convert.short_axis*axes_length(2,:);
+        end
+
+        for g=1:ngroups
+
+          if (fitting.scale_each_egg)
+            aim_circum = 2*max(pos{g});
+          end
+
+          if (aim_circum > 0)
+            rescale_factor = ellipse_circum(axes_length(:,g), aim_circum, fitting.rescale_length_only);
+
+            if (fitting.rescale_length_only)
+              axes_length(1,g) = rescale_factor;
+            else
+              axes_length(:,g) = axes_length(:,g)*rescale_factor;
+            end
+          end
+          egg_properties(1,g) = surface2volume(axes_length(:,g));
+          egg_properties(2,g) = 0.5*ellipse_circum(axes_length(:,g));
+
+          outside = (abs(pos{g}) > egg_properties(2, g));
+          if (any(outside))
+            pos{g} = pos{g}(~outside);
+            ground_truth{g} = ground_truth{g}(:, ~outside, :);
+          end
+
+          boundary = (length(pos{g})-1)/2;
+          fitting.ground_truth{g} = permute([ground_truth{g}(:, 1:boundary+1, :), ground_truth{g}(:,end:-1:boundary+1, :)], [2 1 3]);
+          fitting.x_pos{g} = pos{g}(boundary+1:end);
+          fitting.t_pos{g} = [0:size(ground_truth{g}, 1)-1]*10;
+
+          if (~fitting.fit_full)
+            for k=1:size(fitting.ground_truth{g}, 3)
+              tmp = fitting.ground_truth{g}(:,:,k);
+              tmp = tmp(any(~isnan(tmp), 2), :);
+              fitting.ground_truth{g}(end-size(tmp,1)+1:end,:,k) = tmp;
+            end
+
+            if (isnan(times(2)))
+              if (isnan(times(1)))
+                time = 10;
+              else
+                time = round((times(end) - times(1)) * 0.5);
+              end
+              fitting.ground_truth{g} = fitting.ground_truth{g}(:, end-time:end, :);
+              fitting.t_pos{g} = fitting.t_pos{g}(:, end-time:end);
+            else
+              fitting.ground_truth{g} = fitting.ground_truth{g}(:, times(2):end, :);
+              fitting.t_pos{g} = fitting.t_pos{g}(:, times(2):end);
+            end
+          end
+        end
+        fitting.egg_properties = egg_properties;
+        [score, results] = test_kymograph(fitting, opts);
+
+      catch ME
+        print_all(ME)
+
+        continue;
+      end
+    end
+  end
+
+  return;
+end
+
+function [mymovies, uuid, fitting, opts] = parse_input(varargin)
+
+  mymovies = '';
+  uuid = 1;
+  fitting = get_struct('fitting');
+  opts = get_struct('modeling');
+  opts = load_parameters(opts, 'goehring.txt');
+
+  conf_fit = '';
+  conf_mod = '';
+
+  % Check what we got as inputs
+  if (nargin > 0)
+    mymovies = varargin{1};
+    varargin(1) = [];
+
+    if (length(varargin) > 0 & isstruct(varargin{1}))
+      if (isfield(varargin{1}, 'reaction_params'))
+        opts = varargin{1};
+        varargin(1) = [];
+      elseif (isfield(varargin{1}, 'parameter_set'))
+        fitting = varargin{1};
+        varargin(1) = [];
+      end
+      if (length(varargin) > 0 & isstruct(varargin{1}))
+        if (isfield(varargin{1}, 'reaction_params'))
+          opts = varargin{1};
+          varargin(1) = [];
+        elseif (isfield(varargin{1}, 'parameter_set'))
+          fitting = varargin{1};
+          varargin(1) = [];
+        end
+      end
+    end
+
+    % Now we check that the parameters were provided in pairs
+    npairs = length(varargin) / 2;
+    if (npairs ~= floor(npairs))
+      uuid = str2double(varargin(1));
+      varargin(1) = [];
+      npairs = floor(npairs);
+    end
+
+    % Loop over the pairs of parameters
+    for i = 1:npairs
+      switch varargin{2*i - 1}
+        case 'config_modeling'
+          conf_mod = varargin{2*i};
+        case 'config_fitting'
+          conf_fit = varargin{2*i};
+      end
+    end
+
+    if (~isempty(conf_mod))
+      opts = load_parameters(opts, conf_mod);
+    end
+
+    if (~isempty(conf_fit))
+      fitting = load_parameters(fitting, conf_fit);
+    end
+
+    % Loop over the pairs of parameters
+    for i = 1:npairs
+
+      % If the parameter exists in opts we simply assign it the
+      % provided value
+      if (isfield(fitting, varargin{2*i - 1}))
+        fitting.(varargin{2*i - 1}) = varargin{2*i};
+      elseif (isfield(opts, varargin{2*i - 1}))
+        opts.(varargin{2*i - 1}) = varargin{2*i};
+      else
+        switch varargin{2*i - 1}
+          case 'config_modeling'
+            conf_mod = varargin{2*i};
+          case 'config_fitting'
+            conf_fit = varargin{2*i};
+          otherwise
+            warning on
+            warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
+        end
+      end
+    end
+  end
+
+  if (~fitting.fit_full)
+    opts = load_parameters(opts, 'maintenance.txt');
+  end
+
+  if (~iscell(mymovies))
+    mymovies = {mymovies};
+  end
+
+  return;
+end
+
+function [score, results] = test_kymograph(fitting, opts)
 
   if (nargin == 0)
     fitting = get_struct('fitting');
@@ -25,8 +341,6 @@ function uuids = fit_kymograph(fitting, opts)
     %orig_opts = opts;
     if (fitting.fit_relative)
       orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* orig_opts.reaction_params(4,[2 1]);
-      %orig_opts.reaction_params(3,:) = orig_opts.reaction_params(3,:) .* (orig_opts.reaction_params(5,[2 1]).^(orig_opts.reaction_params(4,:))) ./ orig_opts.reaction_params(4,[2 1]);
-      %orig_opts.reaction_params(5,:) = 1;
     end
     orig_params = [orig_opts.diffusion_params; ...
                 orig_opts.reaction_params];
@@ -37,8 +351,6 @@ function uuids = fit_kymograph(fitting, opts)
 
   if (fitting.fit_relative)
     opts.reaction_params(3,:) = opts.reaction_params(3,:) ./ opts.reaction_params(4,[2 1]);
-    %opts.reaction_params(3,:) = opts.reaction_params(3,:) .* (opts.reaction_params(5,[2 1]).^(opts.reaction_params(4,:))) ./ opts.reaction_params(4,[2 1]);
-    %opts.reaction_params(5,:) = 1;
   end
 
   if (~isempty(fitting.simulation_parameters))
@@ -59,6 +371,7 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   ngroups = length(fitting.ground_truth);
+  results = cell(ngroups, 2);
 
   all_params = false;
   almost_all_params = false;
@@ -84,6 +397,7 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_conv = get_struct('conversion');
     tmp_factor = surface2volume(tmp_opts.axes_length .* [tmp_conv.maintenance;1;1]);
     flow_scale_factor = (fitting.egg_properties(1,:) / tmp_factor) - 1;
+    %flow_scale_factor = (tmp_factor ./ fitting.egg_properties(1,:)) - 1;
   else
     flow_scaling = 1;
   end
@@ -108,12 +422,10 @@ function uuids = fit_kymograph(fitting, opts)
 
     if (iscell(fitting.init_pos))
       tmp_fit = fitting;
-      uuids = [];
 
       for c=1:length(fitting.init_pos)
         tmp_fit.init_pos = fitting.init_pos{c};
-        tmp_uuids = fit_kymograph(tmp_fit, opts);
-        uuids = [uuids; tmp_uuids(:)];
+        score(c) = test_kymograph(tmp_fit, opts);
       end
 
       return;
@@ -157,7 +469,7 @@ function uuids = fit_kymograph(fitting, opts)
       fitting.init_pos = [tmp_params(fit_params) fit_energy];
     else
       warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
-      %keyboard
+      keyboard
       fitting.init_pos = [];
     end
   end
@@ -189,13 +501,10 @@ function uuids = fit_kymograph(fitting, opts)
   else
     RandStream.setDefaultStream(RandStream('mt19937ar','seed',now + cputime));
   end
-  uuids = cell(fitting.nfits, 1);
-
   normalization_done = false;
 
   if (strncmp(fitting.fitting_type, 'dram', 4))
     drscale  = 2; 
-    %adaptint = 500;
     adaptint = 0;
   end
 
@@ -214,20 +523,7 @@ function uuids = fit_kymograph(fitting, opts)
     flow = bilinear_mex(flow, X, Y, [2 2]);
   end
 
-  if (fitting.display)
-    tmp_h = findobj('Type', 'figure');
-    hfig = tmp_h(1:min(end, 3));
-  end
-
   for g=1:ngroups
-
-    if (fitting.display)
-      if (length(hfig) < g)
-        hfig(g) = figure('Visible', 'off', 'Name', ['Group #' num2str(g)]);
-      else
-        set(hfig(g), 'Name', ['Group #' num2str(g)]);
-      end
-    end
 
     opts.reaction_params(end-1,:) = fitting.egg_properties(1,g);
     opts.reaction_params(end, :) = fitting.egg_properties(2,g);
@@ -251,7 +547,6 @@ function uuids = fit_kymograph(fitting, opts)
            [fitting.ground_truth, fitting.t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
         end
 
-      %[fitting.ground_truth, fitting.t_pos] = simulate_model(x0, ml_params, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
       fitting.ground_truth = fitting.ground_truth((end/2)+1:end, :);
       fitting.ground_truth = {[fitting.ground_truth; fitting.ground_truth]};
       fitting.x_pos = {[0:opts.nparticles-1] * opts.x_step};
@@ -299,9 +594,7 @@ function uuids = fit_kymograph(fitting, opts)
       if (~fitting.fit_full)
         f(:) = 1;
       end
-      %fitting.ground_truth = normalize_domain(fitting.ground_truth, f*frac_width, opts_expansion);
       fitting.ground_truth{g} = normalize_domain(fitting.ground_truth{g}, f*frac_width, opts_expansion, is_data, fitting.normalize_smooth);
-      %fitting.ground_truth = normalize_domain(fitting.ground_truth, true);
       normalization_done = true;
 
       tmp_gfrac = f*frac_width;
@@ -326,7 +619,6 @@ function uuids = fit_kymograph(fitting, opts)
 
     linear_truth{g} = fitting.ground_truth{g}(:);
     linear_goods{g} = isfinite(linear_truth{g});
-    %simul_pos = ([0:opts.nparticles-1] * opts.x_step).';
     simul_pos = [0:opts.nparticles-1].';
     penalty(g) = ((max(linear_truth{g}(linear_goods{g})))^2)*opts.nparticles;
     ndata(g) = length(fitting.x_pos{g});
@@ -367,7 +659,6 @@ function uuids = fit_kymograph(fitting, opts)
     orig_fit = fitting;
   end
 
-  for f = 1:fitting.nfits
     if (fitting.cross_measure)
       fitting = orig_fit;
       for g=1:ngroups
@@ -383,9 +674,6 @@ function uuids = fit_kymograph(fitting, opts)
         linear_goods = isfinite(linear_truth{g});
       end
     end
-
-    uuids{f} = num2str(now + cputime);
-    log_name = ['adr-kymo-' uuids{f} '_'];
 
     tmp_params = ml_params;
 
@@ -421,45 +709,14 @@ function uuids = fit_kymograph(fitting, opts)
       p0 = [p0 0];
     end
 
-    %p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     correct = 0;
     tmp_params = ml_params;
     tmp_opts = opts;
-
-    for t=1:20
-      tmp_p = real(exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0))));
-      tmp_params(fit_params) = tmp_p(1:nrates);
-
-      tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
-      tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
-
-      [tmp_pts, correct] = opts.init_func(tmp_opts, fitting.fit_relative, true);
-
-      if (correct == 3)
-        tmp_params = [tmp_opts.diffusion_params; tmp_pts] ./ rescaling;
-        tmp_p(1:numel(fit_params)) = tmp_params(fit_params);
-
-        break;
-      elseif (fitting.start_with_best || ~isempty(fitting.init_pos))
-        tmp_p = p0;
-        tmp_params = ml_params;
-
-        break;
-      end
-    end
-
-    p0 = tmp_p;
 
     tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
     tmp_opts.reaction_params = tmp_params(2:end, :) .* rescaling(2:end, :);
 
     [x0] = opts.init_func(tmp_opts, fitting.fit_relative);
-
-    if (correct < 3)
-      warning on;
-      warning('Could not identify a bistable initial condition');
-      warning off;
-    end
 
     ndecimals = -min(floor(real(log10(fitting.tolerance/10))), 0);
     if (~isfinite(ndecimals))
@@ -477,18 +734,15 @@ function uuids = fit_kymograph(fitting, opts)
         norm_coeff(g) = 1;
       end
 
-      %fitting.score_weights = 1/nobs(1);
       curr_score_weights(g) = fitting.score_weights*length(gfraction{g})/nobs(g,1);
 
       if (fitting.integrate_sigma)
-        %full_error = (0.5*nobs(1))*log(fitting.score_weights * penalty * size_data(2) * 10) + (0.5*nobs(2))*log(size_data(2)*10);
         if (fitting.pixels_only)
           each_full_error(g) = (0.5*nobs(g,1))*log(penalty(g) * size_data(g,2) * 10);
         else
           each_full_error(g) = (0.5*nobs(g,2))*log(curr_score_weights(g)*penalty(g)*size_data(g,2)*10 + size_data(g,2)*10);
         end
       else
-        %full_error = (fitting.score_weights * penalty * size_data(2) * 10 + prod(size_data)) / (2*estim_sigma.^2);
         each_full_error(g) = (curr_score_weights(g) * penalty(g) * size_data(g,2) * 10 + prod(size_data(g,1:2))) / (2*estim_sigma(g).^2);
       end
 
@@ -507,38 +761,6 @@ function uuids = fit_kymograph(fitting, opts)
     end
 
     nparams = length(p0);
-    if (fitting.fit_flow)
-      display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) ' & flow):']);
-    else
-      display(['Fitting ' num2str(nparams) ' parameters (' num2str(fit_params) '):']);
-    end
-    %p0 = sqrt(p0(:));
-
-    has_fixed_parameters = (~isempty(fitting.fixed_parameter) && any(fitting.fixed_parameter));
-    if (has_fixed_parameters)
-      tmp_fixed = false(1, numel(p0));
-      if (islogical(fitting.fixed_parameter) || all(fitting.fixed_parameter==0 | fitting.fixed_parameter==1))
-        nfixed = min(numel(p0), numel(fitting.fixed_parameter));
-        tmp_fixed(1:nfixed) = fitting.fixed_parameter(1:nfixed);
-      else
-        fixed_indxs = fitting.fixed_parameter;
-        fixed_indxs = fixed_indxs(fixed_indxs > 0 & fixed_indxs <= numel(p0));
-
-        if (isempty(fixed_indxs))
-          has_fixed_parameters = false;
-          tmp_fixed = [];
-        else
-          tmp_fixed(fixed_indxs) = true;
-        end
-      end
-
-      fitting.fixed_parameter = tmp_fixed;
-      if (has_fixed_parameters)
-        p_fixed = p0;
-        p0 = p0(~fitting.fixed_parameter);
-        nparams = length(p0);
-      end
-    end
 
     tmp_fit = fitting;
     tmp_fit.ground_truth = [];
@@ -546,182 +768,18 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_fit.rescale_factor = rescaling(fit_params);
     tmp_fit.simulation_parameters = ml_params .* rescaling;
 
-    fid = fopen([log_name 'evol.dat'], 'w');
-    print_all(fid, tmp_fit);
-    fclose(fid);
-
     fitting.scale_each_egg = (fitting.scale_each_egg && (ngroups > 1));
 
-    switch (fitting.fitting_type)
-      case 'simplex'
-        options = optimset('MaxFunEvals', fitting.max_iter, ...
-                           'MaxIter', fitting.max_iter, ...
-                           'Display', 'off', ...
-                           'OutputFcn', @log_simplex, ...
-                           'TolFun', fitting.tolerance, ...
-                           'TolX', fitting.tolerance/10);
+    score = error_function(p0(:));
 
-        uuid = ['SPLX' num2str(ceil(rand(1)*100)) ' '];
-        cmaes_count = 0;
-
-        fid = fopen([log_name 'evol.dat'], 'a');
-
-        fprintf(fid, [uuid '%% columns="iteration, evalutation | lastbest" (' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')\n']);
-
-        display('Local optimization using the Simplex method');
-        [p, fval_opt, stopflag_opt, out_opt] = fminsearch(@error_function, p0(:), options);
-        fclose(fid);
-
-      case 'cmaes'
-
-        opt = cmaes('defaults');
-        opt.MaxFunEvals = fitting.max_iter;
-        opt.TolFun = fitting.tolerance;
-        opt.TolX = fitting.tolerance/10;
-        opt.SaveFilename = '';
-        opt.SaveVariables = 'off';
-        opt.EvalParallel = 'yes';
-        opt.LogPlot = 0;
-        opt.LogFilenamePrefix = log_name;
-        opt.StopOnWarnings = false;
-        opt.WarnOnEqualFunctionValues = false;
-        opt.PopSize = min(5*numel(p0), fitting.max_population);
-        opt.DiagonalOnly = (numel(p0) > 100);
-
-        if (fit_temperatures)
-          opt.PopSize = opt.PopSize + nvisc;
-        end
-
-        [p, fval, cmaes_count, stopflag, out] = cmaes(@error_function, p0(:), fitting.step_size, opt); 
-        p = out.solutions.bestever.x;
-        fval = out.solutions.bestever.f;
-
-        options = optimset('MaxFunEvals', max(fitting.max_iter - cmaes_count,0), ...
-                           'MaxIter', max(fitting.max_iter - cmaes_count,0), ...
-                           'Display', 'off', ...
-                           'OutputFcn', @log_simplex, ...
-                           'TolFun', fitting.tolerance, ...
-                           'TolX', fitting.tolerance/10);
-        uuid = out.uuid;
-        fid = fopen([log_name 'evol.dat'], 'a');
-
-        display('Local optimization using the Simplex method');
-        [p, fval_opt, stopflag_opt, out_opt] = fminsearch(@error_function, p(:), options);
-        fclose(fid);
-
-        disp(['Simplex: ' num2str(fval) ' -> ' num2str(fval_opt)]);
-
-      case 'pso'
-        opt = [1 2000 24 0.5 0.5 0.7 0.2 1500 fitting.tolerance 250 NaN 0 0];
-        opt(2) = fitting.max_iter;
-        opt(9) = 1e-10;
-        opt(12) = 1;
-        opt(13) = 1;
-     
-
-        bounds = [zeros(nparams, 1) ones(nparams, 1)*10];
-        [pbest, tr, te] = pso_Trelea_vectorized(@error_function, nparams, NaN, bounds, 0, opt, '', p0.', [log_name 'evol']);
-        p = pbest(1:end-1);
-      case 'godlike'
-        opt = set_options('Display', 'on', 'MaxIters', fitting.max_iter, 'TolFun', fitting.tolerance, 'LogFile', [log_name 'evol']);
-        which_algos = {'DE';'GA';'PSO';'ASA'};
-        which_algos = which_algos(randperm(4));
-        [p, fval] = GODLIKE(@error_function, 20, zeros(nparams,1), ones(nparams,1) * 10, which_algos, opt);
-
-      case 'dram'
-%        [estim_error, estim_sigma2] = error_function(p0(:));
-
-%        keyboard
-
-        model.ssfun    = @error_function;
-
-        params.par0    = p0(:); % initial parameter values
-%        params.n       = nobs;
-%        params.n0      = params.n;  % prior for error variance sigma^2
-%        params.sigma2  = estim_sigma2;  % prior accuracy for sigma^2
-
-        options.nsimu    = fitting.max_iter;               % size of the chain
-        options.adaptint = adaptint;            % adaptation interval
-        options.drscale  = drscale;
-
-        if (numel(fitting.step_size)==nparams)
-          options.qcov     = diag(fitting.step_size); % initial proposal covariance 
-        elseif (numel(fitting.step_size)==(nparams^2))
-          options.qcov     = fitting.step_size; % initial proposal covariance 
-        else
-          options.qcov     = fitting.step_size(1)*eye(nparams); % initial proposal covariance 
-        end
-        options.qcov = options.qcov.^2;
-        %options.qcov     = fitting.step_size*eye(nparams).*2.4^2./nparams;      % initial proposal covariance 
-        options.ndelays  = fitting.ndelays;
-        options.stall_thresh = fitting.stall_thresh;
-        options.log_file = [log_name 'evol'];
-        options.printint = 10;
-
-        % run the chain
-        results = dramrun(model,[],params,options);
-        p = results.mean;
-      case 'sample'
-        options.sampling_type = fitting.combine_data;
-        options.range_size  = fitting.step_size;
-        options.max_iter    = fitting.max_iter;
-        options.is_log = fitting.sample_log;
-        options.log_file = [log_name 'evol'];
-        options.printint = 10;
-        options.precision = ndecimals;
-
-        p = exhaustive_sampler(@error_function, p0(:), options);
-      otherwise
-        error([fitting.fitting_type ' machine learning algorithm is not implemented']);
-
-        return;
-    end
-
-    p = roundn(p, -(ndecimals+2));
-
-    if (has_fixed_parameters)
-      tmp_p = p_fixed;
-      tmp_p(~fitting.fixed_parameter) = p;
-      p = tmp_p;
-    end
-    p(1:nrates) = abs(p(1:nrates));
-
-    display(['Best (' num2str(p(:).') ')']);
-  end
-
-  warning on;
+    warning on;
 
   return;
 
-  function stop = log_simplex(x, optimValues, state)
-
-    stop = false;
-
-    if ((mod(optimValues.iteration, 10) == 1 && strncmp(state, 'iter', 4)) || strncmp(state, 'done', 4))
-      print_str = [' %.' num2str(ndecimals) 'f'];
-
-      if (uuid(1) == 'C')
-        fprintf(fid, [uuid '1 %ld  %e 0 0'], optimValues.iteration+cmaes_count, optimValues.fval);
-        fprintf(fid, print_str, x);
-        fprintf(fid, '\n');
-      else
-        fprintf(fid, [uuid '%ld : %ld |'], optimValues.iteration+cmaes_count, optimValues.fval);
-        fprintf(fid, print_str, x);
-        fprintf(fid, '\n');
-      end
-
-      disp([num2str(optimValues.iteration+cmaes_count) ' : ' num2str(optimValues.fval), ' | ' num2str(x(:).')]);
-    end
-
-    return;
-  end
-
-  %function [err_all, sigma2] = error_function(varargin)
   function [err_all, offsets] = error_function(varargin)
 
-    %sigma2 = 0;
-    %p_all = varargin{1};
-    p_all = roundn(varargin{1}, -ndecimals);
+    p_all = varargin{1};
+    p_all(~fitting.fixed_parameter) = roundn(p_all(~fitting.fixed_parameter), -ndecimals);
 
     [curr_nparams, nevals] = size(p_all);
     flip = false;
@@ -732,9 +790,6 @@ function uuids = fit_kymograph(fitting, opts)
     end
     err_all = NaN(ngroups, nevals);
 
-    %p_all = p_all.^2;
-    %p_all = abs(p_all);
-
     offsets = zeros(1, ngroups);
 
     for i = 1:nevals
@@ -742,12 +797,6 @@ function uuids = fit_kymograph(fitting, opts)
 
       for g=1:ngroups
         curr_p = p_all(:,i);
-
-        if (has_fixed_parameters)
-          tmp_p = p_fixed;
-          tmp_p(~fitting.fixed_parameter) = curr_p;
-          curr_p = tmp_p;
-        end
 
         tmp_params = ml_params;
 
@@ -891,15 +940,6 @@ function uuids = fit_kymograph(fitting, opts)
           [res, t] = simulate_model_mix(x0, tmp_params .* rescaling, opts.x_step, opts.tmax, opts.time_step, opts.output_rate, flow * curr_flow_scale, opts.user_data, opts.max_iter);
         end
 
-       % if (~isempty(useful_data))
-       %   figure;imagesc(useful_data - res);
-       % end
-       % useful_data = res;
-        %if (t(end) < opts.tmax)
-        %  err_all(i) = Inf;
-        %  continue;
-        %end
-        
         res = res((end/2)+1:end, :);
         if (opts.nparticles ~= ndata)
           res = flipud(interp1q(simul_pos*opts.x_step, flipud(res), fitting.x_pos{g}.'));
@@ -930,11 +970,8 @@ function uuids = fit_kymograph(fitting, opts)
               continue;
             else
 
-              %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
               if (strncmp(fitting.scale_type, 'normalize', 10))
-                %res = normalize_domain(res, f*fwidth, opts_expansion, false);
                 res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
-                %res = normalize_domain(res, false);
                 normalization_done = true;
               end
             end
@@ -943,9 +980,7 @@ function uuids = fit_kymograph(fitting, opts)
               err_all(g,i) = Inf;
               continue;
             end
-            %findx = find(f > fitting.fraction, 1, 'first');
-            %corr_offset = frac_indx(g) - findx + 1;
-            
+
             corr_offset = synchronize_domains(relative_fraction{g}, f);
             disp_args = corr_offset;
             corr_offset = corr_offset(1);
@@ -961,11 +996,8 @@ function uuids = fit_kymograph(fitting, opts)
               continue;
             else
 
-              %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
               if (strncmp(fitting.scale_type, 'normalize', 10))
-                %res = normalize_domain(res, f*fwidth, opts_expansion, false);
                 res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
-                %res = normalize_domain(res, false);
                 normalization_done = true;
               end
             end
@@ -975,7 +1007,6 @@ function uuids = fit_kymograph(fitting, opts)
               continue;
             end
             findx = find(f > fitting.fraction, 1, 'first');
-            %corr_offset = frac_indx(g) - findx + 1;
             corr_offset = findx - frac_indx(g);
           case 'fitting'
             corr_offset = more_params(g)*fitting.offset_scaling;
@@ -988,46 +1019,30 @@ function uuids = fit_kymograph(fitting, opts)
             corr_offset = sindx(g) - rindx;
         end
 
-%        fraction(isnan(fraction)) = 0;
-%        gindxs = [0:size(res, 2)-1];
-%        goods = ((gindxs + corr_offset) > 0 & (gindxs + corr_offset) <= size_data(g,2));
-
-%        if (sum(goods) < 10)
-        %if (length(relative_fraction{g}) - corr_offset < 10)
         if (size_data(g,2) - corr_offset < 10)
           err_all(g,i) = each_full_error(g);
         else
           if (~normalization_done & strncmp(fitting.scale_type, 'normalize', 10))
-            %[f, fwidth] = domain_expansion(res(1:end/2, :).', size(res, 1)/2, size(res,2), opts_expansion);
             if (~fitting.fit_full)
               fraction(:) = fwidth;
             end
-            %res = normalize_domain(res, f*fwidth, opts_expansion);
             res = normalize_domain(res, fraction, opts_expansion, false, fitting.normalize_smooth);
-            %res = normalize_domain(res, false);
             normalization_done = true;
           end
 
           fraction(isnan(fraction)) = 0;
           res(isnan(res)) = 0;
-          
+
           res = interp2([res; fraction.'], [1:length(gfraction{g})].'+corr_offset, [1:size(fitting.ground_truth{g},1)+1]);
           fraction = res(end,:).';
           res = res(1:end-1,:);
-          
+
           fraction(isnan(fraction)) = 0;
           res(isnan(res)) = 0;
 
-%          indxs = corr_offset+gindxs(goods);
-%          tmp_fraction = zeros(1, size_data(g,2));
-%          tmp_fraction(indxs) = fraction(gindxs(goods) + 1);
-          %tmp_fraction(indxs(end)+1:end) = tmp_fraction(indxs(end));
+          results{g,1} = res;
+          results{g,2} = fraction;
 
-%          tmp = ones(size_data(g,1:2))*res(1, 2);
-%          tmp(:, indxs) = res(:, gindxs(goods) + 1);
-
-%          fraction = tmp_fraction(:);
-%          res = tmp;
           if (multi_data)
             res = repmat(res, [1 1 nlayers(g)]);
           end
@@ -1035,7 +1050,7 @@ function uuids = fit_kymograph(fitting, opts)
           if (~normalization_done & strncmp(fitting.scale_type, 'best', 4))
             gres = ~isnan(res(:)) & linear_goods{g};
             c = [ones(sum(gres), 1), res(gres)] \ linear_truth{g}(gres);
-            
+
             if (c(2) <= 0)
               err_all(g,i) = Inf;
               continue;
@@ -1043,29 +1058,13 @@ function uuids = fit_kymograph(fitting, opts)
 
             res = c(1) + c(2)*res;
           end
-          
-          %tmp_err = fitting.score_weights*(fitting.ground_truth - res).^2 / norm_coeff;
 
           tmp_err = (fitting.ground_truth{g} - res).^2 / norm_coeff(g);
-          %tmp_err = 0*tmp_err;
 
-          %tmp_frac = ((gfraction{g} - fraction)/half).^2;
           tmp_frac = 1./(1+exp(-15*(((gfraction{g} - fraction)/half).^2-0.5)));
-          %tmp_frac = 0;
-
-          %[sum(tmp_err(linear_goods)) sum(tmp_frac)]
-
-          %if (nargout == 2)
-          %  tmp_mean = mymean(tmp_err(:));
-          %  sigma2 = mymean((tmp_err(:) - tmp_mean).^2);
-          %end
-          %tmp_err(~linear_goods) = 0;
 
           if (fitting.integrate_sigma)
             % Integrated the sigma out from the gaussian error function
-            %err_all(i) = (0.5*nobs(1))*log(sum(tmp_err(linear_goods))) + (0.5*nobs(2))*log(sum(tmp_frac));
-            %err_all(g,i) = curr_score_weights(g)*(0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g}))) + (0.5*nobs(g,2))*log(sum(tmp_frac));
-
             if (fitting.pixels_only)
               err_all(g,i) = (0.5*nobs(g,1))*log(sum(tmp_err(linear_goods{g})));
             else
@@ -1073,112 +1072,12 @@ function uuids = fit_kymograph(fitting, opts)
             end
           else
             if (fitting.fit_sigma)
-              %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2) + nobs*log(estim_sigma) ;
               err_all(g,i) = (curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac)) / (2*estim_sigma(g).^2) + nobs(g)*log(estim_sigma) ;
             else
-              %err_all(i) = sum(tmp_err(linear_goods) + sum(tmp_frac)) / (2*estim_sigma.^2);
               err_all(g,i) = (curr_score_weights(g)*sum(tmp_err(linear_goods{g})) + sum(tmp_frac)) / (2*estim_sigma(g).^2);
             end
           end
-          % Standard log likelihood with gaussian prob
-          %err_all(i) = sum(tmp_err(:) / (2*error_sigma^2));
-
-          if (fitting.display)
-            tmp_plot_avg = mymean(res,3).';
-            tmp_plot_err = mymean(tmp_err,3).';
-            tmp_plot_truth = mymean(fitting.ground_truth{g},3).';
-
-            tmp_plot_frac = fraction;
-            tmp_plot_frac(1:find(tmp_plot_frac, 1, 'first')-1) = NaN;
-            tmp_plot_gfrac = gfraction{g};
-            tmp_plot_gfrac(1:find(tmp_plot_gfrac, 1, 'first')-1) = NaN;
-
-            yindx = find(tmp_plot_gfrac>0, 1, 'first');
-            y_tick = unique([fliplr([yindx:-20:1]) yindx:20:size(tmp_plot_avg,1)]);
-            y_labels = (y_tick - yindx)*10;
-
-            xfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_frac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_frac];
-            xgfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_gfrac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_gfrac];
-            yfrac = [size(tmp_plot_err, 1):-1:1 1:size(tmp_plot_err,1)].';
-
-            tmp_pos_tick = [0:50:(size(tmp_plot_err,2)/2 - 1)];
-            tmp_pos_label = fitting.x_pos{g}(tmp_pos_tick + 1);
-            tmp_pos_tick = [-tmp_pos_tick(end:-1:2) tmp_pos_tick] + (size(tmp_plot_err,2)/2);
-            tmp_pos_label = [-tmp_pos_label(end:-1:2) tmp_pos_label];
-
-            %figure(hfig(g));
-            hax = subplot(1,3,1, 'Parent', hfig(g), 'NextPlot', 'replace');
-            %hold off;
-            imagesc([tmp_plot_avg(:,1:end/2) tmp_plot_avg(:,end:-1:(end/2)+1)], 'Parent', hax);
-            set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
-                     'YTick', y_tick, 'YTickLabel', y_labels, ...
-                     'NextPlot', 'add')
-            colormap(hax, blueredmap)
-            plot(hax, xfrac, yfrac, 'Color', [83 83 83]/255);
-            title(hax, [num2str(err_all(g,i)) ' : ' num2str(sum(tmp_err(linear_goods{g}))) ', ' num2str(sum(tmp_frac))]);
-
-            hax = subplot(1,3,2, 'Parent', hfig(g), 'NextPlot', 'replace');
-            %hold off;
-            %imagesc(mymean(tmp_err, 3));
-            imagesc([tmp_plot_err(:,1:end/2) tmp_plot_err(:,end:-1:(end/2)+1)], 'Parent', hax);
-            set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
-                     'YTick', y_tick, 'YTickLabel', y_labels, ...
-                     'NextPlot', 'add')
-            colormap(hax, redblackmap)
-            %hold on;
-            %plot((size(tmp_err, 2)/2)-2*gfraction{g}, 1:size(tmp_err,1), 'k');
-            %plot((size(tmp_err, 2)/2)+2*gfraction{g}, 1:size(tmp_err,1), 'k');
-            %plot((size(tmp_err, 2)/2)-2*fraction, 1:size(tmp_err,1), 'w');
-            %plot((size(tmp_err, 2)/2)+2*fraction, 1:size(tmp_err,1), 'w');
-            plot(hax, xfrac, yfrac, 'Color', [83 83 83]/255);
-            plot(hax, xgfrac, yfrac, 'Color', [83 83 83]/255);
-
-            disp_params = tmp_params .* rescaling;
-            disp_params = disp_params(fit_params);
-
-            if (fitting.fit_relative & numel(disp_params) >= 4)
-              disp_params([1 3]) = disp_params([1 3]) .* disp_params([4 2]);
-              %disp_params(1) = bsxfun(@times, disp_params(1), disp_params(4));
-              %disp_params(3) = bsxfun(@rdivide, bsxfun(@times, disp_params(3), disp_params(2)), (1.56.^disp_params(4)));
-            end
-            if (numel(disp_params) > 6)
-              tmp_params = NaN(ceil((numel(disp_params)+numel(E)+2)/6),6);
-              tmp_params(1:numel(disp_params)) = disp_params;
-              tmp_params(numel(disp_params)+1:numel(disp_params)+numel(E)) = E(:).';
-              tmp_params(numel(disp_params)+numel(E)+1:numel(disp_params)+numel(E)+1) =  curr_flow_scale;
-              tmp_params(numel(disp_params)+numel(E)+2:numel(disp_params)+numel(E)+2) =  corr_offset;
-              title(hax, num2str(tmp_params));
-            else
-              if (strncmp(fitting.aligning_type, 'fitting', 7))
-                title(hax, [num2str([disp_params E(:).' corr_offset])]);
-              else
-                title(hax, [num2str([disp_params E(:).'])]);
-              end
-              %title([num2str([disp_params E(:).']) ':' num2str(disp_args)]);
-            end
-
-            hax = subplot(1,3,3, 'NextPlot', 'replace', 'Parent', hfig(g));
-            %hold off;
-            imagesc([tmp_plot_truth(:,1:end/2) tmp_plot_truth(:,end:-1:(end/2)+1)], 'Parent', hax);
-            %set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
-            %set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
-            set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
-                     'YTick', y_tick, 'YTickLabel', y_labels, ...
-                     'NextPlot', 'add')
-            colormap(hax, blueredmap)
-            %hold on
-            plot(hax, xgfrac, yfrac, 'Color', [83 83 83]/255);
-            title(hax, fitting.type)
-
-            %keyboard
-            %drawnow
-          end
         end
-      end
-      if (fitting.display)
-        set(hfig, 'Visible', 'on');
-        drawnow;
-        keyboard
       end
     end
 

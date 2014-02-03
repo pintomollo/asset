@@ -1163,7 +1163,7 @@ function figs_msb(num)
 
           params{i,1} = [vals{i,2}{indx,2}.params.rate vals{i,2}{indx,2}.params.offset vals{i,2}{indx,2}.params.energy vals{i,2}{indx,2}.params.viscosity vals{i,2}{indx,2}.params.flow vals{i,2}{indx,2}.params.sigma];
           rel_params{i,1} = [vals{i,2}{indx,2}.params.effective_value.viscosity; vals{i,2}{indx,2}.params.effective_value.rate; vals{i,2}{indx,2}.params.effective_value.flow];
-          nparams(i) = vals{i,2}{indx,2}.params.nparams;
+          nparams(i) = vals{i,2}{indx,2}.params.nparams - sum(vals{i,1}{1}.fixed_parameter);
           params{i,2} = vals{i,1}{1}.fixed_parameter;
         else
           keyboard
@@ -3065,7 +3065,7 @@ function figs_msb(num)
 
         if (sub_indx ~= 0)
           all_scores(indx, sub_indx) = vals{i,2}{1,2}.score;
-          all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
+          %%all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
         end
       end
 

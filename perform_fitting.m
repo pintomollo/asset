@@ -256,7 +256,7 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = 0;
-      starts = 5;
+      starts = 8;
       param_set = 15;
       params{2} = 'refine_flow';
       params{4} = 'custom_model';
@@ -280,7 +280,7 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 3;
       init_noise = 0;
-      starts = 5;
+      starts = 8;
       param_set = 15;
       params{2} = 'fit_flows';
       params{4} = 'custom_model';
@@ -444,11 +444,15 @@ function perform_fitting(selection, roundit)
               s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441]};
               params{6, 1} = [2 4 (length(s_params{2})+3)];
 
-              s_params{2}([end-4 end-3]) = 0;
-              params{6, 1} = [params{6,1}(1:2) (params{6,1}(3)-[4 3 0])];
+              %s_params{2}([end-4 end-3]) = 0;
+              %params{6, 1} = [params{6,1}(1:2) (params{6,1}(3)-[4 3 0])];
             case {6, 7}
               s_params = {'init_pos'; [0.002657 2.1571 0.014992 2.1871 ps.all_offsets.' 0.3566 0 0.9734 0.8755 1.441]};
-
+            case 8
+              good_indx = (tmp_data.param_set(:,1) == param_set);
+              s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441]};
+              params{6, 1} = [2 4 (length(s_params{2})+[0 3])];
+              s_params{2}(end-3) = 0;
             otherwise
               s_params = {'init_pos'; ps.all_offsets.'};
           end
