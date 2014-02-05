@@ -447,7 +447,7 @@ function perform_fitting(selection, roundit)
               %s_params{2}([end-4 end-3]) = 0;
               %params{6, 1} = [params{6,1}(1:2) (params{6,1}(3)-[4 3 0])];
             case {6, 7}
-              s_params = {'init_pos'; [0.002657 2.1571 0.014992 2.1871 ps.all_offsets.' 0.3566 0 0.9734 0.8755 1.441]};
+              s_params = {'init_pos'; [0.002587 2.1571 0.01482 2.1871 ps.all_offsets.' 0.3566 0 0.9734 0.8755 1.441]};
             case 8
               good_indx = (tmp_data.param_set(:,1) == param_set);
               s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441]};

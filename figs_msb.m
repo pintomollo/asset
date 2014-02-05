@@ -733,13 +733,35 @@ function figs_msb(num)
       pos = cell(1,3);
 
       all_times = NaN(0,2);
+        avgs = NaN(1,3);
 
       figure;hold on
       for i=1:3
         boxplot(all_data{i,2}(:,6), 'colors',colors(i, :), 'position', temperatures(i), 'width', 2);
         all_times = [all_times; [all_data{i,2}(:,6) ones(size(all_data{i,2}),1)*i]];
+
+          hs = findobj(gcf,'tag','Outliers');
+          xc = get(hs,'XData');
+          if (i>1)
+            xc = xc{1};
+          end
+
+          if (isnan(xc))
+            goods = true(size(all_data{i,2}, 1), 1);
+          else
+            yc = get(hs,'YData')
+
+            if (i>1)
+              yc = yc{1};
+            end
+
+            goods = ~(ismember(all_data{i,2}(:,6), yc));
+          end
+
+          avgs(i) = mymean(all_data{i,2}(goods,6));
+
       end
-      avgs = mymean(all_times(:,1), 1, all_times(:,2));
+      %avgs = mymean(all_times(:,1), 1, all_times(:,2));
       plot(temperatures, avgs, '-ok');
 
       title('Polarity establishment')
@@ -3014,7 +3036,7 @@ function figs_msb(num)
       orig_params([4 12]) = orig_params([4 12]) ./ orig_params([13 5]);
       orig_params = orig_params(:).';
 
-      all_scores = NaN(length(all_names), 6);
+      all_scores = Inf(length(all_names), 6);
       all_offsets = all_scores;
       all_params = all_scores(:,1:3);
 
@@ -3063,7 +3085,7 @@ function figs_msb(num)
           %end
         end
 
-        if (sub_indx ~= 0)
+        if (sub_indx ~= 0 && all_scores(indx, sub_indx) > vals{i,2}{1,2}.score)
           all_scores(indx, sub_indx) = vals{i,2}{1,2}.score;
           %%all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
         end

@@ -67,7 +67,14 @@ function find_kymograph(varargin)
           if (~isfinite(temp))
             fitting.temperature = 23;
           else
-            fitting.temperature = temp;
+            switch temp
+              case 14
+                fitting.temperature = 20;
+              case 3
+                fitting.temperature = 13;
+              otherwise
+                fitting.temperature = temp;
+            end
           end
         elseif (isfield(kymo, 'ground_truth') & isfield(kymo, 'pos'))
           ground_truth = kymo.ground_truth;
