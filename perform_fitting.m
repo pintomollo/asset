@@ -306,7 +306,7 @@ function perform_fitting(selection, roundit)
       starts = 'D';
       param_set = 0;
       %params{2} = 'refine_border';
-      params{2} = 'refine_fit';
+      params{2} = 'refine_size';
       params{4} = 'custom_model';
     case 23
       files = {'1056-med-scale.mat'};
