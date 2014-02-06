@@ -2305,7 +2305,7 @@ function figs_msb(num)
         [means, stds] = mymean(pts(goods,:));
 
         if (i==1)
-          hfig(1) = figure('units','normalized','outerposition',[0 0 1 1])
+          hfig(1) = figure('units','normalized','outerposition',[0 0 1 1]);
         else
           figure(hfig(1));
         end
@@ -2353,8 +2353,8 @@ function figs_msb(num)
         end
 
         if (i==1)
-          mtit(['Normalized score : ' num2str(outliers_fraction)])
-          hfig(2) = figure('units','normalized','outerposition',[0 0 1 1])
+          mtit(['Normalized score : ' num2str(outliers_fraction)]);
+          hfig(2) = figure('units','normalized','outerposition',[0 0 1 1]);
         else
           figure(hfig(2));
         end

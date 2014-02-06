@@ -310,8 +310,8 @@ function perform_fitting(selection, roundit)
       params{4} = 'custom_model';
     case 23
       files = {'1056-med-scale.mat'};
-      repeats = 1;
-      init_noise = 0;
+      repeats = 3;
+      init_noise = 0.01;
       starts = 'P';
       param_set = 0;
       params{2} = 'refine_size';
@@ -401,7 +401,7 @@ function perform_fitting(selection, roundit)
         %s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 -2.9900 9.6900 0 0.1599 0 0.83 0.8265]};
 
         %s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 21 2.2400 28.0400]};
-        s_params = {'init_pos'; [17.649 -0.9954 34.613 1.5]};
+        s_params = {'init_pos'; [18.766 -1.9869 33.482 1.5438]};
 
         %refine_temp_indep
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
