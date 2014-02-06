@@ -404,9 +404,9 @@ function perform_fitting(selection, roundit)
 
         %s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 21 2.2400 28.0400]};
         if (user_param == 0)
-          s_params = {'init_pos'; [18.766 -1.9869 33.482 1.5438]};
+          s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 1.5438]};
         else
-          s_params = {'init_pos'; [18.766 -1.9869 33.482 user_param]};
+          s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 user_param]};
         end
 
         %refine_temp_indep
