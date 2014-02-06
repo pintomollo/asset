@@ -315,7 +315,7 @@ function perform_fitting(selection, roundit)
       init_noise = 0.05;
       starts = 'P';
       param_set = 0;
-      params{2} = 'refine_size';
+      params{2} = 'refine_size_flow';
       params{4} = 'custom_model';
       user_param = 10*(selection - switch_selection);
     case 24
