@@ -10,6 +10,7 @@ function perform_fitting(selection, roundit)
   params = {'config_fitting'; 'fit_kymo'; 'config_modeling'; 'custom_flow'; 'fixed_parameter'; []};
   init_noise = 0;
   fixed_parameter = [];
+  user_param = [];
 
   switch_selection = selection;
   if (roundit)
@@ -310,12 +311,13 @@ function perform_fitting(selection, roundit)
       params{4} = 'custom_model';
     case 23
       files = {'1056-med-scale.mat'};
-      repeats = 3;
-      init_noise = 0.01;
+      repeats = 5;
+      init_noise = 0.05;
       starts = 'P';
       param_set = 0;
       params{2} = 'refine_size';
       params{4} = 'custom_model';
+      user_param = 10*(selection - switch_selection);
     case 24
       files = cat(1, all_files{:});
       %files = [dir('1056-3-*_.mat'); ...
@@ -401,7 +403,11 @@ function perform_fitting(selection, roundit)
         %s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 -2.9900 9.6900 0 0.1599 0 0.83 0.8265]};
 
         %s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 21 2.2400 28.0400]};
-        s_params = {'init_pos'; [18.766 -1.9869 33.482 1.5438]};
+        if (user_param == 0)
+          s_params = {'init_pos'; [18.766 -1.9869 33.482 1.5438]};
+        else
+          s_params = {'init_pos'; [18.766 -1.9869 33.482 user_param]};
+        end
 
         %refine_temp_indep
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
