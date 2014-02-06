@@ -2289,6 +2289,9 @@ function figs_msb(num)
       disp(['All: ' num2str(m_all) ' +- ' num2str(s_all)]);
       disp(['Bests: ' num2str(m) ' +- ' num2str(s) ' (' num2str(1-outliers_fraction) ')']);
 
+      tmp_all = cat(1,all_data{:,2});
+      tmp_all = tmp_all(:,2:5);
+
       all_pts = NaN(0, 6);
 
       for i=1:length(targets)-1
@@ -2436,6 +2439,9 @@ function figs_msb(num)
               drawnow
               set(gca, 'YTickLabel', roundn(get(gca,'ytick'), -6));
               set(gca, 'XTickLabel', roundn(get(gca,'xtick'), -6));
+
+              [rho, p] = corr(tmp_all(:,k), tmp_all(:,l));
+              title(['r=' num2str(rho) ', p=' num2str(p)])
             end
           end
         end
