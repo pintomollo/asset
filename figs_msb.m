@@ -2581,7 +2581,17 @@ function figs_msb(num)
                 152 78 163]/255;
 
       data = load('simul_optimized.mat');
+      ref = load('data_expansion.mat');
       targets = {'good_ani2.txt';'good_24.txt';'good_c27d91.txt'};
+
+      [junk, indxs] = ismember(targets, ref.all_data(:,1));
+      all_ref = ref.all_data(indxs,2);
+      sizes = cumsum(cellfun(@(x)(size(x,1)), all_ref));
+      group_indx = ones(sizes(end), 1);
+      group_indx(sizes(1)+1:sizes(2)) = 2;
+      group_indx(sizes(2)+1:end) = 3;
+      all_ref = cat(1, all_ref{:});
+      all_ref = [2*all_ref(:,3) all_ref(:,1)./all_ref(:,2)];
 
       for p=1:length(data.all_simul)
         all_data = cell(3, 3);
@@ -2728,9 +2738,15 @@ function figs_msb(num)
         xlim([30 80]);
         errorbarxy(means(1), means(2), stds(1), stds(2));hold on
         myregress([intercept all_params(:,6)], all_params(:,1)./all_params(:,2), black, 'dx');
-        title('All together')
+        pval = chow_test([intercept all_params(:,6) all_params(:,1)./all_params(:,2)], [intercept all_ref]);
+        title(pval)
         xlabel('Egg length (µm)');
         ylabel('Fraction (a.u.)')
+
+        subplot(2,3,6);hold on;
+        boxplot(all_params(:,1)./all_params(:,2), group_indx);
+        ylim([0 1]);
+        title(ranksum(all_ref(:,2), all_params(:,1)./all_params(:,2)));
 
         mtit('Simulation of membrane length fraction')
 
@@ -2790,7 +2806,7 @@ function figs_msb(num)
         mtit('Simulations')
       end
 
-      %keyboard
+      keyboard
 
     case 8.2
 
