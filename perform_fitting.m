@@ -219,9 +219,9 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       %starts = mod(selection, 10);
-      starts = -1;
+      starts = 'D';
       param_set = 0;
-      params{2} = 'refine_size';
+      params{2} = 'refine_fit';
       params{4} = 'extended_model';
       %fixed_parameter = [2];
     case 12
