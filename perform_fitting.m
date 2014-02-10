@@ -72,20 +72,45 @@ function perform_fitting(selection, roundit)
       starts = 'A';
       param_set = 2;
     case 4
-      files = dir('1056-*-all.mat');
+      perform_fitting(4.1,false);
+      perform_fitting(4.2,false);
+      perform_fitting(4.3,false);
+      return;
+    case 4.1
+      files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = 0;
-      starts = 'B';
-      param_set = 2;
-      params{2} = 'refine_fit';
+      init_noise = [0 0.5 1];
+      starts = 'T';
+      param_set = 14;
+      params{2} = 'refine_flow';
+      params{4} = 'extended_model';
+      fixed_parameter = [4];
+    case 4.2
+      files = {'1056-temps-all.mat'};
+      repeats = 1;
+      init_noise = [0 0.5 1];
+      starts = 'T';
+      param_set = [14 15];
+      params{2} = 'refine_flow';
+      params{4} = 'extended_model';
+      fixed_parameter = [5];
+    case 4.2
+      files = {'1056-temps-all.mat'};
+      repeats = 1;
+      init_noise = [0 0.5 1];
+      starts = 'T';
+      param_set = 15;
+      params{2} = 'refine_flow';
+      params{4} = 'extended_model';
+      fixed_parameter = [4 5];
     case 5
       files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = 0;
+      init_noise = [0 0.5 1];
       starts = 'T';
-      param_set = [14 15 20 25];
+      param_set = [14 15 20];
       params{2} = 'refine_flow';
-      params{4} = 'custom_model';
+      params{4} = 'extended_model';
     case 6
       perform_fitting(6.1,false);
       perform_fitting(6.2,false);
@@ -93,19 +118,19 @@ function perform_fitting(selection, roundit)
     case 6.1
       files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = 0;
+      init_noise = [0 0.5 1];
       starts = 'T';
       param_set = [2 24];
       params{2} = 'refine_flow';
-      params{4} = 'custom_model';
+      params{4} = 'extended_model';
     case 6.2
       files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = 0;
+      init_noise = [0 0.5 1];
       starts = 'T';
       param_set = 24;
       params{2} = 'refine_temp_indep';
-      params{4} = 'custom_model';
+      params{4} = 'extended_model';
     case 7
       files = {'simulation'};
       repeats = 10;
@@ -197,8 +222,8 @@ function perform_fitting(selection, roundit)
       starts = -1;
       param_set = 0;
       params{2} = 'refine_size';
-      params{4} = 'custom_model';
-      fixed_parameter = [2];
+      params{4} = 'extended_model';
+      %fixed_parameter = [2];
     case 12
       files = {'1056-temps-all.mat'};
       repeats = 3;
@@ -516,40 +541,26 @@ function perform_fitting(selection, roundit)
               s_params{2} = [0.28 0.00857 0.0054 0.00154 2.2569 1.56 0.17353 67.5 0.15 0.0472 0.0073 0.0078 2.0203 1 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265];
 
             elseif (starts(s) == 'T')
-              %{
-              vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type', '1056-temps-all'; 'parameter_set', param_set(p); 'fitting_type', 'cmaes'});
-              %vals = group_ml_results('adr-kymo-*_evol.dat', {'type', f_params{1}(1:end-4); 'parameter_set', 2; 'fitting_type', 'cmaes'});
-              
-              if (isempty(vals))
-                warning('No adequat initial condition identified, skipping !');
-                continue;
-              end
-              
-              best = Inf;
-              indx = 0;
-              for j=1:size(vals{1,2}, 1)
-                if (best > vals{1,2}{j,2}(end).score)
-                  best = vals{1,2}{j,2}(end).score;
-                  indx = j;
-                end
-              end
-
-              tmp_p = vals{1,2}{indx,2}(end).params;
-              s_params{2} = abs(tmp_p(1:4) .* vals{1,1}{1}.rescale_factor);
-              %tmp_p(5:end) = tmp_p(5:end) * vals{1,1}{1}.offset_scaling;
-              %s_params{2} = tmp_p;
-              %}
 
               tmp_data = load('temp_params.mat');
+              tmp_opts = load_parameters('modeling', params{4});
 
               good_indx = (tmp_data.param_set(:,1) == param_set(p));
               if (any(good_indx))
                 if (sum(good_indx) > 1)
-                  good_indx = good_indx & (tmp_data.param_set(:,3) ~= (params{2}(end) == 'p'));
+                  ind = fixed_parameter;
+                  if (isempty(ind))
+                    ind = 0;
+                  elseif (numel(ind) > 1)
+                    ind = 10*ind(1) + ind(2);
+                  end
+
+                  good_indx = good_indx & (tmp_data.param_set(:,3) ~= (params{2}(end) == 'p') & (tmp_data.param_set(:,2) == ind));
                 end
 
-                s_params{2} = [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441];
-                params{6, 1} = [2 4 (length(s_params{2})+3)];
+                tmp_vals = tmp_opts.reaction_params([3:4],:);
+                s_params{2} = [tmp_vals(:).' tmp_data.params{good_indx, 1}(5:end)];
+                params{6, 1} = [2 4 fixed_parameter+4];
               else
                 warning('No adequat initial condition identified, skipping !');
                 continue;

@@ -35,7 +35,6 @@ function opts = load_parameters(opts, fname)
     return;
   end
 
-
   % If the file does not exists, we have a few other options
   if (~exist(fname, 'file'))
 
@@ -79,6 +78,11 @@ function opts = load_parameters(opts, fname)
     if (fid<0)
       return;
     end
+  end
+
+  % If opts itself is some text, than we get the corresponding structure
+  if (ischar(opts))
+    opts = get_struct(opts);
   end
 
   % We can have prefixes to access subfields

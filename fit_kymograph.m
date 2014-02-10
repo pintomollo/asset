@@ -79,13 +79,12 @@ function uuids = fit_kymograph(fitting, opts)
   ml_params(end, :) = fitting.egg_properties(2,1);
   half = ml_params(end, 1);
 
-  if (fitting.scale_flow)
+  flow_scaling = 1;
+  if (fitting.scale_flow || ~isempty(opts.scale_params))
     tmp_opts = get_struct('modeling');
     tmp_conv = get_struct('conversion');
     tmp_factor = surface2volume(tmp_opts.axes_length .* [tmp_conv.maintenance;1;1]);
     flow_scale_factor = (tmp_factor ./ fitting.egg_properties(1,:)) - 1;
-  else
-    flow_scaling = 1;
   end
 
   [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_description(fitting.parameter_set);
@@ -418,16 +417,26 @@ function uuids = fit_kymograph(fitting, opts)
     end
 
     if (fitting.scale_flow & ~(all_params || almost_all_params))
-      p0 = [p0 1];
+      if (~isempty(opts.scale_params))
+        p0 = [p0 opts.scale_params(1)];
+      else
+        p0 = [p0 1];
+      end
     end
 
     %p0 = p0 .* (1+fitting.init_noise*randn(size(p0))/sqrt(length(p0)));
     correct = 0;
     tmp_params = ml_params;
     tmp_opts = opts;
+    orig_p0 = p0;
+
+    nulls = (p0 == 0);
 
     for t=1:20
       tmp_p = real(exp(log(p0) + fitting.init_noise*randn(size(p0))/sqrt(length(p0))));
+      if (any(nulls))
+        tmp_p = tmp_p + nulls .* fitting.init_noise.*randn(size(p0))/sqrt(length(p0));
+      end
       tmp_params(fit_params) = tmp_p(1:nrates);
 
       tmp_opts.diffusion_params = tmp_params(1, :) .* rescaling(1, :);
@@ -504,6 +513,14 @@ function uuids = fit_kymograph(fitting, opts)
       [junk, offsets] = error_function(p0(:));
       fitting.aligning_type = 'fitting';
       p0 = [p0(1:nrates) offsets/fitting.offset_scaling p0(nrates+1:end)];
+      orig_p0 = [orig_p0(1:nrates) offsets/fitting.offset_scaling orig_p0(nrates+1:end)];
+    end
+
+    if (~fitting.scale_flow && ~isempty(opts.scale_params))
+      p0 = [p0 opts.scale_params(1)];
+      orig_p0 = [orig_p0 opts.scale_params(1)];
+      fitting.scale_flow = true;
+      fitting.fixed_parameter = [fitting.fixed_parameter length(p0)];
     end
 
     nparams = length(p0);
@@ -534,6 +551,7 @@ function uuids = fit_kymograph(fitting, opts)
 
       fitting.fixed_parameter = tmp_fixed;
       if (has_fixed_parameters)
+        p0(fitting.fixed_parameter) = orig_p0(fitting.fixed_parameter);
         p_fixed = p0;
         p0 = p0(~fitting.fixed_parameter);
         nparams = length(p0);
