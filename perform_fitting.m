@@ -94,7 +94,7 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_flow';
       params{4} = 'extended_model';
       fixed_parameter = [5];
-    case 4.2
+    case 4.3
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = [0 0.5 1];
