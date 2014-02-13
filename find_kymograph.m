@@ -87,6 +87,22 @@ function find_kymograph(varargin)
           end
           if (isfield(kymo, 'temperatures'))
             fitting.temperature = kymo.temperatures;
+          else
+            temp = regexp(kymo_name, '-(\w*)-', 'tokens');
+            temp = str2double(temp{1});
+
+            if (~isfinite(temp))
+              fitting.temperature = 23;
+            else
+              switch temp
+                case 14
+                  fitting.temperature = 20;
+                case 3
+                  fitting.temperature = 13;
+                otherwise
+                  fitting.temperature = temp;
+              end
+            end
           end
           if (isfield(kymo, 'axes_length'))
             axes_length = kymo.axes_length;

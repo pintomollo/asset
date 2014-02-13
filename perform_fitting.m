@@ -403,6 +403,14 @@ function perform_fitting(selection, roundit)
       params{2} = 'fit_extended';
       params{4} = 'extended_model';
       fixed_parameter = [2 4 145:149];
+    case 30
+      files = {'1056-24-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = [10:13];
+      param_set = 2;
+      params{2} = 'refine_fit';
+      params{4} = 'custom_flow';
     otherwise
       warning('Choose a fitting group between 1 and 7');
 
@@ -453,7 +461,7 @@ function perform_fitting(selection, roundit)
           ps = load('all_offsets');
           tmp_data = load('temp_params.mat');
 
-          switch abs(starts)
+          switch abs(starts(s))
             case 1
               s_params = {'init_pos'; [ps.all_offsets.' 1.441]};
             case 2
@@ -484,6 +492,24 @@ function perform_fitting(selection, roundit)
               s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 tmp_data.params{good_indx}(8:end) 1.441]};
               params{6, 1} = [2 4 (length(s_params{2})+[0 3])];
               s_params{2}(end-3) = 0;
+
+            case 10
+              s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202]};
+              params{6, 1} = [1:4 6:length(s_params{2})+1];
+              params{2} = 'refine_fit';
+            case 11
+              s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871]};
+              params{6, 1} = [1:4 6:length(s_params{2})+1];
+              params{2} = 'refine_fit';
+            case 12
+              s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 1.4575]};
+              params{6, 1} = [1:4 6:length(s_params{2})+1];
+              params{2} = 'refine_extended';
+            case 13
+              s_params = {'init_pos'; [0.002535 2.1571 0.014496 2.1871 0.2523 0.0739 0.9062 0.9409 1.4575]};
+              params{6, 1} = [1:4 6:length(s_params{2})+1];
+              params{2} = 'refine_flow';
+              param_set = 15;
             otherwise
               s_params = {'init_pos'; ps.all_offsets.'};
           end
