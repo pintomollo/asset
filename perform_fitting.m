@@ -117,7 +117,7 @@ function perform_fitting(selection, roundit)
       return;
     case 6.1
       files = {'1056-temps-all.mat'};
-      repeats = 1;
+      repeats = 2;
       init_noise = [0 0.5 1];
       starts = 'O';
       param_set = [20 24];
@@ -125,7 +125,7 @@ function perform_fitting(selection, roundit)
       params{4} = 'extended_model';
     case 6.2
       files = {'1056-temps-all.mat'};
-      repeats = 1;
+      repeats = 2;
       init_noise = [0 0.5 1];
       starts = 'O';
       param_set = 24;
