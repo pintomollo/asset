@@ -61,6 +61,22 @@ function [score, results] = check_parameters(varargin)
           axes_length = kymo.mymovie.metadata.axes_length_3d;
 
           kymo_name = kymo.mymovie.experiment;
+
+          temp = regexp(kymo_name, '-(\w*)-', 'tokens');
+          temp = str2double(temp{1});
+
+          if (~isfinite(temp))
+            fitting.temperature = 23;
+          else
+            switch temp
+              case 14
+                fitting.temperature = 20;
+              case 3
+                fitting.temperature = 13;
+              otherwise
+                fitting.temperature = temp;
+            end
+          end
         elseif (isfield(kymo, 'ground_truth') & isfield(kymo, 'pos'))
           ground_truth = kymo.ground_truth;
           pos = kymo.pos;
@@ -119,7 +135,7 @@ function [score, results] = check_parameters(varargin)
           end
 
           if (~isempty(prev_values))
-            prev_values = extract_model_parameters(prev_values);
+            prev_values = extract_model_parameters(prev_values, true);
 
             best_score = Inf;
             best_pos = fitting.init_pos;
@@ -392,14 +408,13 @@ function [score, results] = test_kymograph(fitting, opts)
   ml_params(end, :) = fitting.egg_properties(2,1);
   half = ml_params(end, 1);
 
-  if (fitting.scale_flow)
+  flow_scaling = 1;
+  if (fitting.scale_flow || ~isempty(opts.scale_params))
     tmp_opts = get_struct('modeling');
     tmp_conv = get_struct('conversion');
     tmp_factor = surface2volume(tmp_opts.axes_length .* [tmp_conv.maintenance;1;1]);
     %flow_scale_factor = (fitting.egg_properties(1,:) / tmp_factor) - 1;
     flow_scale_factor = (tmp_factor ./ fitting.egg_properties(1,:)) - 1;
-  else
-    flow_scaling = 1;
   end
 
   [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_description(fitting.parameter_set);
@@ -706,7 +721,11 @@ function [score, results] = test_kymograph(fitting, opts)
     end
 
     if (fitting.scale_flow & ~(all_params || almost_all_params))
-      p0 = [p0 0];
+      if (~isempty(opts.scale_params))
+        p0 = [p0 opts.scale_params(1)];
+      else
+        p0 = [p0 1];
+      end
     end
 
     correct = 0;
@@ -758,6 +777,12 @@ function [score, results] = test_kymograph(fitting, opts)
       [junk, offsets] = error_function(p0(:));
       fitting.aligning_type = 'fitting';
       p0 = [p0(1:nrates) offsets/fitting.offset_scaling p0(nrates+1:end)];
+    end
+
+    if (~fitting.scale_flow && ~isempty(opts.scale_params))
+      p0 = [p0 opts.scale_params(1)];
+      fitting.scale_flow = true;
+      fitting.fixed_parameter = [fitting.fixed_parameter length(p0)];
     end
 
     nparams = length(p0);

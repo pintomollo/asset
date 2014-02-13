@@ -108,7 +108,7 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = [0 0.5 1];
       starts = 'T';
-      param_set = [14 15 20];
+      param_set = [2 14 15];
       params{2} = 'refine_flow';
       params{4} = 'extended_model';
     case 6
@@ -119,15 +119,15 @@ function perform_fitting(selection, roundit)
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = [0 0.5 1];
-      starts = 'T';
-      param_set = [2 24];
+      starts = 'O';
+      param_set = [20 24];
       params{2} = 'refine_flow';
       params{4} = 'extended_model';
     case 6.2
       files = {'1056-temps-all.mat'};
       repeats = 1;
       init_noise = [0 0.5 1];
-      starts = 'T';
+      starts = 'O';
       param_set = 24;
       params{2} = 'refine_temp_indep';
       params{4} = 'extended_model';
@@ -515,30 +515,23 @@ function perform_fitting(selection, roundit)
             end
 
             if (starts(s) == 'O')
-              %{
-              vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type', f_params{1}(1:end-4); 'parameter_set', 2; 'fitting_type', 'cmaes'});
-              %vals = group_ml_results('adr-kymo-*_evol.dat', {'type', f_params{1}(1:end-4); 'parameter_set', 2; 'fitting_type', 'cmaes'});
-              
-              if (isempty(vals))
-                warning('No adequat initial condition identified, skipping !');
-                continue;
-              end
-              
-              best = Inf;
-              indx = 0;
-              for j=1:size(vals{1,2}, 1)
-                if (best > vals{1,2}{j,2}(end).score)
-                  best = vals{1,2}{j,2}(end).score;
-                  indx = j;
-                end
-              end
 
-              tmp_p = vals{1,2}{indx,2}(end).params;
-              tmp_p(1:4) = abs(tmp_p(1:4) .* vals{1,1}{1}.rescale_factor);
-              tmp_p(5:end) = tmp_p(5:end) * vals{1,1}{1}.offset_scaling;
-              s_params{2} = tmp_p;
-              %}
-              s_params{2} = [0.28 0.00857 0.0054 0.00154 2.2569 1.56 0.17353 67.5 0.15 0.0472 0.0073 0.0078 2.0203 1 -2.9900 9.6900 0 0.1599 0 0.6277 1.6908 0.8265];
+              tmp_opts = load_parameters('modeling', params{4});
+              tmp_vals = tmp_opts.reaction_params([3:4],:);
+              tmp_vals = [tmp_vals(:).' -3.9800 9.4600 0.3900];
+
+              switch param_set(p)
+                case 20
+                  tmp_vals = [tmp_vals 0.4059 1.6429 0.9409];
+                case 24
+                  if (params{2}(end) == 'p')
+                    tmp_vals = [tmp_vals 0.78832 0.9127 1.1439 1.0197 0.4059 1.6429 0.9409];
+                  else
+                    tmp_vals = [tmp_vals 0.2523 0.0739 0.4059 1.6429 0.9409];
+                  end
+              end
+              s_params{2} = tmp_vals;
+              params{6, 1} = [2 4 fixed_parameter+4];
 
             elseif (starts(s) == 'T')
 
