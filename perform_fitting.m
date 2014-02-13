@@ -121,7 +121,7 @@ function perform_fitting(selection, roundit)
       init_noise = [0 0.5 1];
       starts = 'O';
       param_set = [20 24];
-      params{2} = 'refine_flow';
+      params{2} = 'fit_flow';
       params{4} = 'extended_model';
     case 6.2
       files = {'1056-temps-all.mat'};
@@ -129,7 +129,7 @@ function perform_fitting(selection, roundit)
       init_noise = [0 0.5 1];
       starts = 'O';
       param_set = 24;
-      params{2} = 'refine_temp_indep';
+      params{2} = 'fit_temp_indep';
       params{4} = 'extended_model';
     case 7
       files = {'simulation'};

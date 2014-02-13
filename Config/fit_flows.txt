@@ -15,8 +15,8 @@ max_iter 100000
 aligning_type 'fitting'
 pixels_only false
 offset_scaling 100
-fit_flow true
 rescale_length_only true
 scale_each_egg true
 extrapol_z true
 scale_flow true
+fit_flow true
