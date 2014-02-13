@@ -577,7 +577,7 @@ function perform_fitting(selection, roundit)
                   end
               end
               s_params{2} = tmp_vals;
-              params{6, 1} = [2 4 fixed_parameter+4 length(tmp_vals)+3];
+              params{6, 1} = [2 4 fixed_parameter+4 length(tmp_vals)];
 
             elseif (starts(s) == 'T')
 
