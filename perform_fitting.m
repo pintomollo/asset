@@ -548,16 +548,16 @@ function perform_fitting(selection, roundit)
 
               switch param_set(p)
                 case 20
-                  tmp_vals = [tmp_vals 0.4059 1.6429 0.9409];
+                  tmp_vals = [tmp_vals 0.4059 1.6429 0.9409 1.4575];
                 case 24
                   if (params{2}(end) == 'p')
-                    tmp_vals = [tmp_vals 0.78832 0.9127 1.1439 1.0197 0.4059 1.6429 0.9409];
+                    tmp_vals = [tmp_vals 0.78832 0.9127 1.1439 1.0197 0.4059 1.6429 0.940 1.4575];
                   else
-                    tmp_vals = [tmp_vals 0.2523 0.0739 0.4059 1.6429 0.9409];
+                    tmp_vals = [tmp_vals 0.2523 0.0739 0.4059 1.6429 0.9409 1.4575];
                   end
               end
               s_params{2} = tmp_vals;
-              params{6, 1} = [2 4 fixed_parameter+4];
+              params{6, 1} = [2 4 fixed_parameter+4 length(tmp_vals)+3];
 
             elseif (starts(s) == 'T')
 
