@@ -1192,11 +1192,13 @@ function figs_msb(num)
           nparams(i) = vals{i,2}{indx,2}.params.nparams - sum(vals{i,1}{1}.fixed_parameter);
           params{i,2} = vals{i,1}{1}.fixed_parameter;
         else
-          keyboard
+          param_set(i,:) = NaN;
         end
       end
 
       [param_set, indx] = sortrows(param_set);
+      goods = ~any(isnan(param_set),2);
+      indx = indx(goods);
       score = score(indx);
       nparams = nparams(indx);
       params = params(indx,:);

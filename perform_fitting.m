@@ -131,6 +131,32 @@ function perform_fitting(selection, roundit)
       param_set = 24;
       params{2} = 'fit_temp_indep';
       params{4} = 'extended_model';
+    case 6.3
+      files = {'1056-temps-all.mat'};
+      repeats = 2;
+      init_noise = [0 0.5 1];
+      starts = 'O';
+      param_set = 15;
+      params{2} = 'fit_flows';
+      params{4} = 'extended_model';
+    case 6.4
+      files = {'1056-temps-all.mat'};
+      repeats = 2;
+      init_noise = [0 0.5 1];
+      starts = 'O';
+      param_set = 15;
+      params{2} = 'fit_flows';
+      params{4} = 'extended_model';
+      fixed_parameter = [5];
+    case 6.5
+      files = {'1056-temps-all.mat'};
+      repeats = 2;
+      init_noise = [0 0.5 1];
+      starts = 'O';
+      param_set = 15;
+      params{2} = 'fit_flows';
+      params{4} = 'extended_model';
+      fixed_parameter = [4 5];
     case 7
       perform_fitting(7.1,false);
       perform_fitting(7.2,false);
@@ -565,8 +591,12 @@ function perform_fitting(selection, roundit)
               tmp_opts = load_parameters('modeling', params{4});
               tmp_vals = tmp_opts.reaction_params([3:4],:);
               tmp_vals = [tmp_vals(:).' -3.9800 9.4600 0.3900];
+              fixed_parameter = fixed_parameter + 4;
 
               switch param_set(p)
+                case 15
+                  tmp_vals = [tmp_vals 0.2523 0.0739 0.9062 0.9409 1.4575];
+                  tmp_vals(fixed_parameter) = 0;
                 case 20
                   tmp_vals = [tmp_vals 0.4059 1.6429 0.9409 1.4575];
                 case 24
@@ -577,7 +607,7 @@ function perform_fitting(selection, roundit)
                   end
               end
               s_params{2} = tmp_vals;
-              params{6, 1} = [2 4 fixed_parameter+4 length(tmp_vals)];
+              params{6, 1} = [2 4 fixed_parameter length(tmp_vals)];
 
             elseif (starts(s) == 'T')
 
