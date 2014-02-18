@@ -200,138 +200,40 @@ function figs_msb(num)
 
     case 0.3
       load('data_expansion')
+      data = load('1056-all-all.mat');
 
-      %load('full_params');
-      %params = params(:,[1:4 end-5:end]);
+      [scores, results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'full_model', 'start_with_best', false, 'aligning_type', 'best', 'init_noise', false);
 
-      %new_vals = [1.55:0.05:1.95].';
-      %params(1,3) = 0.01;
+      count = 1;
+      for f = 1:size(all_data, 1)
+        for i = 1:size(all_data{f,2}, 1)
 
-%      params = repmat(params(1,:), length(new_vals), 1);
-%      params = [params new_vals];
+          domain = results{count, 1};
 
-%      params = [interp1([1 5], params([1 3], 1:4), [1:5]) repmat(params(1,5:end), 5, 1)];
-%      params = params(3:end,:);
-%      params = params(4,:);
-%      new_vals = [0.8:0.1:1.2].';
-%      params = repmat(params, length(new_vals), 1);
-%      params(:,3) = params(:,3) .* new_vals;
+          domain = domain((end/2)+1:end, :).';
+          domain = [domain domain(:,end-1:-1:1)];
 
-      %params = params(1:3,:);
+          [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
 
-      %{
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'; 'scale_flow'; 'extrapol_z'}, {'type', '1056-med-scale'});
-      vals = [vals; group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'; 'scale_flow'; 'extrapol_z'}, {'type', '1056-med-all'})];
+          norig = length(all_data{f,3}{i,1})-1;
+          nprofile = length(profile)-1;
+          profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
+          dwidth = mymean(results{count,2}(end-nframes+1:end));
 
-      values = extract_model_parameters(vals, true);
-      params = NaN(0, 5);
-      fit_scores = NaN(0, 1);
-      extrapols = true(0, 1);
-    
-      for i=1:size(values, 1)
-        for j=1:size(values{i,2}, 1)
-          if (isempty(values{i,1}{1}.scale_flow))
-            params(end+1,:) = [values{i,2}{j,2}.params.rate values{i,2}{j,2}.params.scale_flow];
-          else
-            params(end+1,:) = [values{i,2}{j,2}.params.rate 0];
-          end
-          fit_scores(end+1,1) = values{i,2}{j,2}.score;
-          extrapols(end+1,1) = values{i,1}{1}.extrapol_z;
+          all_data{f,2}(i,1) = min(2*dwidth, all_data{f,2}(i,2));
+          all_data{f,3}{i,1} = profile;
+          all_data{f,3}{i,2} = [path(:) results{count, 2}(:)];
+
+          disp([num2str(i) '/' num2str(size(all_data{f,2},1))]);
+
+          count = count + 1;
         end
       end
-      %}
 
-%      params = [0.19 1 2 2; 0.00556 2.161 0.0307 2.013; 0.00596 2.038 0.0304 1.835];
+      all_simul = {all_data};
+      temperatures = data.temperatures;
 
-      %params = [0.0116 2.1571 0.0658 2.1871 1.4575; ...
-      %          0.0116 2.1571 0.0658 2.1871 2; ...
-      %          0.0116 2.1571 0.0658 2.1871 3; ...
-      %          0.0116 2.1571 0.0658 2.1871 4]
-      params = [0.00769 2.197 0.0314 2.202 0; ...
-                0.0116 2.1571 0.0658 2.1871 0; ...
-                0.0116 2.1571 0.0658 2.1871 1.4575]
-
-      %params(end+1,:) = [0.0116 2.1571 0.0658 2.1871 0];
-      %extrapols(end+1,1) = true;
-      d = load('all_offsets');
-      params = [params(:, 1:4), repmat(d.all_offsets(:).', size(params,1), 1), params(:, end)];
-
-      %params = params(2,:);
-
-      %params = params(end,:);
-      %new_vals = [0:3].';
-
-      %params = [repmat(params, length(new_vals), 1) new_vals];
-
-      %params(end) = 0.8;
-      %params(end-4) = 0.05;
-      %params(:, end-5:end) = repmat([0 0 1 1 1 1], size(params,1), 1);
-
-      full_params = {};
-      for i=1:size(params, 1)
-        full_params{end+1} = params(i,:);
-      end
-
-      scores = NaN(length(full_params), 1);
-
-      for p = 1:length(full_params)
-
-        params = full_params{p};
-
-        scale_flow = false;
-
-        switch length(params)
-          case 144
-            param_set = 2;
-
-          case 145
-            param_set = 2;
-            scale_flow = true;
-
-          % Parameter set 24
-          case 150
-            param_set = 24;
-
-          % Parameter set 30
-          case 160
-            param_set = 30;
-
-          otherwise
-            warning('Unknown parameter length.')
-            continue;
-        end
-
-        [scores(p), results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'start_with_best', false, 'parameter_set', param_set, 'init_pos', params, 'scale_flow', scale_flow);
-
-        count = 1;
-        for f = 1:size(all_data, 1)
-          for i = 1:size(all_data{f,2}, 1)
-
-            domain = results{count, 1};
-
-            domain = domain((end/2)+1:end, :).';
-            domain = [domain domain(:,end-1:-1:1)];
-
-            [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
-
-            norig = length(all_data{f,3}{i,1})-1;
-            nprofile = length(profile)-1;
-            profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
-            dwidth = mymean(results{count,2}(end-nframes+1:end));
-
-            all_data{f,2}(i,1) = min(2*dwidth, all_data{f,2}(i,2));
-            all_data{f,3}{i,1} = profile;
-            all_data{f,3}{i,2} = [path(:) results{count, 2}(:)];
-
-            disp([num2str(i) '/' num2str(size(all_data{f,2},1)) ':' num2str(p)]);
-
-            count = count + 1;
-          end
-        end
-        all_simul{p} = all_data;
-      end
-
-      save('simul_optimized', 'all_simul', 'temperatures', 'full_params');
+      save('simul_optimized', 'all_simul', 'temperatures');
 
       keyboard
 
@@ -2916,6 +2818,7 @@ function figs_msb(num)
       targets = {'good_13.txt';'good_20.txt';'good_24.txt'};
 
       for p=1:length(data.all_simul)
+        indexes = cumsum(cellfun(@(x)(size(x,1)), data.all_simul{p}(:,2)));
         all_data = cell(3, 3);
         for f=1:size(data.all_simul{p}, 1)
           files = data.all_simul{p}{f,3};
@@ -2947,7 +2850,7 @@ function figs_msb(num)
         end
 
         [junk, indxs] = ismember(targets, data.all_simul{p}(:,1));
-        temperatures = data.temperatures(indxs)
+        temperatures = data.temperatures(indexes(indxs));
         all_data = all_data(indxs,:);
         pos = cell(1,3);
 
@@ -3281,7 +3184,7 @@ function figs_msb(num)
       [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.00769 2.197 0.0314 2.202]);
       [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.0116 2.1571 0.0658 2.1871]);
       [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'extended_model', 'aligning_type', 'best', 'start_with_best', false);
-      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_flows', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.002535 2.1571 0.014496 2.1871 0.2523 0.0739 0.9062 0.9409 1.4575], 'parameter_set', 15);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_flows', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.002684 2.1571 0.0151 2.1871 0.3045 0 0.8478 0.8772 1.4575], 'parameter_set', 15);
 
       load('1056-24-all.mat');
       nlayers = size(ground_truth, 3);

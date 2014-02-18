@@ -976,15 +976,17 @@ function uuids = fit_kymograph(fitting, opts)
             tmp_res = res;
             tmp_res(isnan(res)) = 0;
 
+            tmp_truth = inpaint_nans(mymean(fitting.ground_truth{g}, 3));
+
             if (length(t) < size_data(g,2))
-              cc = normxcorr2(tmp_res, mymean(fitting.ground_truth{g}, 3)); 
+              cc = normxcorr2(tmp_res, tmp_truth); 
               cc2 = normxcorr2(tmp_frac, gfraction{g}); 
 
               [max_cc, imax] = max(cc(size(res, 1), 1:2*size(res,2)));
               [max_cc, imax2] = max(cc2(1:2*size(res,2)));
               corr_offset = ((imax-size(res,2))*fitting.score_weights + (imax2-size(res,2))) / (1 + fitting.score_weights);
             else
-              cc = normxcorr2(mymean(fitting.ground_truth{g}, 3), tmp_res); 
+              cc = normxcorr2(tmp_truth, tmp_res); 
               cc2 = normxcorr2(gfraction{g}, tmp_frac); 
 
               [max_cc, imax] = max(cc(size_data(g,1), 1:2*size_data(g,2)));

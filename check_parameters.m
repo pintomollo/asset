@@ -654,15 +654,56 @@ function [score, results] = test_kymograph(fitting, opts)
     penalty(g) = ((max(linear_truth{g}(linear_goods{g})))^2)*opts.nparticles;
     ndata(g) = length(fitting.x_pos{g});
 
-    if (fit_temperatures)
+    if (fit_temperatures || ~isempty(opts.temperature_params))
+
       kB = 8.6173324e-5;
-      E = 0.65;
-      visc_E = 0;
       C2K = 273.15;
-      diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K));
-      ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
-      temp_scale{g} = [ones(1,2)*diff_ratio; ones(3,2)*ratio; ones(4,2)];
-      flow_scale(g) = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+
+      switch length(opts.temperature_params)
+        case 0
+          E = ones(3,2)*0.65;
+          flow_E = 0.65;
+          visc_E = 0.65;
+        case 1
+          E = ones(3,2)*opts.temperature_params;
+          flow_E = E(1);
+          visc_E = E(1);
+        case 2
+          E = ones(3,2)*opts.temperature_params(1);
+          flow_E = opts.temperature_params(1);
+          visc_E = opts.temperature_params(2);
+        case 3
+          E = ones(3,2)*opts.temperature_params(1);
+          flow_E = opts.temperature_params(2);
+          visc_E = opts.temperature_params(3);
+        otherwise
+          if (fit_temperatures)
+            warning('Temperature parameters provided in the configuration file does not correspond to a temeprature model, ignoring them');
+
+            E = ones(3,2)*0.65;
+            flow_E = 0.65;
+            visc_E = 0.65;
+          else
+            opts.temperature_params = [];
+            E = NaN;
+          end
+      end
+
+      if (numel(opts.temperature_params) == numel(fit_energy))
+        fit_energy = opts.temperature_params;
+      end
+
+      if (isfinite(E))
+        fit_temperatures = true;
+
+        diff_ratio = ((fitting.temperature(g)+C2K) / (opts.reaction_temperature+C2K)) * ...
+                     exp(-(visc_E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
+        ratio = exp(-(E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.reaction_temperature+C2K))));
+        flow_ratio = exp(-(flow_E/kB)*((1/(fitting.temperature(g)+C2K)) - (1/(opts.flow_temperature+C2K))));
+
+        temp_scale{g} = [ones(1,2)*diff_ratio; ratio; ones(4,2)];
+        flow_scale(g) = flow_ratio;
+      end
     else
       E = [];
     end
@@ -993,18 +1034,28 @@ function [score, results] = test_kymograph(fitting, opts)
 
         switch fitting.aligning_type
           case 'best'
+            tmp_frac = fraction;
+            tmp_frac(isnan(fraction)) = 0;
+
+            tmp_res = res;
+            tmp_res(isnan(res)) = 0;
+
+            tmp_truth = inpaint_nans(mymean(fitting.ground_truth{g}, 3));
+
             if (length(t) < size_data(g,2))
-              cc = normxcorr2(res, mymean(fitting.ground_truth{g}, 3)); 
+              cc = normxcorr2(tmp_res, tmp_truth); 
+              cc2 = normxcorr2(tmp_frac, gfraction{g}); 
 
               [max_cc, imax] = max(cc(size(res, 1), 1:2*size(res,2)));
-              corr_offset = -(imax-size(res, 2));
-            elseif (all(isfinite(res)))
-              cc = normxcorr2(mymean(fitting.ground_truth{g}, 3), res); 
+              [max_cc, imax2] = max(cc2(1:2*size(res,2)));
+              corr_offset = ((imax-size(res,2))*fitting.score_weights + (imax2-size(res,2))) / (1 + fitting.score_weights);
+            else
+              cc = normxcorr2(tmp_truth, tmp_res); 
+              cc2 = normxcorr2(gfraction{g}, tmp_frac); 
 
               [max_cc, imax] = max(cc(size_data(g,1), 1:2*size_data(g,2)));
-              corr_offset = (imax-size_data(g,2));
-            else
-              corr_offset = 0;
+              [max_cc, imax2] = max(cc2(1:2*size_data(g,2)));
+              corr_offset = ((imax-size_data(g,2))*fitting.score_weights + (imax2-size_data(g,2))) / (1 + fitting.score_weights);
             end
           case 'domain'
             if (size(res,2) <= 10)
