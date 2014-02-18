@@ -335,6 +335,86 @@ function figs_msb(num)
 
       keyboard
 
+    case 0.4
+      opts = get_struct('modeling');
+      opts = load_parameters(opts, 'goehring.txt');
+
+      %ratios = [1.56 [1.5:-0.1:1.3]];
+      ratios = [1.56:-0.1:1.2];
+
+      data = load('1056-24-all.mat');
+      domains = cell(length(data), 1);
+
+      flow = opts.advection_params;
+      if (size(flow, 1) ~= opts.nparticles)
+        [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:opts.nparticles-1]*(size(flow, 1)-1)/(opts.nparticles-1)).');
+        flow = bilinear_mex(flow, X, Y, [2 2]);
+      end
+
+      egg_size = opts.axes_length;
+      cell_width = 2*max(data.pos);
+
+      egg_size = sort(egg_size, 'descend');
+      convert = get_struct('z-correlation');
+      egg_size(3,:) = convert.bkg + convert.long_axis*egg_size(1,:) + convert.short_axis*egg_size(2,:);
+
+      egg_size(1) = ellipse_circum(egg_size, cell_width, true);
+
+      opts.axes_length = egg_size;
+
+      opts.reaction_params(end-1,:) = surface2volume(opts.axes_length);
+      opts.reaction_params(end, :) = 0.5*ellipse_circum(opts.axes_length);
+
+      opts.boundaries = [0 opts.reaction_params(end,1)];
+      opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
+
+      corr_offset = 8;
+      half = ((length(data.pos)-1)/2)+1;
+
+      for i=1:length(ratios)
+
+        opts.reaction_params(5,1) = ratios(i);
+
+        x0 = opts.init_func(opts, false);
+
+        ml_params = [opts.diffusion_params; ...
+                      opts.reaction_params];
+
+        [res, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+
+        %keyboard
+
+        %res = res((end/2)+1:end, :);
+        %res = flipud(interp1q([0:size(res, 1)].'*opts.x_step, flipud(res), data.pos(half:end).'));
+
+        res = flipud(interp2(flipud(res), [1:size(data.ground_truth, 1)]+corr_offset, data.pos(half:end).'/opts.x_step + 1));
+
+        %domain = domain((end/2)+1:end, :).';
+        domain = res.';
+        domain = imnorm([domain domain(:,end-1:-1:1)]);
+
+        domains{i} = domain;
+
+        figure;imagesc(domain);title(num2str(ratios(i)));
+        colormap(blueredmap)
+
+        %figure;
+        %find_kymograph('1056-24-all.mat', opts, 'config_fitting', 'fit_kymo', 'display', true, 'aligning_type', 'best', 'init_noise', 0)
+
+        disp([num2str(i) '/' num2str(length(ratios))]);
+      end
+
+      %[profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
+      %norig = length(all_data{f,3}{i,1})-1;
+      %nprofile = length(profile)-1;
+      %profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
+
+      %all_data{f,2}(i,1) = 2*max_width * opts.x_step/opts_expansion.quantification.resolution;
+      %all_data{f,3}{i,1} = profile;
+      %all_data{f,3}{i,2} = path;
+
+      keyboard
+
     case 1
       files = dir('stainings/*.txt');
       nfiles = length(files);
@@ -615,7 +695,8 @@ function figs_msb(num)
       t0 = 35; % corr_offset + yindx in the next find_kymograph
 
       advection_params = getfield(load('cyto_flow.mat', 'flow3'), 'flow3');
-      figure;imagesc([-advection_params advection_params(:,[end-1:-1:1])])
+      flows = [-advection_params advection_params(:,[end-1:-1:1])];
+      figure;imagesc(flows)
       pos_indx = fliplr([size(advection_params,2):-25:1]);
       pos_indx = [pos_indx(1:end-1) pos_indx(end):25:size(advection_params,2)*2-1];
       pos = [1:2*size(advection_params,2)-1]-size(advection_params,2);
@@ -629,7 +710,9 @@ function figs_msb(num)
 
       %figure;find_kymograph('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'goehring', 'init_noise', 0, 'display', true, 'aligning_type', 'best');
 
-      figure;find_kymograph('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'init_noise', 0, 'display', true, 'aligning_type', 'best');
+      %figure;find_kymograph('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'init_noise', 0, 'display', true, 'aligning_type', 'best');
+
+      keyboard
 
     case 6
 
@@ -1114,7 +1197,7 @@ function figs_msb(num)
 
     case 7
       %vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'fitting_type', 'cmaes'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
-      vals = group_ml_results('LatestFits/ToCheck/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true; 'scale_flow', true});
+      vals = group_ml_results('ScaledFlowFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true; 'scale_flow', true});
 
       data = load('1056-temps-all.mat');
       npts = sum(cellfun(@(x)(size(x,1)), data.ground_truth));
@@ -1142,7 +1225,7 @@ function figs_msb(num)
           ind = 10*ind(1) + ind(2);
         end
 
-        param_set(i,:) = [vals{i,1}{1}.parameter_set ind vals{i,1}{1}.fit_model vals{i,1}{1}.scale_flow];
+        param_set(i,:) = [vals{i,1}{1}.parameter_set ind vals{i,1}{1}.fit_model vals{i,1}{1}.fixed_parameter(end)];
         best = Inf;
         indx = 0;
         for j=1:size(vals{i,2}, 1)
@@ -3187,7 +3270,117 @@ function figs_msb(num)
       end
 
       keyboard
+    case 11
+      %vals = group_ml_results('ScaledFlowFits/adr-kymo-*_evol.dat', {'type', '1056-24-all'}, {'simulation_parameters';'flow_size';'init_pos'});
 
+      score = NaN(0,1);
+      results = cell(0,2);
+
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'goehring', 'aligning_type', 'best', 'start_with_best', false);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.00769 2.197 0.0314 2.202]);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.0116 2.1571 0.0658 2.1871]);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'extended_model', 'aligning_type', 'best', 'start_with_best', false);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_flows', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.002535 2.1571 0.014496 2.1871 0.2523 0.0739 0.9062 0.9409 1.4575], 'parameter_set', 15);
+
+      load('1056-24-all.mat');
+      nlayers = size(ground_truth, 3);
+      tmp_plot_truth = mymean(ground_truth,3).';
+
+      boundary = (size(ground_truth,2)-1)/2;
+      ground_truth = permute([ground_truth(:, 1:boundary+1, :), ground_truth(:,end:-1:boundary+1, :)], [2 1 3]);
+      pos = pos(boundary+1:end);
+
+      opts_expansion = load_parameters(get_struct('ASSET'), 'domain_expansion.txt');
+
+      [f, frac_width, full_width] = domain_expansion(mymean(ground_truth(1:end/2, :, :), 3).', mymean(ground_truth((end/2)+1:end, :, :), 3).', size(ground_truth,1)/2, size(ground_truth,2), opts_expansion);
+      tmp_gfrac = f*frac_width;
+      tmp_gfrac(isnan(tmp_gfrac)) = 0;
+      gfraction = tmp_gfrac;
+
+      max_err = NaN(length(score), 1);
+      residuals = cell(length(score), 1);
+
+      for i=1:length(score)
+        res = results{i,1};
+        fraction = results{i,2};
+        tmp_err = (ground_truth - repmat(res, [1 1 nlayers])).^2;
+
+        tmp_plot_avg = res.';
+        tmp_plot_err = mymean(tmp_err,3).';
+
+        residuals{i} = tmp_plot_err;
+        max_err(i) = max(tmp_plot_err(:));
+
+        tmp_plot_frac = fraction;
+        tmp_plot_frac(1:find(tmp_plot_frac, 1, 'first')-1) = NaN;
+        tmp_plot_gfrac = gfraction;
+        tmp_plot_gfrac(1:find(tmp_plot_gfrac, 1, 'first')-1) = NaN;
+
+        yindx = find(tmp_plot_gfrac>0, 1, 'first');
+        y_tick = unique([fliplr([yindx:-20:1]) yindx:20:size(tmp_plot_avg,1)]);
+        y_labels = (y_tick - yindx)*10;
+
+        xfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_frac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_frac];
+        xgfrac = [(size(tmp_plot_err, 2)/2)-2*tmp_plot_gfrac(end:-1:1); (size(tmp_plot_err, 2)/2)+2*tmp_plot_gfrac];
+        yfrac = [size(tmp_plot_err, 1):-1:1 1:size(tmp_plot_err,1)].';
+
+        tmp_pos_tick = [0:50:(size(tmp_plot_err,2)/2 - 1)];
+        tmp_pos_label = pos(tmp_pos_tick + 1);
+        tmp_pos_tick = [-tmp_pos_tick(end:-1:2) tmp_pos_tick] + (size(tmp_plot_err,2)/2);
+        tmp_pos_label = [-tmp_pos_label(end:-1:2) tmp_pos_label];
+
+        figure;
+        hax = subplot(1,3,1, 'NextPlot', 'replace');
+        %hold off;
+        imagesc([tmp_plot_avg(:,1:end/2) tmp_plot_avg(:,end:-1:(end/2)+1)], 'Parent', hax);
+        set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
+                 'YTick', y_tick, 'YTickLabel', y_labels, ...
+                 'NextPlot', 'add')
+        colormap(hax, blueredmap)
+        plot(hax, xfrac, yfrac, 'Color', [83 83 83]/255);
+
+        hax = subplot(1,3,2, 'NextPlot', 'replace');
+        %hold off;
+        %imagesc(mymean(tmp_err, 3));
+        imagesc([tmp_plot_err(:,1:end/2) tmp_plot_err(:,end:-1:(end/2)+1)], 'Parent', hax);
+        set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
+                 'YTick', y_tick, 'YTickLabel', y_labels, ...
+                 'NextPlot', 'add')
+        colormap(hax, redblackmap)
+
+        title(score(i));
+        %hold on;
+        %plot((size(tmp_err, 2)/2)-2*gfraction{g}, 1:size(tmp_err,1), 'k');
+        %plot((size(tmp_err, 2)/2)+2*gfraction{g}, 1:size(tmp_err,1), 'k');
+        %plot((size(tmp_err, 2)/2)-2*fraction, 1:size(tmp_err,1), 'w');
+        %plot((size(tmp_err, 2)/2)+2*fraction, 1:size(tmp_err,1), 'w');
+        plot(hax, xfrac, yfrac, 'Color', [83 83 83]/255);
+        plot(hax, xgfrac, yfrac, 'Color', [83 83 83]/255);
+
+        hax = subplot(1,3,3, 'NextPlot', 'replace');
+        %hold off;
+        imagesc(tmp_plot_truth.', 'Parent', hax);
+        %set(gca, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label);
+        %set(gca, 'YTick', y_tick, 'YTickLabel', y_labels);
+        set(hax, 'XTick', tmp_pos_tick, 'XTickLabel', tmp_pos_label, ...
+                 'YTick', y_tick, 'YTickLabel', y_labels, ...
+                 'NextPlot', 'add')
+        colormap(hax, blueredmap)
+        %hold on
+        plot(hax, xgfrac, yfrac, 'Color', [83 83 83]/255);
+      end
+
+      for i=1:length(max_err)
+        figure;
+        colormap(redblackmap);
+        for j=1:length(residuals);
+          subplot(2,3,j);
+          imagesc([residuals{j}(:,1:end/2) residuals{j}(:,end:-1:(end/2)+1)], [0 max_err(i)]);
+        end
+      end
+
+      keyboard
   end
 
   return;

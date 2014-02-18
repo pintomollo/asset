@@ -86,8 +86,12 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
               tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             else
               tmp_pts = NaN(npts, nfixed);
-              beep;pause(0.5);beep
-              beep;keyboard
+              tmp_mut = reshape(fitting.simulation_parameters, [], 2);
+              tmp_pts(:,1:nparams) = repmat(tmp_mut(fit_params), npts, 1);
+              if (fitting.scale_flow)
+                tmp_pts(:,end) = opts.scale_params(1);
+              end
+              tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             end
 
             pts = [pts(:,1), tmp_pts];
