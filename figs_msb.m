@@ -7,6 +7,7 @@ function figs_msb(num)
   colors = 'gbrcmyk';
   black = ones(1,3)*37/255;
 
+  rescale_size = [400 700];
   thresh = [0 0.775];
   nframes = 25;
   ntails = 20;
@@ -202,38 +203,47 @@ function figs_msb(num)
       load('data_expansion')
       data = load('1056-all-all.mat');
 
-      [scores, results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'full_model', 'start_with_best', false, 'aligning_type', 'best', 'init_noise', false);
+      %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
+      models = {'extended_model', 'test_model', 'final_model'};
+      all_simul = cell(length(models), 1);
+      scores = NaN(length(models), 1);
 
-      count = 1;
-      for f = 1:size(all_data, 1)
-        for i = 1:size(all_data{f,2}, 1)
+      %[scores, results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'full_model', 'start_with_best', false, 'aligning_type', 'best', 'init_noise', false);
 
-          domain = results{count, 1};
+      for p=1:length(models)
+        [scores(p), results] = check_parameters('1056-all-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', models{p}, 'start_with_best', false, 'aligning_type', 'best', 'init_noise', false);
 
-          domain = domain((end/2)+1:end, :).';
-          domain = [domain domain(:,end-1:-1:1)];
+        count = 1;
+        for f = 1:size(all_data, 1)
+          for i = 1:size(all_data{f,2}, 1)
 
-          [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
+            domain = results{count, 1};
 
-          norig = length(all_data{f,3}{i,1})-1;
-          nprofile = length(profile)-1;
-          profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
-          dwidth = mymean(results{count,2}(end-nframes+1:end));
+            domain = domain((end/2)+1:end, :).';
+            domain = [domain domain(:,end-1:-1:1)];
 
-          all_data{f,2}(i,1) = min(2*dwidth, all_data{f,2}(i,2));
-          all_data{f,3}{i,1} = profile;
-          all_data{f,3}{i,2} = [path(:) results{count, 2}(:)];
+            [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
 
-          disp([num2str(i) '/' num2str(size(all_data{f,2},1))]);
+            norig = length(all_data{f,3}{i,1})-1;
+            nprofile = length(profile)-1;
+            profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
+            dwidth = mymean(results{count,2}(end-nframes+1:end));
 
-          count = count + 1;
+            all_data{f,2}(i,1) = min(2*dwidth, all_data{f,2}(i,2));
+            all_data{f,3}{i,1} = profile;
+            all_data{f,3}{i,2} = [path(:) results{count, 2}(:)];
+
+            disp([num2str(i) '/' num2str(size(all_data{f,2},1))]);
+
+            count = count + 1;
+          end
         end
-      end
 
-      all_simul = {all_data};
+        all_simul{p} = all_data;
+      end
       temperatures = data.temperatures;
 
-      save('simul_optimized', 'all_simul', 'temperatures');
+      save('simul_optimized', 'all_simul', 'temperatures', 'scores');
 
       keyboard
 
@@ -441,45 +451,187 @@ function figs_msb(num)
 
       [H,P] = myttest(all_vals(:,1)./all_vals(:,3), all_vals(:,end))
 
-      %figure;subplot(2,3,4);
-      %{
-      all_vals = NaN(0,4);
-      for i=1:nfiles
-        tmp = importdata(['signal_quantif/' files(i).name]);
-        %good_vals = ismember(tmp.colheaders, 'Mean') | ismember(tmp.colheaders, 'Median');
-        good_vals = ismember(tmp.colheaders, objective);
+      %%%%%%%%%%%%%% Direct import from ImageJ to get percentiles
 
-        tmp = tmp.data(:, good_vals);
-        tmp = [tmp(1:2:end,:) - tmp(2:2:end,:) tmp(1:2:end,:) tmp(2:2:end,:)];
-        names{i,1} = files(i).name(1:find(files(i).name=='_')-1);
-        group = ones(size(tmp,1), 1)*i;
-        all_vals = [all_vals; [tmp group]];
+      files = dir('stainings/*.tif');
+      nfiles = length(files);
+      names = cell(nfiles, 1);
+
+      prct = 75;
+      all_vals = NaN(0, 5);
+      all_vals2 = NaN(0, 5);
+      all_data = cell(nfiles, 2);
+
+      file = dir('stainings/1056*.tif');
+
+      fname = ['stainings/' file(1).name];
+      roi_name = dir(['stainings/1056*.zip']);
+      rois = ReadImageJROI(fullfile(pwd, ['stainings/' roi_name(1).name]));
+
+      img = double(load_data(fname, 1));
+      img(img == 0) = NaN;
+      noise = estimate_noise(img);
+
+      ranges = NaN(1, 4);
+      for j=1:4
+        ranges = [min(ranges(1:2), rois{j}.vnRectBounds(1:2)) max(ranges(3:4), rois{j}.vnRectBounds(3:4))];
+      end
+      cntr = round(mean([ranges(1:2);ranges(3:4)]));
+      cntr = cntr([2 1])
+
+      figure;
+      imshow(realign(imnorm(img-noise(1)),rescale_size,cntr,0));
+      hold on
+
+      %figure;
+      for j = 1:4
+        curr_roi = (rois{j}.vfShapes);
+
+        for k = 1:length(curr_roi)
+          plot(curr_roi{k}(:,1)-cntr(1)+rescale_size(2)/2, curr_roi{k}(:,2)-cntr(2)+rescale_size(1)/2);
+        end
       end
 
-      ref = find(ismember(names, '1054'));
-      avg = mean(all_vals(all_vals(:,end)==ref, :));
+      if (exist('stainings.mat', 'file') == 2)
+        data = load('stainings.mat');
+        all_noise = cat(1, data.all_data{:,1});
+        noise = mymean(all_noise);
 
-      subplot(2,3,4);
-      boxplot(100*all_vals(:,1)/avg(1), all_vals(:,end), 'labels', names);
-      title('Membrane minus background');
-      subplot(2,3,5);
-      boxplot(100*(all_vals(:,2) ./ all_vals(:,3))*(avg(3)/avg(2)), all_vals(:,end), 'labels', names);
-      title('Membrane over bkg');
-      subplot(2,3,6);
-      boxplot(100*all_vals(:,2)/avg(2), all_vals(:,end), 'labels', names);
-      title('Membrane signal');
-      %}
+        prct = [0 25 50 75];
 
-      %scores = NaN(nfiles);
-      %for i=1:nfiles
-      %  for j=i+1:nfiles
-      %    [junk, scores(i,j)] =  ttest2(all_vals(all_vals(:,end)==i,1), all_vals(all_vals(:,end)==j,1));
-      %    [junk, scores(j,i)] =  ttest2(all_vals(all_vals(:,end)==i,2), all_vals(all_vals(:,end)==j,2));
-      %  end
-      %end
-      %[H,P] = myttest(all_vals(:,1), all_vals(:,end))
-      %[H,P] = myttest(all_vals(:,2)./all_vals(:,3), all_vals(:,end))
-      %[H,P] = myttest(all_vals(:,2), all_vals(:,end))
+        for p=prct
+          for i=1:nfiles
+            pts = data.all_data{i,2};
+            [nimg, nvals] = size(pts);
+            all_pts = NaN(nimg, nvals);
+            all_pts2 = all_pts;
+
+            for n=1:nimg
+              for j=1:nvals
+                tmp = pts{n,j};
+                thresh = prctile(tmp, [p 99.5]);
+                all_pts(n, j) = mean(tmp(tmp>thresh(1) & tmp<thresh(2))) - noise(1);
+              end
+            end
+
+            all_vals = [all_vals; [all_pts ones(nimg, 1)*i]];
+          end
+
+          val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) / noise(2);
+          m = mymean(val, 1, all_vals(:,end));
+          val = (val - m(4)) / (m(5) - m(4));
+
+          figure;subplot(1,3,1);
+          boxplot(val, all_vals(:,end))
+          title('signal cortex')
+
+          val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) ./ all_vals(:,4);
+          m = mymean(val, 1, all_vals(:,end));
+          val = (val - m(4)) / (m(5) - m(4));
+
+          subplot(1,3,2)
+          boxplot(val, all_vals(:,end))
+          title('signal cortex to cyto')
+
+          val = all_vals(:,1);
+          m = mymean(val, 1, all_vals(:,end));
+          val = (val - m(4)) / (m(5) - m(4));
+
+          subplot(1,3,3)
+          boxplot(val, all_vals(:,end))
+          title('all signal')
+
+          mtit(num2str(p))
+
+        end
+
+        keyboard
+      else
+        for i=1:nfiles
+          fname = ['stainings/' files(i).name];
+          names{i,1} = files(i).name(1:find(files(i).name=='_')-1);
+
+          [nimg, size_img] = size_data(fname);
+          roi_name = dir(['stainings/' names{i,1} '*.zip']);
+          rois = ReadImageJROI(fullfile(pwd, ['stainings/' roi_name(1).name]));
+
+          all_pts = NaN(nimg, 3);
+
+          pixels = cell(nimg, 1);
+          noises = NaN(nimg, 4);
+
+          for n=1:nimg
+            img = double(load_data(fname, n));
+            img(img == 0) = NaN;
+            noise = estimate_noise(img);
+            indx = (n-1)*4;
+
+            noises(n,:) = noise;
+
+            data = NaN(4,4);
+
+            %figure;
+            for j = 1:4
+              curr_roi = (rois{indx+j}.vfShapes);
+              mask = false(size_img);
+
+              for k = 1:length(curr_roi)
+                mask = mask | roipoly(mask, curr_roi{k}(:,1), curr_roi{k}(:,2));
+              end
+
+              pts = img(mask);
+              thresh = prctile(pts, prct);
+              data(1, j) = mean(pts(pts>thresh));
+              data(2, j) = rois{indx+j}.vnRectBounds(2);
+              data(3, j) = thresh;
+              data(4, j) = k;
+
+              pixels{n, j} = pts;
+              %subplot(2,4, (j-1)*2 + 1);imshow(mask);
+              %subplot(2,4, (j-1)*2 + 2);hist(pts);
+            end
+            data(1,:) = data(1,:) - noise(1);
+
+            cyto = data(1:2, data(4,:) >= 5);
+            pts_indx = find(data(4,:)>=5);
+            if (cyto(2,1) < cyto(2,2))
+              a_cyto = cyto(1,1);
+              p_cyto = cyto(1,2);
+              pts_indx = pts_indx([2 1]);
+            else
+              a_cyto = cyto(1,2);
+              p_cyto = cyto(1,1);
+            end
+
+            cortex = data(1:2, data(4,:) < 5);
+            if (cortex(2,1) < cortex(2,2))
+              a_cortex = cortex(1,1);
+              p_cortex = cortex(1,2);
+              pts_indx = [fliplr(find(data(4,:) < 5)) pts_indx];
+            else
+              a_cortex = cortex(1,2);
+              p_cortex = cortex(1,1);
+              pts_indx = [find(data(4,:) < 5) pts_indx];
+            end
+
+            pixels(n,:) = pixels(n, pts_indx);
+
+            dint = (p_cyto - a_cyto);
+            all_pts(n, :) = [(p_cortex - dint) a_cortex a_cyto];
+
+            disp([num2str(n) '/' num2str(nimg)]);
+          end
+
+          all_data{i, 1} = noises;
+          all_data{i, 2} = pixels;
+          all_vals = [all_vals; [all_pts ones(nimg, 1)*i]];
+          disp([num2str(i) '/' num2str(nfiles)]);
+        end
+
+        save('stainings.mat', 'all_data')
+
+        keyboard
+      end
 
       targets = {'good_24.txt'; 'good_20.txt'; 'good_13.txt'; 'good_c27d91.txt'; 'good_ani2.txt'};
       data = load('data_expansion.mat');
@@ -488,12 +640,6 @@ function figs_msb(num)
 
       all_sizes = NaN(0,4);
       for i=1:length(targets)
-        %files = textread(all_files{i}, '%s');
-        %tmp_size = NaN(length(files), 3);
-        %for j=1:length(files)
-        %  load(files{j});
-        %  tmp_size(j,:) = 2*mymovie.metadata.axes_length_3d.';
-        %end
         tmp_size = 2*all_data{i}(:,3:5);
         group = ones(size(tmp_size,1), 1)*i;
         all_sizes = [all_sizes; [tmp_size group]];
@@ -1338,7 +1484,6 @@ function figs_msb(num)
       keyboard
 
     case 4
-      rescale_size = [400 700];
 
       files = {'1056-ani2-290612_3_.mat', '1056-24-090311_11_.mat', '1056-c27d91-310712_1_.mat'};
       frames = [59, 64, 90];
@@ -1630,8 +1775,8 @@ function figs_msb(num)
       heights = find_cap_size(all_params(:,3:5).', all_params(:,1).');
       [caps_surface, caps_volume] = spheroidal_cap(all_params(:,3:5).', heights);
 
+      %{
       figure;
-
       subplot(2,3,1);
       ylim([0 1]);
       xlim([30 80]);
@@ -1675,6 +1820,44 @@ function figs_msb(num)
       title('Domain size vs membrane length, no intercept')
       xlabel('Membrane length (µm)');
       ylabel('Domain length (\mu m)')
+      %}
+
+      avgs = NaN(3, 4);
+      figure;
+
+      subplot(2,3,6);
+      myregress(all_params(:,2), all_params(:,1));
+      title('Domain size vs membrane length, no intercept')
+      xlabel('Membrane length (µm)');
+      ylabel('Domain length (\mu m)')
+      ylim([40 100]);
+      xlim([80 200]);
+
+      for i=1:3
+        all_params = all_data{i,2};
+
+        [means, stds] = mymean([all_params(:,2) all_params(:,1)]);
+
+        subplot(2,3,i);hold on
+        title(['N=' num2str(size(all_params,1))])
+        xlabel('Membrane length (µm)');
+        ylabel('Domain length (\mu m)')
+        ylim([40 100]);
+        xlim([80 200]);
+        errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
+        myregress(all_params(:,2), all_params(:,1), colors(i, :));
+
+        subplot(2,3,4);hold on
+        ylim([40 100]);
+        xlim([80 200]);
+        errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
+        myregress(all_params(:,2), all_params(:,1), colors(i, :));
+      end
+      title('ani-2, wt, C27D9.1')
+      xlabel('Egg length (µm)');
+      ylabel('Fraction (a.u.)')
+      ylim([40 100]);
+      xlim([80 200]);
 
       keyboard
 
@@ -2747,10 +2930,50 @@ function figs_msb(num)
 
         mtit('Simulation of membrane length fraction')
 
+
+        avgs = NaN(3, 4);
+        figure('Name', num2str(p));
+
+        subplot(2,3,6);
+        myregress(all_params(:,2), all_params(:,1), black, 'dx');
+        title('Domain size vs membrane length, no intercept')
+        xlabel('Membrane length (µm)');
+        ylabel('Domain length (\mu m)')
+        ylim([40 100]);
+        xlim([80 200]);
+
+        for i=1:3
+          all_params = all_data{i,2};
+
+          [means, stds] = mymean([all_params(:,2) all_params(:,1)]);
+
+          subplot(2,3,i);hold on
+          title(['N=' num2str(size(all_params,1))])
+          xlabel('Membrane length (µm)');
+          ylabel('Domain length (\mu m)')
+          ylim([40 100]);
+          xlim([80 200]);
+          errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
+          myregress(all_params(:,2), all_params(:,1), colors(i, :), 'dx');
+
+          subplot(2,3,4);hold on
+          ylim([40 100]);
+          xlim([80 200]);
+          errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
+          myregress(all_params(:,2), all_params(:,1), colors(i, :), 'dx');
+        end
+        title('ani-2, wt, C27D9.1')
+        xlabel('Egg length (µm)');
+        ylabel('Fraction (a.u.)')
+        ylim([40 100]);
+        xlim([80 200]);
+
+
         [ratios, surfaces, volumes] = surface2volume(all_params(:,3:5).');
         heights = find_cap_size(all_params(:,3:5).', all_params(:,1).');
         [caps_surface, caps_volume] = spheroidal_cap(all_params(:,3:5).', heights);
 
+        %{
         figure('Name', num2str(p));
 
         subplot(2,3,1);
@@ -2799,8 +3022,8 @@ function figs_msb(num)
         ylim([30 90])
         xlim([80 180])
 
-
         mtit('Simulations')
+        %}
       end
 
       keyboard
