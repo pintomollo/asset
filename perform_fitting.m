@@ -414,10 +414,10 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       %starts = mod(selection, 10);
-      starts = 7;
+      starts = 'D';
       param_set = 15;
       params{2} = 'refine_extended';
-      params{4} = 'extended_model';
+      params{4} = 'final_model';
       fixed_parameter = [2 4 145:149];
     case 26
       files = {'1056-all-all.mat'};
@@ -429,10 +429,10 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       %starts = mod(selection, 10);
-      starts = 7;
+      starts = 'D';
       param_set = 15;
       params{2} = 'refine_extended';
-      params{4} = 'extended_model';
+      params{4} = 'final_model';
       fixed_parameter = [2 4 149];
     case 27
       files = {'1056-all-all.mat'};
@@ -444,11 +444,41 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       %starts = mod(selection, 10);
-      starts = 7;
+      starts = 'D';
       param_set = 15;
       params{2} = 'fit_extended';
-      params{4} = 'extended_model';
+      params{4} = 'final_model';
       fixed_parameter = [2 4 145:149];
+    case 28
+      files = {'1056-all-all.mat'};
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
+      repeats = 1;
+      init_noise = 0;
+      %starts = mod(selection, 10);
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_extended';
+      params{4} = 'final_model';
+      fixed_parameter = [2 4 5:149];
+    case 29
+      files = {'1056-all-all.mat'};
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
+      repeats = 1;
+      init_noise = 0;
+      %starts = mod(selection, 10);
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_extended';
+      params{4} = 'final_model';
+      fixed_parameter = [2 4 5:144 149];
     case 30
       files = {'1056-24-all.mat'};
       repeats = 1;

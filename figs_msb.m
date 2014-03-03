@@ -204,7 +204,7 @@ function figs_msb(num)
       data = load('1056-all-all.mat');
 
       %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
-      models = {'extended_model', 'test_model', 'final_model'};
+      models = {'extended_model', 'test_model1', 'test_model2', 'full_model', 'final_model'};
       all_simul = cell(length(models), 1);
       scores = NaN(length(models), 1);
 
@@ -3235,26 +3235,88 @@ function figs_msb(num)
 
     case 8.3
 
-      data = load('data_expansion.mat');
-      simul = load('simul_optimized.mat');
+      colors = [179 205 227; ...
+                204 235 197; ...
+                251 180 174; ...
+                254 217 166; ...
+                222 203 228; ...
+                179 179 179; ...
+                55 126 184; ...
+                77 175 74; ...
+                228 26 28; ...
+                255 127 0; ...
+                152 78 163;
+                38 38 38]/255;
+
+
+      data = load('simul_optimized.mat');
+      ref = load('data_expansion.mat');
 
       groups = [];
-      all_ratios = NaN(0, length(simul.all_simul));
 
-      for i=1:size(data.all_data, 1)
-        ratios = data.all_data{i,2}(:,1) ./ data.all_data{i,2}(:,2);
+      for p=1:length(data.all_simul)
+        all_ratios = NaN(0, 7);
+        figure('Name', num2str(p));
 
-        for j=1:length(simul.all_simul)
-          ratios = [ratios, simul.all_simul{j}{i,2}(:,1) ./ simul.all_simul{j}{i,2}(:,2)];
+        for f=1:size(data.all_simul{p}, 1)
+          all_params = data.all_simul{p}{f,2};
+          all_data = ref.all_data{f,2};
+
+          all_values = [all_data(:,1) all_params(:,1) all_data(:,1)./all_data(:,2) all_params(:,1)./all_params(:,2)];
+          %all_values = [all_params(:,1) all_data(:,1) all_params(:,1)./all_params(:,2) all_data(:,1)./all_data(:,2)];
+
+          files = data.all_simul{p}{f,3};
+          nfiles = size(files,1);
+          for i=1:nfiles
+            tmp_indx = NaN(2, length(thresh));
+            fraction = files{i,2};
+            ref_frac = ref.all_data{f,3}{i,2};
+            for t=1:length(thresh)
+              tmp_indx(1, t) = find(fraction>=thresh(t), 1, 'first');
+              tmp_indx(2, t) = find(ref_frac>=thresh(t), 1, 'first');
+            end
+
+            all_values(i,5:6) = [(tmp_indx(2,2)-tmp_indx(2,1)) (tmp_indx(1,2)-tmp_indx(1,1))]*10;
+          end
+
+          intercept = ones(size(all_values,1), 1);
+          [means, stds] = mymean(all_values);
+
+          subplot(2,3,1);hold on
+          errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
+          myregress([intercept all_values(:,1)], all_values(:,2), colors(f, :));
+
+          subplot(2,3,2);hold on
+          errorbarxy(means(3), means(4), stds(3), stds(4)); hold on
+          myregress([intercept all_values(:,3)], all_values(:,4), colors(f, :));
+
+          subplot(2,3,3);hold on
+          errorbarxy(means(5), means(6), stds(5), stds(6)); hold on
+          myregress([intercept all_values(:,5)], all_values(:,6), colors(f, :));
+
+          all_ratios = [all_ratios; [all_values intercept*f]];
         end
-        all_ratios = [all_ratios; ratios];
-        groups = [groups; ones(size(ratios, 1), 1)*i];
 
-        subplot(2,3,i)
-        boxplot(ratios*100);
-        title(data.all_data{i,1})
-        ylim([0 100]);
-        [H,P] = myttest(ratios)
+        intercept = ones(size(all_ratios,1), 1);
+        [means, stds] = mymean(all_ratios);
+
+        subplot(2,3,4);hold on
+        errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
+        myregress([intercept all_ratios(:,1)], all_ratios(:,2));
+        [rho, p] = corr(all_ratios(:,1), all_ratios(:,2));
+        title(['r=' num2str(rho) ', p=' num2str(p)])
+
+        subplot(2,3,5);hold on
+        errorbarxy(means(3), means(4), stds(3), stds(4)); hold on
+        myregress([intercept all_ratios(:,3)], all_ratios(:,4));
+        [rho, p] = corr(all_ratios(:,3), all_ratios(:,4));
+        title(['r=' num2str(rho) ', p=' num2str(p)])
+
+        subplot(2,3,6);hold on
+        errorbarxy(means(5), means(6), stds(5), stds(6)); hold on
+        myregress([intercept all_ratios(:,5)], all_ratios(:,6));
+        [rho, p] = corr(all_ratios(:,5), all_ratios(:,6));
+        title(['r=' num2str(rho) ', p=' num2str(p)])
       end
 
       keyboard
