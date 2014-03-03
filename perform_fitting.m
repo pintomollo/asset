@@ -194,19 +194,21 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       %starts = 'O';
-      starts = 1;
+      starts = 'D';
       param_set = 30;
       params{2} = 'hessian';
-      params{4} = 'custom_flow_sample';
+      params{4} = 'final_model';
+      fixed_parameter = [15:154];
     case 8.2
       files = dir('1056-all-all.mat');
       repeats = 1;
       init_noise = 0;
       %starts = 'O';
-      starts = 1;
+      starts = 'D';
       param_set = 30;
       params{2} = 'sensitivity';
-      params{4} = 'custom_flow_sample';
+      params{4} = 'final_model';
+      fixed_parameter = [15:154];
     case 8.3
       files = dir('1056-all-all.mat');
       repeats = 1;
