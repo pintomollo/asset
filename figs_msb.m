@@ -458,7 +458,7 @@ function figs_msb(num)
       nfiles = length(files);
       names = cell(nfiles, 1);
 
-      prct = 75;
+      prct = 50;
       all_vals = NaN(0, 5);
       all_vals2 = NaN(0, 5);
       all_data = cell(nfiles, 2);
@@ -620,6 +620,7 @@ function figs_msb(num)
             dint = (p_cyto - a_cyto);
             all_pts(n, :) = [(p_cortex - dint) a_cortex a_cyto];
 
+            all_vals = [all_vals; [all_pts ones(nimg, 1)*i]];
             disp([num2str(n) '/' num2str(nimg)]);
           end
 
@@ -630,6 +631,30 @@ function figs_msb(num)
         end
 
         save('stainings.mat', 'all_data')
+
+        val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) / noise(2);
+        m = mymean(val, 1, all_vals(:,end));
+        val = (val - m(4)) / (m(5) - m(4));
+
+        figure;subplot(1,3,1);
+        boxplot(val, all_vals(:,end))
+        title('signal cortex')
+
+        val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) ./ all_vals(:,4);
+        m = mymean(val, 1, all_vals(:,end));
+        val = (val - m(4)) / (m(5) - m(4));
+
+        subplot(1,3,2)
+        boxplot(val, all_vals(:,end))
+        title('signal cortex to cyto')
+
+        val = all_vals(:,1);
+        m = mymean(val, 1, all_vals(:,end));
+        val = (val - m(4)) / (m(5) - m(4));
+
+        subplot(1,3,3)
+        boxplot(val, all_vals(:,end))
+        title('all signal')
 
         keyboard
       end
