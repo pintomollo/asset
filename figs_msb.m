@@ -204,7 +204,8 @@ function figs_msb(num)
       data = load('1056-all-all.mat');
 
       %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
-      models = {'extended_model', 'test_model1', 'test_model2', 'full_model', 'final_model'};
+      %models = {'extended_model', 'test_model1', 'test_model2', 'full_model', 'final_model'};
+      models = {'test_model1', 'test_model2', 'final_model'};
       all_simul = cell(length(models), 1);
       scores = NaN(length(models), 1);
 

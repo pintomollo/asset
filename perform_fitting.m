@@ -465,7 +465,7 @@ function perform_fitting(selection, roundit)
       param_set = 15;
       params{2} = 'refine_extended';
       params{4} = 'final_model';
-      fixed_parameter = [2 4 5:149];
+      fixed_parameter = [2 4 5:148];
     case 29
       files = {'1056-all-all.mat'};
       %files = [dir('1056-3-*_.mat'); ...
