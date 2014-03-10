@@ -1,9 +1,15 @@
-function myregress(x, y, c, s)
+function [b] = myregress(x, y, c, s)
 
+  jitter = 0;
   if (nargin < 3)
     c = 'b';
     s = 'o+';
   elseif (nargin < 4)
+    s = 'o+';
+  end
+
+  if (isnumeric(s))
+    jitter = s;
     s = 'o+';
   end
 
@@ -75,37 +81,44 @@ function myregress(x, y, c, s)
 
   t_n = tinv(0.975, ndof);
 
+  pos = pos + jitter*randn(size(pos));
+  pos_out = pos_out + jitter*randn(size(pos_out));
+  y = y + jitter*randn(size(y));
+  y_out = y_out + jitter*randn(size(y_out));
+
   %figure;
-  hold on;
-  ncolors = size(c,1);
-  if (ncolors>1)
-    if (ncolors ~= N)
-      warning('Missing colors for several data points');
-      c(end+1:N,:) = repmat(c(end,:), N-ncolors, 1);
+  if (nargout == 0)
+    hold on;
+    ncolors = size(c,1);
+    if (ncolors>1)
+      if (ncolors ~= N)
+        warning('Missing colors for several data points');
+        c(end+1:N,:) = repmat(c(end,:), N-ncolors, 1);
+      end
+      c_out = c(~goods, :);
+      c = c(goods, :);
+      for i=1:size(y,1)
+        scatter(pos(i,:), y(i,:), s(1), 'MarkerEdgeColor', c(i,:));
+      end
+      for i=1:size(y_out,1)
+        scatter(pos_out(i,:), y_out(i,:), s(2),  'MarkerEdgeColor', c_out(i,:));
+      end
+    else
+      scatter(pos, y, s(1), 'MarkerEdgeColor', c);
+      scatter(pos_out, y_out, s(2), '+', 'MarkerEdgeColor', c);
     end
-    c_out = c(~goods, :);
-    c = c(goods, :);
-    for i=1:size(y,1)
-      scatter(pos(i,:), y(i,:), s(1), 'MarkerEdgeColor', c(i,:));
-    end
-    for i=1:size(y_out,1)
-      scatter(pos_out(i,:), y_out(i,:), s(2),  'MarkerEdgeColor', c_out(i,:));
-    end
-  else
-    scatter(pos, y, s(1), 'MarkerEdgeColor', c);
-    scatter(pos_out, y_out, s(2), '+', 'MarkerEdgeColor', c);
+    plot(X, Y, 'k');
+    plot(X, Y+t_n*sqrt(s_predi), 'k');
+    plot(X, Y-t_n*sqrt(s_predi), 'k');
+
+    y_limits = ylim;
+    x_limits = xlim;
+
+    range_x = diff(x_limits);
+    range_y = diff(y_limits);
+
+    text(x_limits(1) + [0.05;0.05;ones(ndims,1)*0.05]*range_x, y_limits(end) - [0.1;0.2;0.2+(([1:ndims].')/10)]*range_y, {['R^2 = ' num2str(stats(1))]; ['p_{val} = ' num2str(p_all(:).')]; num2str([b bint])});
   end
-  plot(X, Y, 'k');
-  plot(X, Y+t_n*sqrt(s_predi), 'k');
-  plot(X, Y-t_n*sqrt(s_predi), 'k');
-
-  y_limits = ylim;
-  x_limits = xlim;
-
-  range_x = diff(x_limits);
-  range_y = diff(y_limits);
-
-  text(x_limits(1) + [0.05;0.05;ones(ndims,1)*0.05]*range_x, y_limits(end) - [0.1;0.2;0.2+(([1:ndims].')/10)]*range_y, {['R^2 = ' num2str(stats(1))]; ['p_{val} = ' num2str(p_all(:).')]; num2str([b bint])});
 
   return;
 end

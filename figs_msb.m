@@ -143,7 +143,21 @@ function figs_msb(num)
       keyboard;
 
     case 0.2
-      load('data_expansion')
+
+      load('data_expansion');
+
+      convert = get_struct('z-correlation');
+
+      all_params = cat(1, all_data{:,2});
+      all_params(:, 5) = convert.bkg + convert.long_axis*all_params(:, 3) + convert.short_axis*all_params(:, 4);
+      all_params(:,3) = ellipse_circum(all_params(:,3:5), all_params(:,2), true);
+
+      all_sizes = all_params(:,3:5);
+      all_sizes = [all_sizes all_params(:,2)*0.5 surface2volume(all_sizes.').'];
+
+      data = load('data_fitting');
+      all_params = cat(1, data.all_data{1:5,2});
+      all_params = all_params(:, 2:5);
 
       opts = get_struct('modeling');
       opts = load_parameters(opts, 'goehring.txt');
@@ -155,45 +169,47 @@ function figs_msb(num)
         flow = bilinear_mex(flow, X, Y, [2 2]);
       end
 
-      for f = 1:size(all_data, 1)
-        for i=1:size(all_data{f,2}, 1)
-          egg_size = all_data{f,2}(i, 3:5).';
-          cell_width = all_data{f,2}(i,2);
+      all_simul = cell(size(all_params, 1), 1);
 
-          egg_size(1) = ellipse_circum(egg_size, cell_width, true);
+      for p = 1:size(all_params, 1)
+        opts.reaction_params([3 4 10 11]) = all_params(p, :);
+        counter = 1;
+        for f = 1:size(all_data, 1)
+          for i=1:size(all_data{f,2}, 1)
+            opts.axes_length = all_sizes(counter, 1:3).';
 
-          opts.axes_length = egg_size;
+            opts.reaction_params(end, :) = all_sizes(counter, 4);
+            opts.reaction_params(end-1,:) = all_sizes(counter, 5);
 
-          opts.reaction_params(end-1,:) = surface2volume(opts.axes_length);
-          opts.reaction_params(end, :) = 0.5*ellipse_circum(opts.axes_length);
+            opts.boundaries = [0 opts.reaction_params(end,1)];
+            opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
 
-          opts.boundaries = [0 opts.reaction_params(end,1)];
-          opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
+            x0 = opts.init_func(opts, false);
 
-          x0 = opts.init_func(opts, false);
+            ml_params = [opts.diffusion_params; ...
+                          opts.reaction_params];
 
-          ml_params = [opts.diffusion_params; ...
-                        opts.reaction_params];
+            [domain, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
 
-          [domain, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+            domain = domain((end/2)+1:end, :).';
+            domain = [domain domain(:,end-1:-1:1)];
 
-          domain = domain((end/2)+1:end, :).';
-          domain = [domain domain(:,end-1:-1:1)];
+            [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
+            norig = length(all_data{f,3}{i,1})-1;
+            nprofile = length(profile)-1;
+            profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
 
-          [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
-          norig = length(all_data{f,3}{i,1})-1;
-          nprofile = length(profile)-1;
-          profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
+            all_data{f,2}(i,1) = 2*max_width * opts.x_step/opts_expansion.quantification.resolution;
+            all_data{f,3}{i,1} = profile;
+            all_data{f,3}{i,2} = path;
 
-          all_data{f,2}(i,1) = 2*max_width * opts.x_step/opts_expansion.quantification.resolution;
-          all_data{f,3}{i,1} = profile;
-          all_data{f,3}{i,2} = path;
-
-          disp([num2str(i) '/' num2str(size(all_data{f,2},1))]);
+            disp([num2str(counter) '/' num2str(size(all_sizes,1)) '/' num2str(p)]);
+            counter = counter + 1;
+          end
         end
-      end
 
-      all_simul = all_data;
+        all_simul{p} = all_data;
+      end
 
       save('simul_expansion', 'all_simul', 'temperatures');
 
@@ -203,9 +219,7 @@ function figs_msb(num)
       load('data_expansion')
       data = load('1056-all-all.mat');
 
-      %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
-      %models = {'extended_model', 'test_model1', 'test_model2', 'full_model', 'final_model'};
-      models = {'test_model1', 'test_model2', 'final_model'};
+      models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
       all_simul = cell(length(models), 1);
       scores = NaN(length(models), 1);
 
@@ -452,6 +466,87 @@ function figs_msb(num)
 
       [H,P] = myttest(all_vals(:,1)./all_vals(:,3), all_vals(:,end))
 
+      %%%%%%%%%%%%%%%%%%%%%%%% Importing from ImageJ the other data
+
+      files = dir('signal_quantif/*.tif');
+      nfiles = length(files);
+      names = cell(nfiles, 1);
+
+      prct = 50;
+      all_vals = NaN(0, 5);
+      all_noises = NaN(0,5);
+
+      pos = NaN(1,4);
+      ngroups = NaN(1,4);
+      for i=1:nfiles
+        fname = ['signal_quantif/' files(i).name];
+        names{i,1} = files(i).name(1:find(files(i).name=='_')-1);
+
+        [nimg, size_img] = size_data(fname);
+        roi_name = dir(['signal_quantif/' names{i,1} '*.zip']);
+        rois = ReadImageJROI(fullfile(pwd, ['signal_quantif/' roi_name(1).name]));
+
+        pixels = cell(nimg, 1);
+        noises = NaN(nimg, 4);
+        data = NaN(nimg,4);
+
+        for n=1:nimg
+          img = double(load_data(fname, n));
+          img(img == 0) = NaN;
+          noises(n,:) = estimate_noise(img);
+          indx = (n-1)*4;
+
+          for j = 1:4
+            curr_roi = (rois{indx+j}.vfShapes);
+            mask = false(size_img);
+
+            for k = 1:length(curr_roi)
+              mask = mask | roipoly(mask, curr_roi{k}(:,1), curr_roi{k}(:,2));
+            end
+
+            pts = img(mask);
+            thresh = prctile(pts, prct);
+            data(n, j) = mean(pts(pts > thresh));
+            pos(j) = rois{indx+j}.vnRectBounds(2);
+            ngroups(j) = k;
+          end
+
+          cyto = pos(ngroups >= 5);
+          pts_indx = find(ngroups>=5);
+          [junk, tmp_indx] = max(cyto);
+          %if (cyto(1) < cyto(2))
+          %  pts_indx = pts_indx([2 1]);
+          %end
+          pts_indx = [find(ngroups < 5) 1 pts_indx(tmp_indx) 1];
+
+          %cortex = pos(ngroups < 5);
+          %if (cortex(1) < cortex(2))
+          %  pts_indx = [fliplr(find(ngroups < 5)) pts_indx];
+          %else
+          %  pts_indx = [find(ngroups < 5) pts_indx];
+          %end
+
+          data(n, :) = data(n, pts_indx);
+
+          disp([num2str(n) '/' num2str(nimg)]);
+        end
+
+        all_vals = [all_vals; [data ones(nimg, 1)*i]];
+        all_noises = [all_noises; [noises ones(nimg, 1)*i]];
+        disp([num2str(i) '/' num2str(nfiles)]);
+      end
+
+      noises_grp = mymean(all_noises, 1, all_noises(:,end));
+      noise = noises_grp(all_vals(:,end),:);
+
+      val = (all_vals(:,1) - all_vals(:,3)) ./ noise(:,2);
+      m = mymean(val, 1, all_vals(:,end));
+      val = val / m(1);
+      figure;boxplot(val, all_vals(:,end))
+      title('SNR GFP')
+
+      [H,p] = myttest(val, all_vals(:,end))
+
       %%%%%%%%%%%%%% Direct import from ImageJ to get percentiles
 
       files = dir('stainings/*.tif');
@@ -460,8 +555,9 @@ function figs_msb(num)
 
       prct = 50;
       all_vals = NaN(0, 5);
-      all_vals2 = NaN(0, 5);
-      all_data = cell(nfiles, 2);
+      all_noises = NaN(0,5);
+      %all_vals2 = NaN(0, 5);
+      %all_data = cell(nfiles, 2);
 
       file = dir('stainings/1056*.tif');
 
@@ -478,13 +574,12 @@ function figs_msb(num)
         ranges = [min(ranges(1:2), rois{j}.vnRectBounds(1:2)) max(ranges(3:4), rois{j}.vnRectBounds(3:4))];
       end
       cntr = round(mean([ranges(1:2);ranges(3:4)]));
-      cntr = cntr([2 1])
+      cntr = cntr([2 1]);
 
       figure;
       imshow(realign(imnorm(img-noise(1)),rescale_size,cntr,0));
       hold on
 
-      %figure;
       for j = 1:4
         curr_roi = (rois{j}.vfShapes);
 
@@ -493,171 +588,77 @@ function figs_msb(num)
         end
       end
 
-      if (exist('stainings.mat', 'file') == 2)
-        data = load('stainings.mat');
-        all_noise = cat(1, data.all_data{:,1});
-        noise = mymean(all_noise);
+      pos = NaN(1,4);
+      ngroups = NaN(1,4);
+      for i=1:nfiles
+        fname = ['stainings/' files(i).name];
+        names{i,1} = files(i).name(1:find(files(i).name=='_')-1);
 
-        prct = [0 25 50 75];
+        [nimg, size_img] = size_data(fname);
+        roi_name = dir(['stainings/' names{i,1} '*.zip']);
+        rois = ReadImageJROI(fullfile(pwd, ['stainings/' roi_name(1).name]));
 
-        for p=prct
-          for i=1:nfiles
-            pts = data.all_data{i,2};
-            [nimg, nvals] = size(pts);
-            all_pts = NaN(nimg, nvals);
-            all_pts2 = all_pts;
+        %all_pts = NaN(nimg, 3);
 
-            for n=1:nimg
-              for j=1:nvals
-                tmp = pts{n,j};
-                thresh = prctile(tmp, [p 99.5]);
-                all_pts(n, j) = mean(tmp(tmp>thresh(1) & tmp<thresh(2))) - noise(1);
-              end
+        pixels = cell(nimg, 1);
+        noises = NaN(nimg, 4);
+        data = NaN(nimg,4);
+
+        for n=1:nimg
+          img = double(load_data(fname, n));
+          img(img == 0) = NaN;
+          noises(n,:) = estimate_noise(img);
+          indx = (n-1)*4;
+
+          for j = 1:4
+            curr_roi = (rois{indx+j}.vfShapes);
+            mask = false(size_img);
+
+            for k = 1:length(curr_roi)
+              mask = mask | roipoly(mask, curr_roi{k}(:,1), curr_roi{k}(:,2));
             end
 
-            all_vals = [all_vals; [all_pts ones(nimg, 1)*i]];
+            pts = img(mask);
+            thresh = prctile(pts, prct);
+            data(n, j) = mean(pts(pts > thresh));
+            pos(j) = rois{indx+j}.vnRectBounds(2);
+            ngroups(j) = k;
           end
 
-          val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) / noise(2);
-          m = mymean(val, 1, all_vals(:,end));
-          val = (val - m(4)) / (m(5) - m(4));
-
-          figure;subplot(1,3,1);
-          boxplot(val, all_vals(:,end))
-          title('signal cortex')
-
-          val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) ./ all_vals(:,4);
-          m = mymean(val, 1, all_vals(:,end));
-          val = (val - m(4)) / (m(5) - m(4));
-
-          subplot(1,3,2)
-          boxplot(val, all_vals(:,end))
-          title('signal cortex to cyto')
-
-          val = all_vals(:,1);
-          m = mymean(val, 1, all_vals(:,end));
-          val = (val - m(4)) / (m(5) - m(4));
-
-          subplot(1,3,3)
-          boxplot(val, all_vals(:,end))
-          title('all signal')
-
-          mtit(num2str(p))
-
-        end
-
-        keyboard
-      else
-        for i=1:nfiles
-          fname = ['stainings/' files(i).name];
-          names{i,1} = files(i).name(1:find(files(i).name=='_')-1);
-
-          [nimg, size_img] = size_data(fname);
-          roi_name = dir(['stainings/' names{i,1} '*.zip']);
-          rois = ReadImageJROI(fullfile(pwd, ['stainings/' roi_name(1).name]));
-
-          all_pts = NaN(nimg, 3);
-
-          pixels = cell(nimg, 1);
-          noises = NaN(nimg, 4);
-
-          for n=1:nimg
-            img = double(load_data(fname, n));
-            img(img == 0) = NaN;
-            noise = estimate_noise(img);
-            indx = (n-1)*4;
-
-            noises(n,:) = noise;
-
-            data = NaN(4,4);
-
-            %figure;
-            for j = 1:4
-              curr_roi = (rois{indx+j}.vfShapes);
-              mask = false(size_img);
-
-              for k = 1:length(curr_roi)
-                mask = mask | roipoly(mask, curr_roi{k}(:,1), curr_roi{k}(:,2));
-              end
-
-              pts = img(mask);
-              thresh = prctile(pts, prct);
-              data(1, j) = mean(pts(pts>thresh));
-              data(2, j) = rois{indx+j}.vnRectBounds(2);
-              data(3, j) = thresh;
-              data(4, j) = k;
-
-              pixels{n, j} = pts;
-              %subplot(2,4, (j-1)*2 + 1);imshow(mask);
-              %subplot(2,4, (j-1)*2 + 2);hist(pts);
-            end
-            data(1,:) = data(1,:) - noise(1);
-
-            cyto = data(1:2, data(4,:) >= 5);
-            pts_indx = find(data(4,:)>=5);
-            if (cyto(2,1) < cyto(2,2))
-              a_cyto = cyto(1,1);
-              p_cyto = cyto(1,2);
-              pts_indx = pts_indx([2 1]);
-            else
-              a_cyto = cyto(1,2);
-              p_cyto = cyto(1,1);
-            end
-
-            cortex = data(1:2, data(4,:) < 5);
-            if (cortex(2,1) < cortex(2,2))
-              a_cortex = cortex(1,1);
-              p_cortex = cortex(1,2);
-              pts_indx = [fliplr(find(data(4,:) < 5)) pts_indx];
-            else
-              a_cortex = cortex(1,2);
-              p_cortex = cortex(1,1);
-              pts_indx = [find(data(4,:) < 5) pts_indx];
-            end
-
-            pixels(n,:) = pixels(n, pts_indx);
-
-            dint = (p_cyto - a_cyto);
-            all_pts(n, :) = [(p_cortex - dint) a_cortex a_cyto];
-
-            all_vals = [all_vals; [all_pts ones(nimg, 1)*i]];
-            disp([num2str(n) '/' num2str(nimg)]);
+          cyto = pos(ngroups >= 5);
+          pts_indx = find(ngroups>=5);
+          if (cyto(1) < cyto(2))
+            pts_indx = pts_indx([2 1]);
           end
 
-          all_data{i, 1} = noises;
-          all_data{i, 2} = pixels;
-          all_vals = [all_vals; [all_pts ones(nimg, 1)*i]];
-          disp([num2str(i) '/' num2str(nfiles)]);
+          cortex = pos(ngroups < 5);
+          if (cortex(1) < cortex(2))
+            pts_indx = [fliplr(find(ngroups < 5)) pts_indx];
+          else
+            pts_indx = [find(ngroups < 5) pts_indx];
+          end
+
+          data(n, :) = data(n, pts_indx);
+
+          disp([num2str(n) '/' num2str(nimg)]);
         end
 
-        save('stainings.mat', 'all_data')
-
-        val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) / noise(2);
-        m = mymean(val, 1, all_vals(:,end));
-        val = (val - m(4)) / (m(5) - m(4));
-
-        figure;subplot(1,3,1);
-        boxplot(val, all_vals(:,end))
-        title('signal cortex')
-
-        val = (all_vals(:,1) - diff(all_vals(:,[4 3]), [], 2)) ./ all_vals(:,4);
-        m = mymean(val, 1, all_vals(:,end));
-        val = (val - m(4)) / (m(5) - m(4));
-
-        subplot(1,3,2)
-        boxplot(val, all_vals(:,end))
-        title('signal cortex to cyto')
-
-        val = all_vals(:,1);
-        m = mymean(val, 1, all_vals(:,end));
-        val = (val - m(4)) / (m(5) - m(4));
-
-        subplot(1,3,3)
-        boxplot(val, all_vals(:,end))
-        title('all signal')
-
-        keyboard
+        all_vals = [all_vals; [data ones(nimg, 1)*i]];
+        all_noises = [all_noises; [noises ones(nimg, 1)*i]];
+        disp([num2str(i) '/' num2str(nfiles)]);
       end
+
+      noises_grp = mymean(all_noises, 1, all_noises(:,end));
+      noise = noises_grp(all_vals(:,end),:);
+
+      val = (all_vals(:,1) - all_vals(:,3)) ./ noise(:,2);
+      m = mymean(val, 1, all_vals(:,end));
+      val = (val - m(4)) / (m(5) - m(4));
+      figure;boxplot(val, all_vals(:,end))
+      title('SNR immuno')
+
+      [H,p] = myttest(val, all_vals(:,end))
+
 
       targets = {'good_24.txt'; 'good_20.txt'; 'good_13.txt'; 'good_c27d91.txt'; 'good_ani2.txt'};
       data = load('data_expansion.mat');
@@ -1889,47 +1890,155 @@ function figs_msb(num)
 
     case 4.2
 
-      colors = [254 217 166; ...
+      colors = [179 205 227; ...
+                204 235 197; ...
                 251 180 174; ...
+                254 217 166; ...
                 222 203 228; ...
-                255 127 0; ...
+                179 179 179; ...
+                55 126 184; ...
+                77 175 74; ...
                 228 26 28; ...
-                152 78 163]/255;
+                255 127 0; ...
+                152 78 163;
+                38 38 38]/255;
+
+      %colors = [254 217 166; ...
+      %          251 180 174; ...
+      %          222 203 228; ...
+      %          255 127 0; ...
+      %          228 26 28; ...
+      %          152 78 163]/255;
 
       all_data = cell(3, 3);
 
       %data = load('data_expansion.mat');
       data = load('simul_expansion.mat');
+      fits = load('data_fitting');
       %data.all_data = data.all_simul;
+
+      targets = {'good_13.txt';'good_20.txt';'good_24.txt';'good_ani2.txt'; 'good_c27d91.txt'; 'averages'};
+      [junk, indxs] = ismember(targets, fits.all_data(:,1));
+      all_data = fits.all_data(indxs,:);
+      sizes = cumsum(cellfun(@(x)(size(x,1)), all_data(:,2)));
+      all_data = cat(1, all_data{1:end-1,2});
+      all_data = [all_data(:,2:5) 2*all_data(:,end-3) all_data(:,1)./all_data(:,end)];
+      outliers = pcout(all_data(:, 1:4), [0.33 25], [0.25 1]);
 
       targets = {'good_ani2.txt';'good_24.txt';'good_c27d91.txt'};
 
-      for f=1:size(data.all_simul, 1)
-        files = data.all_simul{f,3};
-        nfiles = size(files,1);
+      nsims = size(data.all_simul, 1);
 
-        all_maint = cell(nfiles, 1);
-        centers = NaN(1, nfiles);
-        all_params = NaN(nfiles, 6);
+      x_abs = [80:10:200].';
+      x_rel = [30:5:80].';
+      x_rel = bsxfun(@power, x_rel, [0:1]);
 
-        for i=1:nfiles
-          all_maint{i} = files{i,1}.';
-          centers(i) = round((data.all_simul{f,2}(i,1)/2)/opts_expansion.quantification.resolution);
-          tmp_params = data.all_simul{f,2}(i,1:5);
-          tmp_params = [tmp_params 2*tmp_params(3)];
-          tmp_params(3) = ellipse_circum(tmp_params(3:5), tmp_params(2), true);
+      y_abs = NaN(length(x_abs), nsims);
+      y_rel = NaN(size(x_rel, 1), nsims);
 
-          all_params(i,:) = tmp_params;
-          disp([num2str(i) '/' num2str(nfiles)]);
-        end
-        [stack, shift] = stack_images(all_maint, centers, 0.5);
-        center = centers(1) + shift(1);
+      all_pts = NaN(0, 3);
 
-        all_data{f,1} = stack;
-        all_data{f,2} = all_params;
-        all_data{f,3} = center;
+      warning off;
+
+      figure;
+      for p = 1:nsims
+        %for f=1:size(data.all_simul{p}, 1)
+          [junk, indxs] = ismember(targets, data.all_simul{p}(:,1));
+
+          all_params = cat(1, data.all_simul{p}{indxs, 2});
+          intercept = ones(size(all_params, 1), 1);
+
+          b_abs = myregress(all_params(:,2), all_params(:,1));
+          b_rel = myregress([intercept all_params(:,3)*2], all_params(:,1)./all_params(:,2));
+
+
+          %subplot(2,3,1);hold on;
+          %scatter(all_params(:,2), all_params(:,1));
+          %subplot(2,3,2);hold on;
+          %scatter(all_params(:,3), all_params(:,1)./all_params(:,2));
+          subplot(2,3,1);hold on;
+          if (outliers(p))
+            y_tmp = x_abs*b_abs;
+            plot(x_abs, y_tmp, '--', 'Color', colors(find(p<sizes, 1), :));
+          else
+            y_abs(:,p) = x_abs*b_abs;
+            plot(x_abs, y_abs(:,p), 'Color', colors(find(p<sizes, 1), :));
+          end
+          subplot(2,3,2);hold on;
+          if (outliers(p))
+            y_tmp = sum(bsxfun(@times, x_rel, b_rel(:).'), 2);
+            plot(x_rel(:,2), y_tmp, '--', 'Color', colors(find(p<sizes, 1), :));
+          else
+            y_rel(:,p) = sum(bsxfun(@times, x_rel, b_rel(:).'), 2);
+            plot(x_rel(:,2), y_rel(:,p), 'Color', colors(find(p<sizes, 1), :));
+          end
+
+          all_pts = [all_pts; all_params(:,1:3)];
+
+          %{
+          files = data.all_simul{f,3};
+          nfiles = size(files,1);
+
+          all_maint = cell(nfiles, 1);
+          centers = NaN(1, nfiles);
+          all_params = NaN(nfiles, 6);
+
+          for i=1:nfiles
+            all_maint{i} = files{i,1}.';
+            centers(i) = round((data.all_simul{f,2}(i,1)/2)/opts_expansion.quantification.resolution);
+            tmp_params = data.all_simul{f,2}(i,1:5);
+            tmp_params = [tmp_params 2*tmp_params(3)];
+            tmp_params(3) = ellipse_circum(tmp_params(3:5), tmp_params(2), true);
+
+            all_params(i,:) = tmp_params;
+            disp([num2str(i) '/' num2str(nfiles)]);
+          end
+          [stack, shift] = stack_images(all_maint, centers, 0.5);
+          center = centers(1) + shift(1);
+
+          all_data{f,1} = stack;
+          all_data{f,2} = all_params;
+          all_data{f,3} = center;
+          %}
+
+        %end
+        disp([num2str(p) '/' num2str(nsims)])
       end
+      %intercept = ones(size(all_pts, 1), 1);
 
+      %subplot(2,3,5);hold on;
+      %myregress(all_pts(:,2), all_pts(:,1));
+      %ylim([40 100]);
+      %xlim([80 200]);
+      %subplot(2,3,6);hold on;
+      %myregress([intercept all_pts(:,3)*2], all_pts(:,1)./all_pts(:,2));
+      %ylim([0 1]);
+      %xlim([30 80]);
+
+      [m_abs, s_abs] = mymean(y_abs, 2);
+      [m_rel, s_rel] = mymean(y_rel, 2);
+
+      c_abs = x_abs\m_abs;
+      c_rel = x_rel\m_rel;
+
+      subplot(2,3,1);hold on;
+      plot(x_abs, m_abs, 'k');
+      errorbar(x_abs(2:2:end), m_abs(2:2:end), s_abs(2:2:end), 'k')
+      title(c_abs)
+      ylim([40 100]);
+      xlim([80 200]);
+      subplot(2,3,2);hold on;
+      plot(x_rel(:,2), m_rel, 'k');
+      errorbar(x_rel(2:2:end, 2), m_rel(2:2:end), s_rel(2:2:end), 'k')
+      title(c_rel)
+      ylim([0 1]);
+      xlim([30 80]);
+
+      warning on;
+
+      keyboard
+
+      %{
       [junk, indxs] = ismember(targets, data.all_simul(:,1));
       all_data = all_data(indxs,:);
       pos = cell(1,3);
@@ -2107,6 +2216,7 @@ function figs_msb(num)
       mtit('Simulations')
 
       keyboard
+      %}
 
     case 4.3
 
@@ -2746,7 +2856,7 @@ function figs_msb(num)
       keyboard
 
     case 7.2
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'combine_data'}, {'type', '1056-temps-all'; 'fitting_type', 'sample'; 'fit_relative', true});
+      vals = group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'combine_data'}, {'type', '1056-all-all'; 'fitting_type', 'sample'; 'fit_relative', true});
 
       for i = 1:size(vals, 1)
         best_indx = -1;
@@ -2764,7 +2874,7 @@ function figs_msb(num)
         end
       end
 
-      vals2 = extract_model_parameters(vals);
+      vals2 = extract_model_parameters(vals, true);
       sensitivity_analysis(vals2{1,2}{1,2}.evolution, 'best_model');
 
       [rC, C, rH, H] = correlation_matrix(vals2{2,2}{1,2}.evolution);
@@ -3311,6 +3421,8 @@ function figs_msb(num)
           subplot(2,3,1);hold on
           errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
           myregress([intercept all_values(:,1)], all_values(:,2), colors(f, :));
+          ylim([30 80]);
+          xlim([30 80]);
 
           subplot(2,3,2);hold on
           errorbarxy(means(3), means(4), stds(3), stds(4)); hold on
@@ -3318,7 +3430,9 @@ function figs_msb(num)
 
           subplot(2,3,3);hold on
           errorbarxy(means(5), means(6), stds(5), stds(6)); hold on
-          myregress([intercept all_values(:,5)], all_values(:,6), colors(f, :));
+          myregress([intercept all_values(:,5)], all_values(:,6), colors(f, :), 5);
+          ylim([0 500]);
+          xlim([0 500]);
 
           all_ratios = [all_ratios; [all_values intercept*f]];
         end
@@ -3331,6 +3445,8 @@ function figs_msb(num)
         myregress([intercept all_ratios(:,1)], all_ratios(:,2));
         [rho, p] = corr(all_ratios(:,1), all_ratios(:,2));
         title(['r=' num2str(rho) ', p=' num2str(p)])
+        ylim([30 80]);
+        xlim([30 80]);
 
         subplot(2,3,5);hold on
         errorbarxy(means(3), means(4), stds(3), stds(4)); hold on
@@ -3340,9 +3456,11 @@ function figs_msb(num)
 
         subplot(2,3,6);hold on
         errorbarxy(means(5), means(6), stds(5), stds(6)); hold on
-        myregress([intercept all_ratios(:,5)], all_ratios(:,6));
+        myregress([intercept all_ratios(:,5)], all_ratios(:,6), [0 0 1], 5);
         [rho, p] = corr(all_ratios(:,5), all_ratios(:,6));
         title(['r=' num2str(rho) ', p=' num2str(p)])
+        ylim([0 500]);
+        xlim([0 500]);
       end
 
       keyboard

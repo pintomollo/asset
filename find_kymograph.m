@@ -193,7 +193,7 @@ function find_kymograph(varargin)
           axes_length = repmat(axes_length(:,indx), 1, ngroups);
         end
 
-        axes_length = sort(axes_length, 'descend');
+        %axes_length = sort(axes_length, 'descend');
         if (fitting.extrapol_z)
           convert = get_struct('z-correlation');
           axes_length(3,:) = convert.bkg + convert.long_axis*axes_length(1,:) + convert.short_axis*axes_length(2,:);
