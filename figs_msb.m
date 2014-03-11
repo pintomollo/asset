@@ -2874,7 +2874,8 @@ function figs_msb(num)
         end
       end
 
-      vals2 = extract_model_parameters(vals, true);
+      vals2 = extract_model_parameters(vals);
+
       sensitivity_analysis(vals2{1,2}{1,2}.evolution, 'best_model');
 
       [rC, C, rH, H] = correlation_matrix(vals2{2,2}{1,2}.evolution);
@@ -3474,16 +3475,29 @@ function figs_msb(num)
       tmp_opts = get_struct('modeling');
       opts_goehring = load_parameters(tmp_opts, 'goehring.txt');
       opts_flow = load_parameters(opts_goehring, 'custom_flow.txt');
+      opts_size = load_parameters(opts_goehring, 'extended_model.txt');
+      opts_full = load_parameters(opts_goehring, 'final_model.txt');
 
-      orig_params = [opts_flow.diffusion_params; opts_flow.reaction_params];
-      orig_params([4 12]) = orig_params([4 12]) ./ orig_params([13 5]);
-      orig_params = orig_params(:).';
+      flow_goehring = size(opts_goehring.advection_params, 2);
 
-      all_scores = Inf(length(all_names), 6);
+      orig_flow = [opts_flow.diffusion_params; opts_flow.reaction_params];
+      orig_flow([4 12]) = orig_flow([4 12]) ./ orig_flow([13 5]);
+      orig_flow = orig_flow(:).';
+
+      orig_size = [opts_size.diffusion_params; opts_size.reaction_params];
+      orig_size([4 12]) = orig_size([4 12]) ./ orig_size([13 5]);
+      orig_size = orig_size(:).';
+
+      orig_full = [opts_full.diffusion_params; opts_full.reaction_params];
+      orig_full([4 12]) = orig_full([4 12]) ./ orig_full([13 5]);
+      orig_full = orig_full(:).';
+
+      all_scores = Inf(length(all_names), 5);
       all_offsets = all_scores;
-      all_params = all_scores(:,1:3);
 
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'type';'simulation_parameters';'flow_size';'scale_flow';'fit_flow';'parameter_set';'fixed_parameter'});
+      vals = [group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 2; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter'; 'flow_size'}); ...
+              group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'flow_size'}); ...
+              group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', true}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
       vals = extract_model_parameters(vals, true);
 
       nfits = size(vals,1);
@@ -3498,39 +3512,23 @@ function figs_msb(num)
           continue;
         end
 
-        if (~curr_val.scale_flow)
-          if (curr_val.parameter_set==2)
-            sub_indx = 1;
-          elseif (curr_val.parameter_set==0)
-            if (curr_val.flow_size(2) == size(opts_goehring.advection_params, 2))
-              sub_indx = 2;
-            elseif (numel(curr_val.simulation_parameters)>4 && all(curr_val.simulation_parameters(4:5) == orig_params(4:5)))
-              sub_indx = 3;
-            else
-              sub_indx = 4;
-            end
-          end
+        if (curr_val.parameter_set==2)
+          sub_indx = 5;
         else
-          if (curr_val.parameter_set==2)
-            sub_indx = 5;
-          elseif (curr_val.parameter_set==15)
-            sub_indx = 6;
+          if (flow_goehring == curr_val.flow_size(2))
+            sub_indx = 1;
+          elseif (numel(curr_val.simulation_parameters)>4 && sum((curr_val.simulation_parameters(4:5) - orig_flow(4:5)).^2)<1e-6)
+              sub_indx = 2;
+          elseif (numel(curr_val.simulation_parameters)>4 && sum((curr_val.simulation_parameters(4:5) - orig_size(4:5)).^2)<1e-6)
+              sub_indx = 3;
+          elseif (numel(curr_val.simulation_parameters)>4 && sum((curr_val.simulation_parameters(4:5) - orig_full(4:5)).^2)<1e-6)
+              sub_indx = 4;
           end
-          %if (~curr_val.fit_flow)
-          %  sub_indx = 4;
-          %  
-          %  all_params(indx, 1) = vals{i,2}{1,2}.params.flow_scaling;
-          %else
-          %  sub_indx = 5;
-          %
-          %  all_params(indx, 2) = vals{i,2}{1,2}.params.flow_scaling;
-          %  all_params(indx, 3) = vals{i,2}{1,2}.params.flow;
-          %end
         end
 
         if (sub_indx ~= 0 && all_scores(indx, sub_indx) > vals{i,2}{1,2}.score)
           all_scores(indx, sub_indx) = vals{i,2}{1,2}.score;
-          %%all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
+          all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
         end
       end
 

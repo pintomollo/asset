@@ -94,6 +94,7 @@ function uuids = fit_kymograph(fitting, opts)
     fitting.fit_model = true;
   end
 
+  init_offsets = [];
   nrates = length(fit_params);
   nenergy = length(fit_energy);
 
@@ -137,6 +138,10 @@ function uuids = fit_kymograph(fitting, opts)
       end
 
       fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
+    elseif (noffsets == numel(fitting.init_pos))
+
+      init_offsets = fitting.init_pos ./ fitting.offset_scaling;
+      fitting.init_pos = [];
     elseif (nrates == numel(fitting.init_pos))
       fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
       fitting.init_pos = [fitting.init_pos fit_energy];
@@ -548,13 +553,18 @@ function uuids = fit_kymograph(fitting, opts)
     end
     full_error = sum(each_full_error);
 
-    if (strncmp(fitting.aligning_type, 'fitting', 7) && length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow + nvisc*fit_viscosity + fitting.scale_flow))
-      nparams = length(p0);
-      fitting.aligning_type = 'domain';
-      [junk, offsets] = error_function(p0(:));
-      fitting.aligning_type = 'fitting';
-      p0 = [p0(1:nrates) offsets/fitting.offset_scaling p0(nrates+1:end)];
-      orig_p0 = [orig_p0(1:nrates) offsets/fitting.offset_scaling orig_p0(nrates+1:end)];
+    if (strncmp(fitting.aligning_type, 'fitting', 7))
+      if (~isempty(init_offsets))
+        p0 = [p0(1:nrates) init_offsets p0(nrates+1:end)];
+        orig_p0 = [orig_p0(1:nrates) init_offsets orig_p0(nrates+1:end)];
+      elseif (length(p0) <= (nrates + numel(fit_energy) + fitting.fit_flow + nvisc*fit_viscosity + fitting.scale_flow))
+        nparams = length(p0);
+        fitting.aligning_type = 'domain';
+        [junk, offsets] = error_function(p0(:));
+        fitting.aligning_type = 'fitting';
+        p0 = [p0(1:nrates) offsets/fitting.offset_scaling p0(nrates+1:end)];
+        orig_p0 = [orig_p0(1:nrates) offsets/fitting.offset_scaling orig_p0(nrates+1:end)];
+      end
     end
 
     if (~fitting.scale_flow && ~isempty(opts.scale_params))

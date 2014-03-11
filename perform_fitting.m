@@ -199,6 +199,10 @@ function perform_fitting(selection, roundit)
       params{2} = 'hessian';
       params{4} = 'final_model';
       fixed_parameter = [15:154];
+
+      ps = load('all_offsets');
+      s_params = {'init_pos'; ps.all_offsets(:,4).'};
+
     case 8.2
       files = dir('1056-all-all.mat');
       repeats = 1;
@@ -209,6 +213,9 @@ function perform_fitting(selection, roundit)
       params{2} = 'sensitivity';
       params{4} = 'final_model';
       fixed_parameter = [15:154];
+
+      ps = load('all_offsets');
+      s_params = {'init_pos'; ps.all_offsets(:,4).'};
     case 8.3
       files = dir('1056-all-all.mat');
       repeats = 1;

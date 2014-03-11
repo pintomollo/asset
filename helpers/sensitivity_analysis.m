@@ -13,9 +13,7 @@ function [conf_int] = sensitivity_analysis(pts, name)
   end
 
   legend = {'D_A', 'k_{A+}', 'k_{A-}', 'k_{AP}', '\alpha','\rho_A','\psi', 'L', ...
-            'D_P', 'k_{P+}', 'k_{P-}', 'k_{PA}', '\beta', '\rho_P', '\nu'};
-
-  keyboard
+            'D_P', 'k_{P+}', 'k_{P-}', 'k_{PA}', '\beta', '\rho_P', '\nu', '\gamma'};
 
   if (isstruct(pts))
 
@@ -24,20 +22,27 @@ function [conf_int] = sensitivity_analysis(pts, name)
     nenergy = size(pts.energy, 2);
     nvisc = size(pts.viscosity, 2);
     nflow = size(pts.flow, 2);
+    nscale = size(pts.flow_scaling, 2);
 
-    pts = [pts.score pts.rate pts.offset pts.energy pts.viscosity pts.flow];
+    pts = [pts.score pts.rate pts.offset pts.energy pts.viscosity pts.flow pts.flow_scaling];
 
     legend = [legend(1:nrates), ... 
               cellstr([repmat('\delta_', noffset, 1), num2str([1:noffset].')]).', ...
               cellstr([repmat('E_', nenergy, 1), num2str([1:nenergy].')]).', ...
               cellstr([repmat('\eta_', nvisc, 1), num2str([1:nvisc].')]).', ...
-              cellstr([repmat(legend{end}, nflow, 1), num2str([1:nflow].')]).'];
+              legend(end-(nflow+nscale-1):end)];
+
+    legend = legend(~cellfun('isempty', legend));
 
   else
     nshifts = size(pts,2) - length(legend) - 1;
     shifts = cellstr([repmat('\delta_', nshifts, 1), num2str([1:nshifts].')]);
     legend = [legend(1:end-1) shifts.' legend(end)];
   end
+
+  is_fixed = any(isnan(pts), 1) | all(bsxfun(@eq, pts, pts(1,:)), 1);
+  pts = pts(:, ~is_fixed);
+  legend = legend(~is_fixed(2:end));
 
   hfig = figure;
   haxes = axes('Parent', hfig, 'NextPlot', 'add', 'box', 'on');
@@ -51,6 +56,8 @@ function [conf_int] = sensitivity_analysis(pts, name)
 
   %pts = sortrows(pts);
   indx = 1;
+
+  keyboard
 
   std_values = median(pts(:,2:end));
   for i=1:size(pts,1)
