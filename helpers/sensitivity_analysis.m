@@ -15,6 +15,8 @@ function [conf_int] = sensitivity_analysis(pts, name)
   legend = {'D_A', 'k_{A+}', 'k_{A-}', 'k_{AP}', '\alpha','\rho_A','\psi', 'L', ...
             'D_P', 'k_{P+}', 'k_{P-}', 'k_{PA}', '\beta', '\rho_P', '\nu'};
 
+  keyboard
+
   if (isstruct(pts))
 
     nrates = size(pts.rate, 2);
