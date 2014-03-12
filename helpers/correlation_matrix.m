@@ -1,7 +1,7 @@
 function [rel_C, C, rel_H, H] = correlation_matrix(pts)
 
   legend = {'D_A', 'k_{A+}', 'k_{A-}', 'k_{AP}', '\alpha','\rho_A','\psi', 'L', ...
-            'D_P', 'k_{P+}', 'k_{P-}', 'k_{PA}', '\beta', '\rho_P', '\nu'};
+            'D_P', 'k_{P+}', 'k_{P-}', 'k_{PA}', '\beta', '\rho_P', '\nu', '\gamma'};
 
   if (isstruct(pts))
 
@@ -10,20 +10,27 @@ function [rel_C, C, rel_H, H] = correlation_matrix(pts)
     nenergy = size(pts.energy, 2);
     nvisc = size(pts.viscosity, 2);
     nflow = size(pts.flow, 2);
+    nscale = size(pts.flow_scaling, 2);
 
-    pts = [pts.score pts.rate pts.offset pts.energy pts.viscosity pts.flow];
+    pts = [pts.score pts.rate pts.offset pts.energy pts.viscosity pts.flow pts.flow_scaling];
 
     legend = [legend(1:nrates), ... 
               cellstr([repmat('\delta_', noffset, 1), num2str([1:noffset].')]).', ...
               cellstr([repmat('E_', nenergy, 1), num2str([1:nenergy].')]).', ...
               cellstr([repmat('\eta_', nvisc, 1), num2str([1:nvisc].')]).', ...
-              cellstr([repmat(legend{end}, nflow, 1), num2str([1:nflow].')]).'];
+              legend(end-(nflow+nscale-1):end)];
+
+    legend = legend(~cellfun('isempty', legend));
 
   else
     nshifts = size(pts,2) - length(legend) - 1;
     shifts = cellstr([repmat('\delta_', nshifts, 1), num2str([1:nshifts].')]);
     legend = [legend(1:end-1) shifts.' legend(end)];
   end
+
+  is_fixed = any(isnan(pts), 1) | all(bsxfun(@eq, pts, pts(1,:)), 1);
+  pts = pts(:, ~is_fixed);
+  legend = legend(~is_fixed(2:end));
 
   scores = pts(:,1);
   pts = pts(:,2:end);
@@ -138,7 +145,7 @@ end
 
 function val = find_value(matrix, pattern, score)
 
-  good = all(bsxfun(@eq, matrix, pattern), 2);
+  good = (sum(bsxfun(@minus, matrix, pattern).^2, 2) < 2e-6);
 
   if (any(good))
     val = score(good);

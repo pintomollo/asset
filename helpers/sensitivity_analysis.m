@@ -57,8 +57,6 @@ function [conf_int] = sensitivity_analysis(pts, name)
   %pts = sortrows(pts);
   indx = 1;
 
-  keyboard
-
   std_values = median(pts(:,2:end));
   for i=1:size(pts,1)
     var_indx = find(pts(i,2:end)~=std_values, 1);

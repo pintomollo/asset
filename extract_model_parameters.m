@@ -84,7 +84,21 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
               end
               tmp_pts(:,nparams+noffsets+1:end) = repmat([fitting.init_pos(:,nparams+1:end) opts.scale_params(1)], npts, 1);
               tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
+            elseif (nfixed == length(fitting.init_pos) + nparams + fitting.scale_flow + fitting.fit_flow)
+              tmp_pts = NaN(npts, nfixed);
+              tmp_mut = reshape(fitting.simulation_parameters, [], 2);
+              tmp_pts(:,1:nparams) = repmat(tmp_mut(fit_params), npts, 1);
+              tmp_pts(:,nparams+1:nparams+noffsets) = repmat(fitting.init_pos, npts, 1);
+              if (fitting.fit_flow)
+                tmp_pts(:,end-1) = 1;
+              end
+              if (fitting.scale_flow)
+                tmp_pts(:,end) = opts.scale_params(1);
+              end
+              tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             else
+            keyboard
+
               tmp_pts = NaN(npts, nfixed);
               tmp_mut = reshape(fitting.simulation_parameters, [], 2);
               tmp_pts(:,1:nparams) = repmat(tmp_mut(fit_params), npts, 1);
@@ -113,6 +127,8 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
             data.rate(:, params_indx(1)) = data.rate(:, params_indx(1)) .* data.rate(:, params_indx(4));
             data.rate(:, params_indx(3)) = data.rate(:, params_indx(3)) .* data.rate(:, params_indx(2));
           end
+
+          keyboard
 
           pts = pts(:, (nparams+2):end);
           data.offset = pts(:, 1:noffsets)*fitting.offset_scaling;

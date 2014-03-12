@@ -17,6 +17,9 @@ function perform_fitting(selection, roundit)
     switch_selection = floor(selection);
   end
 
+  % Default setting
+  s_params = {};
+
   switch switch_selection
     case -2
       files = dir('1056-temps-all.mat');
@@ -681,9 +684,7 @@ function perform_fitting(selection, roundit)
           end
 
           orig_s = s_params;
-        else
-        % Default setting
-          s_params = {};
+        %else
         end
     end
 
