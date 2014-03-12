@@ -5,7 +5,7 @@ step_size 5
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-8
-max_iter 1000
+max_iter 800
 init_noise 0
 data_noise 0.01
 combine_data 'independent'
