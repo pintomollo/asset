@@ -615,6 +615,10 @@ function uuids = fit_kymograph(fitting, opts)
     tmp_fit.rescale_factor = rescaling(fit_params);
     tmp_fit.simulation_parameters = ml_params .* rescaling;
 
+    if (~isempty(init_offsets))
+      tmp_fit.init_pos = init_offsets;
+    end
+
     fid = fopen([log_name 'evol.dat'], 'w');
     print_all(fid, tmp_fit);
     fclose(fid);
