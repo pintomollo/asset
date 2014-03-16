@@ -113,6 +113,8 @@ function [rel_C, C, rel_H, H] = correlation_matrix(pts)
     end
   end
 
+  keyboard
+
   goods = ~all(isnan(H));
 
   %Cov = inv(H(goods, goods));

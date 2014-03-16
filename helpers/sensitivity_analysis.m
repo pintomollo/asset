@@ -142,9 +142,10 @@ function [conf_int] = sensitivity_analysis(pts, name)
     xlims = xlim(haxes);
     plot(haxes, pos(center)*[1 1],ylims, 'k');
 
-    if (mindx~=center)
+    %if (mindx~=center)
       scatter(haxes, pos(mindx), mval, 72, [215 25 28]/255, 'filled');
-    end
+      text(pos(mindx), mval, num2str(pos(mindx)), 'Parent', haxes);
+    %end
 
     m = mean(ci);
     s = ci(1) - m;

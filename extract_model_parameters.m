@@ -97,7 +97,6 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
               end
               tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             else
-            keyboard
 
               tmp_pts = NaN(npts, nfixed);
               tmp_mut = reshape(fitting.simulation_parameters, [], 2);
@@ -127,8 +126,6 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
             data.rate(:, params_indx(1)) = data.rate(:, params_indx(1)) .* data.rate(:, params_indx(4));
             data.rate(:, params_indx(3)) = data.rate(:, params_indx(3)) .* data.rate(:, params_indx(2));
           end
-
-          keyboard
 
           pts = pts(:, (nparams+2):end);
           data.offset = pts(:, 1:noffsets)*fitting.offset_scaling;

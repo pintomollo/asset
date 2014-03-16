@@ -219,7 +219,8 @@ function figs_msb(num)
       load('data_expansion')
       data = load('1056-all-all.mat');
 
-      models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
+      %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
+      models = {'test_model1', 'test_model2', 'final_model'};
       all_simul = cell(length(models), 1);
       scores = NaN(length(models), 1);
 
@@ -341,6 +342,30 @@ function figs_msb(num)
       %all_data{f,3}{i,2} = path;
 
       keyboard
+
+    case 0.5
+      load('1056-24-040311_1_');
+      nframes = size_data(mymovie.dic);
+
+      for nimg=1:nframes
+        img = imnorm(double(load_data(mymovie.dic,nimg)));
+        img = mask_neighbors(img, mymovie.dic.centers(:,nimg), mymovie.dic.axes_length(:,nimg), mymovie.dic.orientations(1,nimg), mymovie.dic.neighbors(nimg), opts);
+        img = realign(img,rescale_size,mymovie.dic.centers(:,nimg),mymovie.dic.orientations(1,nimg));
+        imwrite(img, ['PNG/Movie/DIC-' num2str(nimg) '.tif'], 'tif');
+
+        img = imnorm(double(load_data(mymovie.cortex,nimg)));
+        img = mask_neighbors(img, mymovie.markers.centers(:,nimg), mymovie.markers.axes_length(:,nimg), mymovie.markers.orientations(1,nimg), mymovie.markers.neighbors(nimg), opts);
+        img = realign(img,rescale_size,mymovie.markers.centers(:,nimg),mymovie.markers.orientations(1,nimg));
+        imwrite(img, ['PNG/Movie/PH-' num2str(nimg) '.tif'], 'tif');
+
+        img = imnorm(double(load_data(mymovie.data,nimg)));
+        img = mask_neighbors(img, mymovie.data.centers(:,nimg), mymovie.data.axes_length(:,nimg), mymovie.data.orientations(1,nimg), mymovie.data.neighbors(nimg), opts);
+        img = realign(img,rescale_size,mymovie.data.centers(:,nimg),mymovie.data.orientations(1,nimg));
+        imwrite(img, ['PNG/Movie/PAR2-' num2str(nimg) '.tif'], 'tif');
+
+        disp([num2str(nimg) '/' num2str(nframes)]);
+      end
+
 
     case 1
       files = dir('stainings/*.txt');
@@ -832,14 +857,17 @@ function figs_msb(num)
       [H,P] = myttest(all_times(:,3)-all_times(:,2), all_times(:,end))
 
       subplot(2,3,5)
-      boxplot((all_times(:,3)-all_times(:,2)) ./ (all_times(:,5)-all_times(:,4)), all_times(:,end), 'label', all_data(:,1));
-      title('Polarity establishment VS PC to PNM')
-      [H,P] = myttest((all_times(:,3)-all_times(:,2)) ./ (all_times(:,5)-all_times(:,4)), all_times(:,end))
+      boxplot(all_times(:,1)-all_times(:,3), all_times(:,end), 'label', all_data(:,1));
+      title('Polarity maintenance')
+      [H,P] = myttest(all_times(:,1)-all_times(:,3), all_times(:,end))
+      %boxplot((all_times(:,3)-all_times(:,2)) ./ (all_times(:,5)-all_times(:,4)), all_times(:,end), 'label', all_data(:,1));
+      %title('Polarity establishment VS PC to PNM')
+      %[H,P] = myttest((all_times(:,3)-all_times(:,2)) ./ (all_times(:,5)-all_times(:,4)), all_times(:,end))
 
-      subplot(2,3,6)
+      %subplot(2,3,6)
       %scatter((all_times(:,3)-all_times(:,2)), (all_times(:,5)-all_times(:,4)));
-      myregress([ones(size(all_times,1), 1) (all_times(:,3)-all_times(:,2))], (all_times(:,5)-all_times(:,4)));
-      title('Polarity establishment VS PC to PNM')
+      %myregress([ones(size(all_times,1), 1) (all_times(:,3)-all_times(:,2))], (all_times(:,5)-all_times(:,4)));
+      %title('Polarity establishment VS PC to PNM')
 
       %find_kymograph('1056-temps-all.mat', 'config_modeling', 'custom_flow', 'config_fitting', 'fit_kymo', 'display', true);
 
@@ -874,9 +902,10 @@ function figs_msb(num)
 
           tmp_indx = NaN(size(thresh));
           fraction = files{i,2};
-          for t=1:length(thresh)
-            tmp_indx(t) = find(fraction>=thresh(t), 1, 'first');
-          end
+          %for t=1:length(thresh)
+          %  tmp_indx(t) = find(fraction>=thresh(t), 1, 'first');
+          %end
+          tmp_indx = [find(fraction>=thresh(2), 1, 'first') length(fraction)];
 
           all_params(i,:) = [data.all_data{f,2}(i,1:5) (tmp_indx(2)-tmp_indx(1))*10];
           disp([num2str(i) '/' num2str(nfiles)]);
@@ -926,8 +955,8 @@ function figs_msb(num)
       %avgs = mymean(all_times(:,1), 1, all_times(:,2));
       plot(temperatures, avgs, '-ok');
 
-      title('Polarity establishment')
-      ylim([0 max(all_times(:,1)+10)]);
+      title('Polarity maintenance')
+      ylim([0 max(all_times(:,1)+200)]);
       xlim([10 26]);
       set(gca, 'XTick', [10:26], 'XTickLabel', [10:26]);
       [H,P] = myttest(all_times(:,1), all_times(:,end))
@@ -1054,7 +1083,7 @@ function figs_msb(num)
 
       opts = get_struct('modeling');
       opts = load_parameters(opts, 'goehring.txt');
-      opts = load_parameters(opts, 'custom_flow.txt');
+      opts = load_parameters(opts, 'extended_model.txt');
 
       npos = opts.nparticles;
 
@@ -1131,7 +1160,7 @@ function figs_msb(num)
           domain = [domain domain(:,end-1:-1:1)];
 
           [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
-          timing = (find(path>=thresh(2), 1, 'first') - (find(path>=thresh(1), 1, 'first')))*10;
+          timing = (length(path) - find(path>=thresh(2), 1, 'first'))*10;
 
           all_maint{j} = profile.';
           centers(j) = center;
@@ -2856,7 +2885,7 @@ function figs_msb(num)
       keyboard
 
     case 7.2
-      vals = group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'combine_data'}, {'type', '1056-all-all'; 'fitting_type', 'sample'; 'fit_relative', true});
+      vals = group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'combine_data'; 'fixed_parameter'}, {'type', '1056-all-all'; 'fitting_type', 'sample'; 'fit_relative', true});
 
       for i = 1:size(vals, 1)
         best_indx = -1;
@@ -2875,6 +2904,7 @@ function figs_msb(num)
       end
 
       vals2 = extract_model_parameters(vals);
+      vals2 = vals2(cellfun(@(x)(length(x{1}.fixed_parameter) == 159), vals2(:,1)),:);
 
       if (strncmp(vals2{1,1}{1}.combine_data, 'hessian', 7))
         vals2 = vals2([2 1],:);
@@ -3376,18 +3406,11 @@ function figs_msb(num)
 
     case 8.3
 
-      colors = [179 205 227; ...
+      colors = [251 180 174; ...
                 204 235 197; ...
-                251 180 174; ...
-                254 217 166; ...
+                179 205 227; ...
                 222 203 228; ...
-                179 179 179; ...
-                55 126 184; ...
-                77 175 74; ...
-                228 26 28; ...
-                255 127 0; ...
-                152 78 163;
-                38 38 38]/255;
+                254 217 166]/255;
 
 
       data = load('simul_optimized.mat');
@@ -3412,10 +3435,12 @@ function figs_msb(num)
             tmp_indx = NaN(2, length(thresh));
             fraction = files{i,2};
             ref_frac = ref.all_data{f,3}{i,2};
-            for t=1:length(thresh)
-              tmp_indx(1, t) = find(fraction>=thresh(t), 1, 'first');
-              tmp_indx(2, t) = find(ref_frac>=thresh(t), 1, 'first');
-            end
+            %for t=1:length(thresh)
+            %  tmp_indx(1, t) = find(fraction>=thresh(t), 1, 'first');
+            %  tmp_indx(2, t) = find(ref_frac>=thresh(t), 1, 'first');
+            %end
+            tmp_indx(1, :) = [find(fraction>=thresh(2), 1, 'first') length(fraction)];
+            tmp_indx(2, :) = [find(ref_frac>=thresh(2), 1, 'first') length(ref_frac)];
 
             all_values(i,5:6) = [(tmp_indx(2,2)-tmp_indx(2,1)) (tmp_indx(1,2)-tmp_indx(1,1))]*10;
           end
@@ -3426,6 +3451,7 @@ function figs_msb(num)
           subplot(2,3,1);hold on
           errorbarxy(means(1), means(2), stds(1), stds(2)); hold on
           myregress([intercept all_values(:,1)], all_values(:,2), colors(f, :));
+          text(0, 0, ref.all_data{f, 1}, 'Color', colors(f,:))
           ylim([30 80]);
           xlim([30 80]);
 
@@ -3436,8 +3462,8 @@ function figs_msb(num)
           subplot(2,3,3);hold on
           errorbarxy(means(5), means(6), stds(5), stds(6)); hold on
           myregress([intercept all_values(:,5)], all_values(:,6), colors(f, :), 5);
-          ylim([0 500]);
-          xlim([0 500]);
+          ylim([0 1500]);
+          xlim([0 1500]);
 
           all_ratios = [all_ratios; [all_values intercept*f]];
         end
@@ -3464,8 +3490,8 @@ function figs_msb(num)
         myregress([intercept all_ratios(:,5)], all_ratios(:,6), [0 0 1], 5);
         [rho, p] = corr(all_ratios(:,5), all_ratios(:,6));
         title(['r=' num2str(rho) ', p=' num2str(p)])
-        ylim([0 500]);
-        xlim([0 500]);
+        ylim([0 1500]);
+        xlim([0 1500]);
       end
 
       keyboard
@@ -3536,8 +3562,11 @@ function figs_msb(num)
         end
       end
 
+      figure;bar(sum(all_scores))
+
       keyboard
 
+      %{
       vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'simulation_parameters';'flow_size';'scale_flow';'fit_flow'}, {'type', '1056-all-all'; 'scale_each_egg', true; 'extrapol_z', true});
       vals = extract_model_parameters(vals, true);
 
@@ -3566,6 +3595,7 @@ function figs_msb(num)
       all_params2 = all_params2(indx, :);
 
       keyboard
+      %}
 
     case 10
       vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fitting_type'; 'scale_flow'; 'extrapol_z'}, {'type', '1056-med-scale'});

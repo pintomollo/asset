@@ -14,5 +14,7 @@ time_step 0.05
 user_data getfield(load('cyto_flow.mat', 'flow_step'), 'flow_step')
 reaction_temperature 20
 flow_temperature getfield(load('cyto_flow.mat', 'flow_temp'), 'flow_temp')
-scale_params 1.0251
-temperature_params [0.2080 0.003 0.8282]
+%scale_params 1.0251
+%temperature_params [0.2080 0.003 0.8282]
+scale_params 1.11
+temperature_params [0.2617 0.015 0.6581]
