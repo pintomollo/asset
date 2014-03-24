@@ -113,7 +113,7 @@ function [rel_C, C, rel_H, H] = correlation_matrix(pts)
     end
   end
 
-  keyboard
+  %keyboard
 
   goods = ~all(isnan(H));
 
