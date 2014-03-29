@@ -3461,7 +3461,7 @@ function figs_msb(num)
 
           subplot(2,3,3);hold on
           errorbarxy(means(5), means(6), stds(5), stds(6)); hold on
-          myregress([intercept all_values(:,5)], all_values(:,6), colors(f, :), 5);
+          myregress([intercept all_values(:,5)], all_values(:,6), colors(f, :));
           ylim([0 1500]);
           xlim([0 1500]);
 
@@ -3487,7 +3487,7 @@ function figs_msb(num)
 
         subplot(2,3,6);hold on
         errorbarxy(means(5), means(6), stds(5), stds(6)); hold on
-        myregress([intercept all_ratios(:,5)], all_ratios(:,6), [0 0 1], 5);
+        myregress([intercept all_ratios(:,5)], all_ratios(:,6), [0 0 1]);
         [rho, p] = corr(all_ratios(:,5), all_ratios(:,6));
         title(['r=' num2str(rho) ', p=' num2str(p)])
         ylim([0 1500]);
