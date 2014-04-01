@@ -17,4 +17,4 @@ flow_temperature getfield(load('cyto_flow.mat', 'flow_temp'), 'flow_temp')
 %scale_params 1.0251
 %temperature_params [0.2080 0.003 0.8282]
 scale_params 1.11
-temperature_params [0.2617 0.002 0.8282]
+temperature_params [0.2617 0.0004 0.8282]
