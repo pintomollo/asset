@@ -24,7 +24,7 @@ function spots = detect_spots(imgs, opts)
 % References:
 %   [1] Olivo-Marin, J.-C. Extraction of spots in biological images using 
 %       multiscale products. Pattern Recognit. 35, 1989-1996 (2002).
-%   
+%
 %   [2] Jaensch, S. et al. Automated tracking and analysis of centrosomes in early 
 %       Caenorhabditis elegans embryos. Bioinformatics. (2010)
 %
@@ -119,7 +119,7 @@ function spots = detect_spots(imgs, opts)
 
   % We iterate over the frames
   for i = 1:nframes
-    
+
     % If we have a file, we load the image
     if (~isempty(fname))
       img = double(load_data(fname, i));

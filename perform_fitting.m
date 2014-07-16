@@ -21,6 +21,18 @@ function perform_fitting(selection, roundit)
   s_params = {};
 
   switch switch_selection
+    case -4
+      files = {'1056-24-all.mat'};
+      repeats = 3;
+      starts = 'G';
+      param_set = 6;
+      params{4} = 'goehring';
+    case -3
+      files = {'1056-24-all.mat'};
+      repeats = 3;
+      starts = 'G';
+      param_set = 2;
+      params{4} = 'goehring';
     case -2
       files = dir('1056-temps-all.mat');
       repeats = 3;

@@ -268,7 +268,8 @@ function figs_msb(num)
       opts = load_parameters(opts, 'goehring.txt');
 
       %ratios = [1.56 [1.5:-0.1:1.3]];
-      ratios = [1.56:-0.1:1.2];
+      %ratios = [1.56:-0.1:1.2];
+      ratios = [0.5:0.25:1.5];
 
       data = load('1056-24-all.mat');
       domains = cell(length(data), 1);
@@ -299,16 +300,64 @@ function figs_msb(num)
       corr_offset = 8;
       half = ((length(data.pos)-1)/2)+1;
 
-      for i=1:length(ratios)
+      ml_params = [opts.diffusion_params; ...
+                    opts.reaction_params];
 
-        opts.reaction_params(5,1) = ratios(i);
+      orig_params = ml_params;
+
+      hfig = figure;
+      for j=1:numel(ml_params)-3
+        for i=1:length(ratios)
+          ml_params = orig_params;
+          ml_params(j) = ml_params(j)*ratios(i);
+
+          opts.diffusion_params = ml_params(1,:);
+          opts.reaction_params = ml_params(2:end,:);
+          %opts.reaction_params(5,1) = ratios(i);
+
+          x0 = opts.init_func(opts, false);
+
+
+          [res, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+
+          %keyboard
+
+          %res = res((end/2)+1:end, :);
+          %res = flipud(interp1q([0:size(res, 1)].'*opts.x_step, flipud(res), data.pos(half:end).'));
+
+          res = flipud(interp2(flipud(res), [1:size(data.ground_truth, 1)]+corr_offset, data.pos(half:end).'/opts.x_step + 1));
+
+          %domain = domain((end/2)+1:end, :).';
+          domain = res.';
+          domain = imnorm([domain domain(:,end-1:-1:1)]);
+
+          domains{i} = domain;
+
+          %figure;imagesc(domain);title(num2str(ratios(i)));
+          imagesc(domain);title(num2str([j ratios(i)]));
+          colormap(blueredmap)
+          plot2svg(['PNG/enrichment_sensitivity_' num2str(j) '_' num2str(i) '.svg'], hfig);
+
+          %figure;
+          %find_kymograph('1056-24-all.mat', opts, 'config_fitting', 'fit_kymo', 'display', true, 'aligning_type', 'best', 'init_noise', 0)
+
+          disp([num2str(i) '/' num2str(length(ratios))]);
+        end
+        disp(['---' num2str(j) '/' num2str(numel(ml_params)+1)]);
+      end
+
+      j=j+1;
+      for i=1:length(ratios)
+        ml_params = orig_params;
+
+        opts.diffusion_params = ml_params(1,:);
+        opts.reaction_params = ml_params(2:end,:);
+        %opts.reaction_params(5,1) = ratios(i);
 
         x0 = opts.init_func(opts, false);
 
-        ml_params = [opts.diffusion_params; ...
-                      opts.reaction_params];
 
-        [res, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+        [res, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow*ratios(i), opts.user_data, opts.max_iter);
 
         %keyboard
 
@@ -323,14 +372,17 @@ function figs_msb(num)
 
         domains{i} = domain;
 
-        figure;imagesc(domain);title(num2str(ratios(i)));
+        %figure;imagesc(domain);title(num2str(ratios(i)));
+        imagesc(domain);title(num2str([j ratios(i)]));
         colormap(blueredmap)
+        plot2svg(['PNG/enrichment_sensitivity_' num2str(j) '_' num2str(i) '.svg'], hfig);
 
         %figure;
         %find_kymograph('1056-24-all.mat', opts, 'config_fitting', 'fit_kymo', 'display', true, 'aligning_type', 'best', 'init_noise', 0)
 
         disp([num2str(i) '/' num2str(length(ratios))]);
       end
+      disp(['---' num2str(j) '/' num2str(numel(ml_params)+1)]);
 
       %[profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
       %norig = length(all_data{f,3}{i,1})-1;
@@ -3743,6 +3795,94 @@ function figs_msb(num)
           imagesc([residuals{j}(:,1:end/2) residuals{j}(:,end:-1:(end/2)+1)], [0 max_err(i)]);
         end
       end
+
+      keyboard
+
+    case 12
+
+      best_align = load('1056-24-all.mat');
+      files = textread('good_24.txt', '%s');
+      segment = load('data_expansion');
+
+      nfiles = length(files);
+      prct_thresh = 5;
+
+      if (~exist('all_kymos.mat'))
+        all_files = cell(nfiles, 2);
+        timings = NaN(nfiles, 3);
+        scaling_factors = NaN(nfiles, 2);
+        for i=1:nfiles
+          data = load(files{i});
+          [timings(i,:), name] = get_manual_timing(data.mymovie, data.opts);
+          [f, frac_width, full_width, domain, pos] = domain_expansion(data.mymovie, data.opts);
+          scaling_factors(i,1) = (size(domain, 2) - 1) / 2;
+          scaling_factors(i,2) = frac_width/opts_expansion.quantification.resolution;
+
+          all_files{i,1} = domain;
+          all_files{i,2} = f;
+
+          img = all_files{i,1};
+          path = all_files{i,2}*scaling_factors(i, 2);
+          h = scaling_factors(i,1);
+          w = size(img, 1);
+          pos_mat = repmat([1:h], w, 1);
+          mask = bsxfun(@le, pos_mat, path);
+          mask = [mask(:,end:-1:2) mask];
+
+          min_val = prctile(img(~mask), prct_thresh);
+          max_val = prctile(img(mask), 100-prct_thresh);
+          if (min_val > max_val)
+            all_files{i,1} = (img - max_val) / (min_val - max_val);
+          else
+            all_files{i,1} = (img - min_val) / (max_val - min_val);
+          end
+
+          disp([num2str(i) '/' num2str(nfiles)])
+        end
+        save('all_kymos', 'all_files', 'timings', 'scaling_factors')
+      else
+        load('all_kymos.mat')
+      end
+
+      dt = timings(:,2) - timings(:,1);
+      dt2 = timings(:,3) - timings(:,1);
+      ratio = nanmedian(dt ./ dt2);
+      timings(isnan(dt),2) = timings(isnan(dt),1)+round(dt2(isnan(dt))*ratio);
+
+      thresh = [0 5 10 25 50 75 77.5 90 100]/100;
+      img_thresh = [0:0.1:0.9];
+
+      msr = NaN(length(thresh)+3,length(img_thresh));
+      for j=1:length(img_thresh)
+        for i=1:length(thresh)
+          aligns = cellfun(@(x)(find(x>=thresh(i), 1)), all_files(:,2));
+          [stack, shift] = stack_images(all_files(:,1), aligns, img_thresh(j));
+           avg = nanmean(stack,3);
+           residues = bsxfun(@minus, stack, avg);
+           residues = residues.^2;
+           residues(isnan(residues)) = 0;
+           msr(i,j) = sum(residues(:));
+        end
+
+        for i=1:3
+          [stack, shift] = stack_images(all_files(:,1), timings(:,i), img_thresh(j));
+           avg = nanmean(stack,3);
+           residues = bsxfun(@minus, stack, avg);
+           residues = residues.^2;
+           residues(isnan(residues)) = 0;
+           msr(i+length(thresh),j) = sum(residues(:));
+        end
+      end
+
+      figure;imagesc(msr);
+      colormap(redgreenmap);
+      colorbar
+      set(gca, 'YTick', 1:size(msr, 1), ...
+               'DataAspectRatio', [1 1 1], ...
+               'YTickLabel', {}, ...
+               'YTickLabel', );
+
+      %% + check correlation timings/fraction ??
 
       keyboard
   end

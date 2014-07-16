@@ -72,6 +72,8 @@ function [conf_int] = sensitivity_analysis(pts, name)
   sep_sampling(end,:) = mscore;
   pos_sampling(end,:) = std_values;
 
+  min_y = range(pts(:,1))/10;
+
   conf_int = NaN(length(std_values), 3);
   conf_int(:,1) = std_values(:);
 
@@ -169,6 +171,8 @@ function [conf_int] = sensitivity_analysis(pts, name)
 
     rectangle('Parent', hinset, 'Position', [xlims(1) ylims(1) diff(xlims) diff(ylims)], 'EdgeColor', 'none', 'FaceColor', [217 217 217]/255);
     plot(pos, likeli, 'LineWidth', 2, 'Color', [83 83 83] / 255);
+    ylims = ylim(hinset);
+    ylim(hinset, [ylims(1) max([ylims(2), ylims(1)+min_y])]);
     ylims = ylim(hinset);
     plot(hinset, pos(center)*[1 1], ylims, 'k');
 
