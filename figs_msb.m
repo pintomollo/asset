@@ -3686,6 +3686,71 @@ function figs_msb(num)
       end
 
       keyboard
+
+    case 20
+      vals = group_ml_results('FitsRevision/adr-kymo-*_evol.dat', {'parameter_set',2});
+      values = extract_model_parameters(vals, true);
+
+      keyboard
+
+    case 21
+      x = [0:2:14];
+      y = [-0.2:0.1:0.3];
+
+      xp = [169:69:660];
+      yp = [412 345 278 211 144 77];
+
+      data = [194, 346; 245, 322; 298, 291; 348, 249; 401, 213; 452 200; 504, 187; 555, 179; 607, 178];
+      stds = [194, 321; 245 346; 298, 315; 348, 224; 401, 193; 452, 180; 504, 168; 555, 156; 607, 153];
+
+      vals = [interp1(xp, x, data(:,1).'); interp1(yp, y, data(:,2).')].';
+      stds = [interp1(xp, x, stds(:,1).'); interp1(yp, y, stds(:,2).')].';
+      stds = abs(vals(:,2) - stds(:,2));
+
+      load('niwayama.mat')
+
+      %nparticles = 2000;
+      for nparticles = [100:200:1000]
+        xr = rand([nparticles, 1])*range(x)+x(1);
+        yr = randn(nparticles, 1).*feval(fittedstds, xr) + feval(fittedmodel, xr);
+
+        edges = [0:1.5:14];
+        centers = edges(1:end-1) + diff(edges)/2;
+
+        edges(1) = -1e-3;
+        edges(end) = 14;
+
+        [n, bin] = histc(xr, edges);
+
+        newvals = vals;
+        for i=1:size(vals,1)
+          [newvals(i,1), newvals(i,2)] = mymean(yr(bin==i));
+        end
+
+        pos = [x(1):0.1:x(end)];
+        spline = feval(fittedmodel, pos);
+        splinestds = feval(fittedstds, pos);
+
+        weight = @(x)(exp(-(x.^2)/2));
+        weights = weight(xr);
+        weights = weights / sum(weights);
+
+        avg = sum(yr .* weights);
+        poss = [spline(1) vals(1,2) avg];
+
+        figure;scatter(xr, yr);hold on
+        errorbar(vals(:,1), vals(:,2), stds, 'r')
+        errorbar(centers, newvals(:,1), newvals(:,2), 'g')
+        plot(pos, spline+splinestds, 'k')
+        plot(pos, spline-splinestds, 'k')
+        plot(pos, spline, 'k')
+        plot(pos, weight(pos)*max(yr), 'm')
+        scatter(pos([1 1]), [spline(1) avg], 'r')
+        title([num2str(nparticles) ':' num2str(poss) ' ;' num2str(abs(poss - poss(1)))])
+      end
+
+      keyboard
+
     case 11
       %vals = group_ml_results('ScaledFlowFits/adr-kymo-*_evol.dat', {'type', '1056-24-all'}, {'simulation_parameters';'flow_size';'init_pos'});
 
@@ -3880,7 +3945,7 @@ function figs_msb(num)
       set(gca, 'YTick', 1:size(msr, 1), ...
                'DataAspectRatio', [1 1 1], ...
                'YTickLabel', {}, ...
-               'YTickLabel', );
+               'XTickLabel', {});
 
       %% + check correlation timings/fraction ??
 

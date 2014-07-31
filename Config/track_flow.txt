@@ -1,9 +1,17 @@
+application 'flow'
+ccd_pixel_size 16
+magnification 60
+recompute 0
+segmentation_type 'data'
+verbosity 0
+
 #spot_tracking
 max_size 1
 frame_displacement 0.5
-linking_function @spot_similarity
+linking_function @mutual_distance
 joining_function []
 splitting_function []
+gap_function []
 max_particles 5
 max_iterations  20
 intensity_thresh  30
@@ -13,6 +21,8 @@ fusion_thresh 0.5
 noise_thresh 1
 verbosity 2
 min_path_length 5
+interpolate 0
+smoothing_complexity 1
 projection_frames 10
 projection_dist 0.8333
 projection_bin_size 2
