@@ -164,7 +164,7 @@ function mymovie = detect_data_nuclei(mymovie, opts)
   for i=nframes:-1:1
     nimg = i;
 
-    links = nuclei(nimg).cluster
+    links = nuclei(nimg).cluster;
     for j=1:size(links, 1)
       path_length{links(j,3)}(links(j,2)) = path_length{nimg}(links(j,1));
     end
