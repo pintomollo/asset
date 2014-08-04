@@ -128,7 +128,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
     %img = imfilter(img,parameters.noise.gaussian,'symmetric');
     %img = medfilt2(img,parameters.noise.median);
 
-    if (~isempty(nuclei(nimg).carth))
+    if (~isempty(nuclei(nimg).carth) & ~all(isnan(nuclei(nimg).carth)))
 %      subplot(1,2,1);imagesc(img);
       img = img + GaussMask2D(nuclei(nimg).properties*0.75, size(img), nuclei(nimg).carth([2 1]), 0, 1)*prctile(img(:), 95);
 %      subplot(1,2,2);imagesc(img);
