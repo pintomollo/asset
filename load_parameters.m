@@ -141,5 +141,7 @@ function opts = load_parameters(opts, fname)
   end
   fclose(fid);
 
+  opts = set_pixel_size(opts);
+
   return;
 end
