@@ -50,10 +50,11 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie = split_cells(mymovie, opts);
   end
 
-  redo_nuclei = false
+  redo_nuclei = false;
   if (~isfield(mymovie.data, 'nuclei') | isempty(mymovie.data.nuclei) | empty_struct(mymovie.data.nuclei, 'carth'))
     if (all(isnan(mymovie.data.orientations)))
-      redo_nuclei = true
+      redo_nuclei = true;
+      mymovie.data.nuclei = get_struct('ruffles', [1,nframes]);
     else
       mymovie = detect_data_nuclei(mymovie, opts);
     end
