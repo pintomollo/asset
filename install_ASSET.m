@@ -188,6 +188,11 @@ function install_ASSET
     end
   end
 
+  [res, info] = system('java -version');
+  if ~strfind(info, 'java version "')
+    warning('ASSET:javaMissing', 'Java is either missing or not properly configured ! Make sure that its executable directory is included in your command path.');
+  end
+
   cd ..;
 
   % This folder is required as well
