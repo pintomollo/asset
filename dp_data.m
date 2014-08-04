@@ -8,6 +8,12 @@ function mymovie = dp_data(mymovie, nimg, opts)
       eggshell = mymovie.data.eggshell;
       cortex = mymovie.data.cortex;
 
+      if (~isfield(mymovie.data, 'nuclei'))
+        nuclei = get_struct('ruffles', size(eggshell));
+      else
+        nuclei = mymovie.data.nuclei;
+      end
+
       if (~isfield(mymovie.data, 'update'))
         update = false(size(centers));
       else
@@ -31,6 +37,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
       eggshell = get_struct('eggshell',[1,nframes]);
       cortex = get_struct('cortex',[1,nframes]);
       ruffles = get_struct('ruffles',[1, nframes]); 
+      nuclei = get_struct('ruffles', [1,nframes]);
     end
 
     mymovie.data.eggshell = eggshell;
@@ -38,6 +45,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie.data.centers = centers;
     mymovie.data.axes_length = axes_length;
     mymovie.data.orientations = orientations;
+    mymovie.data.nuclei = nuclei;
     mymovie.data.update = update;
     mymovie.data.ruffles = ruffles;
   else
@@ -50,18 +58,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie = split_cells(mymovie, opts);
   end
 
-  redo_nuclei = false;
-  if (~isfield(mymovie.data, 'nuclei') | isempty(mymovie.data.nuclei) | empty_struct(mymovie.data.nuclei, 'carth'))
-    if (all(isnan(mymovie.data.orientations)))
-      redo_nuclei = true;
-      mymovie.data.nuclei = get_struct('ruffles', [1,nframes]);
-    else
-      mymovie = detect_data_nuclei(mymovie, opts);
-    end
-  end
-
   neighbors = mymovie.data.neighbors;
-  nuclei = mymovie.data.nuclei;
   parameters = opts.segmentation_parameters.data;
 
   img = [];
@@ -260,10 +257,10 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie.data.eggshell = eggshell;
   end
 
-  if redo_nuclei
-    opts.recompute = true;
-    mymovie = detect_data_nuclei(mymovie, opts);
-  end
+%  if redo_nuclei
+%    opts.recompute = true;
+%    mymovie = detect_data_nuclei(mymovie, opts);
+%  end
 
   mymovie.data.parameters = parameters;
   mymovie.data.update = update;

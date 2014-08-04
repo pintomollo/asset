@@ -101,6 +101,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
   end
 
   did_dic = false;
+  did_data = false;
   for i = 1:max_frames
     nframe = frames(i);
 
@@ -111,6 +112,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     end
 
     if (strncmp(opts.segmentation_type, 'data', 3))
+      did_data = true;
       mymovie = dp_data(mymovie, nframe, opts);
 
       updated = updated || any(mymovie.data.update(:, nframe));
@@ -143,6 +145,10 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     if (opts.verbosity > 0)
       waitbar(i/max_frames,hwait);
     end
+  end
+
+  if (did_data)
+    mymovie = detect_data_nuclei(mymovie, opts);
   end
 
   if (did_dic)
