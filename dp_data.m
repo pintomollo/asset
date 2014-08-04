@@ -261,6 +261,7 @@ function mymovie = dp_data(mymovie, nimg, opts)
   end
 
   if redo_nuclei
+    opts.recompute = true;
     mymovie = detect_data_nuclei(mymovie, opts);
   end
 
