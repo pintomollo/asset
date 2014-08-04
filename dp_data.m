@@ -32,6 +32,14 @@ function mymovie = dp_data(mymovie, nimg, opts)
       cortex = get_struct('cortex',[1,nframes]);
       ruffles = get_struct('ruffles',[1, nframes]); 
     end
+
+    mymovie.data.eggshell = eggshell;
+    mymovie.data.cortex = cortex;
+    mymovie.data.centers = centers;
+    mymovie.data.axes_length = axes_length;
+    mymovie.data.orientations = orientations;
+    mymovie.data.update = update;
+    mymovie.data.ruffles = ruffles;
   else
     error 'No suitable channels available for the data segmentation'; 
 
@@ -42,8 +50,13 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie = split_cells(mymovie, opts);
   end
 
+  redo_nuclei = false
   if (~isfield(mymovie.data, 'nuclei') | isempty(mymovie.data.nuclei) | empty_struct(mymovie.data.nuclei, 'carth'))
-    mymovie = detect_data_nuclei(mymovie, opts);
+    if (all(isnan(mymovie.data.orientations)))
+      redo_nuclei = true
+    else
+      mymovie = detect_data_nuclei(mymovie, opts);
+    end
   end
 
   neighbors = mymovie.data.neighbors;
@@ -244,6 +257,10 @@ function mymovie = dp_data(mymovie, nimg, opts)
     mymovie.data.axes_length = axes_length;
     mymovie.data.orientations = orientations;
     mymovie.data.eggshell = eggshell;
+  end
+
+  if redo_nuclei
+    mymovie = detect_data_nuclei(mymovie, opts);
   end
 
   mymovie.data.parameters = parameters;
