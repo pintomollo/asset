@@ -6,7 +6,7 @@ segmentation_type 'data'
 verbosity 0
 
 #spot_tracking
-max_size 1
+max_size 3
 frame_displacement 0.5
 linking_function @mutual_distance
 joining_function []

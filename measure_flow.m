@@ -1,6 +1,6 @@
 function mymovie = measure_flow(mymovie, opts)
 
-  opts = load_parameters(opts, 'track_flow');
+  %opts = load_parameters(opts, 'track_flow');
   nframes = size_data(mymovie.data);
 
   if ((opts.recompute & opts.segment) | ~isfield(mymovie.data, 'spots') | isempty(mymovie.data.spots) | length(mymovie.data.spots)~=nframes | empty_struct(mymovie.data.spots, 'carth'))
