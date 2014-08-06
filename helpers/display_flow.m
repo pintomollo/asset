@@ -1,5 +1,13 @@
 %function [flow, flow_std, pos] = display_flow(mymovie, opts, args)
-function [flow, flow_std, pos] = display_flow(mymovie, opts)
+function [flow, flow_std, pos] = display_flow(mymovie, opts, do_piv)
+
+  if (nargin < 3)
+    do_piv = false;
+  end
+
+  if (do_piv)
+    mymovie.data.flow = mymovie.data.piv;
+  end
 
 %  thresh = opts.quantification.pole_threshold;
   nframes = size_data(mymovie.data);

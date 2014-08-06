@@ -3751,6 +3751,52 @@ function figs_msb(num)
 
       keyboard
 
+    case 22
+
+      %{
+      load('749-031012_5_');
+
+      all_movies = cell(4,2);
+      for resc = 1:4
+        for rem = 0:1
+          new_opts = opts;
+          new_opts.spot_tracking.projection_args = [Inf resc rem];
+          all_movies{resc, rem+1} = piv_flows(mymovie, new_opts);
+
+          disp([num2str(rem) ',' num2str(resc)]);
+        end
+      end
+
+      save([mymovie.experiment 'pivs'], 'all_movies', 'opts');
+
+      all_flows = cell(size(all_movies));
+      for i=1:size(all_movies,1)
+        for j=1:size(all_movies,2)
+          all_flows{i,j}=display_flow(all_movies{i,j}, opts, true);
+        end
+      end
+      %}
+
+      load('749-031012_5_pivs')
+
+      resc=2;
+      rem=0;
+      %clim = [-0.5 0.5];
+      clim = [-0.16 0.16];
+
+      mymovie = all_movies{resc, rem+1};
+      orig_flow = display_flow(mymovie, opts, false);
+      piv_flow = display_flow(mymovie, opts, true);
+
+      figure;subplot(1,2,1);
+      colormap(redgreenmap)
+      imagesc(orig_flow.', clim);
+      subplot(1,2,2);
+      imagesc(piv_flow.', clim);
+
+
+      keyboard
+
     case 11
       %vals = group_ml_results('ScaledFlowFits/adr-kymo-*_evol.dat', {'type', '1056-24-all'}, {'simulation_parameters';'flow_size';'init_pos'});
 
