@@ -156,32 +156,33 @@ function mymovie = measure_flow(mymovie, opts)
 %        drawnow
 
         dist = sqrt(mymean(sum(bsxfun(@minus, cortex(good_ells,:), nucleus_center(1:2)).^2, 2), 1));
-        all_dists(i,1) = dist;
-        dist = dist / nucleus_center(3);
-        %rads & some function ....
-        all_dists(i,2) = dist;
+        if (~isempty(dist))
+          all_dists(i,1) = dist;
+          dist = dist / nucleus_center(3);
+          %rads & some function ....
+          all_dists(i,2) = dist;
 
-        %dangle = dangle*dist;
-        % Sigmoid between 2 and 4 roughly, 3./(1+exp(-5*(x-2.5)))+1
+          %dangle = dangle*dist;
+          % Sigmoid between 2 and 4 roughly, 3./(1+exp(-5*(x-2.5)))+1
 
-          dangle = dangle*(4./(1+exp(-5*(dist-2.5)))+1);
+            dangle = dangle*(4./(1+exp(-5*(dist-2.5)))+1);
 
-        if (dist <= 2)
-          egg_angle = ell_nucleus(1);
-        elseif (dist <= 3)
-          dist = dist - 2;
-          egg_angle = ell_nucleus(1)*(1-dist) + egg_angle*dist;
+          if (dist <= 2)
+            egg_angle = ell_nucleus(1);
+          elseif (dist <= 3)
+            dist = dist - 2;
+            egg_angle = ell_nucleus(1)*(1-dist) + egg_angle*dist;
+          end
+
+          good_ells = (ells(:,1) >= ell_nucleus(1) - dangle & ells(:,1) <= ell_nucleus(1) + dangle);
+
+          if (ell_nucleus(1) - dangle < 0)
+            good_ells = good_ells | (ells(:,1)-2*pi >= ell_nucleus(1) - dangle & ells(:,1)-2*pi <= ell_nucleus(1) + dangle);
+          end
+          if (ell_nucleus(1) + dangle > 2*pi)
+            good_ells = good_ells | (ells(:,1)+2*pi >= ell_nucleus(1) - dangle & ells(:,1)+2*pi <= ell_nucleus(1) + dangle);
+          end
         end
-
-        good_ells = (ells(:,1) >= ell_nucleus(1) - dangle & ells(:,1) <= ell_nucleus(1) + dangle);
-
-        if (ell_nucleus(1) - dangle < 0)
-          good_ells = good_ells | (ells(:,1)-2*pi >= ell_nucleus(1) - dangle & ells(:,1)-2*pi <= ell_nucleus(1) + dangle);
-        end
-        if (ell_nucleus(1) + dangle > 2*pi)
-          good_ells = good_ells | (ells(:,1)+2*pi >= ell_nucleus(1) - dangle & ells(:,1)+2*pi <= ell_nucleus(1) + dangle);
-        end
-
 
         prev_center = nucleus_center;
       end
