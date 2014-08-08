@@ -14,7 +14,7 @@ function mymovie = detect_data_nuclei(mymovie, opts)
     opts = load_parameters(opts, 'nuclei_tracking');
   end
 
-  if (opts.recompute | empty_struct(nuclei, 'carth'))
+  if (opts.recompute | empty_struct(nuclei, 'carth') |  isempty(nuclei(1).carth))
 
     cpb = ConsoleProgressBar();
     cpb.setLeftMargin(4);   % progress bar left margin
@@ -43,84 +43,95 @@ function mymovie = detect_data_nuclei(mymovie, opts)
       nuclei(nimg).carth = [];
       nuclei(nimg).properties = [];
 
-      if (~isnan(mymovie.data.orientations(1,nimg)))
-
-        img = double(load_data(mymovie.data, nimg));
-
-        if (opts.verbosity == 3)
-          orig_img = img;
-        end
-
-        noise_params = estimate_noise(img);
-        vals = range(img(:));
-
-        inner_thresh = min(round(vals / (15*noise_params(2))) + 1, 35);
-        noise_thresh = min(round(vals / (15*noise_params(2))) + 1, 15);
-
-        img = gaussian_mex(img, parameters.noise.gaussian);
-        img = median_mex(img, parameters.noise.median);
-        threshed = (img > noise_params(1) + noise_thresh*noise_params(2));
-        bw = imfill(threshed, 'holes');
-
-        cc = bwconncomp(bw);
-        if (cc.NumObjects > 1)
-          sizes = NaN(1, cc.NumObjects);
-          for c = 1:cc.NumObjects
-            sizes(c) = numel(cc.PixelIdxList{c});
-          end
-          [v, indx] = max(sizes);
+      if (isnan(mymovie.data.orientations(1,nimg)))
+        if (isfield(mymovie.data, 'neighbors') & ~isempty(mymovie.data.neighbors) & ...
+            numel(mymovie.data.neighbors) <= nimg & ~isnan(mymovie.data.neighbors(nimg).orientations))
+            neigh_index = mymovie.data.neighbors(nimg).index;
+            curr_center = mymovie.data.neighbors(nimg).centers(:,neigh_index);
+            curr_orient = mymovie.data.neighbors(nimg).orientations(1,neigh_index);
         else
-          indx = 1;
+          continue;
         end
-        bw = false(size(img));
-        bw(cc.PixelIdxList{indx}) = true;
-        pix = cc.PixelIdxList{indx};
-        [x,y] = ind2sub(size(bw), pix);
-        indx = convhull(x,y);
+      else
+        curr_center = mymovie.data.centers(:,nimg);
+        curr_orient = mymovie.data.orientations(1,nimg);
+      end
 
-        threshed = (img > noise_params(1) + inner_thresh*noise_params(2));
+      img = double(load_data(mymovie.data, nimg));
 
-        bw = roipoly(bw, y(indx), x(indx));
-        bw = imerode(bw, strel('disk', 5));
+      if (opts.verbosity == 3)
+        orig_img = img;
+      end
 
-        if (opts.verbosity == 3)
-          bkg_mask = bw;
+      noise_params = estimate_noise(img);
+      vals = range(img(:));
+
+      inner_thresh = min(round(vals / (15*noise_params(2))) + 1, 35);
+      noise_thresh = min(round(vals / (15*noise_params(2))) + 1, 15);
+
+      img = gaussian_mex(img, parameters.noise.gaussian);
+      img = median_mex(img, parameters.noise.median);
+      threshed = (img > noise_params(1) + noise_thresh*noise_params(2));
+      bw = imfill(threshed, 'holes');
+
+      cc = bwconncomp(bw);
+      if (cc.NumObjects > 1)
+        sizes = NaN(1, cc.NumObjects);
+        for c = 1:cc.NumObjects
+          sizes(c) = numel(cc.PixelIdxList{c});
         end
+        [v, indx] = max(sizes);
+      else
+        indx = 1;
+      end
+      bw = false(size(img));
+      bw(cc.PixelIdxList{indx}) = true;
+      pix = cc.PixelIdxList{indx};
+      [x,y] = ind2sub(size(bw), pix);
+      indx = convhull(x,y);
 
-        bw = bw & ~threshed;
+      threshed = (img > noise_params(1) + inner_thresh*noise_params(2));
 
-        cc = bwconncomp(bw);
-        dist = bwdist(~bw);
+      bw = roipoly(bw, y(indx), x(indx));
+      bw = imerode(bw, strel('disk', 5));
 
-        %props = regionprops(bw, 'Area', 'Eccentricity', 'Centroid', 'EquivDiameter', 'Solidity');
+      if (opts.verbosity == 3)
+        bkg_mask = bw;
+      end
 
-        if (opts.verbosity == 3)
-          img_size = [330 450]
-          figure;imagesc(realign(img, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+      bw = bw & ~threshed;
 
-          figure;imagesc(realign(double(bkg_mask + threshed), img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
+      cc = bwconncomp(bw);
+      dist = bwdist(~bw);
 
-          figure;imagesc(realign(bw, img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi));
-          hold on;
-        end
+      %props = regionprops(bw, 'Area', 'Eccentricity', 'Centroid', 'EquivDiameter', 'Solidity');
 
-        for j = 1:cc.NumObjects
-          vals = dist(cc.PixelIdxList{j});
-          [R, indx] = max(vals);
+      if (opts.verbosity == 3)
+        img_size = [330 450]
+        figure;imagesc(realign(img, img_size, curr_center, curr_orient+pi));
 
-          if (R > radius_thresh & (2*pi*R^2 / numel(vals)) > surf_thresh)
+        figure;imagesc(realign(double(bkg_mask + threshed), img_size, curr_center, curr_orient+pi));
 
-            indx = cc.PixelIdxList{j}(indx(1));
-            [y, x] = ind2sub(size(bw), indx);
-        
-            if (opts.verbosity == 3)
-              tmp_pts = realign([x y], img_size, mymovie.data.centers(:,nimg), mymovie.data.orientations(1,nimg)+pi);
-              rectangle('Position', [tmp_pts(1)-R tmp_pts(2)-R 2*R([1 1])], 'Curvature', [1 1], 'EdgeColor', 'w');
-            end
+        figure;imagesc(realign(bw, img_size, curr_center, curr_orient+pi));
+        hold on;
+      end
 
-            nuclei(nimg).carth = [nuclei(nimg).carth; [x y]];
-            nuclei(nimg).properties(end+1, 1) = R;
+      for j = 1:cc.NumObjects
+        vals = dist(cc.PixelIdxList{j});
+        [R, indx] = max(vals);
+
+        if (R > radius_thresh & (2*pi*R^2 / numel(vals)) > surf_thresh)
+
+          indx = cc.PixelIdxList{j}(indx(1));
+          [y, x] = ind2sub(size(bw), indx);
+      
+          if (opts.verbosity == 3)
+            tmp_pts = realign([x y], img_size, curr_center, curr_orient+pi);
+            rectangle('Position', [tmp_pts(1)-R tmp_pts(2)-R 2*R([1 1])], 'Curvature', [1 1], 'EdgeColor', 'w');
           end
+
+          nuclei(nimg).carth = [nuclei(nimg).carth; [x y]];
+          nuclei(nimg).properties(end+1, 1) = R;
         end
       end
 

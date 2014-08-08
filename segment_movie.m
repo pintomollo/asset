@@ -147,10 +147,6 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
     end
   end
 
-  if (did_data)
-%    mymovie = detect_data_nuclei(mymovie, opts);
-  end
-
   if (did_dic)
     mymovie = correct_jitter(mymovie, dic_opts);
     mymovie = align_embryo(mymovie, dic_opts);

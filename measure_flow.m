@@ -122,16 +122,16 @@ function mymovie = measure_flow(mymovie, opts)
       egg_angle = mymovie.data.orientations(nimg);
       if (nucleus_center)
         if (~isempty(mymovie.data.nuclei(nimg).carth))
-          nucleus_center = [mymovie.data.nuclei(nimg).carth mymovie.data.nuclei(nimg).properties nimg];
+          nucleus_val = [mymovie.data.nuclei(nimg).carth mymovie.data.nuclei(nimg).properties nimg];
         else
-          nucleus_center = prev_center;
+          nucleus_val = prev_center;
         end
 
-        ells = carth2elliptic([cortex; nucleus_center(1:2)], mymovie.data.centers(:, nimg), [1;1], 0, 'radial');
+        ells = carth2elliptic([cortex; nucleus_val(1:2)], mymovie.data.centers(:, nimg), [1;1], 0, 'radial');
         ell_nucleus = ells(end,:);
         ells = ells(1:end-1, :);
 
-        dangle = asin(nucleus_width*nucleus_center(3)/ell_nucleus(2));
+        dangle = asin(nucleus_width*nucleus_val(3)/ell_nucleus(2));
   
         %ell_nucleus(1) = align_orientations(ell_nucleus(1), egg_angle);
         egg_angle = align_orientations(egg_angle, ell_nucleus(1));
@@ -155,10 +155,10 @@ function mymovie = measure_flow(mymovie, opts)
 
 %        drawnow
 
-        dist = sqrt(mymean(sum(bsxfun(@minus, cortex(good_ells,:), nucleus_center(1:2)).^2, 2), 1));
+        dist = sqrt(mymean(sum(bsxfun(@minus, cortex(good_ells,:), nucleus_val(1:2)).^2, 2), 1));
         if (~isempty(dist))
           all_dists(i,1) = dist;
-          dist = dist / nucleus_center(3);
+          dist = dist / nucleus_val(3);
           %rads & some function ....
           all_dists(i,2) = dist;
 
@@ -184,7 +184,7 @@ function mymovie = measure_flow(mymovie, opts)
           end
         end
 
-        prev_center = nucleus_center;
+        prev_center = nucleus_val;
       end
 
       align_cortex = realign(cortex, [0;0], mymovie.data.centers(:, nimg), egg_angle);

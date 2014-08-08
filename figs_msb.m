@@ -1476,8 +1476,8 @@ function figs_msb(num)
       keyboard
 
     case 7.1
-      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'init_noise'}, {'type', 'simulation'});
-      colors = [37 82 115 150] / 255;
+      vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'init_noise';'simulation_parameters';'init_pos'}, {'type', 'simulation'});
+      colors = [37 82 115 150 zeros(1,10)] / 255;
 
       has_drawn_init_pos = false;
 
@@ -1487,6 +1487,7 @@ function figs_msb(num)
       all_best = cell(size(noise));
       max_iter = 0;
       init_pos = [];
+      all_init = NaN(0,4);
 
       for i=1:length(vals)
         noise(i) = vals{i,1}{1}.init_noise;
@@ -1502,6 +1503,9 @@ function figs_msb(num)
           init_pos = vals{i,1}{1}.init_pos;
         end
         all_best{i} = best_vals;
+        if (~isempty(vals{i,1}{1}.init_pos))
+          all_init(end+1,:) = vals{i,1}{1}.init_pos ./ vals{i,1}{1}.rescale_factor;
+        end
       end
       [junk, indx] = sort(noise, 'descend');
       vals = vals(indx,:);
@@ -1524,12 +1528,12 @@ function figs_msb(num)
           end
 
           pts = vals{i,2}{j,2}(end).evolution{1};
-          pts(:,2:5) = abs(bsxfun(@rdivide, pts(:,2:5), vals{i,1}{1}.simulation_parameters ./ vals{i,1}{1}.rescale_factor));
+          %pts(:,2:5) = abs(bsxfun(@rdivide, pts(:,2:5), vals{i,1}{1}.simulation_parameters ./ vals{i,1}{1}.rescale_factor));
           pts(:,6) = pts(:,6)*vals{i,1}{1}.offset_scaling;
 
-          best_vals(count,2:5) = abs(bsxfun(@rdivide, best_vals(count,2:5), vals{i,1}{1}.simulation_parameters ./ vals{i,1}{1}.rescale_factor));
+          %best_vals(count,2:5) = abs(bsxfun(@rdivide, best_vals(count,2:5), vals{i,1}{1}.simulation_parameters ./ vals{i,1}{1}.rescale_factor));
           best_vals(count,6) = best_vals(count,6)*vals{i,1}{1}.offset_scaling;
-          init_pos(2:5) = init_pos(2:5) ./ vals{i,1}{1}.simulation_parameters;
+          %init_pos(2:5) = init_pos(2:5) ./ vals{i,1}{1}.simulation_parameters;
 
           pos = [1:size(pts,1)] - size(pts,1);
           for n=1:size(pts,2)
@@ -3785,15 +3789,155 @@ function figs_msb(num)
       clim = [-0.16 0.16];
 
       mymovie = all_movies{resc, rem+1};
-      orig_flow = display_flow(mymovie, opts, false);
+      [orig_flow, pos] = display_flow(mymovie, opts, false);
       piv_flow = display_flow(mymovie, opts, true);
+
+      marks = [-50:25:50];
+      real_pos = interp1(pos.', 1:length(pos), marks);
 
       figure;subplot(1,2,1);
       colormap(redgreenmap)
       imagesc(orig_flow.', clim);
+      set(gca, 'XTick', real_pos, 'XTickLabel', marks)
       subplot(1,2,2);
       imagesc(piv_flow.', clim);
+      set(gca, 'XTick', real_pos, 'XTickLabel', marks)
+      colorbar
 
+      keyboard
+
+      t0 = 35; % corr_offset + yindx in the next find_kymograph
+
+      advection_params = getfield(load('cyto_flow.mat', 'flow3'), 'flow3');
+      flows = [-advection_params advection_params(:,[end-1:-1:1])];
+      figure;imagesc(flows)
+      pos_indx = fliplr([size(advection_params,2):-25:1]);
+      pos_indx = [pos_indx(1:end-1) pos_indx(end):25:size(advection_params,2)*2-1];
+      pos = [1:2*size(advection_params,2)-1]-size(advection_params,2);
+
+      t_indx = unique([fliplr([t0*10:-200:1]) t0*10:200:size(advection_params,1)]);
+
+      set(gca, 'XTick', pos_indx, 'XTickLabel', pos(pos_indx))
+      set(gca, 'YTick', t_indx, 'YTickLabel', t_indx - t0*10)
+      colormap(redgreenmap)
+      colorbar
+
+
+
+      keyboard
+
+    case 23
+
+      clim = [-0.16 0.16];
+      resc=2;
+      rem=0;
+      files = dir('749-*_.mat');
+      all_flows = cell(length(files), 2);
+      align = load('aligned_flow_1_1127907.619.mat');
+
+      t_ref = 457;
+
+      for i=1:length(files)
+        load(files(i).name);
+
+        if (~isfield(mymovie.data, 'piv'))
+          new_opts = opts;
+          new_opts.spot_tracking.projection_args = [Inf resc rem];
+          mymovie = piv_flows(mymovie, new_opts);
+          save(mymovie.experiment, 'mymovie', 'opts');
+        end
+
+        [orig_flow, pos] = display_flow(mymovie, opts, false);
+        piv_flow = display_flow(mymovie, opts, true);
+        piv_flow(:,1:12) = NaN;
+        switch i
+          case 4
+            piv_flow(:,[13:25]) = NaN;
+          case 6
+            piv_flow(:,[65:75]) = NaN;
+        end
+
+        all_flows{i, 1} = orig_flow.';
+        all_flows{i, 2} = piv_flow.';
+
+        if (i==1)
+          marks = [-50:25:50];
+          real_pos = interp1(pos.', 1:length(pos), marks);
+          t0 = t_ref - (max(align.signals_full{1,2}) - align.signals_full{1,2}(i));
+          t_indx = unique([fliplr([t0:-200:1]) t0:200:size(orig_flow,2)]);
+
+          figure;subplot(1,2,1);
+          colormap(redgreenmap)
+          imagesc(orig_flow.', clim);
+          set(gca, 'XTick', real_pos, 'XTickLabel', marks)
+          set(gca, 'YTick', t_indx, 'YTickLabel', t_indx - t0)
+          subplot(1,2,2);
+          imagesc(piv_flow.', clim);
+          set(gca, 'XTick', real_pos, 'XTickLabel', marks)
+          set(gca, 'YTick', t_indx, 'YTickLabel', t_indx - t0)
+          colorbar
+        end
+
+        disp([num2str(i) '/' num2str(length(files))]);
+      end
+
+      avg_flow = average_flow(all_flows(:,1), align.signals_full{1,2}, 2);
+      avg_piv = average_flow(all_flows(:,2), align.signals_full{1,2}, 2);
+
+%      figure;subplot(1,2,1);
+%      colormap(redgreenmap)
+%      imagesc(avg_flow(:,:,3), clim);
+      %set(gca, 'XTick', real_pos, 'XTickLabel', marks)
+%      subplot(1,2,2);
+%      imagesc(avg_piv(:,:,3), clim);
+      %set(gca, 'XTick', real_pos, 'XTickLabel', marks)
+      %colorbar
+
+      t0 = 35; % corr_offset + yindx in the next find_kymograph
+
+      advection_params = avg_flow(:,:,3);
+      [m,s] = mymean(advection_params(advection_params > mean(advection_params(:)+2*std(advection_params(:)))));
+      flows = [-advection_params advection_params(:,[end-1:-1:1])];
+      figure;imagesc(flows)
+      pos_indx = fliplr([size(advection_params,2):-25:1]);
+      pos_indx = [pos_indx(1:end-1) pos_indx(end):25:size(advection_params,2)*2-1];
+      pos = [1:2*size(advection_params,2)-1]-size(advection_params,2);
+
+      t_indx = unique([fliplr([t0*10:-200:1]) t0*10:200:size(advection_params,1)]);
+
+      set(gca, 'XTick', pos_indx, 'XTickLabel', pos(pos_indx))
+      set(gca, 'YTick', t_indx, 'YTickLabel', t_indx - t0*10)
+      title([num2str(m) '+-' num2str(s)])
+      colormap(redgreenmap)
+      colorbar
+
+      advection_params = avg_piv(:,:,3);
+      [m,s] = mymean(advection_params(advection_params > mean(advection_params(:)+2*std(advection_params(:)))));
+      flows = [-advection_params advection_params(:,[end-1:-1:1])];
+      figure;imagesc(flows)
+      pos_indx = fliplr([size(advection_params,2):-25:1]);
+      pos_indx = [pos_indx(1:end-1) pos_indx(end):25:size(advection_params,2)*2-1];
+      pos = [1:2*size(advection_params,2)-1]-size(advection_params,2);
+
+      t_indx = unique([fliplr([t0*10:-200:1]) t0*10:200:size(advection_params,1)]);
+
+      set(gca, 'XTick', pos_indx, 'XTickLabel', pos(pos_indx))
+      set(gca, 'YTick', t_indx, 'YTickLabel', t_indx - t0*10)
+      title([num2str(m) '+-' num2str(s)])
+      colormap(redgreenmap)
+      colorbar
+
+      all_vals = all_flows(:,1);
+      all_vals = cat(1, all_vals{:});
+      all_vals = abs(all_vals(:));
+
+      all_pivs = all_flows(:,2);
+      all_pivs = cat(1, all_pivs{:});
+      all_pivs = abs(all_pivs(:));
+
+      figure;
+      distributionPlot([all_vals;all_pivs], 'groups', [zeros(size(all_vals));ones(size(all_pivs))],'histOpt', 1.1,'xNames', {'Particles', 'PIV'});
+      ylim([0 0.25])
 
       keyboard
 

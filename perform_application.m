@@ -27,7 +27,11 @@ function mymovie = perform_application(mymovie, opts)
           mymovie = reconstruct_egg(mymovie, opts);
         case 'nuclei'
           if (~done_timing)
-            mymovie = detect_dic_nuclei(mymovie, opts);
+            if (strncmp(opts.segmentation_type, 'data', 4))
+              mymovie = detect_data_nuclei(mymovie, opts);
+            else
+              mymovie = detect_dic_nuclei(mymovie, opts);
+            end
           end
         case 'flow'
           mymovie = measure_flow(mymovie, opts);

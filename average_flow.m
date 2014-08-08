@@ -33,6 +33,7 @@ function [flows, flows_small, pnm] = average_flow(signals, alignment, proj_bin_s
     pnm = zeros(nimgs, 1);
   else
     pnm = zeros(length(signals), 1);
+    nfiles = length(signals);
   end
 
   [signals, shift] = stack_images(signals, alignment);
@@ -40,11 +41,11 @@ function [flows, flows_small, pnm] = average_flow(signals, alignment, proj_bin_s
 
   avg = nanmean(signals, 3);
   clim = [min(avg(:)) max(avg(:))];
-  for i=1:nfiles
-    figure;imagesc(signals(:,:,i), clim);
-  end
+%  for i=1:nfiles
+%    figure;imagesc(signals(:,:,i), clim);
+%  end
 
-  figure;imagesc(avg);
+ % figure;imagesc(avg);
 
   pos = [-half:half]*proj_bin_size;
   pos = (pos(1:end-1) + pos(2:end)) / 2;
@@ -97,7 +98,8 @@ function [flows, flows_small, pnm] = average_flow(signals, alignment, proj_bin_s
   range_t = t(goods);
   range_t = range_t([1 end]);
 
-  flow_full = interp2(X(:,:,1), Y(:,:,1), inter2, [1:66], t(goods));
+  %flow_full = interp2(X(:,:,1), Y(:,:,1), inter2, [1:66], t(goods));
+  flow_full = interp2(X(:,:,1), Y(:,:,1), inter2, [1:66], [range_t(1):range_t(2)].');
   flow_full = padarray(flow_full, [10 1], 0);
 
   flow_small = interp2(X(:,:,1), Y(:,:,1), inter2, [1:66], [range_t(1):15:range_t(end)].');

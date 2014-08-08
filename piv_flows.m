@@ -52,8 +52,9 @@ function mymovie = piv_flows(mymovie, opts)
     if (~isempty(frame))
       frame = str2double(frame{1})+1;
       data = reshape(data, ncols, []).';
-      npts = sqrt(size(data, 1));
-      data = reshape(data, [npts npts, ncols]);
+      ni = numel(unique(data(:,1)));
+      nj = numel(unique(data(:,2)));
+      data = reshape(data, [ni nj, ncols]);
       pivs{frame} = imresize(data, resample);
     end
   end

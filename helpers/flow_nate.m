@@ -1,4 +1,4 @@
-function flow_nate(niter, use_timing)
+function flow_nate(niter, use_timing, pos)
 
 % Optimized alignement of flow measurements:
 % p = [260; 337; 77; 337; 1; 337]
@@ -21,66 +21,73 @@ function flow_nate(niter, use_timing)
     use_timing = true;
   end
 
-  files = dir('749-*_.mat');
-  nfiles = length(files);
-  res = cell(nfiles, 3);
-  signals = cell(nfiles, 1);
-  times = NaN(nfiles, 1);
-  signals_full = cell(niter, 3);
+  if (iscell(niter))
+    signals = niter;
+    signals_full = stack_images(signals, aligned_times);
+    nfiles = length(signals);
+  else
 
-  for i=1:nfiles
-    load(files(i).name);
-    display(mymovie.experiment);
+    files = dir('749-*_.mat');
+    nfiles = length(files);
+    res = cell(nfiles, 3);
+    signals = cell(nfiles, 1);
+    times = NaN(nfiles, 1);
+    signals_full = cell(niter, 3);
 
-    %opts.spot_tracking.projection_bin_size = 2;
-    
-    opts.spot_tracking.projection_args = 2.49;
-    opts.spot_tracking.projection_dist = 2.49/3;
-    mymovie = measure_flow(mymovie, opts);
-    time = get_manual_timing(mymovie, opts);
-    [tmp, pos] = display_flow(mymovie, opts);
-    tmp = tmp.';
+    for i=1:nfiles
+      load(files(i).name);
+      display(mymovie.experiment);
 
-    times(i) = time(2);
+      %opts.spot_tracking.projection_bin_size = 2;
+      
+      opts.spot_tracking.projection_args = 2.49;
+      opts.spot_tracking.projection_dist = 2.49/3;
+      mymovie = measure_flow(mymovie, opts);
+      time = get_manual_timing(mymovie, opts);
+      [tmp, pos] = display_flow(mymovie, opts);
+      tmp = tmp.';
 
-    %imagesc(tmp);
-    %set(gca, 'XTickLabel', pos(get(gca, 'XTick')));
-    %colorbar;
-    %print('-dpng', ['PNG/' mymovie.experiment 'flow.png']);
+      times(i) = time(2);
 
-    signals{i} = tmp;
-  end
+      %imagesc(tmp);
+      %set(gca, 'XTickLabel', pos(get(gca, 'XTick')));
+      %colorbar;
+      %print('-dpng', ['PNG/' mymovie.experiment 'flow.png']);
 
-  if (use_timing && ~isempty(aligned_times))
-    times = aligned_times;
-  end
+      signals{i} = tmp;
+    end
 
-  prev_best = Inf;
-  for j=1:3
-    for i=1:niter
-      if (use_timing)
-        [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals, times - min(times) + 1);
-      else
-        [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals);
+    if (use_timing && ~isempty(aligned_times))
+      times = aligned_times;
+    end
+
+    prev_best = Inf;
+    for j=1:3
+      for i=1:niter
+        if (use_timing)
+          [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals, times - min(times) + 1);
+        else
+          [signals_full{i,1}, signals_full{i,2}, signals_full{i,3}] = simultaneous_registration(signals);
+        end
+
       end
 
+      uuid = num2str(now + cputime);
+      display(num2str(uuid))
+      save(['aligned_flow_' num2str(use_timing) '_' uuid '.mat'], 'signals_full', 'signals');
+
+      vals = cat(1, signals_full{:,3});
+      [v, indx] = min(vals);
+
+      if (v < prev_best)
+        best_signals = signals_full{indx, 1};
+        prev_best = v;
+      end
+
+    %return;
     end
-
-    uuid = num2str(now + cputime);
-    display(num2str(uuid))
-    save(['aligned_flow_' num2str(use_timing) '_' uuid '.mat'], 'signals_full', 'signals');
-
-    vals = cat(1, signals_full{:,3});
-    [v, indx] = min(vals);
-
-    if (v < prev_best)
-      best_signals = signals_full{indx, 1};
-      prev_best = v;
-    end
-
-  %return;
+    signals_full = best_signals;
   end
-  signals_full = best_signals;
 
 %  signals2 = simultaneous_registration(signals2);
   signals = (signals_full(:,(end/2)+1:end,:) - signals_full(:,end/2:-1:1,:)) / 2;

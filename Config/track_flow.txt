@@ -1,4 +1,4 @@
-application 'flow'
+application {'nuclei', 'flow'}
 ccd_pixel_size 16
 magnification 60
 recompute 0
