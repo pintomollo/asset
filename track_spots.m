@@ -382,8 +382,10 @@ function [links, spots] = track_spots(spots, opts)
       if (opts.interpolate)
         for i=1:nframes
           mymovie(i).cluster = links{i};
-          mymovie(i).carth = spots{i}(:, 1:2);
-          mymovie(i).properties = spots{i}(:, 3:end);
+          if (~isempty(spots{i}))
+            mymovie(i).carth = spots{i}(:, 1:2);
+            mymovie(i).properties = spots{i}(:, 3:end);
+          end
         end
       else
         for i=1:nframes
