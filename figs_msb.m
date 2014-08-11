@@ -13,6 +13,37 @@ function figs_msb(num)
   ntails = 20;
 
   switch num
+    case -1
+
+      all_files = {'good_24.txt'; 'good_20.txt'; 'good_13.txt'; 'good_c27d91.txt'; 'good_ani2.txt'};
+      [time, names] = get_manual_timing();
+      all_data = NaN(0,4);
+
+      for f = 1:length(all_files)
+        files = textread(all_files{f}, '%s');
+        nfiles = length(files);
+
+        all_sizes = NaN(nfiles, 4);
+        for i=1:nfiles
+          load(files{i});
+          good_time = ismember(names, files{i});
+          pnm = time(good_time, 2);
+
+          if (~isnan(pnm))
+            cortex = mymovie.dic.cortex(pnm).carth;
+            cortexr = realign(cortex, [1 1], mymovie.dic.centers(:,pnm), mymovie.dic.orientations(1,pnm));
+            conv = convhull(cortexr(:,1),cortexr(:,2));
+            [junk,axes_length,junk]=fit_ellipse(cortexr(conv,:));
+
+            all_sizes(i,:) = [mymovie.dic.axes_length(:,pnm).' axes_length.'];
+          end
+          disp([num2str(i) '/' num2str(nfiles)]);
+        end
+        all_data = [all_data; all_sizes];
+      end
+
+      keyboard
+
     case 0
 
       all_files = {'good_24.txt'; 'good_20.txt'; 'good_13.txt'; 'good_c27d91.txt'; 'good_ani2.txt'};
