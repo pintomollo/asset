@@ -426,11 +426,21 @@ function [score, results] = test_kymograph(fitting, opts)
 
   flow_scaling = 1;
   if (fitting.scale_flow || ~isempty(opts.scale_params))
-    tmp_opts = get_struct('modeling');
-    tmp_conv = get_struct('conversion');
-    tmp_factor = surface2volume(tmp_opts.axes_length .* [tmp_conv.maintenance;1;1]);
-    %flow_scale_factor = (fitting.egg_properties(1,:) / tmp_factor) - 1;
-    flow_scale_factor = (tmp_factor ./ fitting.egg_properties(1,:)) - 1;
+    data_flow_scaling = false;
+    if (numel(opts.scale_params)>1 && opts.scale_params(2))
+      tmp_opts = get_struct('modeling');
+      tmp_opts = load_parameters(opts, 'test_data_flow');
+      tmp_conv = get_struct('z-correlation');
+      tmp_factor = surface2volume([tmp_opts.axes_length(1:2); tmp_conv.bkg + tmp_conv.long_axis*tmp_opts.axes_length(1) + tmp_conv.short_axis*tmp_opts.axes_length(2)]);
+      flow_scale_factor = (tmp_factor ./ fitting.egg_properties(1,:)) - 1;
+      data_flow_scaling = true;
+    else
+      tmp_opts = get_struct('modeling');
+      tmp_conv = get_struct('conversion');
+      tmp_factor = surface2volume(tmp_opts.axes_length .* [tmp_conv.maintenance;1;1]);
+      %flow_scale_factor = (fitting.egg_properties(1,:) / tmp_factor) - 1;
+      flow_scale_factor = (tmp_factor ./ fitting.egg_properties(1,:)) - 1;
+    end
   end
 
   [fit_params, fit_energy, fit_temperatures, fit_viscosity] = model_description(fitting.parameter_set);
@@ -896,8 +906,11 @@ function [score, results] = test_kymograph(fitting, opts)
         more_params = curr_p(nrates+1:end);
 
         if (fitting.scale_flow)
-          %flow_scaling = (abs(more_params(end))*flow_scale_factor(g) + 1);
-          flow_scaling = (-abs(more_params(end))*flow_scale_factor(g) + 1);
+          if (data_flow_scaling)
+            flow_scaling = (0.34*flow_scale_factor(g) + 1);
+          else
+            flow_scaling = (-abs(more_params(end))*flow_scale_factor(g) + 1);
+          end
           more_params = more_params(1:end-1);
         end
 

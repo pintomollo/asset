@@ -42,6 +42,9 @@ function figs_msb(num)
         all_data = [all_data; all_sizes];
       end
 
+      % Avg difference with egg size:
+      % 1 + [3.4 1.6]/100
+
       keyboard
 
     case 0
@@ -251,7 +254,8 @@ function figs_msb(num)
       data = load('1056-all-all.mat');
 
       %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
-      models = {'test_model1', 'test_model2', 'final_model'};
+      %models = {'test_model1', 'test_model2', 'final_model'};
+      models = {'test_model4', 'final_model'};
       all_simul = cell(length(models), 1);
       scores = NaN(length(models), 1);
 
@@ -3969,6 +3973,146 @@ function figs_msb(num)
       figure;
       distributionPlot([all_vals;all_pivs], 'groups', [zeros(size(all_vals));ones(size(all_pivs))],'histOpt', 1.1,'xNames', {'Particles', 'PIV'});
       ylim([0 0.25])
+
+      keyboard
+
+    case 24
+
+      filesw = [dir('749-0*_.mat');dir('749-2*_.mat')];
+      filesa = dir('749-a*_.mat');
+      filesa = filesa(2:end);
+      %filesa = filesa([2 4:end]);
+      filesc = dir('749-c*_.mat');
+      %filesc = filesc(2:end);
+      %filesc = filesc(2:end-1);
+      %files = [filesw; filesa; filesc];
+      files = [filesa; filesc];
+      nfiles = length(files);
+      %nwt = length(filesw);
+      nwt = 0;
+      nani = length(filesa);
+      nc27 = length(filesc);
+      all_flows = cell(nfiles, 1);
+      all_sizes = NaN(3,nfiles);
+      all_stats = NaN(nfiles,10);
+
+      convert = get_struct('z-correlation');
+      names = cell(nfiles, 1);
+
+      for i=1:nfiles
+        load(files(i).name);
+        names{i} = files(i).name;
+        orig_ps = opts.pixel_size;
+        if (i>nwt)
+          opts.ccd_pixel_size = 16.51;
+          opts = set_pixel_size(opts);
+        else
+          opts.ccd_pixel_size = 4.55;
+          opts = set_pixel_size(opts);
+        end
+        all_flows{i} = display_flow(mymovie, opts);
+        if (i>nwt)
+          all_flows{i} = abs(all_flows{i}(:))*opts.pixel_size;
+          %all_flows{i} = abs(all_flows{i}(:))*(opts.pixel_size/orig_ps);
+        else
+          all_flows{i} = abs(all_flows{i}(:));
+        end
+        cortex = mymovie.data.cortex(end).carth;
+        conv = convhull(cortex(:,1),cortex(:,2));
+        [junk,all_sizes(1:2,i),junk] = fit_ellipse(cortex(conv,:));
+        all_sizes(:,i) = all_sizes(:,i)*opts.pixel_size;
+
+        all_stats(i,1:8) = [prctile(all_flows{i},[50:10:100]) nanmean(all_flows{i}) nanstd(all_flows{i})];
+        [all_stats(i,9), all_stats(i,10)] = mymean(all_flows{i}(all_flows{i}>=all_stats(i,7) + 2*all_stats(i,8)));
+
+        disp([num2str(i) '/' num2str(nfiles)]);
+      end
+
+      all_sizes = [[29;19.5;15], all_sizes];
+
+      all_sizes(3, :) = convert.bkg + convert.long_axis*all_sizes(1, :) + convert.short_axis*all_sizes(2, :);
+
+      all_sizes2 = bsxfun(@times, all_sizes, [1.034; 1.016; 1]);
+      all_sizes2(3, :) = convert.bkg + convert.long_axis*all_sizes2(1, :) + convert.short_axis*all_sizes2(2, :);
+
+      all_ratios = [surface2volume(all_sizes);surface2volume(all_sizes2)];
+
+      ref_flow = load('cyto_flow.mat');
+      ref_flow = ref_flow.flow3;
+      ref_flow = abs(ref_flow(:));
+      ref_stats=NaN(1,10);
+      ref_stats(1,1:8) = [prctile(ref_flow,[50:10:100]) nanmean(ref_flow) nanstd(ref_flow)];
+      [ref_stats(1,9), ref_stats(1,10)] = mymean(ref_flow(ref_flow>=ref_stats(1,7) + 2*ref_stats(1,8)));
+
+      %ref = surface2volume([58;38;30]/2);
+      all_ratios(2,1) = all_ratios(1,1);
+      ref = all_ratios(1,1);
+
+      all_stats = [ref_stats; all_stats];
+
+      nfiles = nfiles + 1;
+      nwt = nwt + 1;
+      names = ['Ref'; names];
+
+      g = 1.46;
+      %preds = (1 - g*(ref./all_ratios - 1));
+      preds = (1 + g*(ref./all_ratios - 1));
+      intercept = ones(nfiles, 1);
+
+      %for i=1:length(ref_stats)
+      for i=9
+        figure;
+
+        subplot(2,2,1);hold on;
+        %scatter(all_sizes2(1,1:6), all_stats(1:6,i),'b');
+        myregress([intercept all_sizes2(1,:).'], all_stats(:,i), 'b');
+        errorbar(all_sizes2(1,:), all_stats(:,i), all_stats(:,i+1),'k','LineStyle', 'none');
+        scatter(all_sizes2(1,1:nwt), all_stats(1:nwt,i),'g');
+        scatter(all_sizes2(1,nwt+1:nwt+nani), all_stats(nwt+1:nwt+nani,i),'r');
+        scatter(all_sizes2(1,nwt+nani+1:end), all_stats(nwt+nani+1:end,i),'m');
+        %scatter(all_sizes2(1,:), preds(2,:)*ref_stats(i),'k');
+        text(all_sizes2(1,:), all_stats(:,i),names);
+
+        subplot(2,2,2);hold on;
+        %scatter(all_sizes(1,1:6), all_stats(1:6,i),'b');
+        %myregress([intercept (ref./all_ratios(2,:).') - 1], all_stats(:,i) - all_stats(1,i), 'b');
+        myregress([(ref./all_ratios(2,:).') - 1], all_stats(:,i) - all_stats(1,i), 'b');
+        errorbar((ref./all_ratios(2,:))-1, all_stats(:,i) - all_stats(1,i), all_stats(:,i+1),'k','LineStyle', 'none');
+        scatter((ref./all_ratios(2,1:nwt))-1, all_stats(1:nwt,i) - all_stats(1,i),'g');
+        scatter((ref./all_ratios(2,nwt+1:nwt+nani))-1, all_stats(nwt+1:nwt+nani,i) - all_stats(1,i),'r');
+        scatter((ref./all_ratios(2,nwt+nani+1:end))-1, all_stats(nwt+nani+1:end,i) - all_stats(1,i),'m');
+        %scatter((ref./all_ratios(2,:))-1, preds(1,:)*ref_stats(i),'k');
+        text((ref./all_ratios(2,:))-1, all_stats(:,i) - all_stats(1,i),names);
+
+        subplot(2,2,3);hold on;
+        %scatter(all_sizes(1,1:6), all_stats(1:6,i),'b');
+        myregress([intercept all_ratios(2,:).'], all_stats(:,i), 'b');
+        errorbar(all_ratios(2,:), all_stats(:,i), all_stats(:,i+1),'k','LineStyle', 'none');
+        scatter(all_ratios(2,1:nwt), all_stats(1:nwt,i),'g');
+        scatter(all_ratios(2,nwt+1:nwt+nani), all_stats(nwt+1:nwt+nani,i),'r');
+        scatter(all_ratios(2,nwt+nani+1:end), all_stats(nwt+nani+1:end,i),'m');
+        %scatter((ref./all_ratios(2,:))-1, preds(1,:)*ref_stats(i),'k');
+        text(all_ratios(2,:), all_stats(:,i),names);
+
+        subplot(2,2,4);hold on;
+        %scatter(all_sizes(1,1:6), all_stats(1:6,i),'b');
+        myregress([intercept 1./all_ratios(2,:).'], all_stats(:,i), 'b');
+        errorbar(1./all_ratios(2,:), all_stats(:,i), all_stats(:,i+1),'k','LineStyle', 'none');
+        scatter(1./all_ratios(2,1:nwt), all_stats(1:nwt,i),'g');
+        scatter(1./all_ratios(2,nwt+1:nwt+nani), all_stats(nwt+1:nwt+nani,i),'r');
+        scatter(1./all_ratios(2,nwt+nani+1:end), all_stats(nwt+nani+1:end,i),'m');
+        %scatter((ref./all_ratios(2,:))-1, preds(1,:)*ref_stats(i),'k');
+        text(1./all_ratios(2,:), all_stats(:,i),names);
+
+
+        %subplot(2,2,3);hold on;
+        %scatter(all_stats(:,i), preds(1,:)*ref_stats(i),'b');
+        %myregress([intercept all_stats(:,i)], (preds(1,:).')*ref_stats(i), 'b');
+        %subplot(2,2,4);hold on;
+        %scatter(all_stats(:,i), preds(2,:)*ref_stats(i),'b');
+        %myregress([intercept all_stats(:,i)], (preds(2,:).')*ref_stats(i), 'b');
+
+      end
 
       keyboard
 
