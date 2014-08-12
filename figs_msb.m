@@ -253,9 +253,9 @@ function figs_msb(num)
       load('data_expansion')
       data = load('1056-all-all.mat');
 
-      %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
+      models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
       %models = {'test_model1', 'test_model2', 'final_model'};
-      models = {'test_model4', 'final_model'};
+      %models = {'test_model4', 'final_model'};
       all_simul = cell(length(models), 1);
       scores = NaN(length(models), 1);
 
@@ -3985,11 +3985,11 @@ function figs_msb(num)
       filesc = dir('749-c*_.mat');
       %filesc = filesc(2:end);
       %filesc = filesc(2:end-1);
-      %files = [filesw; filesa; filesc];
-      files = [filesa; filesc];
+      files = [filesw; filesa; filesc];
+      %files = [filesa; filesc];
       nfiles = length(files);
-      %nwt = length(filesw);
-      nwt = 0;
+      nwt = length(filesw);
+      %nwt = 0;
       nani = length(filesa);
       nc27 = length(filesc);
       all_flows = cell(nfiles, 1);
@@ -4003,19 +4003,23 @@ function figs_msb(num)
         load(files(i).name);
         names{i} = files(i).name;
         orig_ps = opts.pixel_size;
+        ps_ratio = 8/16.51;
         if (i>nwt)
           opts.ccd_pixel_size = 16.51;
           opts = set_pixel_size(opts);
         else
-          opts.ccd_pixel_size = 4.55;
+          opts.ccd_pixel_size = 8;
           opts = set_pixel_size(opts);
         end
         all_flows{i} = display_flow(mymovie, opts);
+        all_flows{i} = (all_flows{i}(1:end/2,:) - all_flows{i}(end/2+1:end,:))/2;
         if (i>nwt)
-          all_flows{i} = abs(all_flows{i}(:))*opts.pixel_size;
+          all_flows{i} = abs(all_flows{i}(:))*ps_ratio;
+          %all_flows{i} = abs(all_flows{i}(:))*opts.pixel_size;
           %all_flows{i} = abs(all_flows{i}(:))*(opts.pixel_size/orig_ps);
         else
           all_flows{i} = abs(all_flows{i}(:));
+          %all_flows{i} = abs(all_flows{i}(:))*(opts.pixel_size/orig_ps);
         end
         cortex = mymovie.data.cortex(end).carth;
         conv = convhull(cortex(:,1),cortex(:,2));
@@ -4028,7 +4032,7 @@ function figs_msb(num)
         disp([num2str(i) '/' num2str(nfiles)]);
       end
 
-      all_sizes = [[29;19.5;15], all_sizes];
+      %all_sizes = [[29;19.5;15], all_sizes];
 
       all_sizes(3, :) = convert.bkg + convert.long_axis*all_sizes(1, :) + convert.short_axis*all_sizes(2, :);
 
@@ -4045,14 +4049,15 @@ function figs_msb(num)
       [ref_stats(1,9), ref_stats(1,10)] = mymean(ref_flow(ref_flow>=ref_stats(1,7) + 2*ref_stats(1,8)));
 
       %ref = surface2volume([58;38;30]/2);
-      all_ratios(2,1) = all_ratios(1,1);
-      ref = all_ratios(1,1);
+      %all_ratios(2,1) = all_ratios(1,1);
+      %ref = all_ratios(1,1);
+      ref = 1;
 
-      all_stats = [ref_stats; all_stats];
+      %all_stats = [ref_stats; all_stats];
 
-      nfiles = nfiles + 1;
-      nwt = nwt + 1;
-      names = ['Ref'; names];
+      %nfiles = nfiles + 1;
+      %nwt = nwt + 1;
+      %names = ['Ref'; names];
 
       g = 1.46;
       %preds = (1 - g*(ref./all_ratios - 1));
@@ -4064,14 +4069,14 @@ function figs_msb(num)
         figure;
 
         subplot(2,2,1);hold on;
-        %scatter(all_sizes2(1,1:6), all_stats(1:6,i),'b');
-        myregress([intercept all_sizes2(1,:).'], all_stats(:,i), 'b');
-        errorbar(all_sizes2(1,:), all_stats(:,i), all_stats(:,i+1),'k','LineStyle', 'none');
-        scatter(all_sizes2(1,1:nwt), all_stats(1:nwt,i),'g');
-        scatter(all_sizes2(1,nwt+1:nwt+nani), all_stats(nwt+1:nwt+nani,i),'r');
-        scatter(all_sizes2(1,nwt+nani+1:end), all_stats(nwt+nani+1:end,i),'m');
-        %scatter(all_sizes2(1,:), preds(2,:)*ref_stats(i),'k');
-        text(all_sizes2(1,:), all_stats(:,i),names);
+        myregress([intercept 2*all_sizes2(1,:).'], all_stats(:,i), 'b');
+        errorbar(2*all_sizes2(1,:), all_stats(:,i), all_stats(:,i+1),'k','LineStyle', 'none');
+        scatter(2*all_sizes2(1,1:nwt), all_stats(1:nwt,i),'g');
+        scatter(2*all_sizes2(1,nwt+1:nwt+nani), all_stats(nwt+1:nwt+nani,i),'r');
+        scatter(2*all_sizes2(1,nwt+nani+1:end), all_stats(nwt+nani+1:end,i),'m');
+        %text(all_sizes2(1,:), all_stats(:,i),names);
+        xlim([30 80])
+        ylim([0 0.2])
 
         subplot(2,2,2);hold on;
         %scatter(all_sizes(1,1:6), all_stats(1:6,i),'b');
@@ -4092,7 +4097,9 @@ function figs_msb(num)
         scatter(all_ratios(2,nwt+1:nwt+nani), all_stats(nwt+1:nwt+nani,i),'r');
         scatter(all_ratios(2,nwt+nani+1:end), all_stats(nwt+nani+1:end,i),'m');
         %scatter((ref./all_ratios(2,:))-1, preds(1,:)*ref_stats(i),'k');
-        text(all_ratios(2,:), all_stats(:,i),names);
+        %text(all_ratios(2,:), all_stats(:,i),names);
+        xlim([0.16 0.18])
+        ylim([0 0.2])
 
         subplot(2,2,4);hold on;
         %scatter(all_sizes(1,1:6), all_stats(1:6,i),'b');
@@ -4113,6 +4120,32 @@ function figs_msb(num)
         %myregress([intercept all_stats(:,i)], (preds(2,:).')*ref_stats(i), 'b');
 
       end
+
+      keyboard
+
+    case 25
+
+      files = dir('1056-z-size_*_.mat');
+      nfiles = length(files);
+      sizes = NaN(3,nfiles);
+      intercept = ones(nfiles, 1);
+
+      for i=1:nfiles
+        load(files(i).name);
+        sizes(:,i) = mymovie.metadata.axes_length_3d;
+      end
+
+      convert = get_struct('z-correlation');
+
+      figure;
+      subplot(2,2,1);hold on
+      myregress([intercept, sizes(1,:).'],sizes(3,:).');
+
+      subplot(2,2,2);hold on
+      myregress([intercept, sizes(2,:).'],sizes(3,:).');
+
+      subplot(2,2,3);hold on
+      myregress([intercept, sizes(1:2,:).'],sizes(3,:).');
 
       keyboard
 

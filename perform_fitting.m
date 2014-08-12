@@ -592,6 +592,24 @@ function perform_fitting(selection, roundit)
       params{2} = 'fit_size';
       params{4} = 'final_model';
       fixed_parameter = [2 4];
+
+    case 41
+      files = {'1056-med-scale.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 2;
+      params{2} = 'fit_kymo';
+      params{4} = 'extended_model';
+    case 42
+      files = {'1056-med-scale.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 2;
+      params{2} = 'refine_fit';
+      params{4} = 'extended_model';
+
     otherwise
       warning('Choose a fitting group between 1 and 7');
 
