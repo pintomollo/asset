@@ -595,16 +595,16 @@ function perform_fitting(selection, roundit)
 
     case 41
       files = {'1056-med-scale.mat'};
-      repeats = 15;
-      init_noise = 0.1;
+      repeats = 3;
+      init_noise = 0;
       starts = 'D';
       param_set = 2;
       params{2} = 'fit_kymo';
       params{4} = 'extended_model';
     case 42
       files = {'1056-med-scale.mat'};
-      repeats = 3;
-      init_noise = 0;
+      repeats = 5;
+      init_noise = 0.1;
       starts = 'D';
       param_set = 2;
       params{2} = 'refine_fit';
