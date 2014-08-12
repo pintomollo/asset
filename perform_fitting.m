@@ -609,6 +609,90 @@ function perform_fitting(selection, roundit)
       param_set = 2;
       params{2} = 'refine_fit';
       params{4} = 'extended_model';
+    case 43
+      perform_fitting(43.1,false);
+      perform_fitting(43.2,false);
+      return;
+    case 43.1
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'fit_kymo';
+      params{4} = 'full_model';
+      fixed_parameter = [2 4];
+    case 43.2
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_fit';
+      params{4} = 'full_model';
+    case 44
+      perform_fitting(44.1,false);
+      perform_fitting(44.2,false);
+      return;
+    case 44.1
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_fit';
+      params{4} = 'full_model';
+      fixed_parameter = [2 4];
+    case 44.2
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'fit_kymo';
+      params{4} = 'full_model';
+    case 45
+      perform_fitting(45.1,false);
+      perform_fitting(45.2,false);
+      return;
+    case 45.1
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'fit_kymo';
+      params{4} = 'final_model';
+      fixed_parameter = [2 4];
+    case 45.2
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_fit';
+      params{4} = 'final_model';
+    case 46
+      perform_fitting(46.1,false);
+      perform_fitting(46.2,false);
+      return;
+    case 46.1
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_fit';
+      params{4} = 'final_model';
+      fixed_parameter = [2 4];
+    case 46.2
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'fit_kymo';
+      params{4} = 'final_model';
 
     otherwise
       warning('Choose a fitting group between 1 and 7');
