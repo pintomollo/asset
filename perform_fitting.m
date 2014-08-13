@@ -733,7 +733,7 @@ function perform_fitting(selection, roundit)
         %else
         %  s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 user_param]};
         %end
-        s_params = {'init_pos'; [0.012438      2.1571    0.076901      2.1871     12.725   -6.9864  28.82]}
+        s_params = {'init_pos'; [0.002874 2.2033 0.016591 2.2487 12.33 -6.77 35.83]};
 
         %refine_temp_indep
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
