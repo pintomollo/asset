@@ -75,8 +75,6 @@ function uuids = fit_kymograph(fitting, opts)
   ml_params = [opts.diffusion_params; ...
                 opts.reaction_params];
 
-  keyboard
-
   ml_params(end-1,:) = fitting.egg_properties(1,1);
   ml_params(end, :) = fitting.egg_properties(2,1);
   half = ml_params(end, 1);
