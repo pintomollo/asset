@@ -605,19 +605,19 @@ function perform_fitting(selection, roundit)
       files = {'1056-med-scale.mat'};
       repeats = 3;
       init_noise = 0;
-      starts = 'D';
+      starts = 'P';
       param_set = 2;
       params{2} = 'fit_kymo';
       params{4} = 'extended_model';
     case 42
       files = {'1056-med-scale.mat'};
       repeats = 5;
-      init_noise = 0.1;
-      starts = 'D';
+      init_noise = 0.05;
+      starts = 'P';
       param_set = 2;
       params{2} = 'refine_fit';
       params{4} = 'extended_model';
-      fixed_parameter = [2 4];
+      %fixed_parameter = [2 4];
     case 43
       perform_fitting(43.1,false);
       perform_fitting(43.2,false);
@@ -728,11 +728,12 @@ function perform_fitting(selection, roundit)
         %s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 -2.9900 9.6900 0 0.1599 0 0.83 0.8265]};
 
         %s_params = {'init_pos'; [0.0116 2.1571 0.0658 2.1871 21 2.2400 28.0400]};
-        if (user_param == 0)
-          s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 1.5438]};
-        else
-          s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 user_param]};
-        end
+        %if (user_param == 0)
+        %  s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 1.5438]};
+        %else
+        %  s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 user_param]};
+        %end
+        s_params = {'init_pos'; [0.012438      2.1571    0.076901      2.1871     12.725   -6.9864  28.82]}
 
         %refine_temp_indep
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
