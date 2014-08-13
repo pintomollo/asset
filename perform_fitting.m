@@ -593,6 +593,14 @@ function perform_fitting(selection, roundit)
       params{4} = 'final_model';
       fixed_parameter = [2 4];
 
+    case 40
+      files = {'1056-size-all.mat'};
+      repeats = 5;
+      init_noise = 0.05;
+      starts = 'D';
+      param_set = 2;
+      params{2} = 'refine_fit';
+      params{4} = 'extended_model';
     case 41
       files = {'1056-med-scale.mat'};
       repeats = 3;
