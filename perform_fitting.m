@@ -609,6 +609,7 @@ function perform_fitting(selection, roundit)
       param_set = 2;
       params{2} = 'refine_fit';
       params{4} = 'extended_model';
+      fixed_parameter = [2 4];
     case 43
       perform_fitting(43.1,false);
       perform_fitting(43.2,false);
