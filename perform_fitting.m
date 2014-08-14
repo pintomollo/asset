@@ -604,11 +604,12 @@ function perform_fitting(selection, roundit)
     case 41
       files = {'1056-med-scale.mat'};
       repeats = 3;
-      init_noise = 0;
+      init_noise = 0.05;
       starts = 'P';
       param_set = 2;
       params{2} = 'fit_kymo';
       params{4} = 'extended_model';
+      fixed_parameter = [2 4];
     case 42
       files = {'1056-med-scale.mat'};
       repeats = 5;
@@ -733,7 +734,10 @@ function perform_fitting(selection, roundit)
         %else
         %  s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 user_param]};
         %end
+
+        %% Revisions....
         s_params = {'init_pos'; [0.002874 2.2033 0.016591 2.2487 12.33 -6.77 35.83]};
+        s_params = {'init_pos'; [0.002721 2.1571 0.016588 2.1871 12.73 -6.99 38.82]};
 
         %refine_temp_indep
         %s_params = {'init_pos'; [0.00154 2.2569 0.0078 2.0203 -2.9900 9.6900 0 0.8566 0.8265 1.0889 0.8265 0.6127 1.7139 0.8265]};
