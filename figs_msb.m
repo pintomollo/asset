@@ -4151,11 +4151,12 @@ function figs_msb(num)
 
     case 26
       vals = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-med-scale';});
-      %vals2 = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-size-all';});
-      %vals = [vals;vals2];
+      vals2 = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-size-all';});
+      vals = [vals;vals2];
       vals = extract_model_parameters(vals, true);
 
       bests = NaN(0,8);
+      %bests = NaN(0,5);
       for i=1:size(vals,1)
         best = Inf;
         for j=1:size(vals{i,2},1)
