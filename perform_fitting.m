@@ -703,6 +703,26 @@ function perform_fitting(selection, roundit)
       param_set = 15;
       params{2} = 'fit_kymo';
       params{4} = 'final_model';
+    case 47
+      files = {'1056-temps-all.mat'};
+      repeats = 3;
+      init_noise = 0.01;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_fit';
+      params{4} = 'full_model';
+      fixed_parameter = [2 4];
+    case 48
+      files = {'1056-all-all.mat'};
+      repeats = 3;
+      init_noise = 0.01;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_fit';
+      params{4} = 'full_model';
+      fixed_parameter = [2 4];
+
+
 
     otherwise
       warning('Choose a fitting group between 1 and 7');

@@ -253,8 +253,8 @@ function figs_msb(num)
       load('data_expansion')
       data = load('1056-all-all.mat');
 
-      models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
-      %models = {'test_model1', 'test_model2', 'final_model'};
+      %models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
+      models = {'average_model','test_model1', 'test_model2','test_model3'};
       %models = {'test_model4', 'final_model'};
       all_simul = cell(length(models), 1);
       scores = NaN(length(models), 1);
@@ -4150,20 +4150,21 @@ function figs_msb(num)
       keyboard
 
     case 26
-      vals = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-med-scale';});
-      vals2 = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-size-all';});
-      vals = [vals;vals2];
+      %vals = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'fitting_type';'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-med-scale';});
+      %vals2 = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'fitting_type';'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-size-all';});
+      vals = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'fitting_type';'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-temps-all';});
+      %vals = [vals;vals2];
       vals = extract_model_parameters(vals, true);
 
-      bests = NaN(0,8);
-      %bests = NaN(0,5);
+      %bests = NaN(0,8);
+      bests = NaN(0,5);
       for i=1:size(vals,1)
         best = Inf;
         for j=1:size(vals{i,2},1)
           if (vals{i,2}{j,2}.params.score<best)
             best = vals{i,2}{j,2}.params.score;
-            bests(i,:) = [vals{i,2}{j,2}.params.score, vals{i,2}{j,2}.params.rate, vals{i,2}{j,2}.params.offset];
-            %bests(i,:) = [vals{i,2}{j,2}.params.score, vals{i,2}{j,2}.params.rate];
+            %bests(i,:) = [vals{i,2}{j,2}.params.score, vals{i,2}{j,2}.params.rate, vals{i,2}{j,2}.params.offset];
+            bests(i,:) = [vals{i,2}{j,2}.params.score, vals{i,2}{j,2}.params.rate];
           end
         end
       end
