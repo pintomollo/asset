@@ -730,6 +730,15 @@ function perform_fitting(selection, roundit)
       param_set = 0;
       params{2} = 'refine_fit';
       params{4} = 'extended_model';
+    case 50
+      files = cat(1, all_files{:});
+      repeats = 1;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 15;
+      params{2} = 'refine_fit';
+      params{4} = 'final_model';
+      fixed_parameter = [1:4 6:8];
 
     otherwise
       warning('Choose a fitting group between 1 and 7');

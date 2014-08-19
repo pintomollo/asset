@@ -3618,7 +3618,7 @@ function figs_msb(num)
 
       vals = [group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 2; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter'; 'flow_size'}); ...
               group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'flow_size'}); ...
-              group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set', 2; 'scale_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
+              group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
               %group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', true}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
       vals = extract_model_parameters(vals, true);
 
@@ -3653,6 +3653,8 @@ function figs_msb(num)
           all_offsets(indx, sub_indx) = vals{i,2}{1,2}.params.offset;
         end
       end
+
+      all_scores(~isfinite(all_scores)) = 0;
 
       figure;bar(sum(all_scores))
 
@@ -4180,11 +4182,13 @@ function figs_msb(num)
       results = cell(0,2);
 
       [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'goehring', 'aligning_type', 'best', 'start_with_best', false);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'goehring', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.000756 4.8088 0.07468 3.1495]);
       [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false);
-      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.00769 2.197 0.0314 2.202]);
-      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.0116 2.1571 0.0658 2.1871]);
+      %[score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.00769 2.197 0.0314 2.202]);
+      %[score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.0116 2.1571 0.0658 2.1871]);
       [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'extended_model', 'aligning_type', 'best', 'start_with_best', false);
-      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_flows', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.002684 2.1571 0.0151 2.1871 0.3045 0 0.8478 0.8772 1.4575], 'parameter_set', 15);
+      [score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_kymo', 'config_modeling', 'final_model', 'aligning_type', 'best', 'start_with_best', false,'parameter_set',15);
+      %[score(end+1), results(end+1,:)] = check_parameters('1056-24-all.mat', 'config_fitting', 'fit_flows', 'config_modeling', 'custom_flow', 'aligning_type', 'best', 'start_with_best', false, 'init_pos', [0.002684 2.1571 0.0151 2.1871 0.3045 0 0.8478 0.8772 1.4575], 'parameter_set', 15);
 
       load('1056-24-all.mat');
       nlayers = size(ground_truth, 3);
