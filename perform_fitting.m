@@ -682,6 +682,7 @@ function perform_fitting(selection, roundit)
       param_set = 15;
       params{2} = 'refine_fit';
       params{4} = 'final_model';
+      fixed_parameter = [2 4 9];
     case 46
       perform_fitting(46.1,false);
       perform_fitting(46.2,false);
@@ -694,7 +695,7 @@ function perform_fitting(selection, roundit)
       param_set = 15;
       params{2} = 'refine_fit';
       params{4} = 'final_model';
-      fixed_parameter = [2 4];
+      fixed_parameter = [2 4 ];
     case 46.2
       files = {'1056-temps-all.mat'};
       repeats = 3;
@@ -726,10 +727,9 @@ function perform_fitting(selection, roundit)
       repeats = 1;
       init_noise = 0;
       starts = 'D';
-      param_set = 2;
+      param_set = 0;
       params{2} = 'refine_fit';
       params{4} = 'extended_model';
-      fixed_parameter = [1:4];
 
     otherwise
       warning('Choose a fitting group between 1 and 7');

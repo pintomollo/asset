@@ -3618,7 +3618,8 @@ function figs_msb(num)
 
       vals = [group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 2; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter'; 'flow_size'}); ...
               group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'flow_size'}); ...
-              group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', true}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
+              group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set', 2; 'scale_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
+              %group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', true}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
       vals = extract_model_parameters(vals, true);
 
       nfits = size(vals,1);
@@ -4152,7 +4153,7 @@ function figs_msb(num)
     case 26
       %vals = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'fitting_type';'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-med-scale';});
       %vals2 = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'fitting_type';'parameter_set';'fixed_parameter';'init_pos'}, {'type', '1056-size-all';});
-      vals = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'fitting_type';'parameter_set';'simulation_parameters';'fixed_parameter';'init_pos'}, {'type', '1056-temps-all';});
+      vals = group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'fitting_type';'parameter_set';'simulation_parameters';'fixed_parameter';'init_pos';'fit_flow'}, {'type', '1056-temps-all';});
       %vals = [vals;vals2];
       vals = extract_model_parameters(vals, true);
 
