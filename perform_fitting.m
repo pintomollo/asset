@@ -709,7 +709,7 @@ function perform_fitting(selection, roundit)
       init_noise = 0.01;
       starts = 'D';
       param_set = 15;
-      params{2} = 'refine_fit';
+      params{2} = 'refine_flow';
       params{4} = 'full_model';
       fixed_parameter = [2 4];
     case 48
@@ -721,8 +721,15 @@ function perform_fitting(selection, roundit)
       params{2} = 'refine_fit';
       params{4} = 'full_model';
       fixed_parameter = [2 4];
-
-
+    case 49
+      files = cat(1, all_files{:});
+      repeats = 1;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 2;
+      params{2} = 'refine_fit';
+      params{4} = 'extended_model';
+      fixed_parameter = [1:4];
 
     otherwise
       warning('Choose a fitting group between 1 and 7');
