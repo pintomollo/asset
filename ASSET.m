@@ -306,7 +306,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
       % Assign it and delete it from the list
       mymovie = varargin{1};
       varargin(1) = [];
-      
+
     % Maybe several names were provided
     elseif (iscell(varargin{1}) && (mod(length(varargin), 2)==1 || isstruct(varargin{2})))
 
@@ -317,7 +317,7 @@ function [mymovie, trackings, opts] = parse_input(varargin)
 
       % Do not forget to stop here !
       return;
-      
+
     % Maybe the name of the MAT-file was provided
     elseif (ischar(varargin{1}) && (mod(length(varargin), 2)==1 || isstruct(varargin{2})))
 
