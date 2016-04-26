@@ -16,7 +16,7 @@ function [mymovie,trackings] = ASSET(varargin)
 %   Additional options can provided.
 %
 %   [MYMOVIE, TRACKINGS] = ASSET(...) also returns the updated TRACKINGS.
-%   
+%
 %   OPTS most useful fields (default value):
 %     - application         ('')/'ruffling'/...     Additional(s) analysis based on the segmentation, can
 %                                                   be a cell array (see perform_application.m)
