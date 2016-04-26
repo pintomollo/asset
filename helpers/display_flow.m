@@ -54,13 +54,22 @@ function [flow, flow_std, pos] = display_flow(mymovie, opts, do_piv)
     flow_std = flow;
   end
 
+  if (~isfield(opts.spot_tracking, 'scaling_parameter'))
+    opts = merge_structures(opts, get_struct('ASSET'));
+  end
+  if (do_piv)
+    scaling = 1;
+  else
+    scaling = opts.spot_tracking.scaling_parameter;
+  end
+
   for i=1:nframes
     nimg = i;
 
     %speed = mymovie.data.flow(nimg).speed * opts.pixel_size;
     %dist = mymovie.data.flow(nimg).distance * opts.pixel_size;
     %pos = mymovie.data.flow(nimg).position;
-    speed = mymovie.data.flow(nimg).speed;
+    speed = mymovie.data.flow(nimg).speed * scaling;
     %indxs = mymovie.data.flow(nimg).index;
 
     %cortex = mymovie.data.cortex(nimg).carth;

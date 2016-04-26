@@ -114,7 +114,6 @@ function uuids = fit_kymograph(fitting, opts)
   end
 
   if (~isempty(fitting.init_pos))
-    fitting.init_pos = fitting.init_pos(:).';
 
     if (iscell(fitting.init_pos))
       tmp_fit = fitting;
@@ -127,52 +126,55 @@ function uuids = fit_kymograph(fitting, opts)
       end
 
       return;
-    elseif ((nrates + numel(fit_energy) + noffsets + fitting.fit_flow + fit_viscosity*nvisc + fitting.scale_flow) == numel(fitting.init_pos))
-
-      if (nrates > 0)
-        fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
-      end
-      fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
-
-      all_params = true;
-    elseif ((nrates + numel(fit_energy) + fitting.fit_flow + fit_viscosity*nvisc + fitting.scale_flow) == numel(fitting.init_pos))
-
-      if (nrates > 0)
-        fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
-      end
-      almost_all_params = true;
-    elseif ((nrates + numel(fit_energy) + noffsets + fit_viscosity*nvisc) == numel(fitting.init_pos))
-
-      if (nrates > 0)
-        fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
-      end
-
-      fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
-    elseif (noffsets == numel(fitting.init_pos))
-
-      init_offsets = fitting.init_pos ./ fitting.offset_scaling;
-      fitting.init_pos = [];
-    elseif (nrates == numel(fitting.init_pos))
-      fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
-      fitting.init_pos = [fitting.init_pos fit_energy];
-    elseif (4 + noffsets == numel(fitting.init_pos))
-      warning('Assuming only the 4 main ones were provided !')
-      tmp_params = ml_params;
-      tmp_params([4 5 12 13]) = fitting.init_pos(1:4);
-      tmp_params = tmp_params ./ orig_scaling;
-
-      fitting.init_pos = [tmp_params(fit_params) fitting.init_pos(5:end)/fitting.offset_scaling fit_energy];
-    elseif (4 == numel(fitting.init_pos))
-      warning('Assuming only the 4 main ones were provided !')
-      tmp_params = ml_params;
-      tmp_params([4 5 12 13]) = fitting.init_pos(1:4);
-      tmp_params = tmp_params ./ orig_scaling;
-
-      fitting.init_pos = [tmp_params(fit_params) fit_energy];
     else
-      warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
-      %keyboard
-      fitting.init_pos = [];
+      fitting.init_pos = fitting.init_pos(:).';
+      if ((nrates + numel(fit_energy) + noffsets + fitting.fit_flow + fit_viscosity*nvisc + fitting.scale_flow) == numel(fitting.init_pos))
+
+        if (nrates > 0)
+          fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+        end
+        fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
+
+        all_params = true;
+      elseif ((nrates + numel(fit_energy) + fitting.fit_flow + fit_viscosity*nvisc + fitting.scale_flow) == numel(fitting.init_pos))
+
+        if (nrates > 0)
+          fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+        end
+        almost_all_params = true;
+      elseif ((nrates + numel(fit_energy) + noffsets + fit_viscosity*nvisc) == numel(fitting.init_pos))
+
+        if (nrates > 0)
+          fitting.init_pos(1:nrates) = fitting.init_pos(1:nrates) ./ orig_scaling(fit_params);
+        end
+
+        fitting.init_pos(nrates+1:nrates+noffsets) = fitting.init_pos(nrates+1:nrates+noffsets) ./ fitting.offset_scaling;
+      elseif (noffsets == numel(fitting.init_pos))
+
+        init_offsets = fitting.init_pos ./ fitting.offset_scaling;
+        fitting.init_pos = [];
+      elseif (nrates == numel(fitting.init_pos))
+        fitting.init_pos = fitting.init_pos ./ orig_scaling(fit_params);
+        fitting.init_pos = [fitting.init_pos fit_energy];
+      elseif (4 + noffsets == numel(fitting.init_pos))
+        warning('Assuming only the 4 main ones were provided !')
+        tmp_params = ml_params;
+        tmp_params([4 5 12 13]) = fitting.init_pos(1:4);
+        tmp_params = tmp_params ./ orig_scaling;
+
+        fitting.init_pos = [tmp_params(fit_params) fitting.init_pos(5:end)/fitting.offset_scaling fit_energy];
+      elseif (4 == numel(fitting.init_pos))
+        warning('Assuming only the 4 main ones were provided !')
+        tmp_params = ml_params;
+        tmp_params([4 5 12 13]) = fitting.init_pos(1:4);
+        tmp_params = tmp_params ./ orig_scaling;
+
+        fitting.init_pos = [tmp_params(fit_params) fit_energy];
+      else
+        warning('The provided initial position does not correspond to the dimensionality of the fit, ignoring it.');
+        %keyboard
+        fitting.init_pos = [];
+      end
     end
   end
 

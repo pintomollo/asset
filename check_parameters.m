@@ -1125,6 +1125,8 @@ function [score, results] = test_kymograph(fitting, opts)
             corr_offset = sindx(g) - rindx;
         end
 
+        %disp(corr_offset)
+
         if (size_data(g,2) - corr_offset < 10)
           err_all(g,i) = each_full_error(g);
         else

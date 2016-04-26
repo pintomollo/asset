@@ -58,6 +58,8 @@ function [conf_int] = sensitivity_analysis(pts, name)
   indx = 1;
 
   std_values = median(pts(:,2:end));
+  pts(:,[5 13]) = bsxfun(@times, pts(:,[5 13]), std_values([13 5]));
+  std_values = median(pts(:,2:end));
   for i=1:size(pts,1)
     var_indx = find(pts(i,2:end)~=std_values, 1);
 
@@ -77,7 +79,9 @@ function [conf_int] = sensitivity_analysis(pts, name)
   conf_int = NaN(length(std_values), 3);
   conf_int(:,1) = std_values(:);
 
-  pos_sampling = (pos_sampling);
+  is_pos = (std_values >= 0);
+
+  %pos_sampling = (pos_sampling);
   tmp_std = std_values;
   tmp_std(tmp_std == 0) = 1;
   rel_sampling = bsxfun(@rdivide, pos_sampling, tmp_std);
@@ -116,7 +120,12 @@ function [conf_int] = sensitivity_analysis(pts, name)
       conf_int(i, 3) = pos_sampling(right_bound, i);
     end
     right_bound = min(right_bound, length(ci));
-    ci = pos([left_bound right_bound]);
+    %ci = pos([left_bound right_bound]);
+    ci = pos_sampling([left_bound right_bound],i);
+
+    if (~is_pos(i))
+      ci = ci([2 1]);
+    end
 
     rindx = -2;
     vals = roundn(pos_sampling([left_bound right_bound], i), rindx);
@@ -126,31 +135,42 @@ function [conf_int] = sensitivity_analysis(pts, name)
     end
 
     if (is_neg)
-      zoom = ((pos >= ci(1)*5) & pos <= ci(2)*5);
+      %zoom = ((pos >= ci(1)*5) & pos <= ci(2)*5);
+      zoom = ((pos_sampling(:,i) >= ci(1)*5) & pos_sampling(:,i) <= ci(2)*5);
+    elseif (is_pos(i))
+      %zoom = ((pos >= ci(1)*0.75) & pos <= ci(2)*1.2);
+      zoom = ((pos_sampling(:,i) >= ci(1)*0.75) & pos_sampling(:,i) <= ci(2)*1.2);
     else
-      zoom = ((pos >= ci(1)*0.75) & pos <= ci(2)*1.2);
+      zoom = ((pos_sampling(:,i) >= ci(1)*1.2) & pos_sampling(:,i) <= ci(2)*0.75);
+      vals = vals([2 1]);
     end
     cla(haxes)
-    xlim(haxes, [min(pos(zoom)) max(pos(zoom))]);
-    if (is_neg)
+    %xlim(haxes, [min(pos(zoom)) max(pos(zoom))]);
+
+    xlim(haxes, [min(pos_sampling(zoom,i)) max(pos_sampling(zoom,i))]);
+    if (is_neg || ~is_pos(i))
       set(haxes, 'XScale', 'linear');
     else
       set(haxes, 'XScale', 'log');
     end
 
-    plot(haxes, pos(zoom), likeli(zoom), 'LineWidth', 2, 'Color', [83 83 83] / 255);
+    plot(haxes, pos_sampling(zoom,i), likeli(zoom), 'LineWidth', 2, 'Color', [83 83 83] / 255);
 
     ylims = ylim(haxes);
     xlims = xlim(haxes);
-    plot(haxes, pos(center)*[1 1],ylims, 'k');
+    plot(haxes, pos_sampling(center,i)*[1 1],ylims, 'k');
 
     %if (mindx~=center)
-      scatter(haxes, pos(mindx), mval, 72, [215 25 28]/255, 'filled');
-      text(pos(mindx), mval, num2str(pos(mindx)), 'Parent', haxes);
+      scatter(haxes, pos_sampling(mindx,i), mval, 72, [215 25 28]/255, 'filled');
+      text(pos_sampling(mindx,i), mval, num2str(pos_sampling(mindx,i)), 'Parent', haxes);
     %end
 
     m = mean(ci);
-    s = ci(1) - m;
+    if (is_pos(i))
+      s = ci(1) - m;
+    else
+      s = ci(2) - m;
+    end
 
     errorbarxy(haxes, m, mean(ylims), s, [], {'k', 'k', 'k'});
     text(ci, [1 1]*(mean(ylims)+0.05*range(ylims)), num2str(vals), 'HorizontalAlignment', 'center', 'Parent', haxes);
@@ -162,19 +182,21 @@ function [conf_int] = sensitivity_analysis(pts, name)
     %axes(hinset);
 
     cla(hinset);
-    xlim(hinset, [pos(1) pos(end)]);
-    if (is_neg)
+    xlim(hinset, [min(pos_sampling(:,i)) max(pos_sampling(:,i))]);
+    if (is_neg || ~is_pos(i))
       set(hinset, 'XScale', 'linear');
     else
       set(hinset, 'XScale', 'log');
     end
 
     rectangle('Parent', hinset, 'Position', [xlims(1) ylims(1) diff(xlims) diff(ylims)], 'EdgeColor', 'none', 'FaceColor', [217 217 217]/255);
-    plot(pos, likeli, 'LineWidth', 2, 'Color', [83 83 83] / 255);
+    plot(pos_sampling(:,i), likeli, 'LineWidth', 2, 'Color', [83 83 83] / 255);
+    ylim('auto');
+
     ylims = ylim(hinset);
     ylim(hinset, [ylims(1) max([ylims(2), ylims(1)+min_y])]);
     ylims = ylim(hinset);
-    plot(hinset, pos(center)*[1 1], ylims, 'k');
+    plot(hinset, pos_sampling(center,i)*[1 1], ylims, 'k');
 
     set(hinset,'XTickLabel',roundn(get(hinset,'xtick'), -2));
 

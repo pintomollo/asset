@@ -117,6 +117,28 @@ function install_ASSET
       had_problem = true;
     end
   end
+  if (exist('min_max_domain') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'min_max_domain.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('adaptive_neyman_quantile_mex') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'adaptive_neyman_quantile_mex.c']);
+    catch 
+      had_problem = true;
+    end
+  end
   if (exist('ellipse_ellipse_area_mex') ~= 3)
     try
       if (is_first)
@@ -124,6 +146,17 @@ function install_ASSET
         is_first = false;
       end
       eval(['mex MEX' filesep 'ellipse_ellipse_area_mex.c MEX' filesep 'ellipse_ellipse_overlap.c']);
+    catch 
+      had_problem = true;
+    end
+  end
+  if (exist('simulate_model_real') ~= 3)
+    try
+      if (is_first)
+        mex -setup;
+        is_first = false;
+      end
+      eval(['mex MEX' filesep 'simulate_model_real.c MEX' filesep 'rkf45.cpp MEX' filesep 'rkf45.h']);
     catch 
       had_problem = true;
     end

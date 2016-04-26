@@ -4,11 +4,11 @@ start_with_best false
 init_noise 0.1
 data_noise 0.05
 ndelays 5
-step_size 0.1
+step_size 0.01
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-3
-max_iter 100000
+max_iter 10000
 aligning_type 'fitting'
 pixels_only false
 offset_scaling 100

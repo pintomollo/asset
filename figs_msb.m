@@ -84,7 +84,8 @@ function figs_msb(num)
       keyboard
 
     case 0.1
-      vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type'}, {'parameter_set', 2; 'fit_flow', false; 'extrapol_z', true; 'rescale_length_only', true; 'scale_each_egg', true});
+      %vals = group_ml_results('BestFits/adr-kymo-*_evol.dat', {'type'}, {'parameter_set', 2; 'fit_flow', false; 'extrapol_z', true; 'rescale_length_only', true; 'scale_each_egg', true});
+      vals = group_ml_results('FitsScaledFlows/adr-kymo-*_evol.dat', {'type'}, {'parameter_set', 2; 'fit_flow', false; 'extrapol_z', true; 'rescale_length_only', true; 'scale_each_egg', true});
       vals = extract_model_parameters(vals, true);
       nfits = size(vals,1);
 
@@ -177,6 +178,10 @@ function figs_msb(num)
       keyboard;
 
     case 0.2
+      figs_msb(0.21);
+      figs_msb(0.22);
+
+    case 0.21
 
       load('data_expansion');
 
@@ -249,11 +254,84 @@ function figs_msb(num)
 
       keyboard
 
+    case 0.22
+
+      load('data_expansion');
+
+      convert = get_struct('z-correlation');
+
+      all_params = cat(1, all_data{:,2});
+      all_params(:, 5) = convert.bkg + convert.long_axis*all_params(:, 3) + convert.short_axis*all_params(:, 4);
+      all_params(:,3) = ellipse_circum(all_params(:,3:5), all_params(:,2), true);
+
+      all_sizes = all_params(:,3:5);
+      all_sizes = [all_sizes all_params(:,2)*0.5 surface2volume(all_sizes.').'];
+
+      data = load('data_fitting');
+      all_params = cat(1, data.all_data{1:5,2});
+      all_params = all_params(:, 2:5);
+
+      opts = get_struct('modeling');
+      opts = load_parameters(opts, 'goehring.txt');
+      opts = load_parameters(opts, 'extended_model.txt');
+
+      flow = opts.advection_params;
+      if (size(flow, 1) ~= opts.nparticles)
+        [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:opts.nparticles-1]*(size(flow, 1)-1)/(opts.nparticles-1)).');
+        flow = bilinear_mex(flow, X, Y, [2 2]);
+      end
+
+      all_simul = cell(size(all_params, 1), 1);
+
+      for p = 1:size(all_params, 1)
+        opts.reaction_params([3 4 10 11]) = all_params(p, :);
+        counter = 1;
+        for f = 1:size(all_data, 1)
+          for i=1:size(all_data{f,2}, 1)
+            opts.axes_length = all_sizes(counter, 1:3).';
+
+            opts.reaction_params(end, :) = all_sizes(counter, 4);
+            opts.reaction_params(end-1,:) = all_sizes(counter, 5);
+
+            opts.boundaries = [0 opts.reaction_params(end,1)];
+            opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
+
+            x0 = opts.init_func(opts, false);
+
+            ml_params = [opts.diffusion_params; ...
+                          opts.reaction_params];
+
+            [domain, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, opts.user_data, opts.max_iter);
+
+            domain = domain((end/2)+1:end, :).';
+            domain = [domain domain(:,end-1:-1:1)];
+
+            [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
+            norig = length(all_data{f,3}{i,1})-1;
+            nprofile = length(profile)-1;
+            profile = interp1([0:nprofile], profile, [0:norig]*nprofile/norig);
+
+            all_data{f,2}(i,1) = 2*max_width * opts.x_step/opts_expansion.quantification.resolution;
+            all_data{f,3}{i,1} = profile;
+            all_data{f,3}{i,2} = path;
+
+            disp([num2str(counter) '/' num2str(size(all_sizes,1)) '/' num2str(p)]);
+            counter = counter + 1;
+          end
+        end
+
+        all_simul{p} = all_data;
+      end
+
+      save('simul_expansion2', 'all_simul', 'temperatures');
+
     case 0.3
       load('data_expansion')
       data = load('1056-all-all.mat');
 
-      models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model', 'final_model'};
+      models = {'goehring', 'custom_flow','average_model', 'extended_model', 'full_model','final_model'};
+      %models = {'extended_model','full_model','test_model1', 'test_model2','final_model'};
+
       %models = {'average_model','test_model1', 'test_model2','test_model3'};
       %models = {'test_model4', 'final_model'};
       all_simul = cell(length(models), 1);
@@ -453,6 +531,53 @@ function figs_msb(num)
         disp([num2str(nimg) '/' num2str(nframes)]);
       end
 
+    case 0.6
+
+      opts = get_struct('modeling');
+      opts = load_parameters(opts, 'goehring.txt');
+      orig_opts = opts;
+      flow = opts.advection_params;
+      opts = load_parameters(opts, 'custom_flow.txt');
+
+      if (size(flow, 1) ~= opts.nparticles)
+        [X, Y] = meshgrid([1:size(flow, 2)], 1+([0:opts.nparticles-1]*(size(flow, 1)-1)/(opts.nparticles-1)).');
+        flow = bilinear_mex(flow, X, Y, [2 2]);
+      end
+
+      flow2 = opts.advection_params;
+      if (size(flow2, 1) ~= opts.nparticles)
+        [X, Y] = meshgrid([1:size(flow2, 2)], 1+([0:opts.nparticles-1]*(size(flow2, 1)-1)/(opts.nparticles-1)).');
+        flow2 = bilinear_mex(flow2, X, Y, [2 2]);
+      end
+
+      opts.x_step = diff(opts.boundaries)/(opts.nparticles-1);
+      x0 = opts.init_func(opts, false);
+
+      ml_params = [opts.diffusion_params; ...
+                    opts.reaction_params];
+
+      [domain, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow, orig_opts.user_data, opts.max_iter);
+
+      domain = domain((end/2)+1:end, :).';
+      domain = [domain domain(:,end-1:-1:1)];
+
+      figure;
+      subplot(4,2,1);
+      imagesc(domain);
+
+      for i=[1:0.1:1.5]
+
+        [domain, t_pos] = simulate_model_mix(x0, ml_params, opts.x_step, opts.tmax*0.75, opts.time_step, opts.output_rate, flow2*i, opts.user_data, opts.max_iter);
+
+        domain = domain((end/2)+1:end, :).';
+        domain = [domain domain(:,end-1:-1:1)];
+
+        subplot(4,2,2+round((i-1)*10));
+        imagesc(domain);
+        title(['+' num2str(round((i-1)*100)) '%'])
+      end
+
+      keyboard
 
     case 1
       files = dir('stainings/*.txt');
@@ -1171,6 +1296,7 @@ function figs_msb(num)
       opts = get_struct('modeling');
       opts = load_parameters(opts, 'goehring.txt');
       opts = load_parameters(opts, 'extended_model.txt');
+      %opts = load_parameters(opts, 'final_model.txt');
 
       npos = opts.nparticles;
 
@@ -1187,10 +1313,10 @@ function figs_msb(num)
       %scalings = [0.25 0.33 0.5 0.75 1 1.5 2 3 4];
       % because: exp(-(E/kB)*((1/(13+C2K)) - (1/(20+C2K)))) = 0.5329
       % and      exp(-(E/kB)*((1/(24+C2K)) - (1/(20+C2K)))) = 1.4139
-      scalings = [0.1:0.1:1.5];
+      scalings = [0.2:0.1:1.5];
 
       colors = redbluemap(length(scalings));
-      colors(((length(scalings)-1)/2)+1,:) = [0 0 0];
+      colors(((length(scalings))/2)+1,:) = [0 1 0];
 
       labels = cellstr(num2str(scalings.'));
 
@@ -1247,14 +1373,16 @@ function figs_msb(num)
           domain = [domain domain(:,end-1:-1:1)];
 
           [profile, center, max_width, cell_width, path] = get_profile(domain, nframes);
-          timing = (length(path) - find(path>=thresh(2), 1, 'first'))*10;
+          %timing = (length(path) - find(path>=thresh(2), 1, 'first'))*10;
+          %timing = (find(path>=thresh(2)*max(path), 1, 'first') - find(isfinite(path), 1, 'first'))*10;
+          timing = (find(path>=thresh(2), 1, 'first') - find(isfinite(path), 1, 'first'))*10;
 
           all_maint{j} = profile.';
           centers(j) = center;
           all_params(j,:) = [2*max_width, cell_width, opts.axes_length(:).' timing];
           all_params(j,1:2) = all_params(j,1:2)*opts.x_step/opts_expansion.quantification.resolution;
           
-          %subplot(4,3,mod(i-1,3)+10);
+          %subplot(3,3,mod(i-1,3)+3);
           %hold on;
           %plot(path, 'Color', colors(j,:))
 
@@ -1264,7 +1392,7 @@ function figs_msb(num)
         %keyboard
         %end
 
-        goods = (centers~=npos);
+        goods = (centers~=npos & cellfun(@(x)(x(1) > x(end)), all_maint).');
         temp_colors = colors(goods,:);
 
         centers = centers(goods);
@@ -1279,7 +1407,6 @@ function figs_msb(num)
         hsub = subplot(3,3,mod(i-1,3)+1);
         set(hsub,'ColorOrder', temp_colors);
         hold on;
-      
 
         plot(pos_simul, squeeze(stack));
         plot(pos_simul, m_simul+s_simul, 'k');
@@ -1288,7 +1415,7 @@ function figs_msb(num)
         xlabel('Distance to the boundary (µm)');
         ylabel('Intensity rescaled (a.u.)');
         title('Average profile')
-        ylim([0 1]);
+        ylim([0 1.2]);
         xlim([-20 20]);
         title(titles(i))
         legend(labels(goods));
@@ -1302,6 +1429,8 @@ function figs_msb(num)
 
         subplot(3,3,mod(i-1,3)+7);hold on
         plot(scalings(goods), all_params(goods,end))
+        ylim([0 600])
+        xlim([0.2 1.5])
 
         %keyboard
 
@@ -1388,7 +1517,8 @@ function figs_msb(num)
 
     case 7
       %vals = group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model'}, {'type', '1056-temps-all'; 'fitting_type', 'cmaes'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true});
-      vals = group_ml_results('ScaledFlowFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true; 'scale_flow', true});
+      %vals = group_ml_results('ScaledFlowFits/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true; 'scale_flow', true});
+      vals = group_ml_results('FitsTempModels/adr-kymo-*_evol.dat', {'parameter_set';'fit_flow';'fit_model';'fixed_parameter'}, {'type', '1056-temps-all'; 'aligning_type', 'fitting';'normalize_smooth', true; 'rescale_length_only', true; 'scale_each_egg', true});
 
       data = load('1056-temps-all.mat');
       npts = sum(cellfun(@(x)(size(x,1)), data.ground_truth));
@@ -1483,11 +1613,15 @@ function figs_msb(num)
 
       temps = vals{1,2}{1,2}.params.temperature;
 
-      colors = [0 0 0; ...
-                37 37 37; ...
-                82 82 82; ...
-                150 150 150; ...
-                217 217 217]/255;
+%      colors = [0 0 0; ...
+%                37 37 37; ...
+%                82 82 82; ...
+%                150 150 150; ...
+%                217 217 217]/255;
+
+      colors = [254 153 41; ...
+                254 217 142; ...
+                204 76 2]/255;
 
       for i=1:length(aic)
         if (mod(i, 6) == 1)
@@ -1502,7 +1636,7 @@ function figs_msb(num)
         end
         plot(temps, vals(end,:), '-v', 'Color', colors(end-1,:));
         plot(temps, vals(1,:), '-o', 'Color', colors(end,:));
-        ylim([0 2.5]);
+        ylim([0 2]);
         xlim([10 26])
 
         title([num2str(param_set(i,:)) ':' num2str(aic(i)) ',' num2str(rel_L(i))]);
@@ -2037,11 +2171,12 @@ function figs_msb(num)
       fits = load('data_fitting');
       %data.all_data = data.all_simul;
 
-      targets = {'good_13.txt';'good_20.txt';'good_24.txt';'good_ani2.txt'; 'good_c27d91.txt'; 'averages'};
+      targets = {'good_13.txt';'good_20.txt';'good_24.txt';'good_ani2.txt'; 'good_c27d91.txt'};
       [junk, indxs] = ismember(targets, fits.all_data(:,1));
       all_data = fits.all_data(indxs,:);
       sizes = cumsum(cellfun(@(x)(size(x,1)), all_data(:,2)));
-      all_data = cat(1, all_data{1:end-1,2});
+      %all_data = cat(1, all_data{1:end-1,2});
+      all_data = cat(1, all_data{:,2});
       all_data = [all_data(:,2:5) 2*all_data(:,end-3) all_data(:,1)./all_data(:,end)];
       outliers = pcout(all_data(:, 1:4), [0.33 25], [0.25 1]);
 
@@ -2076,21 +2211,23 @@ function figs_msb(num)
           %scatter(all_params(:,2), all_params(:,1));
           %subplot(2,3,2);hold on;
           %scatter(all_params(:,3), all_params(:,1)./all_params(:,2));
+          color_indx=find(p<=sizes, 1);
+
           subplot(2,3,1);hold on;
           if (outliers(p))
             y_tmp = x_abs*b_abs;
-            plot(x_abs, y_tmp, '--', 'Color', colors(find(p<sizes, 1), :));
+            plot(x_abs, y_tmp, '--', 'Color', colors(color_indx, :));
           else
             y_abs(:,p) = x_abs*b_abs;
-            plot(x_abs, y_abs(:,p), 'Color', colors(find(p<sizes, 1), :));
+            plot(x_abs, y_abs(:,p), 'Color', colors(color_indx, :));
           end
           subplot(2,3,2);hold on;
           if (outliers(p))
             y_tmp = sum(bsxfun(@times, x_rel, b_rel(:).'), 2);
-            plot(x_rel(:,2), y_tmp, '--', 'Color', colors(find(p<sizes, 1), :));
+            plot(x_rel(:,2), y_tmp, '--', 'Color', colors(color_indx, :));
           else
             y_rel(:,p) = sum(bsxfun(@times, x_rel, b_rel(:).'), 2);
-            plot(x_rel(:,2), y_rel(:,p), 'Color', colors(find(p<sizes, 1), :));
+            plot(x_rel(:,2), y_rel(:,p), 'Color', colors(color_indx, :));
           end
 
           all_pts = [all_pts; all_params(:,1:3)];
@@ -2685,21 +2822,26 @@ function figs_msb(num)
       myregress([intercept all_pts(~outliers,end)], all_pts(~outliers,4));
       mtit('Normalized score regress');
 
+      intercept = ones(length(outliers), 1);
       figure;
       subplot(2,3,1);
-      myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,1));
+      %myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,1));
+      myregress([intercept all_pts(:,5)], all_pts(:,1));
       xlabel('Length of the embryo');
       ylabel(params_labels{1})
       subplot(2,3,2);
-      myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,2));
+      %myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,2));
+      myregress([intercept all_pts(:,5)], all_pts(:,2));
       xlabel('Length of the embryo');
       ylabel(params_labels{2})
       subplot(2,3,3);
-      myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,3));
+      %myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,3));
+      myregress([intercept all_pts(:,5)], all_pts(:,3));
       xlabel('Length of the embryo');
       ylabel(params_labels{3})
       subplot(2,3,4);
-      myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,4));
+      %myregress([intercept all_pts(~outliers,5)], all_pts(~outliers,4));
+      myregress([intercept all_pts(:,5)], all_pts(:,4));
       xlabel('Length of the embryo');
       ylabel(params_labels{4})
       mtit('Embryo length regress');
@@ -2976,7 +3118,9 @@ function figs_msb(num)
       keyboard
 
     case 7.2
-      vals = group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'combine_data'; 'fixed_parameter'}, {'type', '1056-all-all'; 'fitting_type', 'sample'; 'fit_relative', true});
+      %vals = group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'combine_data'; 'fixed_parameter'}, {'type', '1056-all-all'; 'fitting_type', 'sample'; 'fit_relative', true});
+      %vals = group_ml_results('adr-kymo-*_evol.dat', {'combine_data'; 'fixed_parameter'}, {'type', '1056-24-all'; 'fit_relative', true; 'fitting_type', 'sample'});
+      vals = group_ml_results('adr-kymo-*_evol.dat', {'combine_data'; 'fixed_parameter';'init_pos';'parameter_set';'fit_relative'}, {'type', '1056-med-all'; 'fitting_type', 'sample'});
 
       for i = 1:size(vals, 1)
         best_indx = -1;
@@ -2995,15 +3139,30 @@ function figs_msb(num)
       end
 
       vals2 = extract_model_parameters(vals);
-      vals2 = vals2(cellfun(@(x)(length(x{1}.fixed_parameter) == 159), vals2(:,1)),:);
+      %vals2 = vals2(cellfun(@(x)(length(x{1}.fixed_parameter) == 159), vals2(:,1)),:);
 
-      if (strncmp(vals2{1,1}{1}.combine_data, 'hessian', 7))
-        vals2 = vals2([2 1],:);
+      %if (strncmp(vals2{1,1}{1}.combine_data, 'hessian', 7))
+      %  vals2 = vals2([2 1 3:end],:);
+      %end
+      hessians = cellfun(@(x)(strncmp(x{1}.combine_data,'hessian',7)), vals2(:,1));
+      hessians = vals2(hessians, :);
+
+      for i=1:size(hessians, 1)
+        [rC, C, rH, H] = correlation_matrix(hessians{i,2}{1,2}.evolution);
+
+        figure;imagesc(rC, [-1 1]);
+        title(hessians{i,2}{1,1})
+        colormap(flipud(redgreencmap));
+        colorbar
       end
 
-      sensitivity_analysis(vals2{1,2}{1,2}.evolution, 'best_model');
+      keyboard
 
-      [rC, C, rH, H] = correlation_matrix(vals2{2,2}{1,2}.evolution);
+      vals2{7,2}{1,2}.evolution.flow = vals2{7,2}{1,2}.evolution.flow*0.86463;
+      sensitivity_analysis(vals2{7,2}{1,2}.evolution, 'best_model');
+
+      corr_indx = find(cellfun(@(x)(strncmp(x{1}.combine_data,'hessian',7)), vals2(:,1)), 1);
+      [rC, C, rH, H] = correlation_matrix(vals2{corr_indx,2}{1,2}.evolution);
 
       figure;imagesc(rC, [-1 1]);
       colormap(flipud(redgreencmap));
@@ -3014,6 +3173,7 @@ function figs_msb(num)
     case 8
       figs_msb(8.1);
       figs_msb(8.2);
+      figs_msb(8.3);
     case 8.1
       colors = [254 217 166; ...
                 251 180 174; ...
@@ -3349,16 +3509,16 @@ function figs_msb(num)
 
           hs = findobj(gcf,'tag','Outliers');
           xc = get(hs,'XData');
-          if (i>1)
+          if (i>1 && iscell(xc))
             xc = xc{1};
           end
 
           if (isnan(xc))
             goods = true(size(all_data{i,2}, 1), 1);
           else
-            yc = get(hs,'YData')
+            yc = get(hs,'YData');
 
-            if (i>1)
+            if (i>1 && iscell(yc))
               yc = yc{1};
             end
 
@@ -3613,12 +3773,16 @@ function figs_msb(num)
       orig_full([4 12]) = orig_full([4 12]) ./ orig_full([13 5]);
       orig_full = orig_full(:).';
 
+      alls = [orig_flow([4 5 12 13]); orig_size([4 5 12 13]); orig_full([4 5 12 13])];
+
       all_scores = Inf(length(all_names), 5);
       all_offsets = all_scores;
 
       vals = [group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 2; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter'; 'flow_size'}); ...
               group_ml_results('LatestFits/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false; 'fit_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'flow_size'}); ...
-              group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
+              group_ml_results('FitsOffsets/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'}); ...
+              group_ml_results('latest_offsets/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
+              %group_ml_results('RevisionFits/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', false}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
               %group_ml_results('FitsMarch/adr-kymo-*_evol.dat', {'parameter_set', 0; 'scale_flow', true}, {'type';'simulation_parameters';'fixed_parameter';'fit_flow'})];
       vals = extract_model_parameters(vals, true);
 
@@ -3639,12 +3803,10 @@ function figs_msb(num)
         else
           if (flow_goehring == curr_val.flow_size(2))
             sub_indx = 1;
-          elseif (numel(curr_val.simulation_parameters)>4 && sum((curr_val.simulation_parameters(4:5) - orig_flow(4:5)).^2)<1e-6)
-              sub_indx = 2;
-          elseif (numel(curr_val.simulation_parameters)>4 && sum((curr_val.simulation_parameters(4:5) - orig_size(4:5)).^2)<1e-6)
-              sub_indx = 3;
-          elseif (numel(curr_val.simulation_parameters)>4 && sum((curr_val.simulation_parameters(4:5) - orig_full(4:5)).^2)<1e-6)
-              sub_indx = 4;
+          elseif (numel(curr_val.simulation_parameters)>4)
+            diffs = sum(bsxfun(@minus, alls, curr_val.simulation_parameters([4 5 12 13])).^2, 2);
+            [diff_val, sub_indx]=min(diffs);
+            sub_indx = (sub_indx + 1) * (diff_val < 1e-6);
           end
         end
 
@@ -3736,9 +3898,56 @@ function figs_msb(num)
       keyboard
 
     case 21
+
+      prob_size = [100 1];
+      radius = 0.895;
+      nfirst = 15;
+
       x = [0:2:14];
       y = [-0.2:0.1:0.3];
+      pos = [x(1):0.1:x(end)];
 
+      load('niwayama.mat')
+      edges = [0:1.5:14];
+      centers = edges(1:end-1) + diff(edges)/2;
+
+      vals = feval(fittedmodel, centers);
+      stds = feval(fittedstds, centers);
+
+      xr = rand(prob_size)*range(x)+x(1);
+      yr = randn(prob_size) .* reshape(feval(fittedstds, xr), prob_size) + reshape(feval(fittedmodel, xr), prob_size);
+
+      spline = feval(fittedmodel, pos);
+      splinestds = feval(fittedstds, pos);
+
+      weight = @(p)(exp(-(p.^2)/(2*(radius/2)^2)));
+
+      goal = feval(fittedmodel, x(1));
+
+      weights = weight(xr);
+      weights = bsxfun(@rdivide, weights, sum(weights, 1));
+      kernel = sum(yr .* weights, 1);
+
+      [junk, indx] = sort(xr, 1);
+      avg = mean(yr(indx(1:nfirst)));
+
+      figure;scatter(xr, yr);hold on
+      plot(x([1 end]), [0 0], 'k');
+      errorbar(centers, vals, stds, 'r')
+      plot(pos, spline+splinestds, 'k')
+      plot(pos, spline-splinestds, 'k')
+      plot(pos, weight(pos)*max(yr), 'm')
+      scatter(x(1), goal, 'k');
+      scatter(x(1), kernel, 'g');
+      scatter(x(1), avg, 'm');
+
+      ylim([y(1) y(end)])
+
+      keyboard
+
+      study_kernel_radius()
+
+      %{
       xp = [169:69:660];
       yp = [412 345 278 211 144 77];
 
@@ -3773,7 +3982,7 @@ function figs_msb(num)
         spline = feval(fittedmodel, pos);
         splinestds = feval(fittedstds, pos);
 
-        weight = @(x)(exp(-(x.^2)/2));
+        weight = @(x)(exp(-(x.^2)/0.5));
         weights = weight(xr);
         weights = weights / sum(weights);
 
@@ -3790,6 +3999,7 @@ function figs_msb(num)
         scatter(pos([1 1]), [spline(1) avg], 'r')
         title([num2str(nparticles) ':' num2str(poss) ' ;' num2str(abs(poss - poss(1)))])
       end
+      %}
 
       keyboard
 
@@ -3869,7 +4079,8 @@ function figs_msb(num)
       clim = [-0.16 0.16];
       resc=2;
       rem=0;
-      files = dir('749-*_.mat');
+      %files = dir('749-*_.mat');
+      files = [dir('749-0*_.mat'); dir('749-2*_.mat')];
       all_flows = cell(length(files), 2);
       align = load('aligned_flow_1_1127907.619.mat');
 
@@ -4406,6 +4617,8 @@ function [means, center, dwidth, full_width, f] = get_profile(domain, nframes, o
 
     domain = domain(first:last,:,:);
     avg_domain = avg_domain(first:last,:);
+
+    %opts_expansion.verbosity = 3;
 
     [f, frac_width, full_width] = domain_expansion(avg_domain, width + 1, last-first+1, opts_expansion);
   end

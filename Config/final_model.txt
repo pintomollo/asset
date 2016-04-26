@@ -4,12 +4,19 @@ dimensionality 1
 boundaries [0 67.3]
 x_step diff(opts.boundaries)/(opts.nparticles-1)
 %advection_params (-getfield(load('cyto_flow.mat', 'flow3'), 'flow3')).';
-advection_params 0.8578*(-getfield(load('cyto_flow.mat', 'flow3'), 'flow3')).';
+%advection_params 0.8578*(-getfield(load('cyto_flow.mat', 'flow3'), 'flow3')).';
+%advection_params 0.8499*(-getfield(load('cyto_flow.mat', 'flow3'), 'flow3')).';
+%advection_params 0.8499*(-getfield(load('cyto_flow.mat', 'flow3'), 'flow3')).';
+advection_params 0.86463*(-getfield(load('cyto_flow.mat', 'flow3'), 'flow3')).';
 init_params true
 init_func @init_goehring
 %reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.002754 0.015402; 2.1571 2.1871; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
 %reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.002523 0.01428; 2.2033 2.2487; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
-reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.002604 0.01463; 2.2033 2.2487; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
+%reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.002604 0.01463; 2.2033 2.2487; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
+%reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.002352 0.013162; 2.0859 2.3570; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
+%reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.002522 0.0137878; 2.0859 2.3570; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
+%reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.0025196 0.0137669; 2.0859 2.3570; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
+reaction_params [0.00857 0.0472; 0.0054 0.0073; 0.0025196 0.0137669; 2.0859 2.3570; 1.56 1; [1 1]*surface2volume(opts.axes_length); [1 1]*0.5*ellipse_circum(opts.axes_length)]
 diffusion_params [0.28 0.15]
 output_rate 10
 tmax 2000
@@ -21,4 +28,8 @@ flow_temperature getfield(load('cyto_flow.mat', 'flow_temp'), 'flow_temp')
 %temperature_params [0.2080 0.003 0.8282]
 %scale_params 1.11
 %temperature_params [0.2617 0.00005 0.77]
-temperature_params [0.5348 0 1.2366]
+%temperature_params [0.5348 0 1.2366]
+%temperature_params [0.2414 0 0.9841]
+%temperature_params [0.186 0 0.7614]
+%temperature_params [0.1973 0 0.7679]
+temperature_params [0.23085 0 0.79864]

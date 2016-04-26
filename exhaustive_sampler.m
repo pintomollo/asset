@@ -42,6 +42,16 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
         pos = 1 + val_range.*([-pos(end:-1:2) pos(2:end)]);
       end
 
+      %{
+      poz = [0:(2*(nevals-1))]*(1/(2*(nevals-1)));
+      if (opts.is_log)
+        poz = (2*val_range).^(poz(2:end));
+      else
+        poz = 1 + (2*val_range).*(poz(2:end));
+      end
+      poz = enumerate(poz(:), poz(:));
+      %}
+
       single_pos = pos(:);
       pos = enumerate(single_pos, single_pos);
       nevals = size(pos, 1);
@@ -133,74 +143,78 @@ function [best_pos, best_score] = exhaustive_sampler(fitfun, p0, opts)
   end
 
   if (strncmp(opts.sampling_type,'hessian', 7))
+    for nloop=1:max_iter
+      fprintf('Looks like numerical Hessian estimation, checking that the sampling was adequat... (%d / %d)\n', nloop, max_iter);
+      values = group_ml_results(['.' filesep log_file '.dat']);
+      values = extract_model_parameters(values);
+      [rC, C, rH] = correlation_matrix(values{1,2}{1,2}.evolution);
 
-    fprintf('Looks like numerical Hessian estimation, checking that the sampling was adequat...\n');
-    values = group_ml_results(['.' filesep log_file '.dat']);
-    values = extract_model_parameters(values);
-    [rC, C, rH] = correlation_matrix(values{1,2}{1,2}.evolution);
+      precision_thresh = 10^(-opts.precision);
 
-    precision_thresh = 10^(-opts.precision);
+      if (any(abs(rH(:)) < precision_thresh) || any(isnan(rC(:))))
+        [I, J] = find((abs(rH) + tril(Inf(nparams), -1) < precision_thresh) | ...
+                      (isnan(rC) & triu(ones(nparams), 0)));
+        problems = [I J];
 
-    if (any(abs(rH(:)) < precision_thresh))
-      [I, J] = find((abs(rH) + tril(Inf(nparams), -1) < precision_thresh));
-      problems = [I J];
-
-      new_range = 2*val_range;
-      new_pos = [-1 1].';
-      if (opts.is_log)
-        new_pos = new_range.^new_pos;
-      else
-        new_pos = 1 + new_range.*new_pos;
-      end
-
-      single_pos = new_pos(:);
-      double_pos = enumerate(single_pos, single_pos);
-
-      nsingle = size(single_pos, 1);
-      ndouble = size(double_pos, 1);
-      is_single = (problems(:,1) == problems(:,2));
-      tmp_all = ones(length(single_pos)*sum(is_single) + size(double_pos, 1)*sum(~is_single), nparams);
-
-      count = 0;
-      for i=1:length(is_single)
-        if (is_single(i))
-          tmp_all(count+[1:nsingle], problems(i,1)) = single_pos;
-
-          count = count + nsingle;
+        val_range = 2*val_range;
+        new_pos = [-1 1].';
+        if (opts.is_log)
+          new_pos = val_range.^new_pos;
         else
-          tmp_all(count+[1:ndouble], problems(i,:)) = double_pos;
-
-          count = count + ndouble;
+          new_pos = 1 + val_range.*new_pos;
         end
-      end
 
-      p0 = median(p0, 1);
-      new_p0 = bsxfun(@times, tmp_all, p0(:).');
-      nulls = all(new_p0==0,1);
+        single_pos = new_pos(:);
+        double_pos = enumerate(single_pos, single_pos);
 
-      if (any(nulls))
-        tmp_pos = tmp_all;
-        tmp_pos(tmp_pos < 1) = 1 - 1./tmp_pos(tmp_pos < 1);
-        tmp_pos(tmp_pos >= 1) = tmp_pos(tmp_pos>=1) - 1;
-        new_p0(:, nulls) = tmp_pos(:,nulls);
-      end
+        nsingle = size(single_pos, 1);
+        ndouble = size(double_pos, 1);
+        is_single = (problems(:,1) == problems(:,2));
+        tmp_all = ones(length(single_pos)*sum(is_single) + size(double_pos, 1)*sum(~is_single), nparams);
 
-      nevals = size(new_p0, 1);
+        count = 0;
+        for i=1:length(is_single)
+          if (is_single(i))
+            tmp_all(count+[1:nsingle], problems(i,1)) = single_pos;
 
-      fprintf('Resampling %d parameters in %d iterations!\n', size(problems, 1), nevals);
+            count = count + nsingle;
+          else
+            tmp_all(count+[1:ndouble], problems(i,:)) = double_pos;
 
-      [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
-      for i=1:nevals
-        curr_p = new_p0(i,:);
-        score = fitfun(curr_p);
-
-        fprintf(fid, [uuid '%ld : %e |'], i, score);
-        fprintf(fid, print_str, curr_p);
-        fprintf(fid, '\n');
-
-        if (mod(i, disp_iter) == 0)
-          fprintf('Iter=%d, %d%% done\n', i, round((i/nevals)*100));
+            count = count + ndouble;
+          end
         end
+
+        p0 = median(p0, 1);
+        new_p0 = bsxfun(@times, tmp_all, p0(:).');
+        nulls = all(new_p0==0,1);
+
+        if (any(nulls))
+          tmp_pos = tmp_all;
+          tmp_pos(tmp_pos < 1) = 1 - 1./tmp_pos(tmp_pos < 1);
+          tmp_pos(tmp_pos >= 1) = tmp_pos(tmp_pos>=1) - 1;
+          new_p0(:, nulls) = tmp_pos(:,nulls);
+        end
+
+        nevals = size(new_p0, 1);
+
+        fprintf('Resampling %d parameters in %d iterations!\n', size(problems, 1), nevals);
+
+        [fid, err] = fopen(['.' filesep log_file '.dat'], 'a');
+        for i=1:nevals
+          curr_p = new_p0(i,:);
+          score = fitfun(curr_p);
+
+          fprintf(fid, [uuid '%ld : %e |'], i, score);
+          fprintf(fid, print_str, curr_p);
+          fprintf(fid, '\n');
+
+          if (mod(i, disp_iter) == 0)
+            fprintf('Iter=%d, %d%% done\n', i, round((i/nevals)*100));
+          end
+        end
+      else
+        break;
       end
 
       fclose(fid);

@@ -5,13 +5,12 @@ step_size 5
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-8
-max_iter 800
+max_iter 1500
 init_noise 0
 data_noise 0.01
 combine_data 'independent'
 parameter_set 6
 fit_flow true
-scale_flow true
 aligning_type 'fitting'
 pixels_only false
 offset_scaling 100

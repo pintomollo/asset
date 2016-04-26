@@ -27,7 +27,8 @@ function flow_nate(niter, use_timing, pos)
     nfiles = length(signals);
   else
 
-    files = dir('749-*_.mat');
+    %files = dir('749-*_.mat');
+    files = [dir('749-0*_.mat'); dir('749-2*_.mat')];
     nfiles = length(files);
     res = cell(nfiles, 3);
     signals = cell(nfiles, 1);

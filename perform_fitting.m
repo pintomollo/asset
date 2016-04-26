@@ -53,16 +53,116 @@ function perform_fitting(selection, roundit)
       %params{2} = 'refine_fit';
     case 0
       % All ani-2 and c27d9.1
-      files = [dir('1056-3-*_.mat'); ...
-               dir('1056-14-*_.mat'); ...
-               dir('1056-24-*_.mat'); ...
-               dir('1056-ani2-*_.mat'); ...
-               dir('1056-c27d91-*_.mat')];
-      repeats = 1;
+      %files = [dir('1056-3-*_.mat'); ...
+      %         dir('1056-14-*_.mat'); ...
+      %         dir('1056-24-*_.mat'); ...
+      %         dir('1056-ani2-*_.mat'); ...
+      %         dir('1056-c27d91-*_.mat')];
+      %files = cat(1, all_files{2:end});
+      files = cat(1, all_files{:});
+      files = files(99:101);
+
+      repeats = 3;
       init_noise = 0;
-      starts = 'B';
+      starts = 'BA';
       param_set = 2;
       params{2} = 'refine_fit';
+    case 0.1
+      files = {'1056-med-scale.mat'};
+      %files = {'1056-size-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'refine_fit';
+      %fixed_parameter = [1:4];
+      %params{2} = 'fit_kymo';
+    case 0.2
+      files = {'1056-med-scale.mat'};
+      %files = {'1056-size-all.mat'};
+      repeats = 5;
+      init_noise = 0.01;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'refine_fit';
+      %params{2} = 'fit_kymo';
+    case 0.3
+      files = {'1056-med-scale.mat'};
+      %files = {'1056-size-all.mat'};
+      repeats = 5;
+      init_noise = 0.01;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'refine_fit';
+      fixed_parameter = [2 4];
+      %params{2} = 'fit_kymo';
+    case 0.4
+      files = {'1056-med-scale.mat'};
+      %files = {'1056-size-all.mat'};
+      repeats = 5;
+      init_noise = 0.01;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'fit_kymo';
+    case 0.5
+      files = {'1056-med-scale.mat'};
+      %files = {'1056-size-all.mat'};
+      repeats = 5;
+      init_noise = 0.01;
+      starts = 'P';
+      param_set = 2;
+      params{2} = 'fit_kymo';
+      fixed_parameter = [2 4];
+    case 0.6
+      files = {'1056-med-all.mat'};
+      repeats = 1;
+      init_noise = [0];
+      starts = 'G';
+      param_set = [15];
+      params{2} = 'refine_flow';
+      params{4} = 'full_model';
+      fixed_parameter = [2 4 12];
+    case 0.7
+      files = {'1056-med-all.mat'};
+      repeats = 1;
+      init_noise = [0];
+      starts = 'G';
+      param_set = [15];
+      params{2} = 'refine_flow';
+      params{4} = 'full_model';
+      fixed_parameter = [2 4 11:14];
+    case 0.8
+      files = {'1056-med-all.mat'};
+      repeats = 1;
+      init_noise = [0];
+      starts = 'G';
+      param_set = [15];
+      params{2} = 'refine_flow';
+      params{4} = 'final_model';
+      %fixed_parameter = [1:4 11:14];
+      fixed_parameter = [2 4 5:10 12];
+      s_params = {'init_pos'; [4.525 5.495 8e-4 16.06 -8.99 29.59]};
+    case 0.9
+      %files = dir('1056-all-all.mat');
+      %files = dir('1056-24-all.mat');
+      files = {'1056-med-all.mat'};
+      repeats = 1;
+      init_noise = 0;
+      %starts = 'O';
+      starts = 'D';
+      param_set = 30;
+      params{2} = 'refine_flow';
+      params{4} = 'final_model';
+      %fixed_parameter = [15:154];
+      %fixed_parameter = [15:61];
+      %fixed_parameter = [15:20];
+
+      %ps = load('all_offsets');
+      %s_params = {'init_pos'; ps.all_offsets(:,4).'};
+      %s_params = {'init_pos'; ps.all_offsets(1:47,4).'};
+      %s_params = {'init_pos'; [1.536 4.8381 -1.66 16.08 -5.94 35.3281]};
+      s_params = {'init_pos'; [2.4821 5.4542 0 16.172 -7.9979 38.7682]};
+
     case 1
       % All 24°C
       files = dir('1056-24-*_.mat');
@@ -94,7 +194,7 @@ function perform_fitting(selection, roundit)
     case 4.1
       files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = [0 0.5 1];
+      init_noise = [0];
       starts = 'T';
       param_set = 14;
       params{2} = 'refine_flow';
@@ -103,7 +203,7 @@ function perform_fitting(selection, roundit)
     case 4.2
       files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = [0 0.5 1];
+      init_noise = [0];
       starts = 'T';
       param_set = [14 15];
       params{2} = 'refine_flow';
@@ -112,7 +212,7 @@ function perform_fitting(selection, roundit)
     case 4.3
       files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = [0 0.5 1];
+      init_noise = [0];
       starts = 'T';
       param_set = 15;
       params{2} = 'refine_flow';
@@ -121,7 +221,7 @@ function perform_fitting(selection, roundit)
     case 5
       files = {'1056-temps-all.mat'};
       repeats = 1;
-      init_noise = [0 0.5 1];
+      init_noise = [0];
       starts = 'T';
       param_set = [2 14 15];
       params{2} = 'refine_flow';
@@ -133,16 +233,16 @@ function perform_fitting(selection, roundit)
     case 6.1
       files = {'1056-temps-all.mat'};
       repeats = 2;
-      init_noise = [0 0.5 1];
-      starts = 'O';
+      init_noise = [0];
+      starts = 'T';
       param_set = [20 24];
-      params{2} = 'fit_flows';
+      params{2} = 'refine_flow';
       params{4} = 'extended_model';
     case 6.2
       files = {'1056-temps-all.mat'};
       repeats = 2;
-      init_noise = [0 0.5 1];
-      starts = 'O';
+      init_noise = [0];
+      starts = 'T';
       param_set = 24;
       params{2} = 'fit_temp_indep';
       params{4} = 'extended_model';
@@ -178,17 +278,17 @@ function perform_fitting(selection, roundit)
       return;
     case 7.1
       files = {'1056-temps-all.mat'};
-      repeats = 2;
-      init_noise = [0 0.5 1];
-      starts = 'O';
+      repeats = 1;
+      init_noise = [0];
+      starts = 'T';
       param_set = [20 24];
       params{2} = 'refine_flow';
       params{4} = 'extended_model';
     case 7.2
       files = {'1056-temps-all.mat'};
-      repeats = 2;
-      init_noise = [0 0.5 1];
-      starts = 'O';
+      repeats = 1;
+      init_noise = [0];
+      starts = 'T';
       param_set = 24;
       params{2} = 'refine_temp_indep';
       params{4} = 'extended_model';
@@ -205,32 +305,51 @@ function perform_fitting(selection, roundit)
       return;
 
     case 8.1
-      files = dir('1056-all-all.mat');
+      %files = dir('1056-all-all.mat');
+      %files = dir('1056-24-all.mat');
+      files = {'1056-med-all.mat'};
       repeats = 1;
       init_noise = 0;
       %starts = 'O';
-      starts = 'D';
+      starts = 'B';
       param_set = 30;
       params{2} = 'hessian';
-      params{4} = 'final_model';
-      fixed_parameter = [15:154];
+      params{4} = 'final_model_sampling';
+      %fixed_parameter = [15:154];
+      %fixed_parameter = [15:61];
+      fixed_parameter = [15:20];
 
-      ps = load('all_offsets');
-      s_params = {'init_pos'; ps.all_offsets(:,4).'};
+      %ps = load('all_offsets');
+      %s_params = {'init_pos'; ps.all_offsets(:,4).'};
+      %s_params = {'init_pos'; ps.all_offsets(1:47,4).'};
+      %s_params = {'init_pos'; [1.536 4.8381 -1.66 16.08 -5.94 35.3281]};
+      s_params = {'init_pos'; [2.4821 5.4542 0 16.172 -7.9979 38.7682]};
 
     case 8.2
-      files = dir('1056-all-all.mat');
+      %files = dir('1056-all-all.mat');
+      %files = dir('1056-24-all.mat');
+      files = {'1056-med-all.mat'};
       repeats = 1;
       init_noise = 0;
       %starts = 'O';
       starts = 'D';
       param_set = 30;
       params{2} = 'sensitivity';
-      params{4} = 'final_model';
-      fixed_parameter = [15:154];
+      params{4} = 'final_model_sampling';
+      %fixed_parameter = [15:154];
+      %fixed_parameter = [15:61];
+      %fixed_parameter = 15;
+      fixed_parameter = [15:20];
+      %fixed_parameter = [1:3 6:11 14:20];
+      %fixed_parameter = [1:14 21:25];
 
-      ps = load('all_offsets');
-      s_params = {'init_pos'; ps.all_offsets(:,4).'};
+      %ps = load('all_offsets');
+      %s_params = {'init_pos'; ps.all_offsets(:,4).'};
+      %s_params = {'init_pos'; ps.all_offsets(1:47,4).'};
+      %s_params = {'init_pos'; 0.11422};
+      %s_params = {'init_pos'; [4.525 5.495 8e-4 16.06 -8.99 29.59]};
+      %s_params = {'init_pos'; [3.2457 5.4542 2.22e-4 16.172 -7.9979 29.647]};
+      s_params = {'init_pos'; [2.4821 5.4542 0 16.172 -7.9979 38.7682]};
     case 8.3
       files = dir('1056-all-all.mat');
       repeats = 1;
@@ -289,6 +408,14 @@ function perform_fitting(selection, roundit)
                dir('1056-24-*_.mat'); ...
                dir('1056-ani2-*_.mat'); ...
                dir('1056-c27d91-*_.mat')];
+      repeats = 1;
+      init_noise = 0;
+      starts = 'D';
+      param_set = 0;
+      params{2} = 'refine_fit';
+      params{4} = 'final_model';
+    case 9.5
+      files = {'1056-24-all.mat'};
       repeats = 1;
       init_noise = 0;
       starts = 'D';
@@ -771,8 +898,17 @@ function perform_fitting(selection, roundit)
         %  s_params = {'init_pos'; [18.766 -1.9869 33.482 0.856 user_param]};
         %end
 
+        %% Re-revisions...
+        %s_params = {'init_pos'; [0.002519 2.2033 0.015445 2.3023 12.36 -15 30.35]};
+        %s_params = {'init_pos'; [0.00769 2.197 0.0314 2.202 12.36 -15 30.35]};
+        %s_params = {'init_pos'; [0.002721 2.1571 0.016588 2.1871 12.36 -15 30.35]};
+        %s_params = {'init_pos'; {[0.002519 2.2033 0.015445 2.3023 12.36 -15 30.35], [0.00769 2.197 0.0314 2.202 12.36 -15 30.35], [0.002721 2.1571 0.016588 2.1871 12.36 -15 30.35]}};
+        %s_params = {'init_pos'; {[0.002519 2.2033 0.015445 2.3023], [0.00769 2.197 0.0314 2.202], [0.002721 2.1571 0.016588 2.1871]}};
+        %s_params = {'init_pos'; [0.007542 2.1694 0.03044 2.3023 6.51 -23.8 25.46]};
+        s_params = {'init_pos'; [0.002394 2.1694 0.01512 2.3023 15.63 -11 32.36]};
+
         %% Revisions....
-        s_params = {'init_pos'; [0.002519 2.2033 0.015445 2.2487 12.36 -15 30.35]};
+        %s_params = {'init_pos'; [0.002519 2.2033 0.015445 2.2487 12.36 -15 30.35]};
         %s_params = {'init_pos'; [0.002721 2.1571 0.016588 2.1871 12.73 -6.99 38.82]};
 
         %refine_temp_indep
@@ -909,7 +1045,7 @@ function perform_fitting(selection, roundit)
                     ind = 10*ind(1) + ind(2);
                   end
 
-                  good_indx = good_indx & (tmp_data.param_set(:,3) ~= (params{2}(end) == 'p') & (tmp_data.param_set(:,2) == ind));
+                  good_indx = good_indx & (tmp_data.param_set(:,3) ~= (params{2}(end) == 'p') & (tmp_data.param_set(:,2) == ind) & (tmp_data.param_set(:,end)));
                 end
 
                 tmp_vals = tmp_opts.reaction_params([3:4],:);
@@ -952,7 +1088,15 @@ function print_cmd(varargin)
 
   string = '';
   for i=1:length(varargin)
-    string = [string num2str(varargin{i}) ','];
+    if (iscell(varargin{i}))
+      string = [string '{'];
+      for j=1:length(varargin{i})
+        string = [string num2str(varargin{i}{j}) ','];
+      end
+      string = [string '}'];
+    else
+      string = [string num2str(varargin{i}) ','];
+    end
   end
 
   disp(string(1:end-1))

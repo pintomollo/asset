@@ -133,13 +133,13 @@ function find_kymograph(varargin)
 
           fields = fieldnames(fitting);
           values = struct2cell(fitting);
-          filters = {'estimate_n'; 'fit_full'; 'fit_relative'; 'parameter_set';'fit_flow';'fit_model';'aligning_type';'normalize_smooth'};
+          filters = {'estimate_n'; 'fit_full'; 'parameter_set';'fit_flow';'fit_model';'aligning_type';'normalize_smooth'};
 
           good_fields = ismember(fields, filters);
 
-          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]]);
+          prev_values = group_ml_results('adr-kymo-*_evol.dat', [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]], {'fixed_parameter'; 'fit_relative'});
           if (exist('BestFits', 'dir')==7)
-            other_values = group_ml_results(['BestFits' filesep 'adr-kymo-*_evol.dat'], [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]]);
+            other_values = group_ml_results(['BestFits' filesep 'adr-kymo-*_evol.dat'], [{'type', kymo_name} ;[fields(good_fields) values(good_fields)]], {'fixed_parameter'; 'fit_relative'});
             if (~isempty(other_values))
               if (~isempty(prev_values))
                 prev_values{1,2} = [prev_values{1,2}; other_values{1,2}];

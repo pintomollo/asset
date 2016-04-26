@@ -161,7 +161,7 @@ function [fraction, max_width, cell_width, raw_domain, pos, path_center] = domai
       end
 
       figure;imagesc(domain);
-      hold on;plot(path, 1:length(path));
+      hold on;plot(path, 1:length(path),'k');
       if (~isempty(pos))
         set(gca, 'XTick', pos_indx+1, 'XTickLabel', pos(pos_indx+center));
       end

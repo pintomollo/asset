@@ -5,7 +5,7 @@ step_size 1e-3
 nfits 1
 skip_file 'artifacts.txt'
 tolerance 1e-8
-max_iter 1000
+max_iter 20
 init_noise 0
 data_noise 0.01
 aligning_type 'fitting'
@@ -14,7 +14,6 @@ combine_data 'hessian'
 sample_log false
 parameter_set 6
 fit_flow true
-scale_flow true
 offset_scaling 100
 rescale_length_only true
 scale_each_egg true

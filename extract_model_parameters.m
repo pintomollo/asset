@@ -68,7 +68,7 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
               tmp_pts = repmat(fitting.init_pos, npts, 1);
               tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             elseif (nfixed == length(fitting.init_pos) + fitting.scale_flow)
-              tmp_pts = repmat([fitting.init_pos opts.scale_params(1)], npts, 1);
+              tmp_pts = repmat([fitting.init_pos 1], npts, 1);
               tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             elseif (nfixed == length(fitting.init_pos) + noffsets)
               tmp_pts = NaN(npts, nfixed);
@@ -93,7 +93,7 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
                 tmp_pts(:,end-1) = 1;
               end
               if (fitting.scale_flow)
-                tmp_pts(:,end) = opts.scale_params(1);
+                tmp_pts(:,end) = 1;
               end
               tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             else
@@ -102,7 +102,7 @@ function ml_values = extract_model_parameters(ml_values, convert_params)
               tmp_mut = reshape(fitting.simulation_parameters, [], 2);
               tmp_pts(:,1:nparams) = repmat(tmp_mut(fit_params), npts, 1);
               if (fitting.scale_flow)
-                tmp_pts(:,end) = opts.scale_params(1);
+                tmp_pts(:,end) = 1;
               end
               tmp_pts(:, ~fitting.fixed_parameter) = pts(:,2:end);
             end
