@@ -1,0 +1,7 @@
+# Vim files
+*.swp
+
+# Mex files
+*.mexmaci64
+*.mexa64
+*.mexw64
