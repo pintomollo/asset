@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "mex.h"
 #include "rkf45.h"
+#include "rkf45.cpp"
 
 #define POS(x) ((x) > 0 ? 1 : 0)
 #define NEG(x) ((x) < 0 ? 1 : 0)

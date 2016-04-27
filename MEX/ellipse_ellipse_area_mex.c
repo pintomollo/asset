@@ -2,6 +2,8 @@
 #include "mex.h"
 #include "program_constants.h"
 
+#include "ellipse_ellipse_overlap.c"
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
   double ph1, a1, b1, h1, k1, ph2, a2, b2, h2, k2, val;
