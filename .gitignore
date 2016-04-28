@@ -5,3 +5,6 @@
 *.mexmaci64
 *.mexa64
 *.mexw64
+
+# The bftools folde
+bftools

@@ -30,13 +30,11 @@ function install_ASSET(recompile)
       rmpath(fullfile(current_dir, 'pipeline'));
       rmpath(fullfile(current_dir, 'to_sort'));
       rmpath(fullfile(current_dir, 'unused'));
+      rmpath(fullfile(current_dir, 'bftools'));
       savepath;
 
       return;
     end
-  end
-
-
   end
 
   % Start by moving inside the cell_tracking folder
@@ -58,15 +56,6 @@ function install_ASSET(recompile)
   addpath(fullfile(current_dir, 'pipeline'));
   addpath(fullfile(current_dir, 'to_sort'));
   savepath;
-
-  % Start by checking where we are, we need to be inside the celegans-analysis folder
-  current_dir = '';
-  if (numel(dir('get_struct.m')) == 1)
-    current_dir = pwd;
-  else
-    current_dir = 'celegans-analysis';
-    cd(current_dir);
-  end
 
   % And for the LOCI as well
   if (exist(fullfile(current_dir, 'bftools'), 'dir'))
