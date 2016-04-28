@@ -57,6 +57,7 @@ function install_ASSET(recompile)
   addpath(fullfile(current_dir, 'modules'));
   addpath(fullfile(current_dir, 'pipeline'));
   addpath(fullfile(current_dir, 'to_sort'));
+  addpath(fullfile(current_dir, 'unused'));
   savepath;
 
   % Start by checking where we are, we need to be inside the celegans-analysis folder
