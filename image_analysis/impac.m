@@ -1,6 +1,5 @@
 function [pac, hits] = impac(contour, nsteps, thresh, method)
-  
-  %keyboard
+  % Wang, W. X. (1998). Binary Image Segmentation of Aggregates Based on Polygonal Approximation and Classification of Concavities. Pattern Recognition, 31(10), 1503–1524. doi:10.1016/S0031-3203(97)00145-3
 
   switch nargin
     case 1
@@ -32,8 +31,10 @@ function [pac, hits] = impac(contour, nsteps, thresh, method)
       end
   end
 
+  is_repeated = true;
   if (all(contour(1,:) ~= contour(end, :)))
     contour = contour([1:end 1], :);
+    is_repeated = false;
   end
   npts = size(contour, 1);
 
@@ -54,8 +55,12 @@ function [pac, hits] = impac(contour, nsteps, thresh, method)
   pac = NaN(size(contour));
   switch method
     case 'recursive'
-      indx = ceil(size(contour, 1) / 2);
-      
+      if (hypot(contour(end-1, 1) - contour(end, 1), contour(end-1,2)-contour(end,2)) > thresh)
+        indx = size(contour, 1)-1;
+      else
+        indx = ceil(size(contour, 1) / 2);
+      end
+
       if (indx > 0)
         pac(1:indx, :) = pac_recursive(contour(1:indx, :), thresh);
       end
@@ -64,7 +69,9 @@ function [pac, hits] = impac(contour, nsteps, thresh, method)
       pac = pac_iterative(contour, nsteps, thresh);
   end
 
-  pac = pac([1:end-1], :);
+  if (~is_repeated && all(pac(1,:) == pac(end, :)))
+    pac = pac([1:end-1], :);
+  end
   hits = find(~any(isnan(pac), 2));
   pac = pac(hits, :);
 

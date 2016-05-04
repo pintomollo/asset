@@ -1,4 +1,4 @@
-function [mymovie,trackings] = ASSET(varargin)
+function [myrecording, opts] = ASSET(varargin)
 % ASSET Algorithm for the Segmentation and the Standardization of C. elegans Time-lapse recordings
 %   This is the main function for the automated analysis of C. elegans embryos.
 %
@@ -20,7 +20,6 @@ function [mymovie,trackings] = ASSET(varargin)
 %   OPTS most useful fields (default value):
 %     - application         ('')/'ruffling'/...     Additional(s) analysis based on the segmentation, can
 %                                                   be a cell array (see perform_application.m)
-%     - auto_save           true/(false)            Save after every step of the analysis
 %     - ccd_pixel_size      (6.45)/...              Camera's pixel size to convert pixels to �m
 %     - config_file         ('')/'file.txt'         File containing all the field/VALUE pairs
 %                                                   (see Config/example.txt)
@@ -44,11 +43,11 @@ function [mymovie,trackings] = ASSET(varargin)
   install_ASSET
 
   % Parsing the variable inputs
-  [mymovie, trackings, opts] = parse_input(varargin{:});
+  [myrecording, opts] = parse_input(varargin{:});
 
   % This can occur only if we ran several analysis in a row.
   % So the work was done and we can stop.
-  if (isempty(mymovie))
+  if (isempty(myrecording))
     return;
   end
 
@@ -65,117 +64,56 @@ function [mymovie,trackings] = ASSET(varargin)
     display('Parameters loaded');
   end
 
-  % We need manual trackings only if we measure the performances of ASSET
-  % or if we want to perform machine learning
-  if (opts.measure_performances || ~strncmp(opts.do_ml, 'none', 4))
+  % Check if we do need to load a movie
+  if (~isstruct(myrecording))
+    if (ischar(myrecording))
 
-    % Import the trackings from the .shapes files
-    [trackings, opts, updated] = import_trackings(trackings, opts);
-%let's see if I can edit something here...
-    % Auto-save
-    if (updated && opts.auto_save)
-
-      % Use whichever name is available
-      tmp_name = '';
-      if (~isempty(mymovie.experiment))
-        tmp_name = mymovie.experiment;
-      elseif (~isempty(trackings.experiment))
-        tmp_name = trackings.experiment;
+      % Easy way of telling if we have a TIFF file already
+      [file_path, filename, ext] = fileparts(myrecording);
+      if (~strncmp(ext, '.tif', 4) && ~strncmp(ext, '.tiff', 5))
+        myrecording = convert_movie(myrecording, false);
       end
-
-      % Update the experiment name if we cannot overwrite
-      if (~opts.overwrite)
-        tmp_name = get_new_name([tmp_name '(\d+)\.mat']);
-
-        % We do not keep the extension
-        tmp_name = tmp_name(1:end-4);
-
-        % Remember we already created a new file
-        is_original_file = false;
-      end
-
-      % Save if we know where to
-      if (~isempty(tmp_name))
-        save(tmp_name, 'mymovie', 'trackings','opts');
-      end
+      [myrecording, opts] = inspect_recording(myrecording, opts, batch_mode);
+    else
+      [myrecording, opts] = inspect_recording();
     end
 
     % Debug mode breakpoints
     if (opts.debug)
-      display('Manual trackings imported');
+      display('Recording imported');
       keyboard;
+
+    % If there is no experiment, something is really wrong, give up
+    elseif (~isstruct(myrecording) || ~isfield(myrecording, 'experiment') || isempty(myrecording.experiment))
+      error('No recording was properly loaded thus ASSET cannot run');
 
     % Progress display
     elseif (opts.verbosity > 0)
-      display('Trackings loaded');
+      display(['Movie ''' myrecording.experiment ''' loaded']);
     end
-  end
-
-  % Import the recordings
-  mymovie = open_movie(mymovie, opts);
-
-  % Debug mode breakpoints
-  if (opts.debug)
-    display('Recording imported');
-    keyboard;
-
-  % If there is no experiment, something is really wrong, give up
-  elseif (~isstruct(mymovie) || ~isfield(mymovie, 'experiment') || isempty(mymovie.experiment))
-    error('No recording was properly loaded thus ASSET cannot run');
-
-  % Progress display
-  elseif (opts.verbosity > 0)
-    display(['Movie ''' mymovie.experiment ''' loaded']);
   end
 
   % Update the experiment name if we cannot overwrite (and if not done before)
   if (~opts.overwrite & is_original_file)
-    mymovie.experiment = get_new_name([mymovie.experiment '(\d+)\.mat']);
+    myrecording.experiment = get_new_name([myrecording.experiment '(\d+)\.mat']);
 
     % We do not keep the extension
-    mymovie.experiment = mymovie.experiment(1:end-4);
+    myrecording.experiment = myrecording.experiment(1:end-4);
   end
 
   % Filter the data channels if need be, still save in just in case it is modified
-  save(mymovie.experiment, 'mymovie', 'trackings','opts');
-  [mymovie, opts] = filter_channels(mymovie, opts);
+  save([myrecording.experiment '.mat'], 'myrecording', 'opts');
+  [myrecording, opts] = filter_channels(myrecording, opts);
 
   % Compute the actual pixel size of the image
   opts = set_pixel_size(opts);
-
-  % Runs machine learning algorithms to optimze the segmentation parameters
-  if (~strncmp(opts.do_ml, 'none', 4))
-    if (opts.verbosity > 0)
-      display('Machine learning starts !');
-    end
-
-    opts = find_parameters(mymovie, trackings, opts);
-
-    % Debug mode breakpoints
-    if (opts.debug)
-      display('M-L finished');
-      keyboard;
-
-    % Progress display
-    elseif (opts.verbosity > 0)
-      display('Machien learning has finished');
-    end
-  end
-
-  % Auto-save
-  if (opts.auto_save)
-    save(mymovie.experiment, 'mymovie', 'trackings','opts');
-  end
+  save([myrecording.experiment '.mat'], 'myrecording', 'opts');
 
   % Segment the movie, the condition is useful if you want to use 'recompute'
   % without re-segmenting the recording
   if (opts.segment)
-    [mymovie, updated] = segment_movie(mymovie, opts);
-
-    % Auto-save if something was changed
-    if (opts.auto_save && updated)
-      save(mymovie.experiment, 'mymovie', 'trackings','opts');
-    end
+    [myrecording, updated] = segment_movie(myrecording, opts);
+    save([myrecording.experiment '.mat'], 'myrecording', 'opts');
 
     % Progress display
     if (opts.verbosity > 0)
@@ -189,7 +127,7 @@ function [mymovie,trackings] = ASSET(varargin)
 
   % Export the movie now that we know more about it
   if (opts.export_movie)
-    export_movie(mymovie, opts);
+    export_movie(myrecording, opts);
 
     % Progress display
     if (opts.verbosity > 0)
@@ -201,33 +139,10 @@ function [mymovie,trackings] = ASSET(varargin)
     end
   end
 
-  % Measuring the performances of ASSET compared to manual tracking
-  if (opts.measure_performances)
-    [mymovie, trackings] = analyze_segmentation(mymovie, trackings, opts);
-
-    % Auto-save
-    if (opts.auto_save)
-      save(mymovie.experiment, 'mymovie', 'trackings','opts');
-    end
-
-    % Progress display
-    if (opts.verbosity > 0)
-      display('Precision with respect to ''trackings'' measured');
-    % Debug mode breakpoints
-    elseif (opts.debug)
-      display('Analyze segmentation finished');
-      keyboard;
-    end
-  end
-
   % Finally perform the application(s)
   if (length(opts.application) > 0)
-    mymovie = perform_application(mymovie, opts);
-
-    % Auto-save
-    if (opts.auto_save)
-      save(mymovie.experiment, 'mymovie', 'trackings','opts');
-    end
+    myrecording = perform_application(myrecording, opts);
+    save([myrecording.experiment '.mat'], 'myrecording', 'opts');
 
     % Progress display
     if (opts.verbosity > 0)
@@ -241,12 +156,8 @@ function [mymovie,trackings] = ASSET(varargin)
 
   % Normalize the movie into the absolute coordinate system
   if (opts.normalize)
-    mymovie = carth2normalized(mymovie, opts);
-
-    % Auto-save
-    if (opts.auto_save)
-      save(mymovie.experiment, 'mymovie', 'trackings','opts');
-    end
+    myrecording = carth2normalized(myrecording, opts);
+    save([myrecording.experiment '.mat'], 'myrecording', 'opts');
 
     % Progress display
     if (opts.verbosity > 0)
@@ -260,13 +171,13 @@ function [mymovie,trackings] = ASSET(varargin)
 
   % Really save at least once
   opts.recompute = false;
-  save(mymovie.experiment, 'mymovie', 'trackings','opts');
+  save([myrecording.experiment '.mat'], 'myrecording', 'opts');
 
   % Catch the error overall
   catch
     err = lasterror();
-    if (exist('mymovie', 'var') & isfield(mymovie, 'experiment') & ~isempty(mymovie.experiment))
-      warning(['Error during the analysis of ' mymovie.experiment ':']);
+    if (exist('myrecording', 'var') & isfield(myrecording, 'experiment') & ~isempty(myrecording.experiment))
+      warning(['Error during the analysis of ' myrecording.experiment ':']);
     else
       warning(['Error during the analysis:']);
     end
@@ -288,11 +199,10 @@ function [mymovie,trackings] = ASSET(varargin)
 end
 
 % Sort out the mess due to the variable number of inputs
-function [mymovie, trackings, opts] = parse_input(varargin)
+function [myrecording, opts] = parse_input(varargin)
 
   % Initialize the outputs to be sure that we don't return unassigned variables
-  mymovie = [];
-  trackings = [];
+  myrecording = [];
   opts = [];
   real_mat = true;
   reset_opts = false;
@@ -300,11 +210,11 @@ function [mymovie, trackings, opts] = parse_input(varargin)
   % Check what we got as inputs
   if (nargin > 0)
 
-    % The first argument should be mymovie, verify using 'experiment'
+    % The first argument should be myrecording, verify using 'experiment'
     if (isfield(varargin{1}, 'experiment'))
 
       % Assign it and delete it from the list
-      mymovie = varargin{1};
+      myrecording = varargin{1};
       varargin(1) = [];
 
     % Maybe several names were provided
@@ -406,26 +316,14 @@ function [mymovie, trackings, opts] = parse_input(varargin)
     end
   end
 
-  % If mymovie was not provided, we use the standard structure
-  if (isempty(mymovie))
+  % If myrecording was not provided, we use the standard structure
+  if (isempty(myrecording))
     if (~real_mat && mod(length(varargin), 2) == 1 && ischar(varargin{1}))
-      mymovie = varargin{1};
+      myrecording = varargin{1};
       varargin(1) = [];
     else
-      mymovie = get_struct('mymovie');
+      myrecording = get_struct('myrecording');
     end
-  end
-
-  % The second possible argument is trackings, it needs to be a
-  % structure with a field 'experiment'
-  if (~isempty(varargin) && isfield(varargin{1}, 'experiment'))
-    % Assign & remove
-    trackings = varargin{1};
-    varargin(1) = [];
-  else
-
-    % Otherwise we assign an empty structure (as it might never be used)
-    trackings = get_struct('tracking', 0);
   end
 
   % Retrieve the latest version of OPTS

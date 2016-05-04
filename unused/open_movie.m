@@ -1,4 +1,4 @@
-function [mymovie] = open_movie(mymovie, opts)
+function [mymovie, opts] = open_movie(mymovie, opts)
 % OPEN_MOVIE prepares a recording such that it can be analyzed by ASSET.
 %
 %   [MYMOVIE] = OPEN_MOVIE(NAME, OPTS) loads the movie NAME into MYMOVIE
