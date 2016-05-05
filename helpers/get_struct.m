@@ -147,6 +147,12 @@ function mystruct = get_struct(type, nstruct)
                         'time_interval', 300, ...       % Time interval between frames (in seconds)
                         'verbosity', 2);                % Verbosity level of the analysis (0 null, 1 text only, 2 gui, 3 full with plots)
 
+    % All the infos required to rescale an image
+    case 'image_infos'
+      mystruct = struct('is_signed', false, ...             % Is it a signed data type
+                        'offset', 0, ...                    % The minimal value of the datatype
+                        'scaling', 1);                      % The scaling factor
+
     % Structure used to segment a channel
     case 'segmentation'
       mydetection = get_struct('detection',0);

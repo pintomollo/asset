@@ -1,5 +1,5 @@
 function [img, params] = all2uint16(img, params)
-% ALL2UINT16 converts any type of array to uint16, rescaling it ot fit the new range
+% ALL2UINT16 converts any type of array to uint16, rescaling it to fit the new range
 % of values.
 %
 %   M = ALL2UINT16(M) converts M to UINT16.
@@ -40,6 +40,9 @@ end
 % the available one in UINT16. In addition, we store whether the type is signed or not.
 function infos = get_infos(img)
 
+  % Get the structure
+  infos = get_struct('image_infos');
+
   % Get the type of numerical variable we have
   type = class(img);
 
@@ -56,18 +59,13 @@ function infos = get_infos(img)
 
         % Warn the user as there is no "range" for double so we will use the
         % range of values
-        warning('Real value arrays will be rescaled');
+        warning('Matlab:all2uint16','Real value arrays will be rescaled');
       case {'uint8', 'uint16', 'uint32', 'uint64'}
         minval = intmin(type);
         maxval = intmax(type);
         is_signed = false;
       otherwise
-        warning(['Unkown image data type:' class(img)]);
-
-        infos = struct('is_signed', false, ...
-                       'offset', 0, ...
-                       'scaling', 1);
-
+        warning('Matlab:all2uint16',['Unkown image data type:' class(img)]);
         return;
   end
 
@@ -77,15 +75,15 @@ function infos = get_infos(img)
   % Convert the parameters as Matlab do not combine different types
   minval = double(minval);
   maxval = double(maxval);
-  
+
   % Compute the two values
   offset = -minval;
   scaling = max16 / (maxval - minval);
 
-  % Create the structure
-  infos = struct('is_signed', is_signed, ...
-                 'offset', offset, ...
-                 'scaling', scaling);
+  % Store everything
+  infos.is_signed = is_signed;
+  infos.offset = offset;
+  infos.scaling = scaling;
 
   return;
 end

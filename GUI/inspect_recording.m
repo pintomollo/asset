@@ -661,6 +661,9 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
 
     % Create a name for the experiment based on the filename
     exp_name = channels(1).fname;
+    for i = 2:nchannels
+      exp_name = common_substring(exp_name, channels(i).fname);
+    end
     [junk, exp_name, junk] = fileparts(exp_name);
     [junk, exp_name, junk] = fileparts(exp_name);
     exp_name = regexprep(exp_name, ' ', '');

@@ -77,6 +77,7 @@ function [myrecording, opts] = ASSET(varargin)
     else
       [myrecording, opts] = inspect_recording();
     end
+    save([myrecording.experiment '.mat'], 'myrecording', 'opts');
 
     % Debug mode breakpoints
     if (opts.debug)
@@ -91,19 +92,13 @@ function [myrecording, opts] = ASSET(varargin)
     elseif (opts.verbosity > 0)
       display(['Movie ''' myrecording.experiment ''' loaded']);
     end
+
+    % Filter the data channels if need be
+    if (~isempty(myrecording))
+      [myrecording, opts] = preprocess_movie(myrecording, opts);
+      save([myrecording.experiment '.mat'], 'myrecording', 'opts');
+    end
   end
-
-  % Update the experiment name if we cannot overwrite (and if not done before)
-  if (~opts.overwrite & is_original_file)
-    myrecording.experiment = get_new_name([myrecording.experiment '(\d+)\.mat']);
-
-    % We do not keep the extension
-    myrecording.experiment = myrecording.experiment(1:end-4);
-  end
-
-  % Filter the data channels if need be, still save in just in case it is modified
-  save([myrecording.experiment '.mat'], 'myrecording', 'opts');
-  [myrecording, opts] = filter_channels(myrecording, opts);
 
   % Compute the actual pixel size of the image
   opts = set_pixel_size(opts);
