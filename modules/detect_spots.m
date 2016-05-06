@@ -34,7 +34,7 @@ function spots = detect_spots(imgs, opts)
 
   % Input checking
   if (nargin < 2)
-    opts = get_struct('ASSET');
+    opts = get_struct('options');
   end
 
   % Adapting to possibly different types of images

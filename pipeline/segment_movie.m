@@ -23,7 +23,7 @@ function [mymovie, updated] = segment_movie(mymovie, opts)
 
   % Set the default value if need be
   if (nargin < 2)
-    opts = get_struct('ASSET', 1);
+    opts = get_struct('options', 1);
   end
 
   % Get the size of the problem, using the correct channel

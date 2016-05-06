@@ -80,7 +80,25 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
     hInfo = warndlg('Parsing metadata, please wait.', 'Preprocessing movie...');
 
     % Store the resulting metadata
-    [myrecording.channels(k).metadata, opts] = parse_metadata(metadata, opts);
+    [metadata, opts] = parse_metadata(metadata, opts);
+    if (length(metadata.channels) == nchannels && nchannels > 1)
+      mindx = 0;
+      for m = 1:nchannels
+        if (~isempty(strfind(fname, metadata.channels{m})))
+          mindx = m;
+          break
+        end
+      end
+
+      % Extract the portion corresponding to the current channel
+      if (mindx ~= 0)
+        metadata.acquisition_time = metadata.acquisition_time(mindx, :);
+        metadata.channels = metadata.channels(mindx);
+        metadata.exposure_time = metadata.exposure_time(mindx, :);
+        metadata.z_position = metadata.z_position(mindx, :);
+      end
+    end
+    myrecording.channels(k).metadata = metadata;
 
     % Delete the information if need be
     if (ishandle(hInfo))
