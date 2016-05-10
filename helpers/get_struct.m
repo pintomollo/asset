@@ -58,6 +58,15 @@ function mystruct = get_struct(type, nstruct)
                         'noise', [], ...            % Parameters of the image noise
                         'properties', []);          % Other properties computed on each detection, depending on the algorithm
 
+    % Structure to store detected embryos
+    case 'embryo'
+      mystruct = struct('axes_lengths', zeros(3, 0), ...  % Length of the 3 axes defining the embryo
+                        'centers', zeros(3, 0), ... % Position of the center of the embryo
+                        'orientations', zeros(1, 0), ...  % Orientation of the embryo
+                        'z_position', {{}}, ...     % Z-position of a given plane in a given channel
+                        'inverted', false, ...      % True if the detected embryo has its A-P axis inverted
+                        'timing', NaN);             % Timing of the cell cycle
+
     % Structure handling the export options
     case 'exporting'
       mystruct = struct('file_name', '', ...                % The name of the file to create
@@ -114,12 +123,21 @@ function mystruct = get_struct(type, nstruct)
     % Global structure of a recording and analysis
     case 'myrecording'
       mychannel = get_struct('channel', 0);
+      myembryos = get_struct('embryo', 0);
       mysegment = get_struct('segmentation', 0);
       mytracks = get_struct('tracking', 0);
+      myquant = get_struct('quantification', 0);
+
       mystruct = struct('channels', mychannel, ...      % Channels of the recording
+                        'embryos', myembryos, ...       % Embryos in the recording
                         'segmentations', mysegment, ... % Segmentation data
                         'trackings', mytracks, ...      % Tracking data
+                        'quantifications', myquant, ... % Quantification data
                         'experiment', '');              % Name of the experiment
+
+    % Data extracted by the quantification of the segmentation
+    case 'quantification'
+      mystruct = struct('properties', []);  % Still to be defined
 
     % Global structure of options/parameters for an analysis
     case 'options'
@@ -155,12 +173,11 @@ function mystruct = get_struct(type, nstruct)
 
     % Structure used to segment a channel
     case 'segmentation'
-      mydetection = get_struct('detection',0);
-      mystruct = struct('denoise', true, ...           % Denoise the segmentation (see imdenoise) ?
-                        'detrend', false, ...          % Detrend the segmentation (see imdetrend.m) ?
-                        'filter_spots', true, ...      % Filter the spots (see filter_spots.m) ?
-                        'detections', mydetection, ... % The structure used to store the resulting detections
-                        'type', {{}});                 % The type of segmentation
+      mystruct = struct('carth', {{}}, ...          % Cartesian position of the detections (Nx2)
+                        'type', '', ...             % Type of segmentation
+                        'channel', -1, ...          % Index of the channel the segmentation is performed onto
+                        'channel_properties', [], ... % Parameters of the image
+                        'properties', []);          % Other properties computed on each detection, depending on the algorithmtruct('detection',0);
 
     % Structure containing the parameters used for splitting touching cells
     case 'splitting'

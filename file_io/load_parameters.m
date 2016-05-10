@@ -22,7 +22,7 @@ function opts = load_parameters(opts, fname)
     % If it's a string, then it's fname
     elseif (ischar(opts))
       fname = opts;
-      opts = get_struct('ASSET',1);
+      opts = get_struct('options',1);
 
     % Otherwise, we just don't do anything
     else

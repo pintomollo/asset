@@ -65,7 +65,7 @@ function [myrecording, opts] = ASSET(varargin)
   end
 
   % Check if we do need to load a movie
-  if (~isstruct(myrecording))
+  if (~isstruct(myrecording) || isempty(myrecording.channels))
     if (ischar(myrecording))
 
       % Easy way of telling if we have a TIFF file already
