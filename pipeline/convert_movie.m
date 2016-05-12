@@ -91,39 +91,53 @@ function [converted_file] = convert_movie(name, force_do_merge)
     return;
   end
 
-  % Traditionally, channels of an experiment were named the same, but for
-  % the last "_channel", so try to identify them
-  hits = strfind(filename, '_');
-  if (~isempty(hits))
-    others = dir(fullfile(file_path, [filename(1:hits(end)) '*']));
+  % This can take a while, so inform the user
+  hInfo = warndlg('Parsing metadata, please wait.', 'Preprocessing movie...');
 
-    % If may have found more files
-    if (length(others) > 1)
-      new_files = {};
-      for i=1:length(others)
-        new_files(end+1) = {others(i).name};
-      end
+  % Try to identify better metadata
+  metadata = find_metadata(fname, get_struct('metadata'));
 
-      % Ask a confirmation from the user
-      answer = questdlg([{'The following files appear to belong to the same experiment:'}; ...
-                          {''}; new_files(:); {''}; {'Open all of them ?'}], ...
-                          'Open multiple files');
+  % Store the resulting metadata
+  [metadata, opts] = parse_metadata(metadata);
 
-      % If he agrees, load all files
-      if (strcmp(answer, 'Yes'))
-        fname = new_files;
-      end
-    end
-  end
-
-  % We convert the provided type into a more handy one using LOCI
-  if (iscell(fname))
-    converted_file = fname;
-    for i=1:length(fname)
-      converted_file{i} = bftools_convert(fullfile(file_path, fname{i}), force_do_merge, do_merge);
-    end
+  if (~isempty(metadata.files) && exist(fullfile(file_path, metadata.files{1}), 'file'))
+    keyboard
   else
-    converted_file = bftools_convert(fname, force_do_merge, do_merge);
+
+    % Traditionally, channels of an experiment were named the same, but for
+    % the last "_channel", so try to identify them
+    hits = strfind(filename, '_');
+    if (~isempty(hits))
+      others = dir(fullfile(file_path, [filename(1:hits(end)) '*']));
+
+      % If may have found more files
+      if (length(others) > 1)
+        new_files = {};
+        for i=1:length(others)
+          new_files(end+1) = {others(i).name};
+        end
+
+        % Ask a confirmation from the user
+        answer = questdlg([{'The following files appear to belong to the same experiment:'}; ...
+                            {''}; new_files(:); {''}; {'Open all of them ?'}], ...
+                            'Open multiple files');
+
+        % If he agrees, load all files
+        if (strcmp(answer, 'Yes'))
+          fname = new_files;
+        end
+      end
+    end
+
+    % We convert the provided type into a more handy one using LOCI
+    if (iscell(fname))
+      converted_file = fname;
+      for i=1:length(fname)
+        converted_file{i} = bftools_convert(fullfile(file_path, fname{i}), force_do_merge, do_merge);
+      end
+    else
+      converted_file = bftools_convert(fname, force_do_merge, do_merge);
+    end
   end
 
   return;
@@ -429,6 +443,50 @@ function [newfile] = bftools_convert(fname, forced, do_merge)
     end
   else
     newfile = relativepath(newname);
+  end
+
+  return;
+end
+
+function metadata = find_metadata(filename, metadata)
+% This function tries to identify more suitable metadata. For now
+% on, the following metadata are supported:
+%   - Leica Application Suite ".las"
+%   - Leica Application Suite ".cal.xml"
+%   - uManager "metadata.txt"
+%   - files manually placed in the "Metadata" folder and named
+%     as the recording
+
+  % Get the folder in which the file is contained
+  [file_path, file_name, file_ext] = fileparts(filename);
+
+  % Check if the file exists
+  if (exist(fullfile(file_path, '.las'), 'file'))
+
+    % Load it !
+    metadata = fileread(fullfile(file_path, '.las'));
+
+  % The other LAS
+  elseif (exist(fullfile(file_path, '.Metadata'), 'dir'))
+    if (exist(fullfile(file_path, '.Metadata', [file_name file_ext '.cal.xml']), 'file'))
+      metadata = fileread(fullfile(file_path, '.Metadata', [file_name file_ext '.cal.xml']));
+    else
+      indx = strfind(file_name, '_');
+      if (~isempty(indx))
+        file = regexpdir(fullfile(file_path, '.Metadata'), [file_name(1:indx(end)-1) '(\..*)?\.cal\.xml' ]);
+        if (length(file)==1)
+          metadata = fileread(file{1});
+        end
+      end
+    end
+
+  % For uManager
+  elseif (exist(fullfile(file_path, 'metadata.txt'), 'file'))
+    metadata = fileread(fullfile(file_path, 'metadata.txt'));
+
+  % For manually edited files
+  elseif (exist(fullfile(pwd, 'Metadata', [filename '.txt']), 'file'))
+    metadata = fileread(fullfile(pwd, 'Metadata', [filename '.txt']));
   end
 
   return;

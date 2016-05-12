@@ -118,11 +118,16 @@ function xml_tree = parse_xml(data)
       end
     end
 
-    if any(strcmp(methods(theNode), 'getData'))
-       nodeStruct.Data = char(theNode.getData); 
-    else
+    try
+       nodeStruct.Data = char(theNode.getData);
+    catch ME
        nodeStruct.Data = '';
     end
+    %if any(strcmp(methods(theNode), 'getData'))
+    %   nodeStruct.Data = char(theNode.getData); 
+    %else
+    %   nodeStruct.Data = '';
+    %end
 
     switch lower(nodeStruct.Name)
       case '#text'

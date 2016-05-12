@@ -6,7 +6,7 @@ function [metadata, opts] = parse_metadata(data, opts)
 %   stores them in METADATA. It also tries to extract the spatial resolution of
 %   the image and stores it in OPTS.
 %
-%   [...] = PARSE_METADATA(UMANAGER, OPTS) converts to uManager text file into
+%   [...] = PARSE_METADATA(UMANAGER, OPTS) converts a uManager text file into
 %   XML before parsing it.
 %
 %   The XML formats currently accepted are :
@@ -28,16 +28,14 @@ function [metadata, opts] = parse_metadata(data, opts)
   data = umanager2xml(data, max_iter);
   data = regexprep(data, '^\*.*\*', '');
 
-  xml_data = parse_xml(data);
-
-  xml_type = get_attribute(xml_data, 'xmlns');
-  xml_type = regexp(xml_type, '^(http://)?(.*?)$', 'tokens');
+  xml_type = regexp(data, 'xmlns="([^"]+)"', 'tokens');
+  xml_type = regexp(xml_type{1}{1}, '^(http://)?(.*?)$', 'tokens');
   xml_type = xml_type{1}{2};
 
   switch xml_type
     case 'www.w3.org/uManager'
       summary_keys = {'Summary', 'Frames', 'Summary', 'Channels', 'Summary', 'Slices'};
-      frame_keys = {'FrameKey*', '^Frame$', 'FrameKey*', '^Slice$', 'FrameKey*', '^Channel$', {'FrameKey*', 1/1000}, '^ElapsedTime-ms$', {'FrameKey*', 1/1000}, '^Exposure-ms$', {'FrameKey*', 1}, '^Z-um$'};
+      frame_keys = {'FrameKey.*?', 'Frame', 'FrameKey.*?', 'Slice', 'FrameKey.*?', 'Channel', {'FrameKey.*?', 1/1000}, 'ElapsedTime-ms', {'FrameKey.*?', 1/1000}, 'Exposure-ms', {'FrameKey.*?', 1}, {'Z-um', 'ZPositionUm'}, 'FrameKey.*?', 'FileName'};
       infer_keys = {};
       resol_keys = {};
     case {'www.openmicroscopy.org/Schemas/OME/2012-06', 'www.openmicroscopy.org/Schemas/OME/2015-01'}
@@ -52,7 +50,7 @@ function [metadata, opts] = parse_metadata(data, opts)
       resol_keys = {{'SpatialCalibration', 1}, {'XBasePixelSize', 'YBasePixelSize'}, {'SpatialCalibration', 1}, 'ObjectiveMagn', {'CameraSetting', 1}, 'Binning'};
     case 'schemas.datacontract.org/2004/07/LeicaMicrosystems.DataEntities.V3_2'
       summary_keys = {};
-      frame_keys = {'', '', '', '', 'Camera', 'Name', {'LasImage', 'yyyy-mm-ddTHH:MM:SS.FFF'}, '^AcquiredDate$', {'Camera', '%f ms', 1/1000}, '^Exposure$', {'^Microscope_Focus_Position$', '%f mm', 1000}, ''};
+      frame_keys = {'', '', '', '', 'Camera', 'Name', {'LasImage', 'yyyy-mm-ddTHH:MM:SS.FFF'}, 'AcquiredDate', {'Camera', '%f ms', 1/1000}, 'Exposure', {'Microscope_Focus_Position', '%f mm', 1000}, '', '', ''};
       infer_keys = {};
       resol_keys = {{'LasImage', 1e6}, {'XMetresPerPixel', 'YMetresPerPixel'}, {'Microscope_Video_Magnification', 1}, '', '', ''};
     otherwise
@@ -71,12 +69,12 @@ function [metadata, opts] = parse_metadata(data, opts)
       end
   end
 
-  metadata = parse_summary(xml_data, summary_keys);
-  metadata = parse_frames(xml_data, frame_keys, metadata);
-  metadata = infer_frames(xml_data, infer_keys, metadata);
+  metadata = parse_summary(data, summary_keys);
+  metadata = parse_frames(data, frame_keys, metadata);
+  metadata = infer_frames(data, infer_keys, metadata);
 
   dt = diff(metadata.acquisition_time, [], 2);
-  dt = median(dt(:));
+  dt = nanmedian(dt(:));
 
   if (isfinite(dt) && dt > 0)
     opts.time_interval = dt;
@@ -84,7 +82,7 @@ function [metadata, opts] = parse_metadata(data, opts)
 
   metadata.raw_data = data;
 
-  opts = infer_resolution(xml_data, resol_keys, opts);
+  opts = infer_resolution(data, resol_keys, opts);
 
   return;
 end
@@ -121,24 +119,6 @@ function data = convert_data(data, formats)
   return;
 end
 
-function value = get_attribute(node, attribute)
-
-  value = '';
-  if (isempty(node))
-    return;
-  end
-
-  for i=1:length(node.Attributes)
-    if (regexp(node.Attributes(i).Name, attribute))
-      value = node.Attributes(i).Value;
-
-      break;
-    end
-  end
-
-  return;
-end
-
 function [channel_index, metadata] = get_channel(channel, metadata)
 
   is_empty = cellfun('isempty', metadata.channels);
@@ -166,45 +146,16 @@ function [channel_index, metadata] = get_channel(channel, metadata)
   return;
 end
 
-function child = get_child(node, children)
-
-  child = '';
-
-  for i=1:length(node.Children)
-    if (regexp(node.Children(i).Name, children))
-      if (isempty(child))
-        child = node.Children(i);
-      else
-        child = [child node.Children(i)];
-      end
-    end
-  end
-
-  for i=1:length(node.Children)
-    grand_child = get_child(node.Children(i), children);
-
-    if (~isempty(grand_child))
-      if (isempty(child))
-        child = grand_child;
-      else
-        child = [child grand_child];
-      end
-    end
-  end
-
-  return;
-end
-
 function values = get_values(node, keys)
 
   nkeys = length(keys) / 2;
 
   values = cell(1, nkeys);
-  has_any = false;
 
   for i=1:nkeys
     key = keys{2*i - 1};
     attr = keys{2*i};
+
 
     if (~isempty(key))
       formats = {};
@@ -212,45 +163,32 @@ function values = get_values(node, keys)
         formats = key(2:end);
         key = key{1};
       end
-
-      children = get_child(node, key);
-      nchilds = length(children);
-
-      if (nchilds > 0)
-        good_child = false(1, nchilds);
-        child_values = cell(nchilds, 1);
-
-        for c = 1:nchilds
-          child = children(c);
-
-          if (isempty(attr))
-            child_values{c} = child.Data;
-          elseif (iscell(attr))
-            nattrs = length(attr);
-            tmp_val = cell(1, nattrs);
-
-            for j=1:nattrs
-              tmp_val{j} = get_attribute(child, attr{j});
-            end
-            child_values{c} = tmp_val;
-          else
-            child_values{c} = get_attribute(child, attr);
-          end
-
-          good_child(c) = good_child(c) || (~isempty(child_values{c}));
+      if (~iscell(attr))
+        attr = {attr};
+      end
+      curr = '';
+      for j=1:length(attr)
+        if (~isempty(regexp(node, attr{j}, 'once')))
+          curr = attr{j};
+          break;
         end
-
-        child_values = convert_data(child_values, formats);
       end
 
-      child_values = child_values(good_child, :);
-      values{i} = child_values;
+      if (~isempty(curr))
+        children = regexp(node, ['<' key '>.*?<' curr '>(.+?)</' curr '>.*?</' key '>'], 'tokens');
 
-      has_any = has_any || any(good_child);
+        if (~isempty(children))
+          children = cellfun(@(x)(x), children);
+          child_values = convert_data(children, formats);
+          child_values = child_values(~cellfun('isempty', child_values));
+          values{i} = child_values;
+        end
+      end
+
     end
   end
 
-  if (~has_any)
+  if (all(cellfun('isempty', values)))
     values = {};
   end
 
@@ -425,31 +363,48 @@ function metadata = parse_frames(data, keys, metadata)
     else
       z_pos = values{6}{i};
     end
+    if (isempty(values{7}))
+      fname = '';
+    else
+      fname = values{7}{i};
+    end
 
     metadata.acquisition_time(channel, frame, slice) = time;
     metadata.exposure_time(channel, frame, slice) = exposure;
     metadata.z_position(channel, frame, slice) = z_pos;
+    metadata.files{channel, frame, slice} = fname;
   end
 
-  if (is_guess)
-    [junk, indexes] = sort(metadata.acquisition_time(1,:,1));
+  valid_frames = ~any(any(isnan(metadata.acquisition_time),3), 1);
+  if (any(valid_frames))
 
-    metadata.acquisition_time = metadata.acquisition_time(:,indexes,:);
-    metadata.exposure_time = metadata.exposure_time(:,indexes,:);
-    metadata.z_position = metadata.z_position(:,indexes,:);
-  end
+    metadata.acquisition_time = metadata.acquisition_time(:,valid_frames,:);
+    metadata.exposure_time = metadata.exposure_time(:,valid_frames,:);
+    metadata.z_position = metadata.z_position(:,valid_frames,:);
+    metadata.files = metadata.files(:,valid_frames,:);
 
-  [junk, indexes] = sort(metadata.acquisition_time(:,1,1));
+    if (is_guess)
+      [junk, indexes] = sort(metadata.acquisition_time(1,:,1));
 
-  metadata.channels = metadata.channels(indexes);
-  metadata.acquisition_time = metadata.acquisition_time(indexes,:,:);
-  metadata.exposure_time = metadata.exposure_time(indexes,:,:);
-  metadata.z_position = metadata.z_position(indexes,:,:);
+      metadata.acquisition_time = metadata.acquisition_time(:,indexes,:);
+      metadata.exposure_time = metadata.exposure_time(:,indexes,:);
+      metadata.z_position = metadata.z_position(:,indexes,:);
+      metadata.files = metadata.files(:,indexes,:);
+    end
 
-  metadata.acquisition_time = metadata.acquisition_time - metadata.acquisition_time(1);
-  if (is_date)
-    for i=1:numel(metadata.acquisition_time)
-      metadata.acquisition_time(i) = etime(datevec(metadata.acquisition_time(i)), datevec(metadata.acquisition_time(1)));
+    [junk, indexes] = sort(metadata.acquisition_time(:,1,1));
+
+    metadata.channels = metadata.channels(indexes);
+    metadata.acquisition_time = metadata.acquisition_time(indexes,:,:);
+    metadata.exposure_time = metadata.exposure_time(indexes,:,:);
+    metadata.z_position = metadata.z_position(indexes,:,:);
+    metadata.files = metadata.files(indexes,:,:);
+
+    metadata.acquisition_time = metadata.acquisition_time - metadata.acquisition_time(1);
+    if (is_date)
+      for i=1:numel(metadata.acquisition_time)
+        metadata.acquisition_time(i) = etime(datevec(metadata.acquisition_time(i)), datevec(metadata.acquisition_time(1)));
+      end
     end
   end
 
@@ -473,9 +428,9 @@ function metadata = parse_summary(xml_data, keys)
   nchannels = str2double(values{2});
   nslices = str2double(values{3});
 
-  nframes = max(nframes, 1);
-  nchannels = max(nchannels, 1);
-  nslices = max(nslices, 1);
+  nframes = max(max(nframes), 1);
+  nchannels = max(max(nchannels), 1);
+  nslices = max(max(nslices), 1);
 
   data = NaN([nchannels, nframes, nslices]);
 
@@ -484,6 +439,7 @@ function metadata = parse_summary(xml_data, keys)
   metadata.acquisition_time = data;
   metadata.exposure_time = data;
   metadata.z_position = data;
+  metadata.files = cell([nchannels, nframes, nslices]);
 
   return;
 end
@@ -491,16 +447,16 @@ end
 function data = umanager2xml(data, max_iter)
 
   if (any(data == '{'))
-    rem_spaces = @remove_spaces;
+    rem_chars = @remove_chars;
     rem_eol = @remove_eol;
 
-    data = regexprep(data, '("\S*? +\S*?":)', '${rem_spaces($1)}');
+    data = regexprep(data, '"([^"]+)":', '"${rem_chars($1)}":');
     data = regexprep(data, '(\[[^\]]*?\],)', '${rem_eol($1)}');
 
     data = regexprep(data, '"([^\n\r]*?)": ([^\n\r{]*?),?[\r\n]+', '<$1>$2</$1>\n');
     nprev = length(data);
     for i=1:max_iter
-      data = regexprep(data, '[\n\r](\s+)"([^\n\r]*?)": {(.*?)[\n\r]\1}[,\r\n]+', '\n$1<$2>$3\n$1</$2>\n');
+      data = regexprep(data, '[\n\r](\s*)"([^\n\r]*?)": {(.*?)[\n\r]\1}[,\r\n]+', '\n$1<$2>$3\n$1</$2>\n');
       curr = length(data);
       if (nprev == curr)
         break;
@@ -525,9 +481,9 @@ function str = remove_eol(str)
   return;
 end
 
-function str = remove_spaces(str)
+function str = remove_chars(str)
 
-  str = strrep(str, ' ', '_');
+  str = regexprep(str, '[^\w-]', '_');
 
   return;
 end

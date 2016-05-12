@@ -116,6 +116,7 @@ function mystruct = get_struct(type, nstruct)
                         'channel_index', [], ...    % Channel <-> frame
                         'exposure_time', [], ...    % Frame exposure time
                         'frame_index', [], ...      % Time point <-> frame
+                        'files', {{}}, ...          % Actual files
                         'plane_index', [], ...      % Plane <-> frame
                         'raw_data', '', ...         % Raw metadata string
                         'z_position', []);          % Z-position of the frame
