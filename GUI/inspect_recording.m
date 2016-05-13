@@ -21,7 +21,13 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
   % Argument checking, need to know if we ask for a recording or not.
   if (nargin == 0 || isempty(fname) || ...
      (isstruct(fname) && isfield(fname, 'channels') && isempty(fname.channels)))
-    fname = convert_movie();
+    [fname, metadata, new_opts] = convert_movie();
+
+    if (nargin < 2 || isempty(opts))
+      opts = new_opts;
+    end
+  else
+    metadata = '';
   end
 
   % We did not get anything to handle...
@@ -72,6 +78,7 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
     channels = get_struct('channel', [nchannels 1]);
     for i=1:nchannels
       channels(i).fname = fname{i};
+      channels(i).metadata = metadata;
     end
   end
 
@@ -319,7 +326,7 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
         set(handles.list, 'String', '');
 
         % And call the movie conversion function to load a new one
-        new_channel = convert_movie();
+        [new_channel, metadata, opts] = convert_movie();
 
         % Did we get something back ?
         if (~isempty(new_channel))
@@ -366,7 +373,7 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
     set(handles.all_buttons, 'Enable', 'off');
 
     % And call the movie conversion function to get a new channel
-    new_channel = convert_movie();
+    [new_channel, metadata] = convert_movie();
 
     % Did we get anything ?
     if (~isempty(new_channel))
@@ -383,6 +390,7 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
         channels(end).fname = new_channel;
         channels(end).type = 1;
         channels(end).compression = 1;
+        channels(end).metadata = metadata;
 
         % We update the list of available channels
         tmp_list = get(handles.list, 'String');

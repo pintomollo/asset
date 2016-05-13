@@ -1,4 +1,4 @@
-function [converted_file] = convert_movie(name, force_do_merge)
+function [converted_file, metadata, opts] = convert_movie(name, force_do_merge)
 % CONVERT_MOVIE converts a recording such that it can be tracked properly.
 %
 %   [CONVERTED] = CONVERT_MOVIE(NAME) converts the movie NAME into CONVERTED
@@ -100,8 +100,57 @@ function [converted_file] = convert_movie(name, force_do_merge)
   % Store the resulting metadata
   [metadata, opts] = parse_metadata(metadata);
 
+  % Close the info
+  if (ishandle(hInfo))
+    delete(hInfo);
+  end
+
   if (~isempty(metadata.files) && exist(fullfile(file_path, metadata.files{1}), 'file'))
-    keyboard
+    % This also takes quite some time, so warn the user
+    hInfo = warndlg('Converting to OME-TIFF, please wait...', 'Converting movie...');
+
+    [junk, dirname, junk] = fileparts(file_path);
+    converted_file = cell(length(metadata.channels), 1);
+
+    % We initially do not know what to do
+    answer = 0;
+    if (do_merge)
+      answer = 2;
+    end
+
+    for i = 1:length(metadata.channels)
+      files = squeeze(metadata.files(i,:,:));
+      files = files.';
+      files = files(:);
+
+      tmp_name = [dirname '_' metadata.channels{i} '.tiff'];
+      converted_file{i} = fullfile(file_path, strrep(tmp_name, ' ', '-'));
+
+      % If the file already exists, we ask what to do
+      if(exist(converted_file{i},'file'))
+        % Creat the fancy name for display (otherwise it thinks they are LaTeX commands)
+        [junk, tmp_name, junk] = fileparts(converted_file{i});
+        printname = strrep(tmp_name,'_','\_');
+
+        % We do not accept "empty" answers
+        while (answer == 0)
+          answer = menu(['The TIFF version of ' printname ' already exists, overwrite it ?'],'Yes','No');
+        end
+
+        % Act accorindly to the policy
+        if (answer == 1)
+          delete(converted_file{i});
+          save_data(converted_file{i}, files, 'uint16');
+        end
+      else
+        save_data(converted_file{i}, files, 'uint16');
+      end
+    end
+
+    % Close the info
+    if (ishandle(hInfo))
+      delete(hInfo);
+    end
   else
 
     % Traditionally, channels of an experiment were named the same, but for

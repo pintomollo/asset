@@ -135,7 +135,7 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
     % Loop over the frames
     for i=1:nframes
       % Convert the image into UINT16
-      [img, img_params] = all2uint16(load_data(fname, i), img_params);
+      [img, img_params] = scaled_cast(load_data(fname, i), img_params);
 
       % Perform the required filtering
       if (myrecording.channels(k).detrend)
@@ -161,7 +161,7 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
       end
 
       % Save the image in the temporary file
-      tmp_fname = save_stack(tmp_fname, img);
+      tmp_fname = save_data(tmp_fname, img);
 
       % Update the progress bar if needed
       if (opts.verbosity > 1)
@@ -193,7 +193,7 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
         img = imnorm(img, myrecording.channels(k).min, myrecording.channels(k).max, '', 0, maxuint);
 
         % Save the file
-        tmp_fname = save_stack(tmp_fname, img);
+        tmp_fname = save_data(tmp_fname, img);
 
         % Update the progress bar
         if (opts.verbosity > 1)
