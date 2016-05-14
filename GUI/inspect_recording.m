@@ -19,12 +19,14 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
 % 14.05.2014
 
   % Argument checking, need to know if we ask for a recording or not.
+  loaded_opts = false;
   if (nargin == 0 || isempty(fname) || ...
      (isstruct(fname) && isfield(fname, 'channels') && isempty(fname.channels)))
     [fname, metadata, new_opts] = convert_movie();
 
     if (nargin < 2 || isempty(opts))
       opts = new_opts;
+      loaded_opts = true;
     end
   else
     metadata = '';
@@ -41,7 +43,7 @@ function [myrecording, opts, is_updated] = inspect_recording(fname, opts)
 
   % The structure containing the parameters for the different filters available to
   % the user
-  if (nargin < 2 || isempty(opts))
+  if (~loaded_opts && (nargin < 2 || isempty(opts)))
     opts = get_struct('options');
   end
 

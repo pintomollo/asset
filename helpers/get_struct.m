@@ -113,7 +113,6 @@ function mystruct = get_struct(type, nstruct)
     case 'metadata'
       mystruct = struct('acquisition_time', [], ... % Time of frame acquisition
                         'channels', {{}}, ...       % List of acquired channels
-                        'channel_index', [], ...    % Channel <-> frame
                         'exposure_time', [], ...    % Frame exposure time
                         'frame_index', [], ...      % Time point <-> frame
                         'files', {{}}, ...          % Actual files

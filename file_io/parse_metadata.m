@@ -73,7 +73,7 @@ function [metadata, opts] = parse_metadata(data, opts)
   metadata = parse_frames(data, frame_keys, metadata);
   metadata = infer_frames(data, infer_keys, metadata);
 
-  dt = diff(metadata.acquisition_time, [], 2);
+  dt = diff(metadata.acquisition_time, [], 3);
   dt = nanmedian(dt(:));
 
   if (isfinite(dt) && dt > 0)
@@ -369,27 +369,27 @@ function metadata = parse_frames(data, keys, metadata)
       fname = values{7}{i};
     end
 
-    metadata.acquisition_time(channel, frame, slice) = time;
-    metadata.exposure_time(channel, frame, slice) = exposure;
-    metadata.z_position(channel, frame, slice) = z_pos;
-    metadata.files{channel, frame, slice} = fname;
+    metadata.acquisition_time(channel, slice, frame) = time;
+    metadata.exposure_time(channel, slice, frame) = exposure;
+    metadata.z_position(channel, slice, frame) = z_pos;
+    metadata.files{channel, slice, frame} = fname;
   end
 
-  valid_frames = ~any(any(isnan(metadata.acquisition_time),3), 1);
+  valid_frames = ~any(any(isnan(metadata.acquisition_time),2), 1);
   if (any(valid_frames))
 
-    metadata.acquisition_time = metadata.acquisition_time(:,valid_frames,:);
-    metadata.exposure_time = metadata.exposure_time(:,valid_frames,:);
-    metadata.z_position = metadata.z_position(:,valid_frames,:);
-    metadata.files = metadata.files(:,valid_frames,:);
+    metadata.acquisition_time = metadata.acquisition_time(:,:,valid_frames);
+    metadata.exposure_time = metadata.exposure_time(:,:,valid_frames);
+    metadata.z_position = metadata.z_position(:,:,valid_frames);
+    metadata.files = metadata.files(:,:,valid_frames);
 
     if (is_guess)
-      [junk, indexes] = sort(metadata.acquisition_time(1,:,1));
+      [junk, indexes] = sort(metadata.acquisition_time(1,1,:));
 
-      metadata.acquisition_time = metadata.acquisition_time(:,indexes,:);
-      metadata.exposure_time = metadata.exposure_time(:,indexes,:);
-      metadata.z_position = metadata.z_position(:,indexes,:);
-      metadata.files = metadata.files(:,indexes,:);
+      metadata.acquisition_time = metadata.acquisition_time(:,:,indexes);
+      metadata.exposure_time = metadata.exposure_time(:,:,indexes);
+      metadata.z_position = metadata.z_position(:,:,indexes);
+      metadata.files = metadata.files(:,:,indexes);
     end
 
     [junk, indexes] = sort(metadata.acquisition_time(:,1,1));
@@ -432,14 +432,14 @@ function metadata = parse_summary(xml_data, keys)
   nchannels = max(max(nchannels), 1);
   nslices = max(max(nslices), 1);
 
-  data = NaN([nchannels, nframes, nslices]);
+  data = NaN([nchannels, nslices, nframes]);
 
   metadata.channels = cell(nchannels, 1);
 
   metadata.acquisition_time = data;
   metadata.exposure_time = data;
   metadata.z_position = data;
-  metadata.files = cell([nchannels, nframes, nslices]);
+  metadata.files = cell([nchannels, nslices, nframes]);
 
   return;
 end

@@ -9,8 +9,19 @@ function [converted_file, metadata, opts] = convert_movie(name, force_do_merge)
 % Simon Blanchoud
 % 04.07.2014
 
+      %%% NEED TO AVOID CONVERTING TIFF FILES
+      %
+      % Easy way of telling if we have a TIFF file already
+      %%[file_path, filename, ext] = fileparts(myrecording);
+      %%if (~strncmp(ext, '.tif', 4) && ~strncmp(ext, '.tiff', 5))
+      %%  myrecording = convert_movie(myrecording, false);
+      %%end
+
+
   % Initialization
   converted_file = '';
+  metadata = '';
+  opts = '';
   curdir = '';
   dirpath = '';
   do_merge = false;
@@ -105,7 +116,9 @@ function [converted_file, metadata, opts] = convert_movie(name, force_do_merge)
     delete(hInfo);
   end
 
+  % Did we get a valid a valid list of metadata files ?
   if (~isempty(metadata.files) && exist(fullfile(file_path, metadata.files{1}), 'file'))
+
     % This also takes quite some time, so warn the user
     hInfo = warndlg('Converting to OME-TIFF, please wait...', 'Converting movie...');
 
@@ -118,11 +131,13 @@ function [converted_file, metadata, opts] = convert_movie(name, force_do_merge)
       answer = 2;
     end
 
+    % Get ready to combine the various files together
+    metadata.files = fullfile(file_path, metadata.files);
     for i = 1:length(metadata.channels)
-      files = squeeze(metadata.files(i,:,:));
-      files = files.';
-      files = files(:);
+      files = metadata.files(i,:,:);
+      files = files(:).';
 
+      % Create a new name
       tmp_name = [dirname '_' metadata.channels{i} '.tiff'];
       converted_file{i} = fullfile(file_path, strrep(tmp_name, ' ', '-'));
 

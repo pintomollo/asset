@@ -9,6 +9,7 @@ function install_ASSET(recompile)
   % By default, do not recompile everything
   if (nargin == 0)
     recompile = false;
+    done_any = false;
 
   % In that particular case, delete the directories
   elseif (strcmp(recompile, 'uninstall'))
@@ -65,6 +66,7 @@ function install_ASSET(recompile)
 
   % Otherwise, try to insall it !
   if (exist('bfconvert.bat', 'file') ~= 2)
+    done_any = true;
     button = questdlg('Should we try to install the Bio-Formats command line tools ?');
 
     % Ask for the user to confirm this foolness
@@ -115,6 +117,7 @@ function install_ASSET(recompile)
   cd('MEX');
   [files] = get_mex_files('.', recompile);
   if (~isempty(files))
+    done_any = true;
     problems = {};
     mex -setup;
     for i=1:length(files)
@@ -134,24 +137,32 @@ function install_ASSET(recompile)
 
   % This folder is required as well
   if (~exist('TmpData', 'dir'))
+    done_any = true;
     mkdir('TmpData');
   end
   if (~exist('export', 'dir'))
+    done_any = true;
     mkdir('export');
   end
 
   % Confirm to the user that everything went fine
-  disp('Installation successful !');
+  if (done_any)
+    disp('Installation successful !');
+  end
 
   % Gnu GPL notice
-  fprintf(1, ['\nASSET: ...,\n', ...
-    'Copyright (C) 2014  Simon Blanchoud\n', ...
+  fprintf(1, ['\nASSET: an Algorithm for the Segmentation and the Standardization of C. Elegans Time-lapse recordings [1]\n\n', ...
+    '[1] Blanchoud et al., Dev. Dyn. (2010) http://doi.org/10.1002/dvdy.22486\n', ...
+    'Copyright (C) 2010-%s Simon Blanchoud\n', ...
     'This program comes with ABSOLUTELY NO WARRANTY;\n', ...
     'This is free software, and you are welcome to redistribute it\n', ...
-    'under certain conditions; read licence.txt for details.\n\n']);
+    'under certain conditions; read licence.txt for details.\n\n'], datestr(now, 'yyyy'));
 
   % First step !
-  disp('Start using ASSET by calling "ASSET_GUI"');
+  calls = dbstack();
+  if (length(calls) == 1)
+    disp('Start using ASSET by calling "ASSET"');
+  end
 
   return;
 end

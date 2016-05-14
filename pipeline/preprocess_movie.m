@@ -14,6 +14,7 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
 
   % Initialize some computer-specific variables required for the conversion
   maxuint = intmax('uint16');
+  minuint = intmin('uint16');
 
   % A nice status-bar if possible
   if (opts.verbosity > 1)
@@ -29,62 +30,17 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
     % We need the absolute path for Java to work properly
     fname = absolutepath(myrecording.channels(k).fname);
 
-    % Hide the bar in case we are loop several times
+    % Hide the bar in case we are looping several times
     if (opts.verbosity > 1)
       set(hwait, 'Visible','off');
     end
 
-    % Now we extract the corresponding metadata for potential later use
-    curdir = pwd;
-    cmd_path = which('bfconvert.bat');
-
-    % We need LOCI to do so...
-    if (isempty(cmd_path))
-      error('ASSET:lociMissing', 'The LOCI command line tools are not present !\nPlease follow the instructions provided by install_cell_tracking');
-    end
-    [mypath, junk] = fileparts(cmd_path);
-
-    % This can take a while, so inform the user
-    hInfo = warndlg('Populating metadata, please wait.', 'Preprocessing movie...');
-
-    % Move to the correct folder
-    cd(mypath);
-
-    % And call the LOCI utility to extract the metadata
-    if (ispc)
-      cmd_name = ['"' fname '"'];
-      [res, metadata] = system(['showinf.bat -nopix -nometa -omexml-only ' cmd_name]);
-
-    else
-      cmd_name = strrep(fname,' ','\ ');
-      [res, metadata] = system(['./showinf -nopix -nometa -omexml-only ' cmd_name]);
-    end
-
-    % Delete the information if need be
-    if (ishandle(hInfo))
-      delete(hInfo);
-    end
-
-    % Go back to the original folder
-    cd(curdir);
-
-    % Check if an error occured
-    if (res ~= 0)
-      error('ASSET:Metadata', metadata);
-    end
-
-    % Try to identify better metadata
-    metadata = find_metadata(fname, metadata);
-
-    % This can take a while, so inform the user
-    hInfo = warndlg('Parsing metadata, please wait.', 'Preprocessing movie...');
-
-    % Store the resulting metadata
-    [metadata, opts] = parse_metadata(metadata, opts);
+    % Split the metadata between the respective channels
+    metadata = myrecording.channels(k).metadata;
     if (length(metadata.channels) == nchannels && nchannels > 1)
       mindx = 0;
       for m = 1:nchannels
-        if (~isempty(strfind(fname, metadata.channels{m})))
+        if (~isempty(strfind(fname, metadata.channels{m})) || ~isempty(strfind(fname, strrep(metadata.channels{m}, ' ', '-'))))
           mindx = m;
           break
         end
@@ -92,36 +48,37 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
 
       % Extract the portion corresponding to the current channel
       if (mindx ~= 0)
-        metadata.acquisition_time = metadata.acquisition_time(mindx, :);
+        [c,p,f] = size(metadata.acquisition_time);
+        findx = repmat([1:f], p, 1);
+        pindx = repmat([1:p].', 1, f);
+
+        metadata.acquisition_time = metadata.acquisition_time(mindx, :, :);
         metadata.channels = metadata.channels(mindx);
-        metadata.exposure_time = metadata.exposure_time(mindx, :);
-        metadata.z_position = metadata.z_position(mindx, :);
+        metadata.exposure_time = metadata.exposure_time(mindx, :, :);
+        metadata.z_position = metadata.z_position(mindx, :, :);
+        metadata.files = metadata.files(mindx, :, :);
+
+        metadata.acquisition_time = metadata.acquisition_time(:).';
+        metadata.exposure_time = metadata.exposure_time(:).';
+        metadata.z_position = metadata.z_position(:).';
+        metadata.files = metadata.files(:).';
+
+        metadata.frame_index = findx(:).';
+        metadata.plane_index = pindx(:).';
       end
     end
     myrecording.channels(k).metadata = metadata;
 
-    % Delete the information if need be
-    if (ishandle(hInfo))
-      delete(hInfo);
-    end
-
     % Store the original file name as we will replace it by the rescaled one
-    myrecording.channels(k).file = absolutepath(myrecording.channels(k).fname);
+    myrecording.channels(k).file = fname;
 
     % Perfom some string formatting for the display
-    indx = strfind(myrecording.channels(k).file, filesep);
-    if (isempty(indx))
-      indx = 1;
-    else
-      indx = indx(end) + 1;
-    end
+    [junk, tmp_name, junk] = fileparts(fname);
+    [junk, tmp_name, junk] = fileparts(tmp_name);
     if (opts.verbosity > 1)
-      waitbar(0, hwait, ['Preprocessing Movie ' strrep(myrecording.channels(k).file(indx:end),'_','\_')]);
+      waitbar(0, hwait, ['Preprocessing Movie ' strrep(tmp_name,'_','\_')]);
       set(hwait, 'Visible', 'on');
     end
-
-    % Get the absolute file name
-    fname = myrecording.channels(k).file;
 
     % Get the name of the new file
     tmp_fname = absolutepath(get_new_name('tmpmat(\d+)\.ome\.tiff?', 'TmpData'));
@@ -153,10 +110,10 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
       maximg = max(img(:));
 
       % We'll store the biggest range, to rescale it afterwards
-      if(minimg < myrecording.channels(k).min)
+      if (minimg < myrecording.channels(k).min)
         myrecording.channels(k).min = minimg;
       end
-      if(maximg > myrecording.channels(k).max)
+      if (maximg > myrecording.channels(k).max)
         myrecording.channels(k).max = maximg;
       end
 
@@ -220,50 +177,6 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
   % Close the status bar
   if (opts.verbosity > 1)
     close(hwait);
-  end
-
-  return;
-end
-
-function metadata = find_metadata(filename, metadata)
-% This function tries to identify more suitable metadata. For now
-% on, the following metadata are supported:
-%   - Leica Application Suite ".las"
-%   - Leica Application Suite ".cal.xml"
-%   - uManager "metadata.txt"
-%   - files manually placed in the "Metadata" folder and named
-%     as the recording
-
-  % Get the folder in which the file is contained
-  [file_path, file_name, file_ext] = fileparts(filename);
-
-  % Check if the file exists
-  if (exist(fullfile(file_path, '.las'), 'file'))
-
-    % Load it !
-    metadata = fileread(fullfile(file_path, '.las'));
-
-  % The other LAS
-  elseif (exist(fullfile(file_path, '.Metadata'), 'dir'))
-    if (exist(fullfile(file_path, '.Metadata', [file_name file_ext '.cal.xml']), 'file'))
-      metadata = fileread(fullfile(file_path, '.Metadata', [file_name file_ext '.cal.xml']));
-    else
-      indx = strfind(file_name, '_');
-      if (~isempty(indx))
-        file = regexpdir(fullfile(file_path, '.Metadata'), [file_name(1:indx(end)-1) '(\..*)?\.cal\.xml' ]);
-        if (length(file)==1)
-          metadata = fileread(file{1});
-        end
-      end
-    end
-
-  % For uManager
-  elseif (exist(fullfile(file_path, 'metadata.txt'), 'file'))
-    metadata = fileread(fullfile(file_path, 'metadata.txt'));
-
-  % For manually edited files
-  elseif (exist(fullfile(pwd, 'Metadata', [filename '.txt']), 'file'))
-    metadata = fileread(fullfile(pwd, 'Metadata', [filename '.txt']));
   end
 
   return;

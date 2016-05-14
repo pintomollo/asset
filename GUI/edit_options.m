@@ -20,7 +20,10 @@ function [mystruct, is_updated] = edit_options(mystruct, name)
   end
 
   % Analyze the structure we received
-  [name, values] = parse_struct(mystruct);
+  [new_name, values] = parse_struct(mystruct);
+  if (isempty(name))
+    name = new_name;
+  end
 
   % Create the figure corresponding to the structure
   hFig = create_figure(values);

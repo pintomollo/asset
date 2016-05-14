@@ -20,10 +20,10 @@ function [myrecording, opts] = ASSET(varargin)
 %   OPTS most useful fields (default value):
 %     - application         ('')/'ruffling'/...     Additional(s) analysis based on the segmentation, can
 %                                                   be a cell array (see perform_application.m)
-%     - ccd_pixel_size      (6.45)/...              Camera's pixel size to convert pixels to �m
+%     - ccd_pixel_size      (6.45)/...              Camera's pixel size to convert pixels to um
 %     - config_file         ('')/'file.txt'         File containing all the field/VALUE pairs
 %                                                   (see Config/example.txt)
-%     - magnification       (63)/...                Microscope's magnification to convert pixels to �m
+%     - magnification       (63)/...                Microscope's magnification to convert pixels to um
 %     - overwrite           (true)/false            Saves the results in the same MAT-file as before
 %     - recompute           true/(false)            Recompute the whole analysis
 %     - segmentation_type   ('dic')/'markers'/...   Channel(s) used to perform the segmentation, can be
@@ -67,15 +67,18 @@ function [myrecording, opts] = ASSET(varargin)
   % Check if we do need to load a movie
   if (~isstruct(myrecording) || isempty(myrecording.channels))
     if (ischar(myrecording))
-
-      % Easy way of telling if we have a TIFF file already
-      [file_path, filename, ext] = fileparts(myrecording);
-      if (~strncmp(ext, '.tif', 4) && ~strncmp(ext, '.tiff', 5))
-        myrecording = convert_movie(myrecording, false);
-      end
-      [myrecording, opts] = inspect_recording(myrecording, opts, batch_mode);
+      [myrecording, opts] = inspect_recording(myrecording, opts);
     else
       [myrecording, opts] = inspect_recording();
+    end
+
+    % If there is no experiment, something is really wrong, give up
+    if (~isstruct(myrecording) || ~isfield(myrecording, 'experiment') || isempty(myrecording.experiment))
+      error('No recording was properly loaded thus ASSET cannot run');
+
+    % Progress display
+    elseif (opts.verbosity > 0)
+      display(['Movie ''' myrecording.experiment ''' loaded']);
     end
     save([myrecording.experiment '.mat'], 'myrecording', 'opts');
 
@@ -83,14 +86,6 @@ function [myrecording, opts] = ASSET(varargin)
     if (opts.debug)
       display('Recording imported');
       keyboard;
-
-    % If there is no experiment, something is really wrong, give up
-    elseif (~isstruct(myrecording) || ~isfield(myrecording, 'experiment') || isempty(myrecording.experiment))
-      error('No recording was properly loaded thus ASSET cannot run');
-
-    % Progress display
-    elseif (opts.verbosity > 0)
-      display(['Movie ''' myrecording.experiment ''' loaded']);
     end
 
     % Filter the data channels if need be
@@ -101,8 +96,11 @@ function [myrecording, opts] = ASSET(varargin)
   end
 
   % Compute the actual pixel size of the image
+  opts = edit_options(opts, 'Verify the inferred resolutions');
   opts = set_pixel_size(opts);
   save([myrecording.experiment '.mat'], 'myrecording', 'opts');
+
+  return;
 
   % Segment the movie, the condition is useful if you want to use 'recompute'
   % without re-segmenting the recording
@@ -183,7 +181,7 @@ function [myrecording, opts] = ASSET(varargin)
   end
 
   % It's over, let's notify it !
-  if (~exist('opts', 'var') | opts.verbosity > 1)
+  if (~exist('opts', 'var') || isempty(opts) || opts.verbosity > 1)
     try
       mariosong(working);
     catch
