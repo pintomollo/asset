@@ -1,4 +1,7 @@
-function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
+function [mymovie, all_estim] = detect_embryos(mymovie, estim_only, opts)
+
+  min_egg_size = [7 5] um;
+
 
   if (nargin == 2)
     opts = estim_only;
@@ -38,6 +41,10 @@ function [mymovie, all_estim] = split_cells(mymovie, estim_only, opts)
     [h,w,nframes] = size(imgs);
     imgsize = [h, w];
   end
+
+  rad_thresh = max(egg_min_size);
+  rad_thresh = rad_thresh ./ [0.5 4 8 10 12];
+  area_thresh = prod(egg_min_size + rad_thresh(3))*pi;
 
   opts.split_parameters.max_distance = opts.split_parameters.max_distance / opts.pixel_size;
 
