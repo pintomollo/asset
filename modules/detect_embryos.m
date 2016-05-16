@@ -1,4 +1,4 @@
-function [all_estim] = detect_embryos(imgs, type, egg_min_size, intense_thresh, border_thresh)
+function [all_estim] = detect_embryos(imgs, use_edges, egg_min_size, intense_thresh, border_thresh)
 
   [h,w,nframes] = size(imgs);
   imgsize = [h, w];
@@ -12,17 +12,15 @@ function [all_estim] = detect_embryos(imgs, type, egg_min_size, intense_thresh, 
   for nming = 1:nframes
     img = double(imgs(:,:,n));
 
-    switch type
-      case 'dic'
-        img = imadm_mex(img);
-        thresh = graythresh(img);
-        img = (img > thresh*intense_thresh*(max(img(:))));
+    if (use_edges)
+      img = imadm_mex(img);
+      thresh = graythresh(img);
+      img = (img > thresh*intense_thresh*(max(img(:))));
+    else
+      img = gaussian_mex(img, rad_thresh(5));
+      img = median_mex(img, rad_thresh(4), 3);
 
-      otherwise
-        img = gaussian_mex(img, rad_thresh(5));
-        img = median_mex(img, rad_thresh(4), 3);
-
-        img = (img > intense_thresh);
+      img = (img > intense_thresh);
     end
 
     img = padarray(img, rad_thresh([1 1]));

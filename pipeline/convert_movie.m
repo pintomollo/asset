@@ -211,6 +211,9 @@ end
 % favorite OME-TIFF format
 function [newfile] = bftools_convert(fname, forced, do_merge)
 
+  % Java heap space
+  % mathworks.com/matlabcentral/answers/92813
+
   % We need the absolute path for Java to work properly
   fname = absolutepath(fname);
   if (exist(fname, 'file') ~= 2)

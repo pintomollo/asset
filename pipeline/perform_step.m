@@ -14,6 +14,27 @@ function [varargout] = perform_step(cast_step, segment_type, varargin)
   % Which step are we performing ?
   switch cast_step
 
+    case 'embryo'
+      img = varargin{1};
+      opts = varargin{2};
+      use_edges = false;
+
+      % Now determine which approach to use
+      switch segment_type
+        case 'dic'
+          thresh = 0.5;
+          use_edges = true;
+        case 'eggshell'
+          img = max(img(:)) - img;
+          noise_params = estimate_noise(img);
+          thresh = noise_params(1) + noise_params(2);
+        case 'fluorescence'
+          noise_params = estimate_noise(img);
+          noise_thresh = min(round(range(img(:)) / (15*noise_params(2))) + 1, 10);
+          thresh = noise_params(1) + noise_thresh*noise_params(2);
+      end
+      estimates = detect_embryos(img, use_edges, opts.split_parameters.egg_min_size / opts.pixel_size, thresh, opts.split_parameters.border_thresh);
+
     % We will here estimate a set of detections
     case 'estimation'
 
