@@ -1,4 +1,4 @@
-function ellipses = fit_ellipse_segments(pts, junctions, max_ratio, max_dist, max_score, max_overlap)
+function [ellipses, scores] = fit_ellipse_segments(pts, junctions, max_ratio, max_dist, max_score, max_overlap)
 
   nsegments = length(junctions);
   ellipses = NaN(nsegments, 5);
@@ -29,8 +29,11 @@ function ellipses = fit_ellipse_segments(pts, junctions, max_ratio, max_dist, ma
 
   [ellipses, segments, scores] = combine_ellipses(segments, ellipses, scores, max_ratio, max_dist, max_score, max_overlap);
 
-  ellipses = ellipses(scores <= max_score & (ellipses(:, 4) ./ ellipses(:, 3)) >= max_ratio, :);
-  ellipses = ellipses(~any(isnan(ellipses), 2), :);
+  goods = (scores <= max_score & (ellipses(:, 4) ./ ellipses(:, 3)) >= max_ratio & ~any(isnan(ellipses),2));
+  %ellipses = ellipses(scores <= max_score & (ellipses(:, 4) ./ ellipses(:, 3)) >= max_ratio, :);
+  %ellipses = ellipses(~any(isnan(ellipses), 2), :);
+  ellipses = ellipses(goods, :);
+  scores = scores(goods);
 
   return;
 end

@@ -1,16 +1,17 @@
 function [all_estim] = detect_embryos(imgs, use_edges, egg_min_size, intense_thresh, border_thresh)
 
-  [h,w,nframes] = size(imgs);
+  [h, w, nframes] = size(imgs);
   imgsize = [h, w];
 
   rad_thresh = max(egg_min_size);
   rad_thresh = rad_thresh ./ [0.5 4 8 10 12];
-  area_thresh = prod(egg_min_size + rad_thresh(3))*pi;
+  rad_thresh(1:3) = ceil(rad_thresh(1:3));
+  area_thresh = ceil(prod(egg_min_size + rad_thresh(3))*pi);
 
   all_estim = cell(nframes, 1);
 
-  for nming = 1:nframes
-    img = double(imgs(:,:,n));
+  for nimg = 1:nframes
+    img = double(imgs(:,:,nimg));
 
     if (use_edges)
       img = imadm_mex(img);
@@ -34,12 +35,6 @@ function [all_estim] = detect_embryos(imgs, use_edges, egg_min_size, intense_thr
 
     img =  img([1:imgsize(1)]+rad_thresh(1),[1:imgsize(2)]+rad_thresh(1));
 
-    img =  img((size10+1):(size10+imgsize(1)),(size10+1):(size10+imgsize(2)));
-
-    if (opts.verbosity == 3)
-      figure;imshow(img);
-    end
-
     if(~any(img) | (sum(img(:)) / prod(imgsize) > 0.9))
       continue;
     end
@@ -55,7 +50,7 @@ function [all_estim] = detect_embryos(imgs, use_edges, egg_min_size, intense_thr
 
     borders = (any(estim <= border_thresh | bsxfun(@eq, estim, imgsize([2 1])-border_thresh+1), 2));
 
-    all_estim{nimg} = estim(~borders, :);
+    all_estim{nimg} = estim(~borders, [2 1]);
   end
 
   if (nframes == 1)

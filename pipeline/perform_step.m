@@ -14,12 +14,15 @@ function [varargout] = perform_step(cast_step, segment_type, varargin)
   % Which step are we performing ?
   switch cast_step
 
+    % Detect embryos in an image
     case 'embryo'
-      img = varargin{1};
-      opts = varargin{2};
-      use_edges = false;
 
-      % Now determine which approach to use
+      % We'll need an image and some options
+      img = double(varargin{1});
+      opts = varargin{2};
+
+      % Now determine which approach to use and which threshold to set
+      use_edges = false;
       switch segment_type
         case 'dic'
           thresh = 0.5;
@@ -32,15 +35,38 @@ function [varargout] = perform_step(cast_step, segment_type, varargin)
           noise_params = estimate_noise(img);
           noise_thresh = min(round(range(img(:)) / (15*noise_params(2))) + 1, 10);
           thresh = noise_params(1) + noise_thresh*noise_params(2);
+        otherwise
+          varargout = {[], []};
+          return;
       end
-      estimates = detect_embryos(img, use_edges, opts.split_parameters.egg_min_size / opts.pixel_size, thresh, opts.split_parameters.border_thresh);
+
+      % First estimate where there are "stuff" in the image
+      estimates = detect_embryos(img, use_edges, ...
+                  opts.split_parameters.egg_min_size / opts.pixel_size, thresh, ...
+                  opts.split_parameters.border_thresh);
+
+      % Then split this estimate into elliptical embryos
+      embryos = split_cells(estimates, opts.split_parameters.angle_thresh, ...
+                opts.split_parameters.max_ratio, ...
+                opts.split_parameters.max_distance / opts.pixel_size, ...
+                opts.split_parameters.max_score, opts.split_parameters.max_overlap);
+
+      % The ouput variables
+      varargout = {embryos, estimates};
 
     % We will here estimate a set of detections
     case 'estimation'
 
       % For that we need an image, spots and the options
       img = varargin{1};
-      opts = varargin{4};
+      spots = varargin{2};
+      opts = varargin{3};
+
+      % Check if we are forcing the estimation
+      force_estim = false;
+      if (length(varargin) > 3)
+        force_estim = varargin{4};
+      end
 
       % Now determine which approach to use
       switch segment_type

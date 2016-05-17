@@ -1,5 +1,5 @@
 function [x,y] = draw_ellipse(center,axes_length,orientation,npts)
-  
+
   if(nargin<4)
     npts=128;
     color = 'b';
@@ -16,16 +16,14 @@ function [x,y] = draw_ellipse(center,axes_length,orientation,npts)
   t = [0:2*pi/npts:2*pi];
   r = ones(1,npts+1);
 
-  [x,y] = elliptic2carth([t;r], center, axes_length, orientation, 'radial');
-  %x=axes_length(1)*cos(t)*cos(orientation) - axes_length(2)*sin(t)*sin(orientation) + center(1);
-  %y=axes_length(1)*cos(t)*sin(orientation) + axes_length(2)*sin(t)*cos(orientation) + center(2);
+  [ex,ey] = elliptic2carth([t;r], center, axes_length, orientation, 'radial');
 
   if(nargout==0)
-    plot(x,y,color);
-    x = [];
-    y = [];
+    plot(ex,ey,color);
   elseif (nargout==1)
-    x = [x y];
-    y = [];
+    x = [ex ey];
+  else
+    x = ex;
+    y = ey;
   end
 end

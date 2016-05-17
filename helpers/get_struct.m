@@ -63,7 +63,7 @@ function mystruct = get_struct(type, nstruct)
       mystruct = struct('axes_lengths', zeros(3, 0), ...  % Length of the 3 axes defining the embryo
                         'centers', zeros(3, 0), ... % Position of the center of the embryo
                         'orientations', zeros(1, 0), ...  % Orientation of the embryo
-                        'z_position', {{}}, ...     % Z-position of a given plane in a given channel
+                        'z_position', [], ...     % Z-position of a given plane in a given channel
                         'inverted', false, ...      % True if the detected embryo has its A-P axis inverted
                         'timing', NaN);             % Timing of the cell cycle
 
@@ -183,6 +183,8 @@ function mystruct = get_struct(type, nstruct)
     % Structure containing the parameters used for splitting touching cells
     case 'splitting'
       mystruct = struct('angle_thresh', 0.23, ...
+                        'border_thresh', 2, ...
+                        'egg_min_size', [7 5], ...  % Minimum radius 
                         'max_area_diff', 2, ...
                         'max_distance', 14.4, ...
                         'max_overlap', 0.37, ...
