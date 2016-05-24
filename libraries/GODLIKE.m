@@ -126,7 +126,8 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
     %% Initialize
        
     % basic check on input
-    error(nargchk(4, inf, nargin));
+    %error(nargchk(4, inf, nargin));
+    narginchk(4, inf);
     
     % more elaborate check on input (nested function)
     check_input;

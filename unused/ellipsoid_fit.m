@@ -26,7 +26,8 @@ function [ center, radii, evecs, v ] = ellipsoid_fit( X, flag, equals )
 % Yury Petrov, Northeastern University, Boston, MA
 %
 
-error( nargchk( 1, 3, nargin ) );  % check input arguments
+%error( nargchk( 1, 3, nargin ) );  % check input arguments
+narginchk(1, 3);
 if nargin == 1
     flag = 0;  % default to a free ellipsoid
 end

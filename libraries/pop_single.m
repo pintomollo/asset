@@ -40,7 +40,8 @@ classdef pop_single < handle
         function pop = pop_single(varargin)
             
             % default check
-            error(nargchk(2, 7, nargin));
+            %error(nargchk(2, 7, nargin));
+            narginchk(2, 7);
             
             % input is ( new [pop_data] structure, previous [population] object, options )
             % (subsequent call from GODLIKE)
