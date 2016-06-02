@@ -408,6 +408,16 @@ function metadata = parse_frames(data, keys, metadata)
     end
   end
 
+  acq_times = metadata.acquisition_time(1,:,:);
+  [junk, nslices, nframes] = size(acq_times);
+  slices = repmat([1:nslices].', 1, nframes);
+  frames = repmat([1:nframes], nslices, 1);
+
+  [junk, indxs] = sort(acq_times(:));
+
+  metadata.frame_index = frames(indxs).';
+  metadata.plane_index = slices(indxs).';
+
   return;
 end
 
