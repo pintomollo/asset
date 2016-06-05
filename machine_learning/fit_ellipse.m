@@ -1,100 +1,95 @@
-function [center, axes_length, orientation] = fit_ellipse(X,Y)
+function [center, axes_length, orientation] = fit_ellipse(pts)
 %
 % To convert this vector to the geometric parameters I use 
 % the standard formulas, e.g., (19) - (24) in Wolfram Mathworld:
 %     http://mathworld.wolfram.com/Ellipse.html
 %
-  center = NaN(2,1);
-  axes_length = center;
+  center = NaN;
+  axes_length = NaN;
   orientation = NaN;
 
-  if (isempty(X))
+  if (isempty(pts))
     return;
   end
 
-  if (nargin == 1)
-    if (size(X, 1)==2 & size(X, 2)>2)
-      X = X.';
-    end
-
-    Y = X(:,2);
-    X = X(:,1);
-  else
-    X = X(:);
-    Y = Y(:);
+  ndims = size(pts, 2);
+  if (ndims < 2)
+    return;
   end
 
-  indx = (any(isnan([X Y]),2) | any(isinf([X Y]),2));
+  center = NaN(ndims, 1);
+  axes_length = NaN(ndims, 1);
 
-  if (any(indx))
-    if (all(indx))
-
-      return;
-    end
-
-    X = X(~indx);
-    Y = Y(~indx);
+  goods = all(isfinite(pts), 2);
+  if (~any(goods))
+    return;
   end
 
-  XY = unique([X Y], 'rows');
-  if (size(XY, 1) < 10)
+  pts = pts(goods, :);
+
+  pts = unique(pts, 'rows');
+  if (size(pts, 1) < 10)
 
     return;
   else
-    x = unique(XY(:, 1));
-    y = unique(XY(:, 2));
+    repeats = bsxfun(@eq, pts, pts(1,:));
 
-    if (numel(x) == 1 | numel(y) == 1)
+    if (any(all(repeats, 1)))
       return;
     end
   end
 
-  A = EllipseDirectFit(XY);
-  if (isempty(A))
-    return;
-  end
+  if (ndims == 2)
+    A = ellipsefit_direct(pts(:,1), pts(:,2));
 
-  % Correct the scaling factor of 2 present in Wolfram
-  a = A(1); b = A(2) / 2; c = A(3); d = A(4) / 2; f = A(5) / 2; g = A(6);
+    % Correct the scaling factor of 2 present in Wolfram
+    a = A(1); b = A(2) / 2; c = A(3); d = A(4) / 2; f = A(5) / 2; g = A(6);
 
-  delta = b^2 - a*c;
-  x0 = (c*d - b*f) / delta;
-  y0 = (a*f - b*d) / delta;
-  center = real([x0; y0]);
+    delta = b^2 - a*c;
+    x0 = (c*d - b*f) / delta;
+    y0 = (a*f - b*d) / delta;
+    center = real([x0; y0]);
 
-  numer = 2*(a*(f^2) + c*(d^2) + g*(b^2) - 2*b*d*f - a*c*g);
-  denom = sqrt((a-c)^2 + 4*b^2);
-  a0 = sqrt(numer / (delta * (denom - (a + c))));
-  b0 = sqrt(numer / (delta * (-denom - (a + c))));
+    numer = 2*(a*(f^2) + c*(d^2) + g*(b^2) - 2*b*d*f - a*c*g);
+    denom = sqrt((a-c)^2 + 4*b^2);
+    a0 = sqrt(numer / (delta * (denom - (a + c))));
+    b0 = sqrt(numer / (delta * (-denom - (a + c))));
 
-  if (b == 0)
-    if (a < c)
-      orientation = 0;
+    if (b == 0)
+      if (a < c)
+        orientation = 0;
+      else
+        orientation = pi / 2;
+
+      end
     else
-      orientation = pi / 2;
-
+      if (a < c)
+        orientation = acot((a - c) / (2*b)) / 2;
+      else
+        orientation = acot((a - c) / (2*b)) / 2 + pi/2;
+      end
     end
+    % Correct for the inverted Y axis in images
+    orientation = -orientation;
+
+    % Reorder the axes length
+    if (a0 < b0)
+      tmp = b0;
+      b0 = a0;
+      a0 = tmp;
+
+      orientation = orientation + pi/2;
+    end
+
+    axes_length = [a0; b0];
   else
-    if (a < c)
-      orientation = acot((a - c) / (2*b)) / 2;
-    else
-      orientation = acot((a - c) / (2*b)) / 2 + pi/2;
-    end
-  end
-  % Correct for the inverted Y axis in images
-  orientation = -orientation;
+    [centers, axes_length, R] = ellipsoidfit_direct(pts(:,1), pts(:,2), pts(:,3));
 
-  % Reorder the axes length
-  if (a0 < b0)
-    tmp = b0;
-    b0 = a0;
-    a0 = tmp;
-
-    orientation = orientation + pi/2;
+    keyboard
   end
 
   % Keep only the real part of the parameters, in case something went wrong
-  axes_length = real([a0; b0]);
+  axes_length = real(axes_length);
   orientation = real(orientation + 2*pi * (orientation < 0) - 2*pi * (orientation > 2*pi));
 
   return;

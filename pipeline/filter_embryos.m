@@ -2,7 +2,6 @@ function embryos = filter_embryos(all_ellipses, all_estims, frame_indx, slice_in
 
   nimgs = length(all_ellipses);
   nframes = max(frame_indx);
-  nslices = max(slice_indx);
 
   for i=1:nimgs
     if (~isempty(all_ellipses{i}))
@@ -13,6 +12,7 @@ function embryos = filter_embryos(all_ellipses, all_estims, frame_indx, slice_in
 
   nembryos = cellfun(@(x)size(x,1), all_ellipses);
   all_embryos = cat(1, all_ellipses{:});
+  nparams = size(all_embryos, 2) - 2;
 
   dist_thresh = (max_distance / 3);
   clusts = cluster_distance(all_embryos(:,1:2), dist_thresh);
@@ -30,7 +30,6 @@ function embryos = filter_embryos(all_ellipses, all_estims, frame_indx, slice_in
     new_indxs(indxs) = [1:length(indxs)];
 
     clusts = new_indxs(clusts);
-    indxs = new_indxs(indxs);
   end
 
   frames = all_embryos(:,end-1);
@@ -42,83 +41,43 @@ function embryos = filter_embryos(all_ellipses, all_estims, frame_indx, slice_in
 
   full_indxs = (frames-1)*ntargets*nslices + (slices-1)*ntargets + clusts;
 
-  new_embryos = NaN(nframes*nslices*ntargets, 5);
+  embryos = NaN(nframes*nslices*ntargets, nparams);
 
-  new_embryos(full_indxs, :) = all_embryos(:, 1:5);
-  new_embryos = permute(reshape(new_embryos.', [5 ntargets nslices nframes]), [2 1 3 4]);
+  embryos(full_indxs, :) = all_embryos(:, 1:nparams);
+  embryos = permute(reshape(embryos.', [nparams ntargets nslices nframes]), [2 1 3 4]);
 
-  avg_ell = mymean(new_embryos, 4);
-  goods = (sum(~any(isnan(new_embryos), 2), 4) > nframes/3);
+  goods = (sum(~any(isnan(embryos), 2), 4) > nframes/3);
+  all_goods = (sum(goods, 3) > nslices/2);
 
-  keyboard
+  embryos = embryos(all_goods,:,:,:);
+  goods = goods(all_goods,:,:);
 
-
-
-  %{
-  avg_ell = mymean(all_embryos, 1, clusts);
-  nembryos = length(indxs);
-
-  avg_area = prod(avg_ell(:,3:4), 2)*pi;
-  mean_area = mean(avg_area);
-  goods = (avg_area <= avg_area * max_area_diff & ...
-           avg_area >= avg_area / max_area_diff);
-
-  avg_ell = avg_ell(goods, :);
-  ntargets = size(avg_ell, 1);
-  real_ell = NaN(ntargets, 5, nframes);
-  %}
-
-  %full_indxs = (frames-1)*nembryos + clusts;
-  %new_embryos = NaN(nframes*nembryos, 5);
-
-  %new_embryos(full_indxs, :) = all_embryos(:, 1:5);
-  %new_embryos2 = permute(reshape(new_embryos.', [5 nembryos nframes]), [2 1 3]);
-
-  %keyboard
-  %%%
-
-  %{
-  last_indx = 0;
-  for i=1:nframes
-    tmp_ell = all_ellipses{i};
-    for k=1:size(tmp_ell, 1)
-      found = false;
-      mpos = mymean(real_ell(:,1:2,:), 3);
-      for j=1:size(mpos, 1)
-        if (sum((mpos(j, :) - tmp_ell(k, 1:2)).^2) < dist_thresh)
-          found = true;
-          real_ell(j, :, i) = tmp_ell(k, :);
-          break;
-        end
-      end
-
-      if (~found)
-        last_indx = last_indx + 1;
-        real_ell(last_indx, :, 1) = tmp_ell(k,:);
-      end
-    end
+  if (~any(goods(:)))
+    embryos = [];
+    return;
   end
 
-  goods = sum(~isnan(real_ell),3);
-  goods = (goods(:,1) > nframes/3);
-  real_ell = real_ell(goods,:,:);
+  ntargets = size(embryos, 1);
 
-  avg_ell = median(real_ell, 3, 'omitnan');
-%  for i=1:size(real_ell, 1)
-%    tmp = real_ell(i, :, :);
-%    tmp = reshape(tmp(~isnan(tmp)), 5, []);
-%    avg_ell(end+1,:) = median(tmp, 2);
-%  end
-  avg_area = prod(avg_ell(:,3:4), 2)*pi;
-  mean_area = mean(avg_area);
-  goods = (avg_area <= avg_area * max_area_diff & ...
-           avg_area >= avg_area / max_area_diff);
+  avg_ell = median(embryos, 4, 'omitnan');
+  avg_area = prod(avg_ell(:,3:4,:), 2)*pi;
+  mean_area = mean(avg_area(:));
 
-  avg_ell = avg_ell(goods, :);
-  ntargets = size(avg_ell, 1);
-  %}
+  area_goods = (avg_area <= mean_area * max_area_diff & ...
+           avg_area >= mean_area / max_area_diff);
+  goods = goods & area_goods;
 
-  for nimg = 1:nframes
+  embryos(repmat(~goods, [1 nparams 1 nframes])) = NaN;
+
+  avg_ell = median(embryos, 4, 'omitnan');
+  avg_avg = mymean(avg_ell, 3);
+
+  if (any(isnan(avg_avg(:))))
+    embryos = [];
+    return;
+  end
+
+  for nimg = 1:nimgs
 
     estim = all_estims{nimg};
 
@@ -144,11 +103,14 @@ function embryos = filter_embryos(all_ellipses, all_estims, frame_indx, slice_in
 
     indxs = unique(labels);
 
-    ellipses = NaN(ntargets, 5);
-    scores = Inf(ntargets, 1);
-
     for i = 1:ntargets
-      ell_pts = carth2elliptic(estim, avg_ell(i, 1:2), avg_ell(i, 3:4), avg_ell(i, 5), 'radial');
+
+      curr_avg = avg_ell(i, :, slice_indx(nimg));
+      if (isnan(curr_avg))
+        curr_avg = avg_avg(i, :);
+      end
+
+      ell_pts = carth2elliptic(estim, curr_avg(1:2), curr_avg(3:4), curr_avg(5), 'radial');
       dist = abs(ell_pts(:,2) - 1);
 
       valids = (dist <= 2*max_score);
@@ -157,18 +119,17 @@ function embryos = filter_embryos(all_ellipses, all_estims, frame_indx, slice_in
       fit_indxs = indxs(npts > 0.333);
       current = ismember(labels, fit_indxs);
       current_concaves = ismember(concave_labels, fit_indxs);
-      new_ellipse = fit_ellipse_segments(estim(current,:), concave_labels(current_concaves), max_ratio, max_distance, max_score, max_overlap);
+      ellipse = fit_ellipse_segments(estim(current,:), ...
+                                     concave_labels(current_concaves), max_ratio, ...
+                                     max_distance, max_score, max_overlap);
 
-      if (isempty(new_ellipse))
-        real_ell(i,:,nimg) = NaN;
+      if (isempty(ellipse))
+        embryos(i,:,slice_indx(nimg), frame_indx(nimg)) = NaN;
       else
-        real_ell(i,:,nimg) = new_ellipse;
+        embryos(i,:,slice_indx(nimg), frame_indx(nimg)) = ellipse;
       end
     end
   end
-
-  %% NEED TO SETUP THE STUFF IN SHAPE & INTERPOLATE FOR NAN ?
-  embryos = real_ell;
 
   return;
 end

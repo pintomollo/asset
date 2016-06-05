@@ -146,7 +146,7 @@ function [ptsx, ptsy, center, axes_length, orient, align, type] = parse_inputs(v
   end
 
   if (isempty(center))
-    [center, axes_length, orient] = fit_ellipse(ptsx, ptsy(:, 1));
+    [center, axes_length, orient] = fit_ellipse([ptsx, ptsy(:, 1)]);
   end
 
   return;

@@ -61,6 +61,8 @@ function [mymovie, opts] = segment_embryos(myrecording, opts)
                   opts.split_parameters.max_distance / opts.pixel_size, ...
                   opts.split_parameters.max_overlap, ...
                   opts.split_parameters.max_score, opts.split_parameters.max_area_diff);
+
+    new_embryos = reconstruct_egg(new_embryos);
   end
 
   % Close the status bar
