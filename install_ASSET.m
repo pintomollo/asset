@@ -119,7 +119,75 @@ function install_ASSET(recompile)
   if (~isempty(files))
     done_any = true;
     problems = {};
-    mex -setup;
+
+    % Test if the compiler is working
+    try
+      mex -setup;
+
+    % If not, we have a problem !
+    catch ME
+
+      % In some peculiar macOS X configurations it might be quite tricky to solve !!
+      if ismac
+
+        % Use this to check if XCode and its command line tool is installed
+        [s,r]=system('which xcode-select');
+
+        % If not, tell the user to install it, specify that we need version 7 for version < 2016b
+        if s==1
+          mat_ver=version();
+          if str2double(mat_ver(end-2))>6 || all(mat_ver(end-2:end-1)=='6b')
+            error('ASSET:install_ASSET', ['ASSET requires a working compiler to run, please install XCode and its command line tools using the AppStore.'])
+          else
+            error('ASSET:install_ASSET', ['ASSET requires a working compiler to run, please install XCode version 7 and its command line tools (your version is not compatible with Xcode8 or later) by downloading it here:\nhttps://developer.apple.com/download/more/']);
+          end
+
+        % If XCode is installed, it get tricky...
+        else
+
+          % Repeat the error message, in case it contains some useful information
+          warning(ME)
+
+          % The three tricks advised online
+          disp('Trying to fix common macOS compatibility problems:');
+
+          disp('Resetting XCode...')
+          system('sudo xcode-select -r')
+
+          disp('Cleaning the option directory')
+          delete(fullfile(prefdir, 'mex_*.xml'))
+
+          % Get the current version of SDK
+          [s, ver]=system('xcrun --show-sdk-version')
+          opts_dir = fullfile(matlabroot, 'bin', lower(computer), 'mexopts');
+          files = dir(fullfile(opts_dir, '*.xml'));
+
+          % Add the correct reference to the SDK in every XML file, if it does not exist yet
+          for i=1:length(files)
+            curr_file = fullfile(opts_dir, files(i).name);
+
+            [s, hit] = system(['grep ' ver ' ' curr_file]);
+            if isempty(hit)
+              disp(['Updating the option file ' curr_file]);
+
+              if ~exist([curr_file, '.bak'], 'file')
+                copyfile(curr_file, [curr_file '.bak'])
+              end
+              system(['sed -E ''s/(.*)10.10(.*)/&€\1' ver '\2/g'' ' curr_file '.bak | tr ''€'' ''\n'' > ' curr_file]);
+            end
+          end
+
+          % Reboot is required
+          error('ASSET:install_ASSET', ['Please restart MATLAB and see whether the problem persists.']);
+        end
+
+      % I have no experience on other plaforms, hopefully it's easier to solve
+      else
+        error(ME);
+      end
+    end
+
+    % Try to compile every file
     for i=1:length(files)
       try
         eval(['mex' mexopts ' ' files{i}]);
