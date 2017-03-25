@@ -215,6 +215,7 @@ function install_ASSET(recompile)
 
   % Confirm to the user that everything went fine
   if (done_any)
+    disp(' ');
     disp('Installation successful !');
   end
 
@@ -229,7 +230,7 @@ function install_ASSET(recompile)
   % First step !
   calls = dbstack();
   if (length(calls) == 1)
-    disp('Start using ASSET by calling "ASSET"');
+    disp('Start using ASSET by typing "ASSET"');
   end
 
   return;

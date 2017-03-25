@@ -27,7 +27,15 @@ function [new_stack] = save_data(fname, data, varargin)
 
   img = data{1};
   if (ischar(img))
+    try
     img = imread(img);
+    catch ME
+      try
+        img = movie2tiff(img);
+      catch ME2
+        error('ASSET:unknownFileFormat', ['The file ' img ' is of unknown format, please convert it manually into a stack of TIFF images.'])
+      end
+    end
   end
 
   is_partial=(nargout==1);
@@ -57,7 +65,7 @@ function [new_stack] = save_data(fname, data, varargin)
     elseif (type(1)=='i')
       byte = Tiff.SampleFormat.Int;
     else
-      warning(['Invalid pixel type ''' type '''. Using UINT8 instead.']);
+      warning('ASSET:saveData', ['Invalid pixel type ''' type '''. Using UINT8 instead.']);
       type = 'uint8';
       byte = Tiff.SampleFormat.UInt;
     end
