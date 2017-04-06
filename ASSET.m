@@ -74,7 +74,7 @@ function [myrecording, opts] = ASSET(varargin)
 
     % If there is no experiment, something is really wrong, give up
     if (~isstruct(myrecording) || ~isfield(myrecording, 'experiment') || isempty(myrecording.experiment))
-      error('No recording was properly loaded thus ASSET cannot run');
+      error('ASSET:loadData', 'No recording were properly loaded thus ASSET cannot run');
 
     % Progress display
     elseif (opts.verbosity > 0)
@@ -170,9 +170,9 @@ function [myrecording, opts] = ASSET(varargin)
   catch
     err = lasterror();
     if (exist('myrecording', 'var') & isfield(myrecording, 'experiment') & ~isempty(myrecording.experiment))
-      warning(['Error during the analysis of ' myrecording.experiment ':']);
+      warning('ASSET:runtimeError', ['Error during the analysis of ' myrecording.experiment ':']);
     else
-      warning(['Error during the analysis:']);
+      warning('ASSET:runtimeError', ['Error during the analysis:']);
     end
     print_all(err);
     working = false;
@@ -243,7 +243,7 @@ function [myrecording, opts] = parse_input(varargin)
       elseif (numel(files) == 1)
         varargin{1} = files{1};
       elseif (~exist(varargin{1}, 'file'))
-        warning(['No file could be identified with the pattern: ' varargin{1}]);
+        warning('ASSET:parseInput', ['No file could be identified with the pattern: ' varargin{1}]);
         return;
       end
 
@@ -334,7 +334,7 @@ function [myrecording, opts] = parse_input(varargin)
   % Now we check that the parameters were provided in pairs
   npairs = length(varargin) / 2;
   if (npairs ~= floor(npairs))
-    error 'Properties pairs must come in PAIRS.';
+    error('ASSET:parseInput', 'Properties pairs must come in PAIRS.');
   end
 
   % Loop over the pairs of parameters
@@ -376,7 +376,7 @@ function [myrecording, opts] = parse_input(varargin)
         if (strncmp(varargin{2*i-1}, 'reset', 5))
           reset_opts = varargin{2*i};
         else
-          warning(['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
+          warning('ASSET:parseInput', ['Property ''' varargin{2*i -1} ''' does not exist. Ignoring']);
         end
       end
     end

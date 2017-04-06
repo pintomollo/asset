@@ -120,8 +120,8 @@ input_t get_input(int nlhs,int nrhs,const mxArray *prhs[]) {
   }
   
   /* more input checking */
-  if (!input.allocated_x && SMALLER(mxGetN(prhs[0]),mxGetM(prhs[0]))!=1 ||
-  SMALLER(mxGetN(prhs[1]),mxGetM(prhs[1]))!=1)
+  if (!input.allocated_x && (SMALLER(mxGetN(prhs[0]),mxGetM(prhs[0]))!=1 ||
+  SMALLER(mxGetN(prhs[1]),mxGetM(prhs[1]))!=1))
     mexErrMsgTxt("X and Y must be vectors");
   if (GREATER(mxGetN(prhs[1]),mxGetM(prhs[1]))!=n)
     mexErrMsgTxt("X and Y must have the same length");
