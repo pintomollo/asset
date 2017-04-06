@@ -33,9 +33,9 @@ function install_ASSET(recompile)
       rmpath(fullfile(current_dir, 'unused'));
       rmpath(fullfile(current_dir, 'bftools'));
       savepath;
-
-      return;
     end
+
+    return;
   end
 
   % Start by moving inside the cell_tracking folder

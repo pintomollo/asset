@@ -137,12 +137,14 @@ function [result] = load_data(fid, indexes)
       %result = imread(fid, indexes);
 
       tmp_img = imread(fid, indexes(1));
-      result = zeros([ssize length(indexes)], class(tmp_img));
-      result(:, :, 1) = tmp_img;
+      nchannels = size(tmp_img, 3);
+      result = zeros([ssize nchannels length(indexes)], class(tmp_img));
+      result(:, :, :, 1) = tmp_img;
 
       for i = 2:length(indexes)
-        result(:,:,i) = imread(fid, indexes(i));
+        result(:,:,:,i) = imread(fid, indexes(i));
       end
+      result = squeeze(result);
     end
 %  end
 %end
