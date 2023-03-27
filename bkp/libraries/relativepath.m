@@ -21,10 +21,6 @@ function  rel_path = relativepath( tgt_path, act_path )
 %
 %   See also:  ABSOLUTEPATH PATH
 
-% Modified by Simon Blanchoud, 2014
-%   - Added support for filenames
-%   - Removed the case insensitivity
-
 %   Jochen Lenz
 
 if isempty(tgt_path) | isequal(tgt_path(1), '.')

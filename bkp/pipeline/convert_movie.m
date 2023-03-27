@@ -209,53 +209,54 @@ function metadata = find_metadata(filename)
   % As a last resort, we'll try to use the LOCI tool if installed
   else
 
-    % Solution to Java heap space errors:
-    % https://www.mathworks.com/matlabcentral/answers/92813
+	  disp('Warning: no metadata found. You will need to set the parameter values manually!');
+   % % Solution to Java heap space errors:
+   % % https://www.mathworks.com/matlabcentral/answers/92813
 
-    % We need the absolute path for Java to work properly
-    filename = absolutepath(filename);
+   % % We need the absolute path for Java to work properly
+   % filename = absolutepath(filename);
 
-    if (ispc)
-      cmd_name = ['"' filename '"'];
-    else
-      cmd_name = strrep(filename,' ','\ ');
-    end
+   % if (ispc)
+   %   cmd_name = ['"' filename '"'];
+   % else
+   %   cmd_name = strrep(filename,' ','\ ');
+   % end
 
-    % Look for the LOCI command line tool
-    curdir = pwd;
-    cmd_path = which('bfconvert.bat');
+   % % Look for the LOCI command line tool
+   % curdir = pwd;
+   % cmd_path = which('bfconvert.bat');
 
-    % If it's installed, run it
-    if (~isempty(cmd_path))
-      [mypath, junk] = fileparts(cmd_path);
+   % % If it's installed, run it
+   % if (~isempty(cmd_path))
+   %   [mypath, junk] = fileparts(cmd_path);
 
-      % Move to the correct folder
-      cd(mypath);
+   %   % Move to the correct folder
+   %   cd(mypath);
 
-      % And call the LOCI utility to extract the metadata
-      if (ispc)
-        [res, metadata] = system(['showinf.bat -stitch -nopix -nometa -omexml-only ' cmd_name]);
-      else
-        [res, metadata] = system(['./showinf -stitch -nopix -nometa -omexml-only ' cmd_name]);
-      end
+   %   % And call the LOCI utility to extract the metadata
+   %   if (ispc)
+   %     [res, metadata] = system(['showinf.bat -stitch -nopix -nometa -omexml-only ' cmd_name]);
+   %   else
+   %     [res, metadata] = system(['./showinf -stitch -nopix -nometa -omexml-only ' cmd_name]);
+   %   end
 
-      % Check if an error occured, remove the metadata
-      if (res ~= 0)
+   %   % Check if an error occured, remove the metadata
+   %   if (res ~= 0)
 
-        % A issue with the versions of Java...
-        if (~isempty(strfind(metadata, 'JNI')))
-          warning('ASSET:javaVersion', 'MATLAB appears to be running on a different version of java than the one installed on your computer, which prevents LOCI from running.\nTo fix this issue, see https://www.mathworks.com/matlabcentral/answers/103056')
-        end
+   %     % A issue with the versions of Java...
+   %     if (~isempty(strfind(metadata, 'JNI')))
+   %       warning('ASSET:javaVersion', 'MATLAB appears to be running on a different version of java than the one installed on your computer, which prevents LOCI from running.\nTo fix this issue, see https://www.mathworks.com/matlabcentral/answers/103056')
+   %     end
 
-        metadata = '';
+   %     metadata = '';
 
-      % Remove the unused lines of data
-      else
-        metadata = regexprep(metadata, '^[^=:]*\n', '');
-      end
+   %   % Remove the unused lines of data
+   %   else
+   %     metadata = regexprep(metadata, '^[^=:]*\n', '');
+   %   end
 
-      cd(curdir);
-    end
+   %   cd(curdir);
+   % end
   end
 
   return;

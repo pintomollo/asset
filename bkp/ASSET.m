@@ -169,7 +169,7 @@ function [myrecording, opts] = ASSET(varargin)
   % Catch the error overall
   catch
     err = lasterror();
-    if (exist('myrecording', 'var') & isfield(myrecording, 'experiment') & ~isempty(myrecording.experiment))
+    if (exist('myrecording', 'var') && isfield(myrecording, 'experiment') && ~isempty(myrecording.experiment))
       warning('ASSET:runtimeError', ['Error during the analysis of ' myrecording.experiment ':']);
     else
       warning('ASSET:runtimeError', ['Error during the analysis:']);
@@ -177,7 +177,8 @@ function [myrecording, opts] = ASSET(varargin)
     print_all(err);
     working = false;
 
-    close all hidden force;
+    close all force;
+    close all hidden;
   end
 
   % It's over, let's notify it !

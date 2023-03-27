@@ -8,7 +8,7 @@ function [mystruct, is_updated] = edit_options(mystruct, name)
 %   will ignore changes made by the user.
 %
 %   [...] = EDIT_OPTIONS(ORIGINAL, NAME) displays NAME in the title
-%   bar. Used primarly during esition of sub-structures.
+%   bar. Used primarly during edition of sub-structures.
 %
 % Gonczy & Naef labs, EPFL
 % Simon Blanchoud
@@ -499,7 +499,7 @@ function [name, values] = parse_struct(mystruct)
         values{i, 3} = 'char';
         values{i, 4} = 'edit';
       case 'cell'
-        if (~isempty(val) & strncmp(class(val{1}), 'function_handle', 15))
+        if (~isempty(val) && strncmp(class(val{1}), 'function_handle', 15))
           values{i, 3} = 'func';
           values{i, 4} = 'table';
 

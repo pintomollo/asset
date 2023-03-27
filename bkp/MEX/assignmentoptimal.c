@@ -3,7 +3,7 @@ function [assignment, cost] = assignmentoptimal(distMatrix)
 */
 
 #include <mex.h>
-#include <matrix.h>
+//#include <matrix.h>
 
 #define CHECK_FOR_INF
 #define ONE_INDEXING

@@ -1,267 +1,223 @@
 function install_ASSET(recompile)
-% INSTALL_ASSET adds the required directories to the matlabpath, compiles the MEX
-% functions and checks for the existence of the required java libraries.
-%
-% Gonczy & Naef labs, EPFL
-% Simon Blanchoud
-% 19.05.2011
+  % INSTALL_ASSET adds the package to the work path, creates the required directories,
+  % handles the dependencies and compiles the necessary MEX libraries.
+  %
+  % INSTALL_ASSET('UNINSTALL') removes this package from the work path.
+  %
+  % INSTALL_ASSET(RECOMPILE) if RECOMPILE is TRUE, recompiles all MEX files.
+  %
+  % Blanchoud group, University of Fribourg
+  % Simon Blanchoud
+  % 27.03.2023
 
   % By default, do not recompile everything
   if (nargin == 0)
     recompile = false;
-    done_any = false;
 
-  % In that particular case, delete the directories
+    % In that particular case, delete the directories
   elseif (strcmp(recompile, 'uninstall'))
     cell_folder = which('install_ASSET');
     if (~isempty(cell_folder))
       [current_dir, junk, junk] = fileparts(cell_folder);
-      [root_dir, junk, junk] = fileparts(current_dir);
+      folders = strsplit(path(), ':');
 
-      % Remove the used directories to MATLAB path
-      rmpath(current_dir);
-      rmpath(fullfile(current_dir, 'GUI'));
-      rmpath(fullfile(current_dir, 'MEX'));
-      rmpath(fullfile(current_dir, 'file_io'));
-      rmpath(fullfile(current_dir, 'helpers'));
-      rmpath(fullfile(current_dir, 'image_analysis'));
-      rmpath(fullfile(current_dir, 'libraries'));
-      rmpath(fullfile(current_dir, 'machine_learning'));
-      rmpath(fullfile(current_dir, 'modules'));
-      rmpath(fullfile(current_dir, 'pipeline'));
-      rmpath(fullfile(current_dir, 'to_sort'));
-      rmpath(fullfile(current_dir, 'unused'));
-      rmpath(fullfile(current_dir, 'bftools'));
+      % Remove the used directories from the work path
+      for i=1:length(folders)
+        if (strncmp(folders{i}, current_dir, length(current_dir)))
+          rmpath(folders{i});
+        end
+      end
       savepath;
+
+      % Remove the added java libraries if any
+      fname = tilde_expand('~/.octaverc');
+      fnew = tilde_expand('~/octave.rc');
+
+      % We open the file and a new new
+      fid = fopen(fname, 'rt');
+      if fid >= 0
+        fnw = fopen(fnew, 'wt');
+        if fnw >= 0
+
+          javastring = ['javaaddpath(''' current_dir];
+
+          % And we copy everything that isn't in our directory
+          line = fgetl(fid);
+          while ischar(line)
+            if (~strncmp(line, javastring, length(javastring)))
+              fwrite(fnw, line);
+            end
+            line = fgetl(fid);
+          end
+
+          fclose(fnw);
+          movefile(fnew, fname);
+        end
+
+        fclose(fid);
+      end
+
+      % Move to the root of SiBoRG
+      [root_dir, junk, junk] = fileparts(current_dir);
+      cd(root_dir);
+
+      % Actually delete this package if required
+      btn = questdlg ("Do you want to delete ASSET completely (cannot be undone)?", "DELETE FILES??", "Yes", "No", "No");
+      if (strcmp (btn, "Yes"))
+        disp('(not really) DELETED');
+        % rmdir(current_dir, 's');
+      end
     end
 
     return;
   end
 
-  % Start by moving inside the cell_tracking folder
+  disp('Installing ASSET:');
+  warning('off','all');
+
+  % Start by moving inside the containing folder
   cell_folder = which('install_ASSET');
   [current_dir, junk, junk] = fileparts(cell_folder);
   [root_dir, junk, junk] = fileparts(current_dir);
   cd(current_dir);
 
-  % Add the proper directories to MATLAB path
-  addpath(current_dir);
-  addpath(fullfile(current_dir, 'GUI'));
-  addpath(fullfile(current_dir, 'MEX'));
-  addpath(fullfile(current_dir, 'file_io'));
-  addpath(fullfile(current_dir, 'helpers'));
-  addpath(fullfile(current_dir, 'image_analysis'));
-  addpath(fullfile(current_dir, 'libraries'));
-  addpath(fullfile(current_dir, 'machine_learning'));
-  addpath(fullfile(current_dir, 'modules'));
-  addpath(fullfile(current_dir, 'pipeline'));
-  addpath(fullfile(current_dir, 'to_sort'));
-  savepath;
-
-  % And for the LOCI as well
-  if (exist(fullfile(current_dir, 'bftools'), 'dir'))
-    addpath(fullfile(current_dir, 'bftools'));
-    savepath;
-  end
-
-  % Otherwise, try to insall it !
-  if (exist('bfconvert.bat', 'file') ~= 2)
-    done_any = true;
-    button = questdlg('Should we try to install the Bio-Formats command line tools ?');
-
-    % Ask for the user to confirm this foolness
-    if (strncmpi(button, 'yes', 3))
-      try
-        rmdir('bftools', 's');
-      catch
-        % Nothing...
-      end
-
-      % This looks like a permanent link... up to now at least
-      try
-        disp('Downloading Bio-Formats tools...')
-
-        unzip('http://downloads.openmicroscopy.org/latest/bio-formats/artifacts/bftools.zip');
-        addpath(fullfile(current_dir, 'bftools'));
-        savepath;
-      catch
-        errs = lasterror;
-        warning('ASSET:installLOCI', ['Installation failed for the following reason:\n' errs.message]);
-      end
-
-      % Amazing enough !!
-      if (exist('bfconvert.bat', 'file') == 2)
-        disp('Done !');
-        disp(' ');
-      else
-        disp('Failed... try to get the Bio-Formats command-line tools from http://www.openmicroscopy.org and place it in the "cast" folder');
-        disp(' ');
-      end
-    end
-  end
-
-  % Check if java is doing fine
-  [res, info] = system('java -version');
-  if isempty(strfind(info, 'java version "'))
-    warning('ASSET:javaMissing', 'Java is either missing or not properly configured ! Make sure that its executable directory is included in your command path.');
-  end
-
-  % Check if the sparse 64bits flag is needed
-  if ~isempty(strfind(computer(),'64'))
-    mexopts = ' -largeArrayDims';
-  else
-    mexopts = '';
-  end
-
-  % Compile all files in MEX folder
-  cd('MEX');
-  [files] = get_mex_files('.', recompile);
-  if (~isempty(files))
-    done_any = true;
-    problems = {};
-
-    % Test if the compiler is working
-    try
-      mex -setup;
-
-    % If not, we have a problem !
-    catch ME
-
-      % In some peculiar macOS X configurations it might be quite tricky to solve !!
-      if ismac
-
-        % Use this to check if XCode and its command line tool is installed
-        [s,r]=system('which xcode-select');
-
-        % If not, tell the user to install it, specify that we need version 7 for version < 2016b
-        if s==1
-          mat_ver=version();
-          if str2double(mat_ver(end-2))>6 || all(mat_ver(end-2:end-1)=='6b')
-            error('ASSET:install_ASSET', ['ASSET requires a working compiler to run, please install XCode and its command line tools using the AppStore.'])
-          else
-            error('ASSET:install_ASSET', ['ASSET requires a working compiler to run, please install XCode version 7 and its command line tools (your version is not compatible with Xcode8 or later) by downloading it here:\nhttps://developer.apple.com/download/more/']);
-          end
-
-        % If XCode is installed, it get tricky...
-        else
-
-          % Repeat the error message, in case it contains some useful information
-          warning(ME)
-
-          % The three tricks advised online
-          disp('Trying to fix common macOS compatibility problems:');
-
-          disp('Resetting XCode...')
-          system('sudo xcode-select -r')
-
-          disp('Cleaning the option directory')
-          delete(fullfile(prefdir, 'mex_*.xml'))
-
-          % Get the current version of SDK
-          [s, ver]=system('xcrun --show-sdk-version')
-          opts_dir = fullfile(matlabroot, 'bin', lower(computer), 'mexopts');
-          files = dir(fullfile(opts_dir, '*.xml'));
-
-          % Add the correct reference to the SDK in every XML file, if it does not exist yet
-          for i=1:length(files)
-            curr_file = fullfile(opts_dir, files(i).name);
-
-            [s, hit] = system(['grep ' ver ' ' curr_file]);
-            if isempty(hit)
-              disp(['Updating the option file ' curr_file]);
-
-              if ~exist([curr_file, '.bak'], 'file')
-                copyfile(curr_file, [curr_file '.bak'])
-              end
-              system(['sed -E ''s/(.*)10.10(.*)/&€\1' ver '\2/g'' ' curr_file '.bak | tr ''€'' ''\n'' > ' curr_file]);
-            end
-          end
-
-          % Reboot is required
-          error('ASSET:install_ASSET', ['Please restart MATLAB and see whether the problem persists.']);
+  printf(' - updating octave path');
+  % Add the proper directories to the work path
+  subdirs = ls();
+  folders = strsplit(path(), ':');
+  for i=1:size(subdirs, 1)
+    dir_name = strtrim(subdirs(i,:));
+    if (isfolder(dir_name))
+      if (dir_name(1) ~= '.' && dir_name(1) ~= '_')
+        full_path = fullfile(current_dir, dir_name);
+        if (~any(strncmp(folders, full_path, length(full_path))))
+          addpath(full_path);
         end
-
-      % I have no experience on other plaforms, hopefully it's easier to solve
-      else
-        error(ME);
       end
     end
+    printf('.');
+  end
+  addpath(current_dir);
+  savepath;
+  printf('.done\n');
 
-    % Try to compile every file
-    for i=1:length(files)
-      try
-        eval(['mex' mexopts ' ' files{i}]);
-      catch ME
-        problems{end+1} = ME.message;
-      end
+  printf(' - updating java path');
+
+  % Added the required java libraries if any to octaverc
+  fname = tilde_expand('~/.octaverc');
+
+  % We open the file to add our files
+  fid = fopen(fname, 'at');
+  if fid >= 0
+
+    % And we copy everything that is a jar in our libraries
+    libraries = dir(fullfile('libraries', '*.jar'));
+    fdisp(fid, ' ');
+
+    % We both run the command and store it for the next boot
+    for i=1:length(libraries)
+      library = fullfile(pwd, 'libraries', libraries(i).name);
+      fdisp(fid, ['javaaddpath(''' library ''');']);
+      javaaddpath(library);
     end
-    if (~isempty(problems))
-      error('ASSET:install_ASSET', ['Could not compile the required MEX function(s)!\n' strjoin(problems, '\n')]);
-    end
+
+    fclose(fid);
+    printf('.');
+  end
+  printf('.done\n');
+
+  printf(' - installing required packages');
+
+  % Install the required packages
+  if isempty(pkg('list', 'image'))
+    pkg install -forge image;
+  end
+  printf('.');
+  if isempty(pkg('list', 'io'))
+    pkg install -forge io;
+  end
+  printf('.');
+  if isempty(pkg('list', 'statistics'))
+    pkg install -forge statistics;
+  end
+  printf('.');
+  if isempty(pkg('list', 'control'))
+    pkg install -forge control;
+  end
+  printf('.');
+  if isempty(pkg('list', 'signal'))
+    pkg install -forge signal;
+  end
+  printf('.');
+  if isempty(pkg('list', 'tisean'))
+    pkg install -forge tisean;
+  end
+  printf('.');
+  if isempty(pkg('list', 'matgeom'))
+    pkg install -forge matgeom;
   end
 
-  % Back to the original folder
+  fid = fopen(fname, 'at');
+  if fid >= 0
+    pkgs = pkg('list');
+
+    for i=1:length(pkgs)
+      fdisp(fid, ['pkg load ' pkgs{i}.name ';']);
+      pkg('load', pkgs{i}.name);
+    end
+
+    fclose(fid);
+  end
+  printf('.done\n');
+
+  printf(' - compiling MEX files');
+  % Try to compile the necessary MEX files
+  cd('MEX');
+  files = ls('*_mex.c*');
+  troubles = false;
+  for i=1:size(files, 1)
+    fname = strtrim(files(i,:));
+    [junk, no_ext, ext] = fileparts(fname);
+    if (recompile || exist(no_ext) ~= 3)
+      failure = mex(fname);
+
+      if (failure == 1)
+        troubles = true;
+        wtharning('SiBoRG:MEX', {'Could not compile the required MEX function!' ME.message});
+      end
+    end
+    printf('.');
+  end
+  printf('.done\n');
+
   cd(root_dir);
 
-  % This folder is required as well
+  % These folders are required as well
   if (~exist('TmpData', 'dir'))
-    done_any = true;
     mkdir('TmpData');
   end
   if (~exist('export', 'dir'))
-    done_any = true;
     mkdir('export');
   end
 
+  warning('on','all');
+  warning('off', 'Octave:language-extension');
+  warning('off', 'Octave:mixed-string-concat');
+  warning('off', 'Octave:array-as-logical');
+  warning('off', 'Octave:missing-semicolon');
+
   % Confirm to the user that everything went fine
-  if (done_any)
-    disp(' ');
+  if (troubles)
+    disp('Installation (almost) successful...');
+  else
     disp('Installation successful !');
   end
 
   % Gnu GPL notice
-  fprintf(1, ['\nASSET: an Algorithm for the Segmentation and the Standardization of C. Elegans Time-lapse recordings [1]\n\n', ...
-    '[1] Blanchoud et al., Dev. Dyn. (2010) http://doi.org/10.1002/dvdy.22486\n', ...
-    'Copyright (C) 2010-%s Simon Blanchoud\n', ...
+  printf(['\nSimon''s Botrylloides Regeneration Group plateform,  Copyright (C) 2019  Simon Blanchoud\n', ...
     'This program comes with ABSOLUTELY NO WARRANTY;\n', ...
     'This is free software, and you are welcome to redistribute it\n', ...
-    'under certain conditions; read licence.txt for details.\n\n'], datestr(now, 'yyyy'));
-
-  % First step !
-  calls = dbstack();
-  if (length(calls) == 1)
-    disp('Start using ASSET by typing "ASSET"');
-  end
-
-  return;
-end
-
-% Get all the files to be compiled
-function [files] = get_mex_files(dir_path, recompile)
-
-  % All potential files
-  candidates = [dir(fullfile(dir_path, '*.c')); dir(fullfile(dir_path, '*.cc')); dir(fullfile(dir_path, '*.cpp'))];
-  files = {};
-  ext = mexext();
-
-  % Loop over them all
-  for i=1:length(candidates)
-    [junk, name, junk] = fileparts(candidates(i).name);
-
-    % If there is no executable, then we might want to compile it
-    if (~exist(fullfile(dir_path, [name '.' ext]), 'file') || recompile)
-      curr_file = fullfile(dir_path, candidates(i).name);
-
-      % Check if the file contains the mex main function
-      content = fileread(curr_file);
-      indx = strfind(content, 'void mexFunction(');
-
-      % Store the valid files
-      if (~isempty(indx))
-        files{end+1} = curr_file;
-      end
-    end
-  end
+    'under certain conditions; read licence.txt for details.\n\n']);
 
   return;
 end

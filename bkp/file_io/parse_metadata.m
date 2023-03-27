@@ -490,6 +490,7 @@ function metadata = parse_frames(data, keys, metadata)
     end
   end
 
+  %acq_times = metadata.acquisition_time(1,:,:);
   acq_times = metadata.acquisition_time;
   [nchannels, nframes, nslices] = size(acq_times);
   channels = repmat([1:nchannels].', 1, nframes, nslices);
