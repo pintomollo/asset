@@ -3,7 +3,7 @@ function [nframes, ssize, infos] = size_data(fname)
     %Substitute imfinfos to handle natively missing files
     if (isempty(fname))
       error('MATLAB:imfinfo:fileOpen', 'No file name was provided.');
-    elseif(isstruct(fname) & isfield(fname, 'fname'))
+    elseif(isstruct(fname) && isfield(fname, 'fname'))
       if (isempty(fname.fname))
         error('MATLAB:imfinfo:fileOpen', 'No file name was provided.');
       else

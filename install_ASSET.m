@@ -205,6 +205,7 @@ function install_ASSET(recompile)
   warning('off', 'Octave:mixed-string-concat');
   warning('off', 'Octave:array-as-logical');
   warning('off', 'Octave:missing-semicolon');
+  warning('off', 'Octave:shadowed-function');
 
   % Confirm to the user that everything went fine
   if (troubles)

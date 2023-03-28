@@ -2,7 +2,7 @@ function [result] = load_data(fid, indexes)
   % LOAD_DATA reads the requested frames from a file using
   %   imread.
 
-  if(isstruct(fid) & isfield(fid, 'fname'))
+  if(isstruct(fid) && isfield(fid, 'fname'))
     fid = fid.fname;
   end
 
