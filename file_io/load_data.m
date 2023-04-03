@@ -1,31 +1,66 @@
-function [result] = load_data(fid, indexes)
-  % LOAD_DATA reads the requested frames from a file using
-  %   imread.
+function [result] = load_data(fname, indexes)
+% LOAD_DATA reads image files through imread.
+%
+%   IMGS = LOAD_DATA(FNAME, INDXS) loads the frames at INDXS from FNAME and returns
+%   them as the stack IMGS. IMGS has the same data type as the one used in FNAME.
+%   INDXS which are not valid are ignored.
+%
+%   IMGS = LOAD_DATA(STRUCT, INDXS) utilizes the field 'fname' in STRUCT as FNAME.
+%
+% Gonczy & Naef labs, EPFL
+% Simon Blanchoud
+% 15.05.2014
 
-  if(isstruct(fid) && isfield(fid, 'fname'))
-    fid = fid.fname;
+  % Initialize the output
+  result = [];
+
+  if (nargin < 2)
+    indexes = [];
   end
 
-  [nframes, ssize] = size_data(fid);
+  % If this is a structure with proper field, use this file name
+  if(isstruct(fname) && isfield(fname, 'fname'))
+    fname = fname.fname;
+  end
 
+  % Get the stack size
+  [nframes, ssize] = size_data(fname);
+
+  % There was something wrong !
+  if (nframes < 1)
+    return;
+  end
+
+  % Remove the invalid indexes
   indexes = indexes(indexes > 0 & indexes <= nframes);
 
-  if (length(indexes) == 1)
-    result = imread(fid, indexes);
-  else
-    % If RGB we can have some problems 
-    %result = imread(fid, indexes);
-
-    tmp_img = imread(fid, indexes(1));
-    nchannels = size(tmp_img, 3);
-    result = zeros([ssize nchannels length(indexes)], class(tmp_img));
-    result(:, :, :, 1) = tmp_img;
-
-    for i = 2:length(indexes)
-      result(:,:,:,i) = imread(fid, indexes(i));
-    end
-    result = squeeze(result);
+  % Just in case
+  if (isempty(indexes))
+    return;
   end
+
+  % Read the frames
+  result = imread(fname, indexes);
+  %% In case we have only one frame to load, we can load it directly
+  %if (length(indexes) == 1)
+  %  result = imread(fname, indexes);
+
+  %% Otherwise, we need to create the appropriate stack first
+  %else
+  %  % Load the first frame to know the data type
+  %  tmp_img = imread(fname, indexes(1));
+
+  %  % Create the stack
+  %  result = zeros([ssize length(indexes)], class(tmp_img));
+
+  %  % Copy the frame
+  %  result(:, :, 1) = tmp_img;
+
+  %  % And add the remaining frames
+  %  for i = 2:length(indexes)
+  %    result(:,:,i) = imread(fname, indexes(i));
+  %  end
+  %end
 
   return;
 end

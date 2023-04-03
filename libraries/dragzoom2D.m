@@ -128,16 +128,16 @@ function WindowButtonDownCallback2D(src, evnt)    %#ok
     switch clickType
 
         % Left click: dragging
-        case 'normal'
-            %----DragMouseBegin();
-            if (~params.fIsDragAllowed)
-                [cx, cy] = GetCursorCoordOnWindow(src);
-                
-                params.mStartX = cx;
-                params.mStartY = cy;
-                
-                params.fIsDragAllowed = true;
-            end
+        %case 'normal'
+        %    %----DragMouseBegin();
+        %    if (~params.fIsDragAllowed)
+        %        [cx, cy] = GetCursorCoordOnWindow(src);
+        %        
+        %        params.mStartX = cx;
+        %        params.mStartY = cy;
+        %        
+        %        params.fIsDragAllowed = true;
+        %    end
 
         % Double click: reset
         case 'open'
@@ -222,10 +222,10 @@ function WindowButtonUpCallback2D(src, evnt)      %#ok
         return;
     end
 
-    %---DragMouseEnd();
-    if params.fIsDragAllowed
-        params.fIsDragAllowed = false;
-    end
+    %%---DragMouseEnd();
+    %if params.fIsDragAllowed
+    %    params.fIsDragAllowed = false;
+    %end
 
     %---ZoomMouseExtendEnd();
     if params.fIsZoomExtendAllowed
@@ -418,20 +418,20 @@ function WindowKeyPressCallback2D(src, evnt)      %#ok
             % Determine which movement increment to keep
             switch evnt.Key(1)
                 case 'r'
-                    dx = -dx;
                     dy = 0;
                 case 'l'
+                    dx = -dx;
                     dy = 0;
                 case 'd'
+                    dy = -dy;
                     dx = 0;
                 case 'u'
                     dx = 0;
-                    dy = -dy;
             end
 
             % Y-axis is inverted in images
             if (params.fIsImage)
-                pdy = -pdy;
+                dy = -dy;
             end
 
             DragAxes(params.hAx, dx, dy, ...
@@ -493,6 +493,7 @@ function WindowKeyPressCallback2D(src, evnt)      %#ok
 
     % Store the updated parameter structure
     set(src, 'userdata', params);
+    drawnow;
 end
 %--------------------------------------------------------------------------
 
@@ -631,14 +632,14 @@ function [x, y] = GetCursorCoordOnWindow(hFig)
     %GetCursorCoordOnWindow get the position of the mouse on the figure
     % in pixels
     
-    dfltUnits = get(hFig, 'Units');
-    set(hFig, 'Units', 'pixels');
+    %dfltUnits = get(hFig, 'Units');
+    %set(hFig, 'Units', 'pixels');
     
     crd = get(hFig, 'CurrentPoint');
     x = crd(1); 
     y = crd(2);
     
-    set(hFig, 'Units', dfltUnits);
+    %set(hFig, 'Units', dfltUnits);
 end
 %--------------------------------------------------------------------------
 

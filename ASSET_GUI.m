@@ -1,73 +1,42 @@
-function [] = ASSET_GUI(fname)
-% ASSET_GUI displays a pop-up window for the user to manually identify the
-% type of data contained in the different channels of a movie recording.
+function [] = ASSET_GUI(myrecording, opts)
+% ASSET_GUI displays the main window of this interactive segmentation and
+% tracking platform in time-lapse recordings.
 %
-%   ASSET_GUI(CHANNELS) displays the window using the data
-%   contained in CHANNELS, updates it accordingly to the user's choice and saves
-%   the adequate structure for later analysis MYRECORDING. CHANNELS can either
-%   be a string, a cell list of strings or a 'channel' structure (see get_struct.m).
-%   MYRECORDING is a structure as defined by get_struct('myrecording').
+%   ASSET_GUI() displays an empty GUI for the user to load a recording interactively.
 %
-%   ASSET_GUI() prompts the user to select a recording and converts
-%   it before opening the GUI.
+%   [MYRECORDING, OPTS] = ASSET_GUI() returns the results of the analysis in MYRECORDING
+%   and the corresponding options in OPTS. MYRECORDING and OPTS will be structured as defined
+%   get_struct('myrecording') and get_struct('options') respectively.
 %
-% Blanchoud group, UNIFR
+%   [MYRECORDING, OPTS] = ASSET_GUI(MYRECORDING, OPTS) displays the window using
+%   the data contained in MYRECORDING and the parameter values from OPTS. It updates
+%   them accordingly to the user's choice.
+%
+% Gonczy & Naef labs, EPFL
 % Simon Blanchoud
-% 19.12.2018
+% 02.07.2014
 
-  % Argument checking, need to know if we ask for a recording or not.
-  if (nargin == 0 || isempty(fname) || ...
-     (isstruct(fname) && isfield(fname, 'channels') && isempty(fname.channels)))
-    fname = load_images();
-
-    % We did not get anything to handle...
-    if isempty(fname)
-      return;
-    end
-
-    % Maybe we got a .mat file?
-    if length(fname)==1 && strncmp(fname{1}(end-3:end), '.mat', 4)
-      data = load(fname{1});
-      ASSET_GUI(data.myrecording);
-      return;
-    end
-  end
-
-  % Create the channels structure if it was not provided.
-  if (isstruct(fname))
-    if (isfield(fname, 'experiment'))
-      myrecording = fname;
-      channels = myrecording.channels;
-    else
-      myrecording = get_struct('myrecording');
-      channels = fname;
-    end
-  else
-    % Put everything in a cell list
-    if (ischar(fname))
-      fname = {fname};
-    end
-
-    % Parse the list and copy its content into the channels structure
-    nchannels = length(fname);
-    channels = get_struct('channel', [nchannels 1]);
-    for i=1:nchannels
-      channels(i).fname = fname{i};
-    end
-
+  % Argument checking, need to know if we create new structures or not
+  if (nargin ~= 2 || isempty(myrecording) || isempty(opts))
     myrecording = get_struct('myrecording');
+    opts = get_struct('options');
+  else
+    % We utilize this function to improve compatibility between versions of this
+    % platform, fusing option structures if need be.
+    opts = update_structure(opts, 'options');
   end
 
-  % Load the required packages
-  %pkg load image;
-  %pkg load statistics;
+  if(exist('./install_ASSET.m', 'file'))
+    cd('..')
+  end
 
   % Create the GUI
-  [hFig, handles] = create_figure(channels);
+  [hFig, handles] = create_figure();
 
   % Store all the useful data in a single structure to be stored in the figure
-  data = struct('channels', channels, ...
+  data = struct('channels', myrecording.channels, ...
                 'recording', myrecording, ...
+                'options', opts, ...
                 'img', [], ...
                 'orig_img', [], ...
                 'img_next', [], ...
@@ -85,16 +54,16 @@ function [] = ASSET_GUI(fname)
   return;
 end
 
-function [hFig, handles] = create_figure(channels)
+function [hFig, handles] = create_figure()
 % This function actually creates the GUI, placing all the elements
 % and linking the callbacks.
 
   % The number of channels provided
-  nchannels = length(channels);
+  %nchannels = length(channels);
 
   % Initialize the possible types and compressions
-  typestring = {'luminescence';'brightfield'; 'dic'; 'fluorescence'};
-  typecompress = {'none', 'lzw', 'deflate', 'jpeg'};
+  %typestring = {'luminescence';'brightfield'; 'dic'; 'fluorescence'};
+  %typecompress = {'none', 'lzw', 'deflate', 'jpeg'};
 
   % Initialize the structure used for the interface
   %liststring = '';
@@ -108,28 +77,30 @@ function [hFig, handles] = create_figure(channels)
   %end
 
   % Get the number of frames
-  if nchannels > 0
-    nframes = size_data(channels(1).fname);
-  else
-    nframes = NaN;
-  end
+  %if nchannels > 0
+  %  nframes = size_data(channels(1).fname);
+  %else
+  %  nframes = NaN;
+  %end
+
+  nframes = 1;
 
   % Set the parameters for the sliders
-  if isfinite(nframes)
-    slider_step = [1 10]/nframes;
-    slider_max = max(nframes, 1.1);
-    slider_min = 1;
-  else
+  %if isfinite(nframes)
+  %  slider_step = [1 10]/nframes;
+  %  slider_max = max(nframes, 1.1);
+  %  slider_min = 1;
+  %else
     slider_step = [1 1];
     slider_max = 1.1;
     slider_min = 1;
-  end
+  %end
 
   % Create a name for the experiment based on the filename
-  exp_name = channels(1).fname;
-  [junk, exp_name, junk] = fileparts(exp_name);
-  [junk, exp_name, junk] = fileparts(exp_name);
-  exp_name = regexprep(exp_name, ' ', '');
+  %exp_name = channels(1).fname;
+  %[junk, exp_name, junk] = fileparts(exp_name);
+  %[junk, exp_name, junk] = fileparts(exp_name);
+  %exp_name = regexprep(exp_name, ' ', '');
 
   % Create my own grayscale map for the image display
   mygray = [0:255]' / 255;
@@ -226,7 +197,8 @@ function [hFig, handles] = create_figure(channels)
   hName = uicontrol('Parent', hFig, ...
                     'Units', 'normalized',  ...
                     'Position', [0.3 0.93 0.5 0.05], ...
-                    'String', exp_name,  ...
+                    %'String', exp_name,  ...
+                      'String', 'Load a recording here -->', ...
                     'FontSize', 12, ...
                     'Style', 'edit',  ...
                     'Tag', 'experiment');
@@ -415,21 +387,27 @@ function [hFig, handles] = create_figure(channels)
                     'Units', 'normalized',  ...
                     'Callback', @pipeline_Callback, ...
                     'Position', [0.89 0.72 0.09 0.06], ...
-                    'String', 'Segment Recording',  ...
+                    'String', 'Segment eggshell',  ...
+                    'Enable', 'off', ...
+                    'Visible', 'off', ...
                     'Tag', 'segment');
 
     hTrack = uicontrol('Parent', hPanel, ...
                     'Units', 'normalized',  ...
                     'Callback', @pipeline_Callback, ...
                     'Position', [0.89 0.66 0.09 0.06], ...
-                    'String', 'Track Cells',  ...
+                    'String', 'Segment membrane',  ...
+                    'Enable', 'off', ...
+                    'Visible', 'off', ...
                     'Tag', 'track');
 
     hPaths = uicontrol('Parent', hPanel, ...
                     'Units', 'normalized',  ...
                     'Callback', @pipeline_Callback, ...
                     'Position', [0.89 0.60 0.09 0.06], ...
-                    'String', 'Filter Paths',  ...
+                    'String', 'Quantification',  ...
+                    'Enable', 'off', ...
+                    'Visible', 'off', ...
                     'Tag', 'paths');
 
     hAutosave = uicontrol('Parent', hPanel, ...
@@ -597,6 +575,7 @@ function [hFig, handles] = create_figure(channels)
                    'list', hChannel, ...
                    %'normalize', hNorm, ...
                    'axes', [hAxes hAxesNext], ...
+                   'autosave', true, ...
                    'experiment', hName, ...
                    'all_buttons', enabled, ...
                    %'resolution', hResol, ...
@@ -607,7 +586,7 @@ function [hFig, handles] = create_figure(channels)
                    'roi', {{}}, ...
                    'display', [1 1], ...
                    'prev_channel', -1, ...
-                   'current', 1);
+                   'current', -1);
 
   % Link both axes to keep the same information on both sides
   %linkaxes(handles.axes);
@@ -966,11 +945,13 @@ function pipeline_Callback(hObject, eventdata)
 
   data = guidata(hObject);
   handles = data.handles;
+  myrecording = data.recording;
+  opts = data.options;
 
   % Block the GUI
   set(handles.all_buttons, 'Enable', 'off');
   drawnow;
-  refresh(hFig);
+  refresh(handles.hFig);
 
   % And get the type of button which called the callback (from its tag)
   type = get(hObject, 'tag');
@@ -988,60 +969,60 @@ function pipeline_Callback(hObject, eventdata)
 
     % Call the data processing GUI and process the channels accordingly
     case 'process'
-      set(hFig, 'Visible', 'off')
+      set(handles.hFig, 'Visible', 'off')
       [myrecording, opts, reload] = inspect_recording(myrecording, opts);
       if (reload)
         [myrecording, opts] = preprocess_movie(myrecording, opts);
-        if (autosave)
+        if (handles.autosave)
           save([myrecording.experiment '.mat'], 'myrecording', 'opts');
         end
         [opts, recompute] = edit_options(opts);
       end
-      set(hFig, 'Visible', 'on')
+      set(handles.hFig, 'Visible', 'on')
 
     % Call the segmenting GUI, and segment accordingly
     case 'segment'
-      set(hFig, 'Visible', 'off')
+      set(handles.hFig, 'Visible', 'off')
       [myrecording, opts, reload] = inspect_segmentation(myrecording, opts);
       if (reload)
         [myrecording, opts] = segment_movie(myrecording, opts);
-        if (autosave)
+        if (handles.autosave)
           save([myrecording.experiment '.mat'], 'myrecording', 'opts');
         end
       end
-      set(hFig, 'Visible', 'on')
+      set(handles.hFig, 'Visible', 'on')
 
     % Call the cell tracking GUI, and track accordingly
     case 'track'
-      set(hFig, 'Visible', 'off')
+      set(handles.hFig, 'Visible', 'off')
       [myrecording, opts, reload] = inspect_tracking(myrecording, opts);
       if (reload)
         [myrecording, opts] = track_spots(myrecording, opts);
-        if (autosave)
+        if (handles.autosave)
           save([myrecording.experiment '.mat'], 'myrecording', 'opts');
         end
       end
-      set(hFig, 'Visible', 'on')
+      set(handles.hFig, 'Visible', 'on')
 
     % Call the path filtering GUI, and filter accordingly
     case 'paths'
-      set(hFig, 'Visible', 'off')
+      set(handles.hFig, 'Visible', 'off')
       [myrecording, opts, reload] = inspect_paths(myrecording, opts);
       if (reload)
         [myrecording, opts] = filter_paths(myrecording, opts);
-        if (autosave)
+        if (handles.autosave)
           save([myrecording.experiment '.mat'], 'myrecording', 'opts');
         end
       end
-      set(hFig, 'Visible', 'on')
+      set(handles.hFig, 'Visible', 'on')
   end
 
   % Release the GUI and recompute the filters
   set(handles.all_buttons, 'Enable', 'on');
-  if (reload)
-    setup_environment()
-  end
-  update_display(reload);
+  %if (reload)
+  %  setup_environment()
+  %end
+  update_display(data, reload);
 
   return
 end
@@ -1181,7 +1162,7 @@ function options_Callback(hObject, eventdata)
 
       txthelp = ['AXES interactions:\n\n', imghelp{1}{1}, '\n\nROI interactions:\n\n', polyhelp{1}{1}];
 
-      helpdlg(sprintf(txthelp), 'How to count zooids?');
+      helpdlg(sprintf(txthelp), 'How to handle ASSET?');
 
     % Save a snapshot
     case 'snapshot'
@@ -1300,11 +1281,18 @@ function gui_CloseRequestFcn(hObject, eventdata)
   % If everything is OK, release the GUI and quit
   data = guidata(hObject);
   handles = data.handles;
+  myrecording = data.recording;
+  opts = data.options;
 
-  % Just double check that the user want to save?
-  answer = questdlg('Do you want to save your changes ?');
-  ok = strcmp(answer,'Yes');
-  no = strcmp(answer,'No');
+  if (strcmp(get(handles.hFig, 'Visible'), 'off'))
+    ok = false;
+    no = true;
+  else
+    % Just double check that the user want to save?
+    answer = questdlg('Do you want to save your changes ?');
+    ok = strcmp(answer,'Yes');
+    no = strcmp(answer,'No');
+  end
 
   % If everything is OK, release the GUI and quit
   if (ok)

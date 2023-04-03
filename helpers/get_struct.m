@@ -26,7 +26,7 @@ function mystruct = get_struct(type, nstruct)
     % Structure used to parse the original files (reused in myrecording)
     case 'channel'
       mystruct = struct('color', 1, ...             % Color of the channel (index of 'colors')
-                        'compression', 'none', ...  % Compression used for the temporary file
+                        'compression', 1, ...       % Compression used for the temporary file
                         'cosmics', false, ...       % Remove the cosmic rays in the image (see imcosmics.m)
                         'detrend', false, ...       % Detrend the image (see imdetrend.m)
                         'file', '', ...             % Path to the original file
@@ -38,16 +38,16 @@ function mystruct = get_struct(type, nstruct)
                         'normalize', true, ...      % Normalize the whole stack
                         'pixel_size', 2.5, ...
                         'amplitude', -1, ...
-                        'type', 'dic');             % Type of channel
+                        'type', 3);                 % Type of channel
 
     % Structure storing the color codes used in the display
     case 'colors'
-      mystruct = struct('colormaps', {{@gray, @cool, @summer, @hot, @jet}}, ...     % The colors used for the images
+      mystruct = struct('colormaps', {{'gray', 'cool', 'summer', 'hot', 'jet', 'redbluemap', 'purples', 'redyellowgreen'}}, ...     % The colors used for the images
                         'spots', {{'r','k','b','g','k'}}, ...                                   % The colors used for the detections
                         'spots_next', {{'b','r','k','b', 'w'}}, ...                             % The second colors for the detections
                         'status', {{'myg','mky','mkg','mbg','myg'}}, ...                        % The colors for the status of cells
                         'links', {{'y','k','k','y','y'}}, ...                                   % The colors for the links between cells
-                        'paths', {{@hot, @autumn, @gray, @cool, @gray}}, ... % The colors for the paths
+                        'paths', {{'hot', 'autumn', 'gray', 'cool', 'gray'}}, ... % The colors for the paths
                         'text', {{'r','k','b','g','k'}});                                       % The colors for the text in the movies
 
     % Structure to store detections from segmentations

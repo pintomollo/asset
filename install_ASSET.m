@@ -157,17 +157,17 @@ function install_ASSET(recompile)
     pkg install -forge matgeom;
   end
 
-  fid = fopen(fname, 'at');
-  if fid >= 0
-    pkgs = pkg('list');
+  %fid = fopen(fname, 'at');
+  %if fid >= 0
+  %  pkgs = pkg('list');
 
-    for i=1:length(pkgs)
-      fdisp(fid, ['pkg load ' pkgs{i}.name ';']);
-      pkg('load', pkgs{i}.name);
-    end
+    %for i=1:length(pkgs)
+    %  fdisp(fid, ['pkg load ' pkgs{i}.name ';']);
+    %  pkg('load', pkgs{i}.name);
+    %end
 
-    fclose(fid);
-  end
+    %fclose(fid);
+  %end
   printf('.done\n');
 
   printf(' - compiling MEX files');

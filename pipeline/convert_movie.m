@@ -57,7 +57,11 @@ function [converted_file, metadata, opts] = convert_movie(name)
 
     % Prompting the user for the movie file
     [fname, dirpath] = uigetfile({'*.*'}, ['Load a movie']);
-    fname = fullfile(dirpath, fname);
+
+    % In case the user canceled the loading
+    if (ischar(fname))
+      fname = fullfile(dirpath, fname);
+    end
   end
 
   % Return back to our original folder
@@ -84,86 +88,133 @@ function [converted_file, metadata, opts] = convert_movie(name)
   hInfo = warndlg('Parsing metadata, please wait.', 'Preprocessing movie...');
 
   % Try to identify better metadata
-  metadata = find_metadata(fname);
+  [metadata, type] = find_metadata(fname);
 
   % Store the resulting metadata
   [metadata, opts] = parse_metadata(metadata);
-
-  keyboard
 
   % Close the info
   if (ishandle(hInfo))
     delete(hInfo);
   end
 
-  % Did we get a valid list of metadata files ?
-  if (~isempty(metadata.files) && exist(fullfile(file_path, metadata.files{1}), 'file'))
+  switch type
+    case 'inf'
 
-      %%% NEED TO AVOID CONVERTING TIFF FILES
-      %
-      % Easy way of telling if we have a TIFF file already
-      %%[file_path, filename, ext] = fileparts(myrecording);
-      %%if (~strncmp(ext, '.tif', 4) && ~strncmp(ext, '.tiff', 5))
-      %%  myrecording = convert_movie(myrecording, false);
-      %%end
+      % This also takes quite some time, so warn the user
+      hInfo = warndlg('Splitting to individual TIFF, please wait...', 'Converting movie...');
+      [dirname, currname, junk] = fileparts(fname);
+      converted_file = cell(length(metadata.channels), 1);
 
+      % We initially do not know what to do
+      answer = 0;
+      for i = 1:length(metadata.channels)
 
-    % This also takes quite some time, so warn the user
-    hInfo = warndlg('Converting to TIFF, please wait...', 'Converting movie...');
+        % Create a new name
+        tmp_name = [currname '_' metadata.channels{i} '.tiff'];
+        converted_file{i} = fullfile(file_path, strrep(tmp_name, ' ', '-'));
 
-    [junk, dirname, junk] = fileparts(file_path);
-    converted_file = cell(length(metadata.channels), 1);
+        % If the file already exists, we ask what to do
+        if(exist(converted_file{i},'file'))
+          % Creat the fancy name for display (otherwise it thinks they are LaTeX commands)
+          [junk, printname, junk] = fileparts(converted_file{i});
 
-    % We initially do not know what to do
-    answer = 0;
+          % We do not accept "empty" answers
+          while (answer == 0)
+            choice = questdlg(['The TIFF version of ' printname ' already exists, overwrite it ?']);
+            answer = strcmp(choice,'Yes') + 2*strcmp(choice, 'No');
+          end
 
-    % Get ready to combine the various files together
-    metadata.files = fullfile(file_path, metadata.files);
-    for i = 1:length(metadata.channels)
-      files = metadata.files(i,:,:);
-      files = files(:).';
+          % Act accorindly to the policy
+          if (answer == 1)
+            delete(converted_file{i});
 
-      % Create a new name
-      tmp_name = [dirname '_' metadata.channels{i} '.tiff'];
-      converted_file{i} = fullfile(file_path, strrep(tmp_name, ' ', '-'));
+            % Convert the file
+            save_data(converted_file{i}, load_data(fname, metadata.stack_index(i,:,:)));
+          end
 
-      % If the file already exists, we ask what to do
-      if(exist(converted_file{i},'file'))
-        % Creat the fancy name for display (otherwise it thinks they are LaTeX commands)
-        [junk, tmp_name, junk] = fileparts(converted_file{i});
-        printname = strrep(tmp_name,'_','\_');
-
-        % We do not accept "empty" answers
-        while (answer == 0)
-          answer = menu(['The TIFF version of ' printname ' already exists, overwrite it ?'],'Yes','No');
-        end
-
-        % Act accorindly to the policy
-        if (answer == 1)
-          delete(converted_file{i});
+        else
+          % Convert the file
+          save_data(converted_file{i}, load_data(fname, metadata.stack_index(i,:,:)));
         end
       end
 
-      % Convert the file
-      save_data(converted_file{i}, files, 'uint16');
-    end
+      % Close the info
+      if (ishandle(hInfo))
+        delete(hInfo);
+      end
 
-    % Close the info
-    if (ishandle(hInfo))
-      delete(hInfo);
-    end
+    otherwise
 
-  % We do not have valid data
-  else
-    disp(['No valid movie found']);
-    metadata = '';
-    opts = '';
+      % Did we get a valid list of metadata files ?
+      if (~isempty(metadata.files) && exist(fullfile(file_path, metadata.files{1}), 'file'))
+
+          %%% NEED TO AVOID CONVERTING TIFF FILES
+          %
+          % Easy way of telling if we have a TIFF file already
+          %%[file_path, filename, ext] = fileparts(myrecording);
+          %%if (~strncmp(ext, '.tif', 4) && ~strncmp(ext, '.tiff', 5))
+          %%  myrecording = convert_movie(myrecording, false);
+          %%end
+
+
+        % This also takes quite some time, so warn the user
+        hInfo = warndlg('Converting to TIFF, please wait...', 'Converting movie...');
+
+        [junk, dirname, junk] = fileparts(file_path);
+        converted_file = cell(length(metadata.channels), 1);
+
+        % We initially do not know what to do
+        answer = 0;
+
+        % Get ready to combine the various files together
+        metadata.files = fullfile(file_path, metadata.files);
+        for i = 1:length(metadata.channels)
+          files = metadata.files(i,:,:);
+          files = files(:).';
+
+          % Create a new name
+          tmp_name = [dirname '_' metadata.channels{i} '.tiff'];
+          converted_file{i} = fullfile(file_path, strrep(tmp_name, ' ', '-'));
+
+          % If the file already exists, we ask what to do
+          if(exist(converted_file{i},'file'))
+            % Creat the fancy name for display (otherwise it thinks they are LaTeX commands)
+            [junk, tmp_name, junk] = fileparts(converted_file{i});
+            printname = strrep(tmp_name,'_','\_');
+
+            % We do not accept "empty" answers
+            while (answer == 0)
+              answer = menu(['The TIFF version of ' printname ' already exists, overwrite it ?'],'Yes','No');
+            end
+
+            % Act accorindly to the policy
+            if (answer == 1)
+              delete(converted_file{i});
+            end
+          end
+
+          % Convert the file
+          save_data(converted_file{i}, files, 'uint16');
+        end
+
+        % Close the info
+        if (ishandle(hInfo))
+          delete(hInfo);
+        end
+
+      % We do not have valid data
+      else
+        disp(['No valid movie found']);
+        metadata = '';
+        opts = '';
+      end
   end
 
   return;
 end
 
-function metadata = find_metadata(filename)
+function [metadata, type] = find_metadata(filename)
 % This function tries to identify more suitable metadata. For now
 % on, the following metadata are supported:
 %   - Leica Application Suite ".las"
@@ -174,6 +225,7 @@ function metadata = find_metadata(filename)
 
   % Initialize the metadata
   metadata = '';
+  type = '';
 
   % Get the folder in which the file is contained
   [file_path, file_name, file_ext] = fileparts(filename);
@@ -183,6 +235,7 @@ function metadata = find_metadata(filename)
 
     % Load it !
     metadata = fileread(fullfile(file_path, '.las'));
+    type = 'las';
 
   % The other LAS
   elseif (exist(fullfile(file_path, '.Metadata'), 'dir'))
@@ -197,19 +250,30 @@ function metadata = find_metadata(filename)
         end
       end
     end
+    type = 'cal';
 
   % For uManager
   elseif (exist(fullfile(file_path, 'metadata.txt'), 'file'))
     metadata = fileread(fullfile(file_path, 'metadata.txt'));
+    type = 'umg';
 
   % For manually edited files
   elseif (exist(fullfile(pwd, 'Metadata', [filename '.txt']), 'file'))
     metadata = fileread(fullfile(pwd, 'Metadata', [filename '.txt']));
+    type = 'txt';
 
-  % As a last resort, we'll try to use the LOCI tool if installed
+  % As a last resort, we'll try to read them directly from the file
   else
 
-	  disp('Warning: no metadata found. You will need to set the parameter values manually!');
+    % Get the file's metadata
+    [nframes, ssize, infos] = size_data(filename);
+
+    if (isstruct(infos) && (length(infos) > 0) && isfield(infos(1), 'Comment'))
+      metadata = infos(1).Comment;
+      type = 'inf';
+    else
+	    disp('Warning: no metadata found. You will need to set the parameter values manually!');
+    end
    % % Solution to Java heap space errors:
    % % https://www.mathworks.com/matlabcentral/answers/92813
 

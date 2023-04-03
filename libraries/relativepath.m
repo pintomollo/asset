@@ -27,7 +27,7 @@ function  rel_path = relativepath( tgt_path, act_path )
 
 %   Jochen Lenz
 
-if isempty(tgt_path) | isequal(tgt_path(1), '.')
+if isempty(tgt_path) || isequal(tgt_path(1), '.')
   rel_path = tgt_path;
 
   return;
@@ -51,10 +51,10 @@ end
 rel_path = '';
 
 % Make sure strings end by a filesep character:
-if  length(act_path) == 0   |   ~isequal(act_path(end),filesep)
+if  length(act_path) == 0   ||   ~isequal(act_path(end),filesep)
    act_path = [act_path filesep];
 end
-if  length(tgt_path) == 0   |   ~isequal(tgt_path(end),filesep)
+if  length(tgt_path) == 0   ||   ~isequal(tgt_path(end),filesep)
    tgt_path = [tgt_path filesep];
 end
 
@@ -69,7 +69,7 @@ act_path_cell = pathparts(act_path);
 tgt_path_cell = pathparts(tgt_path);
 
 % If volumes are different, return absolute path:
-if  length(act_path_cell) == 0   |   length(tgt_path_cell) == 0
+if  length(act_path_cell) == 0   ||   length(tgt_path_cell) == 0
    return  % rel_path = ''
 else
    if  ~isequal( act_path_cell{1} , tgt_path_cell{1} )
@@ -79,7 +79,7 @@ else
 end
 
 % Remove level by level, as long as both are equal:
-while  length(act_path_cell) > 0   &   length(tgt_path_cell) > 0
+while  length(act_path_cell) > 0   &&   length(tgt_path_cell) > 0
    if  isequal( act_path_cell{1}, tgt_path_cell{1} )
       act_path_cell(1) = [];
       tgt_path_cell(1) = [];
@@ -118,7 +118,7 @@ function  path_cell = pathparts(path_str)
 path_str = [filesep path_str filesep];
 path_cell = {};
 
-sep_pos = findstr( path_str, filesep );
+sep_pos = strfind( path_str, filesep );
 for i = 1 : length(sep_pos)-1
    path_cell{i} = path_str( sep_pos(i)+1 : sep_pos(i+1)-1 );
 end

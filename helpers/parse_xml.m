@@ -34,17 +34,31 @@ function xml_tree = parse_xml(data)
 
     % Either we have a string or a filename
     if (data(1) == '<')
-      [fid, fname] = mkstemp('TmpData/xmldataXXXXXX', true);
-      fprintf(fid, data);
-      fclose(fid);
-      xml_input = fname;
+      if(exist('TmpData', 'dir'))
+        [fid, fname] = mkstemp('TmpData/xmldataXXXXXX', true);
+      else
+        [fid, fname] = mkstemp('xmldataXXXXXX', true);
+      end
+      if (fid > 0)
+        fprintf(fid, data);
+        fclose(fid);
+        xml_input = fname;
+      else
+        disp('Error: could not create temporary file.')
+        xml_input = '';
+      end	
     elseif (exist(data, 'file') == 2)
       xml_input = data;
     end
 
     if (~isempty(xml_input))
+      %pkg unload io;
+      %pkg load io;
+
       % Load the data
       xml_tree = xmlread(xml_input);
+
+      %pkg unload io;
 
       % Recurse over child nodes. This could run into problems 
       % with very deeply nested trees.

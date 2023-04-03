@@ -497,10 +497,12 @@ function metadata = parse_frames(data, keys, metadata)
   slices = repmat(permute([1:nslices], [1 3 2]), nchannels, nframes, 1);
 
   [junk, indxs] = sort(acq_times(:));
+  ssize = size(acq_times);
 
-  metadata.channel_index = channels(indxs).';
-  metadata.frame_index = frames(indxs).';
-  metadata.plane_index = slices(indxs).';
+  metadata.channel_index = reshape(channels(indxs).', ssize);
+  metadata.frame_index = reshape(frames(indxs).', ssize);
+  metadata.plane_index = reshape(slices(indxs).', ssize);
+  metadata.stack_index = reshape(indxs.', ssize);
 
   if (length(values) > 7)
     if (length(metadata.channels) == length(values{8}))
