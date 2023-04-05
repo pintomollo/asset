@@ -1,0 +1,27 @@
+% EXAMPLE_PARAMS an example file for storing parameter values.
+%
+% You can place in this folder configuration files to store
+% parameter values for the different structures (see get_struct.m).
+%
+% These files can then be loaded into the option structure using
+% load_parameters.m. Note that such files can also be created
+% directly by save_parameters.m
+%
+% Gonczy and Naef labs, EPFL
+% Simon Blanchoud
+% 13.05.2014
+
+% The structure of such configuration file is the following:
+
+% A comment line starts with the '%' symbol !
+
+% Create a prefix for targeting subfields of the structure :
+% #field.subfield.subsubfield[...]
+
+% Add afterwards the default values of your parameter e.g. :
+#filtering
+cosmic_rays_threshold 5
+
+% To reset the field/subfield targetting, simply use an empty #:
+#
+verbosity 2

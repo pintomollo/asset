@@ -57,6 +57,8 @@ function [myrecording, opts] = preprocess_movie(myrecording, opts)
         metadata.exposure_time = metadata.exposure_time(mindx, :, :);
         metadata.z_position = metadata.z_position(mindx, :, :);
         metadata.files = metadata.files(mindx, :, :);
+        metadata.channel_index = metadata.channel_index(mindx, :, :);
+        metadata.stack_index = metadata.stack_index(mindx, :, :);
 
         metadata.acquisition_time = metadata.acquisition_time(:).';
         metadata.exposure_time = metadata.exposure_time(:).';

@@ -26,6 +26,7 @@ function [] = ASSET_GUI(myrecording, opts)
     opts = update_structure(opts, 'options');
   end
 
+  % Don't stay inside the directory itself
   if(exist('./install_ASSET.m', 'file'))
     cd('..')
   end
@@ -34,9 +35,10 @@ function [] = ASSET_GUI(myrecording, opts)
   [hFig, handles] = create_figure();
 
   % Store all the useful data in a single structure to be stored in the figure
-  data = struct('channels', myrecording.channels, ...
-                'recording', myrecording, ...
+  %data = struct('channels', myrecording.channels, ...
+  data = struct('recording', myrecording, ...
                 'options', opts, ...
+                'hFig', hFig, ...
                 'img', [], ...
                 'orig_img', [], ...
                 'img_next', [], ...
@@ -575,17 +577,21 @@ function [hFig, handles] = create_figure()
                    'list', hChannel, ...
                    %'normalize', hNorm, ...
                    'axes', [hAxes hAxesNext], ...
+                  'sliders', [hIndex1, hIndex2], ...
                    'autosave', true, ...
                    'experiment', hName, ...
                    'all_buttons', enabled, ...
                    %'resolution', hResol, ...
                    %'amplitude', hAmpl, ...
                    'hFig', hFig, ...
-                   'img', -1, ...
+                    'img', -1, ...
                    'scatter', -1, ...
                    'roi', {{}}, ...
                    'display', [1 1], ...
                    'prev_channel', -1, ...
+                    'prev_frame', [-1 -1], ...
+                    'frame', [1 1], ...
+                    'prev_channel', -1, ...
                    'current', -1);
 
   % Link both axes to keep the same information on both sides
@@ -605,12 +611,12 @@ function [data] = handle_rois(data, prev_indx, next_indx)
   %  for i=1:nrois
   %    systems = [systems; handles.roi{i}.getPosition(); NaN(1,2)];
   %  end
-  %  data.channels(prev_indx).system = systems;
+  %  data.recording.channels(prev_indx).system = systems;
   %end
 
   %if (next_indx > 0)
 
-  %  systems = data.channels(next_indx).system;
+  %  systems = data.recording.channels(next_indx).system;
   %  sys = find(all(isnan(systems), 2));
   %  nsys = length(sys);
 
@@ -647,89 +653,279 @@ function data = update_display(data, recompute)
 
   % Retrive the stored data
   handles = data.handles;
+  channels = data.recording.channels;
+  segmentations = data.recording.segmentations;
+  trackings = data.recording.trackings;
+  opts = data.options;
   hFig = handles.hFig;
+  img = data.img;
+  orig_img = data.orig_img;
+  img_next = data.img_next;
+  colors = get_struct('colors');
 
   % Get the indexes of the current frame and channel
   indx = handles.current;
+  nimg = handles.frame;
+  nchannels = length(channels);
 
   % Stop if no data at all
-  if (indx < 1)
+  if (indx < 1 || indx > nchannels)
+
+    if (numel(handles.img) > 1 && all(ishandle(handles.img)))
+      set(handles.img(1),'CData', []);
+      set(handles.img(2),'CData', []);
+
+      delete(get(handles.data(1), 'Children'));
+      delete(get(handles.data(2), 'Children'));
+      delete(get(handles.data(3), 'Children'));
+      delete(get(handles.data(4), 'Children'));
+
+      set(handles.scale, 'XData', [], 'YData', []);
+    end
+
     return;
   end
 
-  % Here we recompute all the filtering of the frame
-  if (recompute || indx ~= handles.prev_channel)
+  % If we have changed channel, we need to update the display of the buttons
+  if (indx ~= handles.prev_channel && indx <= nchannels)
     % Because it takes long, display it and block the GUI
-    set(hFig, 'Name', 'ASSET (Filtering...)');
+    color_index = channels(indx).color(1);
+    set(hFig, 'Name', 'ASSET (Processing...)');
+    %all_all = [handles.all_buttons, handles.save, handles.pipeline];
+    %curr_status = get(all_all, 'Enable');
     set(handles.all_buttons, 'Enable', 'off');
     drawnow;
     refresh(hFig);
-  end
 
-  % If we have changed channel, we need to update the display of the buttons
-  if (indx ~= handles.prev_channel)
-    if (handles.prev_channel > 0)
-      data.channels(handles.prev_channel).pixel_size = str2double(get(handles.resolution, 'String'));
-      data.channels(handles.prev_channel).amplitude = str2double(get(handles.amplitude, 'String'));
-    end
+    has_segmentation = false;
 
-    % Set the name of the current panel
-    set(handles.uipanel,'Title', ['Image ' num2str(indx)]);
-
-    %set(handles.normalize,'Value', data.channels(indx).normalize);
-
-    %set(handles.resolution, 'String', num2str(data.channels(indx).pixel_size));
-    %set(handles.amplitude, 'String', num2str(data.channels(indx).amplitude));
-
-    %if (numel(handles.img) > 1 && all(ishandle(handles.img)))
-    %  data = handle_rois(data, handles.prev_channel, indx);
-    %  handles = data.handles;
-    %end
+    % The name
+    typestring = {'luminescence';'brightfield'; 'dic'; 'fluorescence'};
+    set(handles.uipanel,'Title', [typestring{channels(indx).type} ' ' num2str(indx)]);
 
     % And setup the indexes correctly
-    %handles.prev_channel = indx;
+    handles.prev_channel = indx;
+    handles.prev_frame = [-1 -1];
+
+    % The paths
+    all_paths = [];
+
+    % Check what is available in the structure
+    has_segmentation = false;
+    has_tracking = false;
+    has_filtered = false;
+
+    if (~isempty(segmentations))
+      has_segmentation = true;
+      if (~isempty(trackings) && (length(trackings(indx).detections)==nframes))
+        has_tracking = true;
+
+        if (isfield(trackings(indx), 'filtered') && (length(trackings(indx).filtered)==nframes))
+          for i=1:nframes
+            has_filtered = (~isempty(trackings(indx).filtered(i).cluster));
+            if has_filtered
+              break;
+            end
+          end
+        end
+      end
+    end
+
+    % Reconstruct the available tracks
+    if ~has_tracking
+      all_paths = {[]};
+    else
+      all_paths = reconstruct_tracks(trackings(indx).detections, true);
+    end
+    if ~has_filtered
+      all_filtered = {[]};
+    else
+      all_filtered = reconstruct_tracks(trackings(indx).filtered, true);
+    end
+
+    set(hFig, 'Name', 'ASSET');
+    %set(handles.all_buttons, {'Enable'}, curr_status);
   end
 
-  % Here we recompute all the filtering of the frame
+  % And get the corresponding colormaps
+  all_colors = colorize_graph(all_paths, colors.paths{color_index}(length(all_paths)));
+  all_colors_filtered = colorize_graph(all_filtered, colors.paths{color_index}(length(all_filtered)));
+
+  % The slider
+  set(handles.sliders(1), 'String', ['Frame #' num2str(nimg(1))]);
+  set(handles.sliders(2), 'String', ['Frame #' num2str(nimg(2))]);
+
   if (recompute)
+    % Because it takes long, display it and block the GUI
+    set(hFig, 'Name', 'ASSET (Processing...)');
+    %curr_status = get(handles.all_buttons, 'Enable');
+    set(handles.all_buttons, 'Enable', 'off');
+    drawnow;
+    refresh(hFig);
+
+    % Here we recompute all the filtering of the frame
+    noise = [];
 
     % Try to avoid reloading frames as much as possible
-    data.orig_img = imread(data.channels(indx).fname);
+    if (nimg(1) == handles.prev_frame(1))
+      if (nimg(2) == nimg(1))
+        img_next = orig_img;
+      else
+        img_next = double(load_data(channels(indx).fname, nimg(2)));
+      end
+    elseif (nimg(2) == handles.prev_frame(2))
+      if (nimg(2) == nimg(1))
+        orig_img = img_next;
+      else
+        orig_img = double(load_data(channels(indx).fname, nimg(1)));
+      end
+    else
+      if (nimg(2) == nimg(1))
+        orig_img = double(load_data(channels(indx).fname, nimg(1)));
+        img_next = orig_img;
+      else
+        orig_img = double(load_data(channels(indx).fname, nimg(1)));
+        img_next = double(load_data(channels(indx).fname, nimg(2)));
+      end
+    end
 
-    % Copy to the working variable
-    data.img = data.orig_img;
-
-    % Normalize the image ?
-    %if (data.channels(indx).normalize)
-    %  data.img = imnorm(data.img);
-    %end
+    % Update the index
+    handles.prev_frame = nimg;
   end
 
-  % Determine which image to display in the left panel
-  img1 = data.img;
-  img2 = data.img;
+  % Determine which data to display in the left panel
+  switch handles.display(1)
 
-  % Get the location of the zooids
-  %zooids = data.channels(indx).zooids;
-  %if (isempty(zooids))
-  %  zooids = NaN(1,2);
-  %end
+    % The segmented image
+    case 2
+      if has_segmentation
+        spots1 = [segmentations(indx).detections(nimg(1)).carth segmentations(indx).detections(nimg(1)).properties];
+      else
+        spots1 = [];
+      end
+      links1 = {[]};
+      colors1 = [];
+      divisions_colors1 = colors.spots{color_index};
 
-  curr_color = 'k';
+    % The tracked spots
+    case 3
+
+      if has_tracking
+        spots = cellfun(@(x)(x(x(:,end-1)==nimg(1),:)), all_paths, 'UniformOutput', false);
+        spots = cat(1,spots{:});
+        divs = spots(:,1);
+        spots1 = {spots(divs<0,2:end), spots(divs==0,2:end), spots(divs>0,2:end)};
+        links1 = cellfun(@(x)(x(abs(x(:,end-1)-nimg(1)) < 2,:)), all_paths, 'UniformOutput', false);
+        links1 = links1(~cellfun('isempty', links1));
+      else
+        spots1 = {[]};
+        links1 = {[]};
+      end
+      colors1 = colorize_graph(links1, colors.paths{color_index}(length(links1)));
+      divisions_colors1 = colors.status{color_index};
+
+    % The full paths
+    case 4
+      if has_filtered
+        spots = cellfun(@(x)(x(x(:,end-1)==nimg(1),:)), all_filtered, 'UniformOutput', false);
+        spots = cat(1,spots{:});
+        divs = spots(:,1);
+        spots1 = {spots(divs<0,2:end), spots(divs==0,2:end), spots(divs>0,2:end)};
+      else
+        spots1 = {[]};
+      end
+      links1 = all_filtered;
+      colors1 = all_colors_filtered;
+      divisions_colors1 = colors.status{color_index};
+
+    % The image only
+    otherwise
+      spots1 = {[]};
+      links1 = {[]};
+      colors1 = 'k';
+      divisions_colors1 = 'k';
+  end
+
+  % Determine which image to display in the right panel
+  switch handles.display(2)
+
+    % The segmented image
+    case 2
+      if has_segmentation
+        spots2 = [segmentations(indx).detections(nimg(2)).carth segmentations(indx).detections(nimg(2)).properties];
+      else
+        spots2 = {[]};
+      end
+      links2 = {[]};
+      colors2 = [];
+      divisions_colors2 = colors.spots_next{color_index};
+
+    % The tracked data
+    case 3
+      if has_tracking
+        spots_next = cellfun(@(x)(x(x(:,end-1)==nimg(2),:)), all_paths, 'UniformOutput', false);
+        spots_next = cat(1,spots_next{:});
+        divs = spots_next(:,1);
+        spots2 = {spots_next(divs<0,2:end), spots_next(divs==0,2:end), spots_next(divs>0,2:end)};
+        links2 = cellfun(@(x)(x(abs(x(:,end-1)-nimg(2)) < 2,:)), all_paths, 'UniformOutput', false);
+        links2 = links2(~cellfun('isempty', links2));
+      else
+        spots2 = {[]};
+        links2 = {[]};
+      end
+      colors2 = colorize_graph(links2, colors.paths{color_index}(length(links2)));
+      divisions_colors2 = colors.status{color_index};
+
+    % The full paths
+    case 4
+      if has_filtered
+        spots_next = cellfun(@(x)(x(x(:,end-1)==nimg(2),:)), all_filtered, 'UniformOutput', false);
+        spots_next = cat(1,spots_next{:});
+        divs = spots_next(:,1);
+        spots2 = {spots_next(divs<0,2:end), spots_next(divs==0,2:end), spots_next(divs>0,2:end)};
+      else
+        spots2 = {[]};
+      end
+      links2 = all_filtered;
+      colors2 = all_colors;
+      divisions_colors2 = colors.status{color_index};
+
+    % The image alone
+    otherwise
+      spots2 = {[]};
+      links2 = {[]};
+      colors2 = 'k';
+      divisions_colors2 = 'k';
+  end
+
+  % Get the type of segmentation used, if one is available
+  if (has_segmentation)
+    segment_type = segmentations(indx).type;
+  else
+    segment_type = 'unknown';
+  end
 
   % If we have already created the axes and the images, we can simply change their
-  % content (i.e. CData)
+  % content (i.e. CData, XData, ...)
+  [size_y, size_x] = size(orig_img);
   if (numel(handles.img) > 1 && all(ishandle(handles.img)))
-    set(handles.img(1),'CData', img1);
-    set(handles.img(2),'CData', img2);
-    %set(handles.scatter, 'XData', zooids(:,1), 'YData', zooids(:,2), 'Color', curr_color);
+    set(handles.img(1),'CData', orig_img);
+    set(handles.img(2),'CData', img_next);
+
+    plot_paths(handles.data(3), links1, colors1);
+    plot_paths(handles.data(4), links2, colors2);
+
+    perform_step('plotting', segment_type, handles.data(1), spots1, divisions_colors1, iscell(spots1));
+    perform_step('plotting', segment_type, handles.data(2), spots2, divisions_colors2, iscell(spots2));
+
+    set(handles.scale, 'XData', size_x*[0.05 0.05]+[0 10/opts.pixel_size], 'YData', size_y*[0.95 0.95]);
   else
 
     % Otherwise, we create the two images in their respective axes
-    handles.img = image(img1,'Parent', handles.axes(1),...
+    handles.img = image(orig_img,'Parent', handles.axes(1),...
                       'CDataMapping', 'scaled',...
                       'Tag', 'image');
-    handles.img(2) = image(img2,'Parent', handles.axes(2), ...
+    handles.img(2) = image(img_next,'Parent', handles.axes(2), ...
                       'CDataMapping', 'scaled',...
                       'Tag', 'image');
 
@@ -737,22 +933,21 @@ function data = update_display(data, recompute)
     set(handles.axes,'Visible', 'off',  ...
                'DataAspectRatio',  [1 1 1]);
 
-    %handles.scatter = line('XData', zooids(:,1), 'YData', zooids(:,2), 'Parent', handles.axes(2), 'Color', curr_color, 'Marker', 'o', 'LineStyle', 'none');
+    % Now add the links
+    handles.data(3) = plot_paths(handles.axes(1), links1, colors1);
+    handles.data(4) = plot_paths(handles.axes(2), links2, colors2);
+
+    % And their detected spots
+    handles.data(1) = perform_step('plotting', segment_type, handles.axes(1), spots1, divisions_colors1, iscell(spots1));
+    handles.data(2) = perform_step('plotting', segment_type, handles.axes(2), spots2, divisions_colors2, iscell(spots2));
+
+    % And the necessary scale bar
+    handles.scale = line('XData', size_x*[0.05 0.05]+[0 10/opts.pixel_size], 'YData', size_y*[0.95 0.95], 'Parent', handles.axes(1), 'Color', 'w', 'LineWidth', 4);
 
     % Drag and Zoom library from Evgeny Pr aka iroln
-    dragzoom2D(handles.axes(1));
-    linkaxes(handles.axes);
+    dragzoom2D(handles.axes(1), 'on')
   end
-
-    %if (numel(handles.img) > 1 && all(ishandle(handles.img)))
-  if (indx ~= handles.prev_channel)
-    data.handles = handles;
-    data = handle_rois(data, handles.prev_channel, indx);
-    handles = data.handles;
-
-    % And setup the indexes correctly
-    handles.prev_channel = indx;
-  end
+  colormap(hFig, colors.colormaps{color_index});
 
   if (recompute || indx ~= handles.prev_channel)
     % Release the image
@@ -784,11 +979,11 @@ function remove_channel_Callback(hObject, eventdata)
   if (ok)
 
     % Remove the current index and select the first one
-    data.channels(indx) = [];
+    data.recording.channels(indx) = [];
     handles.current = 1;
 
     % If it was the only one, we need to handle this
-    if (isempty(data.channels))
+    if (isempty(data.recording.channels))
 
       % Set up the indexes as empty
       handles.current = 0;
@@ -806,8 +1001,8 @@ function remove_channel_Callback(hObject, eventdata)
       if (~isempty(new_channel))
 
         % We provide basic default values for all fields
-        data.channels = get_struct('channel');
-        data.channels.fname = new_channel;
+        data.recording.channels = get_struct('channel');
+        data.recording.channels.fname = new_channel;
 
         % We update the list of available channels
         set(handles.list, 'String', 'Image 1', 'Value', 1);
@@ -872,8 +1067,8 @@ end
 
   %keyboard
 %
-%  zooids = find_zooids(data.img, data.channels(handles.current).system, params);
-%  data.channels(handles.current).zooids = zooids;
+%  zooids = find_zooids(data.img, data.recording.channels(handles.current).system, params);
+%  data.recording.channels(handles.current).zooids = zooids;
 
 
 %  % Release the GUI
@@ -889,7 +1084,7 @@ function add_channel_Callback(hObject, eventdata)
   handles = data.handles;
 
   % Remember how many there were
-  nchannels = length(data.channels);
+  nchannels = length(data.recording.channels);
 
   % As this is long, block the GUI
   set(handles.all_buttons, 'Enable', 'off');
@@ -903,12 +1098,12 @@ function add_channel_Callback(hObject, eventdata)
     liststring = get(handles.list, 'String');
     for i=1:length(new_channel)
       % We provide basic default values for all fields
-      data.channels(end+1) = get_struct('channel');
-      data.channels(end).fname = new_channel{i};
+      data.recording.channels(end+1) = get_struct('channel');
+      data.recording.channels(end).fname = new_channel{i};
 
       % We update the list of available channels
       if (nchannels == 0)
-        liststring = ['Image ' num2str(length(data.channels))];
+        liststring = ['Image ' num2str(length(data.recording.channels))];
       else
         if (size(liststring, 1) > 1)
           liststring(:,end+1) = '|';
@@ -916,7 +1111,7 @@ function add_channel_Callback(hObject, eventdata)
           liststring = liststring(:).';
           liststring = liststring(1:end-1);
         end
-        liststring = [liststring '|Image ' num2str(length(data.channels))];
+        liststring = [liststring '|Image ' num2str(length(data.recording.channels))];
       end
 
       nchannels = nchannels + 1;
@@ -1018,11 +1213,15 @@ function pipeline_Callback(hObject, eventdata)
   end
 
   % Release the GUI and recompute the filters
-  set(handles.all_buttons, 'Enable', 'on');
+  data.handles = handles;
+  data.recording = myrecording;
+  data.options = opts;
+  guidata(handles.hFig, data);
   %if (reload)
   %  setup_environment()
   %end
   update_display(data, reload);
+  set(handles.all_buttons, 'Enable', 'on');
 
   return
 end
@@ -1040,13 +1239,14 @@ function experiment_Callback(hObject, eventdata)
   %set(all_all, 'Enable', 'off');
   set(handles.all_buttons, 'Enable', 'off');
   drawnow;
-  refresh(hFig);
+  refresh(handles.hFig);
 
   % And get the type of button which called the callback (from its tag)
   type = get(hObject, 'tag');
 
   % By default, recompute
   recompute = true;
+  nchannels = length(data.recording.channels);
 
   % Handle all three buttons differently
   switch type
@@ -1066,8 +1266,8 @@ function experiment_Callback(hObject, eventdata)
         delete(handles.img);
         delete(handles.data);
         delete(handles.scale);
-        dragzoom(handles.axes, 'off')
-        set(hFig, 'UserData', '');
+        dragzoom2D(handles.axes(1), 'off')
+        set(handles.hFig, 'UserData', '');
       end
 
       % Fancy output
@@ -1082,16 +1282,32 @@ function experiment_Callback(hObject, eventdata)
         fname = fullfile(dirpath, fname);
 
         % Load the matrix and check its content
-        data = load(fname);
+        matdata = load(fname);
 
         % Not what we expected
-        if (~isfield(data, 'myrecording') || ~isfield(data, 'opts'))
+        if (~isfield(matdata, 'myrecording') || ~isfield(matdata, 'opts'))
           disp(['Error: ' fname ' does not contain a valid myrecording structure']);
 
         % Extract the loaded data
         else
-          myrecording = data.myrecording;
-          opts = update_structure(data.opts, 'options');
+          myrecording = matdata.myrecording;
+          opts = update_structure(matdata.opts, 'options');
+
+          data.recording = myrecording;
+          data.options = opts;
+
+          data.img = [];
+          data.orig_img = [];
+          data.img_next = [];
+          data.handles.img = -1;
+          data.handles.scatter = -1;
+          data.handles.roi = {{}};
+          data.handles.display = [1 1];
+          data.handles.prev_channel = -1;
+          data.handles.prev_frame = [-1 -1];
+          data.handles.frame = [1 1];
+          data.handles.prev_channel = -1;
+          data.handles.current = 1;
         end
       end
 
@@ -1234,7 +1450,7 @@ function gui_Callback(hObject, eventdata)
 
     % Each checkbox is responsible for its respective boolean fields
     case {'detrend', 'cosmics', 'hot_pixels', 'normalize'}
-      data.channels(indx).(type) = logical(get(hObject, 'Value'));
+      data.recording.channels(indx).(type) = logical(get(hObject, 'Value'));
 
     % A change in the channel index
     case 'channels'
@@ -1299,13 +1515,13 @@ function gui_CloseRequestFcn(hObject, eventdata)
     data = handle_rois(data, handles.current, 0);
     handles = data.handles;
 
-    if (handles.current > 0)
-      data.channels(handles.current).pixel_size = str2double(get(handles.resolution, 'String'));
-      data.channels(handles.current).amplitude = str2double(get(handles.amplitude, 'String'));
-    end
+    %if (handles.current > 0)
+    %  data.recording.channels(handles.current).pixel_size = str2double(get(handles.resolution, 'String'));
+    %  data.recording.channels(handles.current).amplitude = str2double(get(handles.amplitude, 'String'));
+    %end
 
     % Copy the channels
-    myrecording.channels = data.channels;
+    %myrecording.channels = data.recording.channels;
     % And get the experiment name
     myrecording.experiment = get(handles.experiment, 'String');
 

@@ -36,8 +36,6 @@ function mystruct = get_struct(type, nstruct)
                         'min', Inf, ...             % Original minimum value used for rescaling
                         'metadata', '', ...         % Recordings metadata
                         'normalize', true, ...      % Normalize the whole stack
-                        'pixel_size', 2.5, ...
-                        'amplitude', -1, ...
                         'type', 3);                 % Type of channel
 
     % Structure storing the color codes used in the display
